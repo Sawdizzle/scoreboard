@@ -101,6 +101,8 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .fxbtn.mute.on { background: var(--strike); border-color: var(--strike); color: #fff; }
 .slider { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); margin-top: 12px; }
 .slider input[type="range"] { flex: 1; height: 30px; accent-color: var(--steel); }
+.slider b { font-family: var(--num); font-size: 13px; color: var(--chalk); min-width: 3.5ch; text-align: right; }
+.look-pad { margin-top: 16px; }
 
 .urlbar { display: flex; gap: 8px; margin-top: 16px; }
 .urlbar input { font-family: var(--num); font-size: 12px; }

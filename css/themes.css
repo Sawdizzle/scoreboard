@@ -1,0 +1,54 @@
+/* Theme palettes. Default (Blue Steel "Night Game") lives in overlay.css :root.
+   Each theme just overrides CSS variables + a few structural touches. The bug,
+   diamond, count, and even the animations recolor automatically from these vars.
+   Fonts are system stacks (no web-font load = no layout shift); self-hosted brand
+   fonts can drop into @font-face later without touching anything else. */
+
+/* Broadcast Minimal (clean, ESPN-ish) */
+body[data-theme="espn"] {
+  --panel: rgba(17, 18, 20, 0.94);
+  --panel-2: rgba(0, 0, 0, 0.35);
+  --line: rgba(255, 255, 255, 0.12);
+  --chalk: #ffffff;
+  --steel: #c8ccd2;
+  --accent: #e2231a;
+  --radius: 4px;
+  --disp: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+}
+body[data-theme="espn"] .bug { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
+body[data-theme="espn"] .team .abbr { letter-spacing: 0.02em; font-weight: 700; }
+
+/* Retro 8-bit */
+body[data-theme="retro"] {
+  --panel: #0e1016;
+  --panel-2: #05070c;
+  --line: #39ff14;
+  --chalk: #eafff0;
+  --steel: #29d3ff;
+  --accent: #ff3ca6;
+  --radius: 0px;
+  --disp: "Courier New", ui-monospace, monospace;
+  --num: "Courier New", ui-monospace, monospace;
+}
+body[data-theme="retro"] .bug { border: 2px solid var(--line); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.85); }
+body[data-theme="retro"] .team .abbr,
+body[data-theme="retro"] .team .runs,
+body[data-theme="retro"] .count { text-transform: uppercase; text-shadow: 0 0 6px currentColor; }
+body[data-theme="retro"] .team.home { border-left: 2px solid var(--line); }
+body[data-theme="retro"] .situation { border-left: 2px solid var(--line); }
+
+/* Classic Green Scoreboard */
+body[data-theme="green"] {
+  --panel: #0b2a1b;
+  --panel-2: #071c12;
+  --line: rgba(255, 210, 74, 0.25);
+  --chalk: #ffd24a;
+  --steel: #8fe0a8;
+  --accent: #ff8a3c;
+  --radius: 6px;
+  --disp: "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+}
+body[data-theme="green"] .team .runs,
+body[data-theme="green"] .count,
+body[data-theme="green"] .team .abbr { text-shadow: 0 0 8px rgba(255, 210, 74, 0.55); }
+body[data-theme="green"] .bug { box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.5); }

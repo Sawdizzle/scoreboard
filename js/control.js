@@ -160,6 +160,25 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- Look settings (theme / position / scale)
+async function writeField(patch) {
+  game = { ...game, ...patch };
+  renderLook();
+  const { error } = await db.from('games').update(patch).eq('id', game.id);
+  if (error) console.warn('look write failed', error.message);
+}
+$('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
+$('pos-sel').addEventListener('change', (e) => writeField({ scorebug_position: e.target.value }));
+$('scale-sel').addEventListener('input', (e) => { $('scale-val').textContent = (+e.target.value).toFixed(2) + '×'; });
+$('scale-sel').addEventListener('change', (e) => writeField({ scorebug_scale: +e.target.value }));
+function renderLook() {
+  $('theme-sel').value = game.theme || 'nightgame';
+  $('pos-sel').value = game.scorebug_position || 'bottom-bar';
+  const sc = game.scorebug_scale || 1;
+  $('scale-sel').value = sc;
+  $('scale-val').textContent = (+sc).toFixed(2) + '×';
+}
+
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
 $('fx-charge').onclick = () => fireAnim('charge');
 
@@ -234,6 +253,7 @@ function renderGame() {
   $('base-3').classList.toggle('on', b.third);
   renderRally();
   renderAudio();
+  renderLook();
 }
 
 $('copy-url-btn').onclick = async () => {

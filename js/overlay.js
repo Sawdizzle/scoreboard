@@ -39,6 +39,11 @@ function render(s) {
   document.getElementById('b3').classList.toggle('on', b.third);
   el.bug.dataset.ready = '1';
 
+  // Theme, position, and scale (live).
+  document.body.dataset.theme = s.theme || 'nightgame';
+  document.body.dataset.pos = s.scorebug_position || 'bottom-bar';
+  document.body.style.setProperty('--scale', s.scorebug_scale || 1);
+
   // Ambient rally state (persistent) + audio settings/pack.
   setRally(s.rally_mode);
   audio.setPack(s.sound_pack);
@@ -69,22 +74,37 @@ async function fetchState() {
 }
 
 // ---- Realtime with auto-reconnect + exponential backoff -------------------
+// Robust against flaky LTE: each attempt uses a UNIQUE channel name (so a not-yet
+// removed channel can't collide and throw), callbacks from stale channels are
+// ignored, and only one reconnect is ever pending at a time.
 let channel = null;
 let backoff = 1000;
+let reconnectTimer = null;
+let subGen = 0;
+
+function teardown() {
+  if (channel) { const c = channel; channel = null; supabase.removeChannel(c); }
+}
 
 function subscribe() {
   if (!gameId) return;
-  channel = supabase.channel(`overlay:${gameId}`)
+  teardown();
+  const myGen = ++subGen;
+  channel = supabase.channel(`overlay:${gameId}:${myGen}`);
+  channel
     .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${gameId}` },
       (payload) => render(payload.new))
     .subscribe((status) => {
+      if (myGen !== subGen) return; // ignore callbacks from a superseded channel
       if (status === 'SUBSCRIBED') { backoff = 1000; fetchState(); }
-      else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) reconnect();
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') scheduleReconnect();
     });
 }
-function reconnect() {
-  if (channel) { supabase.removeChannel(channel); channel = null; }
-  setTimeout(subscribe, backoff);
+
+function scheduleReconnect() {
+  if (reconnectTimer) return; // one pending reconnect only
+  teardown();
+  reconnectTimer = window.setTimeout(() => { reconnectTimer = null; subscribe(); }, backoff);
   backoff = Math.min(backoff * 2, 15000);
 }
 

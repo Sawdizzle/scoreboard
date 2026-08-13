@@ -8,7 +8,9 @@
   --steel: #8fb6de;
   --accent: #e8b23a;
   --num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --disp: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --disp: "Roboto Condensed", "Arial Narrow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 10px;
+  --scale: 1;
 }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
 /* ?debug=1 paints a backdrop so you can see the bug locally before OBS. */
@@ -19,16 +21,23 @@ body.debug {
 }
 
 .bug {
-  position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%);
+  position: fixed;
   display: flex; align-items: stretch;
   font-family: var(--disp); color: var(--chalk);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px; overflow: hidden;
+  border-radius: var(--radius); overflow: hidden;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
   opacity: 0; transition: opacity 0.25s ease;
 }
 .bug[data-ready="1"] { opacity: 1; }
+
+/* Position + scale. Each rule sets BOTH edges (one to auto) so switching position
+   never leaves a stale top/bottom that would stretch the fixed element. */
+.bug { top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="bottom-bar"] .bug { top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="top-bar"]    .bug { bottom: auto; top: 32px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
+body[data-pos="top-left"]   .bug { bottom: auto; top: 32px; left: 44px; transform: scale(var(--scale)); transform-origin: top left; }
 
 .team { display: flex; align-items: center; gap: 14px; padding: 11px 18px; }
 .team.away { background: linear-gradient(180deg, rgba(143, 182, 222, 0.10), transparent); }

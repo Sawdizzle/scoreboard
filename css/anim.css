@@ -5,11 +5,12 @@
 /* ---- Run scored: scorebug pulse + soft floor flash ---- */
 .fx-run-flash { background: radial-gradient(circle at 50% 100%, rgba(232,178,58,0.35), transparent 60%); animation: run-flash 0.85s ease-out forwards; }
 @keyframes run-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+/* Glow-based pulse (no transform) so it works with any position/scale. */
 .bug.pulse { animation: bug-pulse 0.9s ease-out; }
 @keyframes bug-pulse {
-  0% { transform: translateX(-50%) scale(1); }
-  25% { transform: translateX(-50%) scale(1.06); box-shadow: 0 0 0 3px var(--accent), 0 10px 34px rgba(0,0,0,0.5); }
-  100% { transform: translateX(-50%) scale(1); }
+  0% { box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
+  25% { box-shadow: 0 0 0 3px var(--accent), 0 0 26px var(--accent), 0 10px 34px rgba(0,0,0,0.5); }
+  100% { box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
 }
 
 /* ---- Home run: ball streak + steel-plate slam + chalk burst ---- */
