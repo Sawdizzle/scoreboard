@@ -35,11 +35,14 @@ export function setSettings(s) {
   applyGains();
 }
 
+// Football moments reuse existing pack sounds.
+const ALIAS = { touchdown: 'homerun', fieldgoal: 'webgem', turnover: 'strikeout', bigplay: 'webgem' };
+
 export function play(type) {
   ensure();
   if (ctx.state !== 'running') ctx.resume();
   const pack = PACKS[packName] || PACKS.bigleague;
-  const fn = pack[type];
+  const fn = pack[ALIAS[type] || type];
   if (!fn) return;
   const cat = type === 'charge' ? 'organ' : 'moments';
   fn(ctx, catGain[cat] || master, ctx.currentTime);

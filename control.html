@@ -54,50 +54,106 @@
 
     <div class="scorecard">
       <div class="sc-team"><span id="g-away-name">Visitor</span><b id="g-away-runs">0</b></div>
-      <div class="sc-mid">
-        <span id="g-inning" class="sc-inning">▲ 1</span>
-        <span id="g-count" class="sc-count">0 - 0</span>
-        <span id="g-outs" class="sc-outs">0 out</span>
-      </div>
+      <div class="sc-mid" id="sc-mid"></div>
       <div class="sc-team"><span id="g-home-name">Home</span><b id="g-home-runs">0</b></div>
     </div>
 
-    <div class="pad">
-      <button id="btn-ball"   class="key ball">BALL</button>
-      <button id="btn-strike" class="key strike">STRIKE</button>
-      <button id="btn-foul"   class="key foul">FOUL</button>
-      <button id="btn-out"    class="key out">OUT</button>
-      <button id="btn-run"    class="key run">RUN</button>
-      <button id="btn-batter" class="key batter">NEXT BATTER</button>
+    <!-- ============ BASEBALL ============ -->
+    <div class="sport-only" data-sport="baseball">
+      <div class="pad">
+        <button id="btn-ball"   class="key ball">BALL</button>
+        <button id="btn-strike" class="key strike">STRIKE</button>
+        <button id="btn-foul"   class="key foul">FOUL</button>
+        <button id="btn-out"    class="key out">OUT</button>
+        <button id="btn-run"    class="key run">RUN</button>
+        <button id="btn-batter" class="key batter">NEXT BATTER</button>
+      </div>
+      <div class="bases">
+        <span class="bases-label">Bases</span>
+        <div class="bases-row">
+          <button id="base-1" class="base-btn">1B</button>
+          <button id="base-2" class="base-btn">2B</button>
+          <button id="base-3" class="base-btn">3B</button>
+          <button id="btn-advance" class="base-btn wide">Advance ▸</button>
+          <button id="btn-clear" class="base-btn wide">Clear</button>
+        </div>
+      </div>
+      <div class="util-row">
+        <button id="btn-reset" class="key util">Reset Count</button>
+        <button id="btn-endhalf" class="key util">End ½ Inning</button>
+      </div>
+      <div class="fx-pad">
+        <span class="bases-label">Moments</span>
+        <button id="fx-homerun" class="fxbtn hr">💥 HOME RUN</button>
+        <div class="fx-grid">
+          <button id="fx-k" class="fxbtn">K</button>
+          <button id="fx-dp" class="fxbtn">Double Play</button>
+          <button id="fx-gem" class="fxbtn">Web Gem</button>
+          <button id="fx-sb" class="fxbtn">Stolen Base</button>
+          <button id="fx-walkoff" class="fxbtn">Walk-Off</button>
+        </div>
+      </div>
     </div>
 
-    <div class="bases">
-      <span class="bases-label">Bases</span>
+    <!-- ============ FOOTBALL ============ -->
+    <div class="sport-only" data-sport="football" hidden>
+      <span class="bases-label">Possession</span>
       <div class="bases-row">
-        <button id="base-1" class="base-btn">1B</button>
-        <button id="base-2" class="base-btn">2B</button>
-        <button id="base-3" class="base-btn">3B</button>
-        <button id="btn-advance" class="base-btn wide">Advance ▸</button>
-        <button id="btn-clear" class="base-btn wide">Clear</button>
+        <button id="fb-poss-away" class="base-btn">◄ Away ball</button>
+        <button id="fb-poss-home" class="base-btn">Home ball ►</button>
+      </div>
+
+      <span class="bases-label">Down &amp; distance</span>
+      <div class="bases-row">
+        <button id="fb-down-1" class="base-btn">1st</button>
+        <button id="fb-down-2" class="base-btn">2nd</button>
+        <button id="fb-down-3" class="base-btn">3rd</button>
+        <button id="fb-down-4" class="base-btn">4th</button>
+      </div>
+      <div class="bases-row">
+        <button id="fb-dist-dn" class="base-btn">– yd</button>
+        <b id="fb-dist-val" class="fb-dist">10</b>
+        <button id="fb-dist-up" class="base-btn">+ yd</button>
+        <button id="fb-goal" class="base-btn">&amp; Goal</button>
+        <button id="fb-firstdown" class="base-btn wide">1st &amp; 10</button>
+      </div>
+
+      <span class="bases-label">Score (offense = possession)</span>
+      <div class="pad fb-score">
+        <button id="fb-td"     class="key run">TD +6</button>
+        <button id="fb-fg"     class="key out">FG +3</button>
+        <button id="fb-xp"     class="key util">XP +1</button>
+        <button id="fb-2pt"    class="key util">2-PT +2</button>
+        <button id="fb-safety" class="key strike">SAFETY +2</button>
+        <button id="fb-nextq"  class="key batter">Next Qtr ▸</button>
+      </div>
+      <div class="bases-row">
+        <button id="fb-away-dn" class="base-btn">Away –</button>
+        <button id="fb-away-up" class="base-btn">Away +</button>
+        <button id="fb-home-dn" class="base-btn">Home –</button>
+        <button id="fb-home-up" class="base-btn">Home +</button>
+      </div>
+
+      <div class="util-row">
+        <button id="fb-to-away"  class="key util">Away Timeout</button>
+        <button id="fb-to-home"  class="key util">Home Timeout</button>
+        <button id="fb-to-reset" class="key util">Reset TOs</button>
+      </div>
+
+      <div class="fx-pad">
+        <span class="bases-label">Moments</span>
+        <button id="fx-touchdown" class="fxbtn hr">🏈 TOUCHDOWN</button>
+        <div class="fx-grid">
+          <button id="fx-fieldgoal" class="fxbtn">Field Goal</button>
+          <button id="fx-turnover" class="fxbtn">Turnover</button>
+          <button id="fx-bigplay" class="fxbtn">Big Play</button>
+        </div>
       </div>
     </div>
 
-    <div class="util-row">
-      <button id="btn-reset" class="key util">Reset Count</button>
-      <button id="btn-endhalf" class="key util">End ½ Inning</button>
-    </div>
-
-    <div class="fx-pad">
-      <span class="bases-label">Moments (fire a stinger on the overlay)</span>
-      <button id="fx-homerun" class="fxbtn hr">💥 HOME RUN</button>
-      <div class="fx-grid">
-        <button id="fx-k" class="fxbtn">K</button>
-        <button id="fx-dp" class="fxbtn">Double Play</button>
-        <button id="fx-gem" class="fxbtn">Web Gem</button>
-        <button id="fx-sb" class="fxbtn">Stolen Base</button>
-        <button id="fx-walkoff" class="fxbtn">Walk-Off</button>
-        <button id="fx-rally" class="fxbtn rally-toggle">Rally: OFF</button>
-      </div>
+    <!-- shared momentum + organ (all sports) -->
+    <div class="shared-fx">
+      <button id="fx-rally" class="fxbtn rally-toggle">Rally: OFF</button>
       <button id="fx-charge" class="fxbtn charge">🎺 Charge!</button>
     </div>
 
@@ -180,6 +236,19 @@
   <div id="setup-sheet" class="sheet" hidden>
     <div class="sheet-card scroll">
       <h3>Game Setup</h3>
+      <div class="audio-row">
+        <label class="sel">Sport
+          <select id="su-sport">
+            <option value="baseball">Baseball</option>
+            <option value="football">Football</option>
+          </select>
+        </label>
+        <label class="sel">Style
+          <select id="su-style">
+            <option value="bar">Bar</option>
+          </select>
+        </label>
+      </div>
       <div class="setup-cols">
         <div class="setup-col">
           <span class="col-h">Away / Visitor</span>

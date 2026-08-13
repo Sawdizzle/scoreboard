@@ -77,6 +77,7 @@
 .lt-bar b { font: 900 40px/1 var(--disp); letter-spacing: .08em; color: #fff; }
 .lt-bar i { font: 700 16px/1 var(--disp); font-style: normal; letter-spacing: .16em; color: var(--steel); }
 .fx-lower.gem .lt-bar b { background: linear-gradient(90deg, #8fb6de, #e8b23a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.fx-lower.turn .lt-bar b { color: #ff5a4d; }
 @keyframes lower { 0% { opacity: 0; transform: translateY(140%); } 12% { opacity: 1; transform: translateY(0); } 24% { transform: translateY(-6px); } 30% { transform: translateY(0); } 85% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(40%); } }
 
 /* ---- Stolen base: dust streak ---- */

@@ -1,6 +1,7 @@
 import { supabase, db } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USER_EMAIL_DOMAIN } from './config.js';
 import * as L from './logic.js';
+import * as F from './football.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -104,8 +105,9 @@ async function commit(res) {
   const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: res.type, p_new: res.patch, p_payload: res.payload || {} });
   if (error) { game = prev; renderGame(); return alert(error.message); }
   game = data; renderGame();
-  // Auto-fire the matching stinger for scoring / strikeout actions.
-  if (res.type === 'run' || (res.type === 'walk' && res.payload?.runs)) fireAnim('run');
+  // Auto-fire the matching stinger.
+  if (res.anim) fireAnim(res.anim);
+  else if (res.type === 'run' || (res.type === 'walk' && res.payload?.runs)) fireAnim('run');
   else if (res.type === 'strikeout') fireAnim('strikeout');
 }
 
@@ -140,6 +142,35 @@ $('base-2').onclick      = () => commit(L.toggleBase(game, 'second'));
 $('base-3').onclick      = () => commit(L.toggleBase(game, 'third'));
 $('undo-btn').onclick    = doUndo;
 
+// Football buttons
+$('fb-poss-away').onclick = () => commit(F.setPossession(game, 'away'));
+$('fb-poss-home').onclick = () => commit(F.setPossession(game, 'home'));
+$('fb-down-1').onclick = () => commit(F.setDown(game, 1));
+$('fb-down-2').onclick = () => commit(F.setDown(game, 2));
+$('fb-down-3').onclick = () => commit(F.setDown(game, 3));
+$('fb-down-4').onclick = () => commit(F.setDown(game, 4));
+$('fb-dist-dn').onclick = () => commit(F.distanceDelta(game, -1));
+$('fb-dist-up').onclick = () => commit(F.distanceDelta(game, 1));
+$('fb-goal').onclick = () => commit(F.setGoal(game));
+$('fb-firstdown').onclick = () => commit(F.firstDown(game));
+$('fb-td').onclick = () => commit(F.touchdown(game));
+$('fb-fg').onclick = () => commit(F.fieldGoal(game));
+$('fb-xp').onclick = () => commit(F.extraPoint(game));
+$('fb-2pt').onclick = () => commit(F.twoPoint(game));
+$('fb-safety').onclick = () => commit(F.safety(game));
+$('fb-nextq').onclick = () => commit(F.nextQuarter(game));
+$('fb-away-dn').onclick = () => commit(F.manualScore(game, 'away', -1));
+$('fb-away-up').onclick = () => commit(F.manualScore(game, 'away', 1));
+$('fb-home-dn').onclick = () => commit(F.manualScore(game, 'home', -1));
+$('fb-home-up').onclick = () => commit(F.manualScore(game, 'home', 1));
+$('fb-to-away').onclick = () => commit(F.timeout(game, 'away'));
+$('fb-to-home').onclick = () => commit(F.timeout(game, 'home'));
+$('fb-to-reset').onclick = () => commit(F.resetTimeouts(game));
+$('fx-touchdown').onclick = () => fireAnim('touchdown');
+$('fx-fieldgoal').onclick = () => fireAnim('fieldgoal');
+$('fx-turnover').onclick = () => fireAnim('turnover');
+$('fx-bigplay').onclick = () => fireAnim('bigplay');
+
 // Moments / FX
 $('fx-homerun').onclick = () => fireAnim('homerun');
 $('fx-k').onclick       = () => fireAnim('strikeout');
@@ -165,6 +196,8 @@ const suVal = (id) => $(id).value.trim();
 $('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
 $('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
 function fillSetup() {
+  $('su-sport').value = game.sport || 'baseball';
+  $('su-style').value = game.style || 'bar';
   $('su-away-name').value = game.away_name || '';
   $('su-away-abbr').value = game.away_abbr || '';
   $('su-away-logo').value = game.away_logo_url || '';
@@ -187,7 +220,9 @@ function fillSetup() {
 $('setup-save').onclick = async () => {
   const mins = parseInt($('su-time').value, 10);
   const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
+  const sport = $('su-sport').value;
   const patch = {
+    sport, style: $('su-style').value,
     away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
     away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
     home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
@@ -201,6 +236,8 @@ $('setup-save').onclick = async () => {
   };
   // Reset the clock's remaining time if the limit changed and it isn't running.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
+  // Initialize football situation the first time a game becomes football.
+  if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
   $('setup-sheet').hidden = true;
   await writeField(patch);
 };
@@ -237,6 +274,7 @@ $('demo-btn').onclick = () => {
   $('demo-btn').textContent = demoTimer ? '■ Stop Demo' : '▶ Demo Mode';
 };
 function demoStep() {
+  if ((game.sport || 'baseball') === 'football') return demoStepFootball();
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
@@ -251,8 +289,22 @@ function demoStep() {
   return commit(L.onAdvance(game));
 }
 
+function demoStepFootball() {
+  const r = Math.random();
+  if (r < 0.14) return fireAnim(['touchdown', 'fieldgoal', 'turnover', 'bigplay'][Math.floor(Math.random() * 4)]);
+  if (r < 0.28) return commit(F.touchdown(game));
+  if (r < 0.38) return commit(F.fieldGoal(game));
+  if (r < 0.54) return commit(F.setDown(game, (F.fbState(game).down % 4) + 1));
+  if (r < 0.70) return commit(F.distanceDelta(game, Math.random() < 0.5 ? -3 : 3));
+  if (r < 0.82) return commit(F.firstDown(game));
+  if (r < 0.93) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
+  return commit(F.nextQuarter(game));
+}
+
 $('preview-fx-btn').onclick = async () => {
-  const types = ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
+  const baseball = ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
+  const football = ['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'charge'];
+  const types = (game.sport || 'baseball') === 'football' ? football : baseball;
   for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
 };
 
@@ -333,24 +385,44 @@ $('walk-confirm').onclick = () => {
 };
 
 // Render --------------------------------------------------------------------
+const ordinal = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || n + 'th');
+function showSport(sport) {
+  document.querySelectorAll('.sport-only').forEach((el) => { el.hidden = el.dataset.sport !== sport; });
+}
 function renderGame() {
   if (!game) return;
-  const b = L.safeBases(game.bases);
+  const sport = game.sport || 'baseball';
+  showSport(sport);
   $('g-away-name').textContent = game.away_name;
   $('g-home-name').textContent = game.home_name;
   $('g-away-runs').textContent = game.away_score;
   $('g-home-runs').textContent = game.home_score;
-  $('g-inning').textContent = `${game.half === 'top' ? '▲' : '▼'} ${game.inning}`;
-  $('g-count').textContent = `${game.balls} - ${game.strikes}`;
-  $('g-outs').textContent = `${game.outs} out`;
-  $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
-  $('base-1').classList.toggle('on', b.first);
-  $('base-2').classList.toggle('on', b.second);
-  $('base-3').classList.toggle('on', b.third);
+  if (sport === 'football') renderFootballControl();
+  else renderBaseballControl();
   renderRally();
   renderAudio();
   renderLook();
   renderClock();
+}
+function renderBaseballControl() {
+  const b = L.safeBases(game.bases);
+  $('sc-mid').innerHTML = `<span class="sc-inning">${game.half === 'top' ? '▲' : '▼'} ${game.inning}</span>` +
+    `<span class="sc-count">${game.balls} - ${game.strikes}</span><span class="sc-outs">${game.outs} out</span>`;
+  $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
+  $('base-1').classList.toggle('on', b.first);
+  $('base-2').classList.toggle('on', b.second);
+  $('base-3').classList.toggle('on', b.third);
+}
+function renderFootballControl() {
+  const st = F.fbState(game);
+  const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
+  const poss = st.possession === 'away' ? '🏈 ◄' : st.possession === 'home' ? '► 🏈' : '—';
+  $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
+  $('g-batting').textContent = st.possession ? `Ball: ${st.possession === 'home' ? game.home_name : game.away_name}` : 'Possession: —';
+  $('fb-dist-val').textContent = st.distance === 'goal' ? 'Gl' : st.distance;
+  $('fb-poss-away').classList.toggle('on', st.possession === 'away');
+  $('fb-poss-home').classList.toggle('on', st.possession === 'home');
+  for (const d of [1, 2, 3, 4]) $('fb-down-' + d).classList.toggle('on', st.down === d);
 }
 
 $('copy-url-btn').onclick = async () => {

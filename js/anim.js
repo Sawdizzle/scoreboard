@@ -43,7 +43,19 @@ export function playAnimation(anim) {
     case 'webgem':     return lowerThird('WEB GEM', 'WHAT A PLAY', 'gem');
     case 'stolenbase': return stolen();
     case 'walkoff':    return walkoff();
+    case 'touchdown':  return touchdown();
+    case 'fieldgoal':  return lowerThird('FIELD GOAL', '3 POINTS');
+    case 'turnover':   return lowerThird('TURNOVER', 'CHANGE OF POSSESSION', 'turn');
+    case 'bigplay':    return lowerThird('BIG PLAY', '');
   }
+}
+
+function touchdown() {
+  const el = mount('fx-hr', `
+    <div class="hr-rays"></div>
+    <div class="hr-plate"><span class="hr-l1">TOUCH</span><span class="hr-l2">DOWN</span></div>
+    <div class="hr-particles"></div>`, 4800);
+  burst(el.querySelector('.hr-particles'), 30, 'chalk', 0.4);
 }
 
 function runFlash() {

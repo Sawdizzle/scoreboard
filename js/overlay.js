@@ -22,13 +22,10 @@ const el = {
 let last = null; // keep last-known state; never blank on disconnect
 let lastAnimNonce = 0; // only play strictly-newer triggers (reload/undo never replay)
 
-function render(s) {
-  if (!s) return;
-  last = s;
-  el.awayAbbr.textContent = s.away_abbr || s.away_name;
-  el.homeAbbr.textContent = s.home_abbr || s.home_name;
-  el.awayRuns.textContent = s.away_score;
-  el.homeRuns.textContent = s.home_score;
+function showSituation(sport) {
+  document.querySelectorAll('.situation').forEach((n) => { n.hidden = !n.classList.contains('sit-' + sport); });
+}
+function renderBaseball(s) {
   el.inning.textContent = `${s.half === 'top' ? '▲' : '▼'}${s.inning}`;
   el.balls.textContent = s.balls;
   el.strikes.textContent = s.strikes;
@@ -37,15 +34,38 @@ function render(s) {
   document.getElementById('b1').classList.toggle('on', b.first);
   document.getElementById('b2').classList.toggle('on', b.second);
   document.getElementById('b3').classList.toggle('on', b.third);
+}
+function renderFootball(s) {
+  const st = s.state || {};
+  document.getElementById('fb-quarter').textContent = 'Q' + (st.quarter || 1);
+  const down = st.down || 1, dist = st.distance;
+  const ord = { 1: '1ST', 2: '2ND', 3: '3RD', 4: '4TH' }[down] || down + 'TH';
+  document.getElementById('fb-dd').textContent = dist === 'goal' ? `${ord} & GOAL` : `${ord} & ${dist == null ? 10 : dist}`;
+  const poss = st.possession;
+  document.getElementById('fb-poss').textContent = poss === 'away' ? `🏈 ${s.away_abbr || ''}` : poss === 'home' ? `${s.home_abbr || ''} 🏈` : '';
+}
 
+function render(s) {
+  if (!s) return;
+  last = s;
+  const sport = s.sport || 'baseball';
+  el.awayAbbr.textContent = s.away_abbr || s.away_name;
+  el.homeAbbr.textContent = s.home_abbr || s.home_name;
+  el.awayRuns.textContent = s.away_score;
+  el.homeRuns.textContent = s.home_score;
   setLogo('away-logo', s.away_logo_url);
   setLogo('home-logo', s.home_logo_url);
+
+  showSituation(sport);
+  if (sport === 'football') renderFootball(s);
+  else renderBaseball(s);
+
   updateClock();
   updateDetail(s);
   el.bug.dataset.ready = '1';
 
-  // Sport, theme, position, and scale (live). Sport drives per-sport layout later.
-  document.body.dataset.sport = s.sport || 'baseball';
+  // Sport, theme, position, and scale (live).
+  document.body.dataset.sport = sport;
   document.body.dataset.style = s.style || 'bar';
   document.body.dataset.theme = s.theme || 'nightgame';
   document.body.dataset.pos = s.scorebug_position || 'bottom-bar';
@@ -90,20 +110,35 @@ function remainingSeconds(s) {
   return s.clock_remaining_seconds ?? s.time_limit_seconds;
 }
 function updateClock() {
-  const s = last, el2 = document.getElementById('clock');
-  if (!s || !s.show_clock || !s.time_limit_seconds) { el2.hidden = true; return; }
+  const s = last;
+  if (!s) return;
+  const sport = s.sport || 'baseball';
   const rem = remainingSeconds(s);
-  el2.hidden = false;
-  el2.textContent = fmtClock(rem);
-  el2.classList.toggle('low', rem <= 60 && rem > 0);
-  el2.classList.toggle('zero', rem <= 0);
+  // Football/soccer clock is core (shows whenever a length is set); baseball's is
+  // an optional time limit gated by show_clock.
+  const showable = rem !== null && (sport !== 'baseball' || s.show_clock);
+  document.querySelectorAll('.js-clock').forEach((c) => {
+    c.hidden = !showable;
+    if (!showable) return;
+    c.textContent = fmtClock(rem);
+    c.classList.toggle('low', rem <= 60 && rem > 0);
+    c.classList.toggle('zero', rem <= 0);
+  });
 }
 // Local 4Hz tick so the countdown is smooth without hammering the DB.
 setInterval(updateClock, 250);
 
+function toDots(n) { let out = ''; for (let i = 0; i < 3; i++) out += i < (n | 0) ? '●' : '○'; return out; }
 function updateDetail(s) {
   const el2 = document.getElementById('detail');
   const parts = [];
+  if ((s.sport || 'baseball') === 'football') {
+    const st = s.state || {};
+    parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')} TO</span>${toDots(st.away_timeouts ?? 3)}</span>`);
+    parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')} TO</span>${toDots(st.home_timeouts ?? 3)}</span>`);
+    el2.innerHTML = parts.join(''); el2.hidden = false;
+    return;
+  }
   if (s.show_batter && (s.batter_name || s.batter_number)) {
     const num = s.batter_number ? `#${s.batter_number} ` : '';
     parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(s.batter_name || '')}</span>`);

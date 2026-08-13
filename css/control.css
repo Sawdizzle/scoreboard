@@ -104,6 +104,12 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .slider b { font-family: var(--num); font-size: 13px; color: var(--chalk); min-width: 3.5ch; text-align: right; }
 .look-pad { margin-top: 16px; }
 
+/* Football control */
+.fb-dist { align-self: center; font-family: var(--num); font-size: 20px; min-width: 2.5ch; text-align: center; }
+.fb-score { margin-top: 8px; }
+.shared-fx { display: flex; gap: 12px; margin-top: 16px; }
+.shared-fx .fxbtn { flex: 1; }
+
 /* Clock row */
 .clock-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .clock-disp { font-family: var(--num); font-size: 26px; font-weight: 700; min-width: 4ch; }

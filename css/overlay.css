@@ -48,6 +48,10 @@ body[data-pos="top-left"]   #bug-wrap { bottom: auto; top: 32px; left: 44px; ali
 .team .runs { font-family: var(--num); font-size: 27px; font-weight: 700; min-width: 1.5ch; text-align: center; }
 
 .situation { display: flex; align-items: center; gap: 18px; padding: 11px 20px; background: var(--panel-2); border-left: 1px solid var(--line); }
+.situation[hidden] { display: none; }
+.fb-q { color: var(--steel); font-weight: 800; font-size: 20px; }
+.fb-dd { font-family: var(--disp); font-weight: 700; font-size: 18px; letter-spacing: 0.02em; }
+.fb-poss { font-weight: 700; color: var(--accent); font-size: 17px; }
 .inning { color: var(--steel); font-weight: 800; font-size: 20px; }
 .count { font-family: var(--num); font-size: 21px; font-weight: 700; }
 .count em { opacity: 0.55; font-style: normal; padding: 0 3px; }
