@@ -41,8 +41,16 @@
     <header class="topbar">
       <button id="back-btn" class="ghost small">‹ Games</button>
       <button id="undo-btn" class="undo">↶ Undo</button>
+      <button id="setup-btn" class="ghost small">⚙ Setup</button>
       <span id="g-batting" class="tag">Batting: —</span>
     </header>
+
+    <div class="clock-row" id="clock-row" hidden>
+      <span id="clock-display" class="clock-disp">--:--</span>
+      <button id="clock-start" class="ghost small">▶ Start</button>
+      <button id="clock-pause" class="ghost small">⏸ Pause</button>
+      <button id="clock-reset" class="ghost small">↺ Reset</button>
+    </div>
 
     <div class="scorecard">
       <div class="sc-team"><span id="g-away-name">Visitor</span><b id="g-away-runs">0</b></div>
@@ -133,6 +141,11 @@
       <p class="hint">Sound plays on the overlay (so OBS captures it). Open the overlay tab and click it once to enable audio when testing in a browser.</p>
     </div>
 
+    <div class="practice-row">
+      <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
+      <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
+    </div>
+
     <div class="urlbar">
       <input id="overlay-url" readonly />
       <button id="copy-url-btn" class="ghost small">Copy</button>
@@ -159,6 +172,56 @@
       <div class="sheet-actions">
         <button id="walk-cancel" class="ghost">Cancel</button>
         <button id="walk-confirm" class="primary">Confirm Walk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP SHEET -->
+  <div id="setup-sheet" class="sheet" hidden>
+    <div class="sheet-card scroll">
+      <h3>Game Setup</h3>
+      <div class="setup-cols">
+        <div class="setup-col">
+          <span class="col-h">Away / Visitor</span>
+          <input id="su-away-name" placeholder="Team name" />
+          <input id="su-away-abbr" placeholder="ABBR" maxlength="6" />
+          <input id="su-away-logo" placeholder="Logo URL (optional)" />
+          <label class="colorlab">Color <input id="su-away-color" type="color" /></label>
+        </div>
+        <div class="setup-col">
+          <span class="col-h">Home</span>
+          <input id="su-home-name" placeholder="Team name" />
+          <input id="su-home-abbr" placeholder="ABBR" maxlength="6" />
+          <input id="su-home-logo" placeholder="Logo URL (optional)" />
+          <label class="colorlab">Color <input id="su-home-color" type="color" /></label>
+        </div>
+      </div>
+
+      <label class="fld">Time limit — minutes (0 = none)<input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
+
+      <span class="col-h">Show on overlay</span>
+      <div class="toggles">
+        <label><input type="checkbox" id="su-show-clock" /> Clock</label>
+        <label><input type="checkbox" id="su-show-batter" /> Batter</label>
+        <label><input type="checkbox" id="su-show-pitcher" /> Pitcher</label>
+        <label><input type="checkbox" id="su-show-pitchcount" /> Pitch count</label>
+        <label><input type="checkbox" id="su-show-runrule" /> Run-rule</label>
+      </div>
+
+      <div class="setup-cols">
+        <div class="setup-col">
+          <input id="su-batter-name" placeholder="Batter name" />
+          <input id="su-batter-num" placeholder="Batter #" />
+        </div>
+        <div class="setup-col">
+          <input id="su-pitcher-name" placeholder="Pitcher name" />
+          <input id="su-pitch-count" type="number" placeholder="Pitch count" inputmode="numeric" />
+        </div>
+      </div>
+
+      <div class="sheet-actions">
+        <button id="setup-cancel" class="ghost">Close</button>
+        <button id="setup-save" class="primary">Save</button>
       </div>
     </div>
   </div>

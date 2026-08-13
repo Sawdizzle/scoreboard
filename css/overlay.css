@@ -21,7 +21,6 @@ body.debug {
 }
 
 .bug {
-  position: fixed;
   display: flex; align-items: stretch;
   font-family: var(--disp); color: var(--chalk);
   background: var(--panel);
@@ -32,14 +31,17 @@ body.debug {
 }
 .bug[data-ready="1"] { opacity: 1; }
 
-/* Position + scale. Each rule sets BOTH edges (one to auto) so switching position
-   never leaves a stale top/bottom that would stretch the fixed element. */
-.bug { top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
-body[data-pos="bottom-bar"] .bug { top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
-body[data-pos="top-bar"]    .bug { bottom: auto; top: 32px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
-body[data-pos="top-left"]   .bug { bottom: auto; top: 32px; left: 44px; transform: scale(var(--scale)); transform-origin: top left; }
+/* The wrapper is the positioned element (bug + detail line flow inside it).
+   Each rule sets BOTH edges (one to auto) so switching position never leaves a
+   stale top/bottom. transform-origin matches the anchor so scaling looks right. */
+#bug-wrap { position: fixed; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="bottom-bar"] #bug-wrap { top: auto; bottom: 46px; left: 50%; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="top-bar"]    #bug-wrap { bottom: auto; top: 32px; left: 50%; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
+body[data-pos="top-left"]   #bug-wrap { bottom: auto; top: 32px; left: 44px; align-items: flex-start; transform: scale(var(--scale)); transform-origin: top left; }
 
-.team { display: flex; align-items: center; gap: 14px; padding: 11px 18px; }
+.team { display: flex; align-items: center; gap: 12px; padding: 11px 18px; }
+.team .logo { height: 30px; width: 30px; object-fit: contain; }
 .team.away { background: linear-gradient(180deg, rgba(143, 182, 222, 0.10), transparent); }
 .team.home { background: linear-gradient(180deg, rgba(232, 178, 58, 0.10), transparent); border-left: 1px solid var(--line); }
 .team .abbr { font-weight: 800; letter-spacing: 0.04em; font-size: 23px; }
@@ -56,6 +58,18 @@ body[data-pos="top-left"]   .bug { bottom: auto; top: 32px; left: 44px; transfor
 .outs { display: inline-flex; gap: 7px; }
 .outs .dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--chalk); opacity: 0.45; transition: all 0.15s ease; }
 .outs .dot.on { background: var(--accent); border-color: var(--accent); opacity: 1; }
+
+.clock { font-family: var(--num); font-size: 20px; font-weight: 700; letter-spacing: 0.03em; padding-left: 4px; }
+.clock.low { color: var(--accent); }
+.clock.zero { color: #ff5a4d; animation: clock-blink 1s steps(2, start) infinite; }
+@keyframes clock-blink { 50% { opacity: 0.35; } }
+
+/* Detail line under the bug: batter / pitcher / pitch count / run-rule */
+.detail { display: flex; gap: 14px; align-items: center; font-family: var(--disp); color: var(--chalk);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px);
+  padding: 5px 14px; font-size: 15px; }
+.detail .k { color: var(--steel); font-weight: 700; margin-right: 5px; }
+.detail .runrule { color: #ff5a4d; font-weight: 800; letter-spacing: 0.06em; }
 
 .err { padding: 12px 18px; color: #fff; background: rgba(190, 40, 40, 0.85); border-radius: 8px; font-family: var(--disp); }
 

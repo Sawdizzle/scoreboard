@@ -160,6 +160,102 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- Game setup sheet -----------------------------------------------------
+const suVal = (id) => $(id).value.trim();
+$('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
+$('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
+function fillSetup() {
+  $('su-away-name').value = game.away_name || '';
+  $('su-away-abbr').value = game.away_abbr || '';
+  $('su-away-logo').value = game.away_logo_url || '';
+  $('su-away-color').value = game.away_color || '#7a8794';
+  $('su-home-name').value = game.home_name || '';
+  $('su-home-abbr').value = game.home_abbr || '';
+  $('su-home-logo').value = game.home_logo_url || '';
+  $('su-home-color').value = game.home_color || '#1b2a41';
+  $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
+  $('su-show-clock').checked = !!game.show_clock;
+  $('su-show-batter').checked = !!game.show_batter;
+  $('su-show-pitcher').checked = !!game.show_pitcher;
+  $('su-show-pitchcount').checked = !!game.show_pitchcount;
+  $('su-show-runrule').checked = !!game.show_runrule;
+  $('su-batter-name').value = game.batter_name || '';
+  $('su-batter-num').value = game.batter_number || '';
+  $('su-pitcher-name').value = game.pitcher_name || '';
+  $('su-pitch-count').value = game.pitch_count || '';
+}
+$('setup-save').onclick = async () => {
+  const mins = parseInt($('su-time').value, 10);
+  const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
+  const patch = {
+    away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
+    away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
+    home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
+    home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
+    time_limit_seconds,
+    show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
+    show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
+    show_runrule: $('su-show-runrule').checked,
+    batter_name: suVal('su-batter-name') || null, batter_number: suVal('su-batter-num') || null,
+    pitcher_name: suVal('su-pitcher-name') || null, pitch_count: parseInt($('su-pitch-count').value, 10) || 0,
+  };
+  // Reset the clock's remaining time if the limit changed and it isn't running.
+  if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
+  $('setup-sheet').hidden = true;
+  await writeField(patch);
+};
+
+// ---- Time-limit clock -----------------------------------------------------
+function clockRemaining(g) {
+  if (!g || !g.time_limit_seconds) return 0;
+  if (g.clock_running && g.clock_ends_at) return (new Date(g.clock_ends_at).getTime() - Date.now()) / 1000;
+  return g.clock_remaining_seconds ?? g.time_limit_seconds;
+}
+$('clock-start').onclick = () => {
+  if (!game.time_limit_seconds) return;
+  const rem = game.clock_remaining_seconds ?? game.time_limit_seconds;
+  writeField({ clock_running: true, clock_ends_at: new Date(Date.now() + rem * 1000).toISOString(), clock_remaining_seconds: rem });
+};
+$('clock-pause').onclick = () => writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: Math.max(0, Math.round(clockRemaining(game))) });
+$('clock-reset').onclick = () => writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds });
+function renderClock() {
+  const row = $('clock-row');
+  if (!game || !game.time_limit_seconds) { row.hidden = true; return; }
+  row.hidden = false;
+  const rem = Math.max(0, Math.round(clockRemaining(game)));
+  $('clock-display').textContent = Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0');
+  $('clock-display').classList.toggle('low', rem <= 60);
+}
+setInterval(() => { if (game) renderClock(); }, 250);
+
+// ---- Practice / demo mode -------------------------------------------------
+let demoTimer = null;
+$('demo-btn').onclick = () => {
+  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+  else demoTimer = setInterval(demoStep, 1800);
+  $('demo-btn').classList.toggle('on', !!demoTimer);
+  $('demo-btn').textContent = demoTimer ? '■ Stop Demo' : '▶ Demo Mode';
+};
+function demoStep() {
+  const r = Math.random();
+  if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
+  if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
+    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }, payload: { runs: w.runs } }); }
+    else commit({ type: 'ball', patch: { balls: (game.balls | 0) + 1 } });
+    return;
+  }
+  if (r < 0.54) return commit(L.onStrike(game));
+  if (r < 0.66) return commit(L.onFoul(game));
+  if (r < 0.80) return commit(L.onOut(game));
+  if (r < 0.90) return commit(L.onRun(game));
+  return commit(L.onAdvance(game));
+}
+
+$('preview-fx-btn').onclick = async () => {
+  const types = ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
+  for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
+};
+
 // ---- Look settings (theme / position / scale)
 async function writeField(patch) {
   game = { ...game, ...patch };
@@ -254,6 +350,7 @@ function renderGame() {
   renderRally();
   renderAudio();
   renderLook();
+  renderClock();
 }
 
 $('copy-url-btn').onclick = async () => {

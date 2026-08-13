@@ -37,6 +37,11 @@ function render(s) {
   document.getElementById('b1').classList.toggle('on', b.first);
   document.getElementById('b2').classList.toggle('on', b.second);
   document.getElementById('b3').classList.toggle('on', b.third);
+
+  setLogo('away-logo', s.away_logo_url);
+  setLogo('home-logo', s.home_logo_url);
+  updateClock();
+  updateDetail(s);
   el.bug.dataset.ready = '1';
 
   // Theme, position, and scale (live).
@@ -67,9 +72,53 @@ function refreshSoundHint() { const h = document.getElementById('sound-hint'); i
 window.setTimeout(refreshSoundHint, 600);
 document.getElementById('sound-hint')?.addEventListener('click', () => { Promise.resolve(audio.resume()).then(() => setTimeout(refreshSoundHint, 60)); });
 
+function setLogo(id, url) {
+  const img = document.getElementById(id);
+  if (url) { if (img.getAttribute('src') !== url) img.src = url; img.hidden = false; }
+  else { img.hidden = true; img.removeAttribute('src'); }
+}
+
+function fmtClock(sec) {
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+function remainingSeconds(s) {
+  if (!s || !s.time_limit_seconds) return null;
+  if (s.clock_running && s.clock_ends_at) return (new Date(s.clock_ends_at).getTime() - Date.now()) / 1000;
+  return s.clock_remaining_seconds ?? s.time_limit_seconds;
+}
+function updateClock() {
+  const s = last, el2 = document.getElementById('clock');
+  if (!s || !s.show_clock || !s.time_limit_seconds) { el2.hidden = true; return; }
+  const rem = remainingSeconds(s);
+  el2.hidden = false;
+  el2.textContent = fmtClock(rem);
+  el2.classList.toggle('low', rem <= 60 && rem > 0);
+  el2.classList.toggle('zero', rem <= 0);
+}
+// Local 4Hz tick so the countdown is smooth without hammering the DB.
+setInterval(updateClock, 250);
+
+function updateDetail(s) {
+  const el2 = document.getElementById('detail');
+  const parts = [];
+  if (s.show_batter && (s.batter_name || s.batter_number)) {
+    const num = s.batter_number ? `#${s.batter_number} ` : '';
+    parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(s.batter_name || '')}</span>`);
+  }
+  if (s.show_pitcher && s.pitcher_name) parts.push(`<span><span class="k">P</span>${escapeHtml(s.pitcher_name)}</span>`);
+  if (s.show_pitchcount) parts.push(`<span><span class="k">PC</span>${s.pitch_count | 0}</span>`);
+  if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_runs | 0) - (s.away_runs | 0)) >= s.run_rule_diff) {
+    parts.push('<span class="runrule">RUN RULE</span>');
+  }
+  if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; }
+  else el2.hidden = true;
+}
+const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 async function fetchState() {
   if (!gameId) return;
-  const { data, error } = await db.from('games').select('*').eq('id', gameId).single();
+  const { data, error } = await db.from('games').select('*').eq('id', gameId).maybeSingle();
   if (!error && data) render(data);
 }
 
