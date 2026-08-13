@@ -82,6 +82,7 @@ function render(s) {
   document.body.dataset.theme = s.theme || 'nightgame';
   document.body.dataset.pos = s.scorebug_position || 'bottom-bar';
   document.body.style.setProperty('--scale', s.scorebug_scale || 1);
+  applyLook(s);
 
   // Ambient rally state (persistent) + audio settings/pack.
   setRally(s.rally_mode);
@@ -105,6 +106,26 @@ document.addEventListener('pointerdown', () => { audio.resume(); setTimeout(refr
 function refreshSoundHint() { const h = document.getElementById('sound-hint'); if (h) h.hidden = !audio.isSuspended(); }
 window.setTimeout(refreshSoundHint, 600);
 document.getElementById('sound-hint')?.addEventListener('click', () => { Promise.resolve(audio.resume()).then(() => setTimeout(refreshSoundHint, 60)); });
+
+const LOOK_FONTS = {
+  condensed: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
+  clean: '"Helvetica Neue", Arial, system-ui, sans-serif',
+  mono: 'ui-monospace, Menlo, Consolas, monospace',
+  serif: '"Times New Roman", Georgia, serif',
+  system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+};
+function setVar(el, name, val) { if (val) el.style.setProperty(name, val); else el.style.removeProperty(name); }
+function applyLook(s) {
+  const L = s.look || {};
+  const b = document.body;
+  setVar(b, '--accent', L.accent);
+  setVar(b, '--disp', L.font ? LOOK_FONTS[L.font] : '');
+  setVar(b, '--radius', (L.radius != null && L.radius !== '') ? parseInt(L.radius, 10) + 'px' : '');
+  b.classList.toggle('no-logos', !!L.hideLogos);
+  b.classList.toggle('no-detail', !!L.hideDetail);
+  b.classList.toggle('no-shadow', !!L.noShadow);
+  b.classList.toggle('uppercase', !!L.uppercase);
+}
 
 function setLogo(id, url) {
   const img = document.getElementById(id);

@@ -376,6 +376,40 @@ function renderLook() {
   const sc = game.scorebug_scale || 1;
   $('scale-sel').value = sc;
   $('scale-val').textContent = (+sc).toFixed(2) + '×';
+  renderCustomize();
+}
+
+// ---- Customize (freeform `look` overrides on top of the theme) ------------
+const lookOf = () => game.look || {};
+async function writeLook(patch) {
+  const look = { ...lookOf(), ...patch };
+  for (const k of Object.keys(look)) if (look[k] === '' || look[k] === false || look[k] == null) delete look[k];
+  game = { ...game, look };
+  renderCustomize();
+  const { error } = await db.from('games').update({ look }).eq('id', game.id);
+  if (error) console.warn('look write failed', error.message);
+}
+$('cust-accent').addEventListener('change', (e) => writeLook({ accent: e.target.value }));
+$('cust-font').addEventListener('change', (e) => writeLook({ font: e.target.value }));
+$('cust-radius').addEventListener('change', (e) => writeLook({ radius: e.target.value }));
+$('cust-logos').addEventListener('change', (e) => writeLook({ hideLogos: e.target.checked }));
+$('cust-detail').addEventListener('change', (e) => writeLook({ hideDetail: e.target.checked }));
+$('cust-shadow').addEventListener('change', (e) => writeLook({ noShadow: e.target.checked }));
+$('cust-uppercase').addEventListener('change', (e) => writeLook({ uppercase: e.target.checked }));
+$('cust-reset').onclick = async () => {
+  game = { ...game, look: {} };
+  renderCustomize();
+  await db.from('games').update({ look: {} }).eq('id', game.id);
+};
+function renderCustomize() {
+  const L = lookOf();
+  $('cust-accent').value = L.accent || '#e8b23a';
+  $('cust-font').value = L.font || '';
+  $('cust-radius').value = L.radius != null ? String(L.radius) : '';
+  $('cust-logos').checked = !!L.hideLogos;
+  $('cust-detail').checked = !!L.hideDetail;
+  $('cust-shadow').checked = !!L.noShadow;
+  $('cust-uppercase').checked = !!L.uppercase;
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)

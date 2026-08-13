@@ -30,3 +30,18 @@ body[data-style="bug"] .situation {
 
 /* Detail line (batter / timeouts / cards) hugs the bug width. */
 body[data-style="bug"] .detail { align-self: stretch; justify-content: center; }
+
+/* 'minimal' — slimmer, tighter chrome, softer corners. */
+body[data-style="minimal"] .team { padding: 7px 13px; gap: 10px; }
+body[data-style="minimal"] .team .abbr { font-size: 18px; }
+body[data-style="minimal"] .team .runs { font-size: 20px; }
+body[data-style="minimal"] .team .logo { height: 22px; width: 22px; }
+body[data-style="minimal"] .situation { padding: 7px 14px; gap: 12px; }
+body[data-style="minimal"] .bug { border-radius: calc(var(--radius) + 6px); }
+
+/* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
+body.no-logos .team .logo { display: none !important; }
+body.no-detail .detail { display: none !important; }
+body.no-shadow .bug { box-shadow: none !important; }
+body.uppercase .team .abbr, body.uppercase .detail, body.uppercase .count,
+body.uppercase .fb-dd, body.uppercase .fb-poss, body.uppercase .fb-q { text-transform: uppercase; }

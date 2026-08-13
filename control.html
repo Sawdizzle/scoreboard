@@ -203,6 +203,10 @@
             <option value="espn">Broadcast Minimal</option>
             <option value="retro">Retro 8-bit</option>
             <option value="green">Classic Green</option>
+            <option value="neon">Neon</option>
+            <option value="sunset">Sunset</option>
+            <option value="ice">Ice (light)</option>
+            <option value="mono">Newsprint</option>
           </select>
         </label>
         <label class="sel">Position
@@ -214,6 +218,38 @@
         </label>
       </div>
       <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
+    </div>
+
+    <div class="look-pad">
+      <span class="bases-label">Customize</span>
+      <div class="audio-row">
+        <label class="sel">Accent<input id="cust-accent" type="color" /></label>
+        <label class="sel">Font
+          <select id="cust-font">
+            <option value="">Theme default</option>
+            <option value="condensed">Condensed</option>
+            <option value="clean">Clean sans</option>
+            <option value="mono">Monospace</option>
+            <option value="serif">Serif</option>
+            <option value="system">System</option>
+          </select>
+        </label>
+        <label class="sel">Corners
+          <select id="cust-radius">
+            <option value="">Theme</option>
+            <option value="16">Round</option>
+            <option value="8">Soft</option>
+            <option value="0">Sharp</option>
+          </select>
+        </label>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
+        <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
+        <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
+        <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
+      </div>
+      <button id="cust-reset" class="fxbtn">Reset customizations</button>
     </div>
 
     <div class="audio-pad">
@@ -285,6 +321,7 @@
           <select id="su-style">
             <option value="bar">Bar (wide strip)</option>
             <option value="bug">Bug (stacked)</option>
+            <option value="minimal">Minimal (slim)</option>
           </select>
         </label>
       </div>
