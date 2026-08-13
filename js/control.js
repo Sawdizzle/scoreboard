@@ -18,7 +18,7 @@ let channel = null;
 async function refreshSession() {
   const { data } = await supabase.auth.getSession();
   user = data.session?.user ?? null;
-  if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); }
+  if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); await loadPresets(); }
   else show('auth');
 }
 const setAuthMsg = (m) => { $('auth-msg').textContent = m; };
@@ -188,6 +188,48 @@ $('sc-away-up').onclick = () => commit(S.manualScore(game, 'away', 1));
 $('sc-home-dn').onclick = () => commit(S.manualScore(game, 'home', -1));
 $('sc-home-up').onclick = () => commit(S.manualScore(game, 'home', 1));
 $('fx-goal').onclick = () => fireAnim('goal');
+
+// Look presets (per-user saved bundles of presentation settings)
+async function loadPresets() {
+  if (!user) return;
+  const { data, error } = await db.from('presets').select('id,name,settings').eq('owner_id', user.id).order('name');
+  const sel = $('preset-sel');
+  sel.innerHTML = '<option value="">— saved looks —</option>';
+  if (error) return;
+  for (const p of data || []) {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name; o.dataset.settings = JSON.stringify(p.settings || {});
+    sel.appendChild(o);
+  }
+}
+const currentLookBundle = () => ({
+  theme: game.theme, style: game.style, scorebug_position: game.scorebug_position,
+  scorebug_scale: game.scorebug_scale, sound_pack: game.sound_pack, look: game.look || {},
+});
+$('preset-save').onclick = async () => {
+  const name = $('preset-name').value.trim();
+  if (!name) return alert('Name the preset first.');
+  const { error } = await db.from('presets').insert({ name, settings: currentLookBundle() });
+  if (error) return alert(error.message);
+  $('preset-name').value = '';
+  await loadPresets();
+};
+$('preset-apply').onclick = async () => {
+  const opt = $('preset-sel').selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const s = JSON.parse(opt.dataset.settings || '{}');
+  await writeField({
+    theme: s.theme || 'nightgame', style: s.style || 'bar',
+    scorebug_position: s.scorebug_position || 'bottom-bar', scorebug_scale: s.scorebug_scale || 1,
+    sound_pack: s.sound_pack || 'bigleague', look: s.look || {},
+  });
+};
+$('preset-del').onclick = async () => {
+  const opt = $('preset-sel').selectedOptions[0];
+  if (!opt || !opt.value) return;
+  await db.from('presets').delete().eq('id', opt.value);
+  await loadPresets();
+};
 
 // Broadcast cards (persistent until cleared)
 async function showCard(type) {
