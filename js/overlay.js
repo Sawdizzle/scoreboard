@@ -45,6 +45,17 @@ function renderFootball(s) {
   document.getElementById('fb-poss').textContent = poss === 'away' ? `🏈 ${s.away_abbr || ''}` : poss === 'home' ? `${s.home_abbr || ''} 🏈` : '';
 }
 
+function ordinalHalf(h) { return h === 2 ? '2nd' : h === 1 ? '1st' : String(h); }
+function soccerElapsed(s) {
+  const c = (s.state && s.state.clock) || {};
+  return c.running && c.since ? (c.base || 0) + (Date.now() - new Date(c.since).getTime()) / 1000 : (c.base || 0);
+}
+function renderSoccer(s) {
+  const st = s.state || {};
+  document.getElementById('sc-half').textContent = ordinalHalf(st.half || 1);
+  document.getElementById('sc-stoppage').textContent = st.stoppage ? `+${st.stoppage}` : '';
+}
+
 function render(s) {
   if (!s) return;
   last = s;
@@ -58,6 +69,7 @@ function render(s) {
 
   showSituation(sport);
   if (sport === 'football') renderFootball(s);
+  else if (sport === 'soccer') renderSoccer(s);
   else renderBaseball(s);
 
   updateClock();
@@ -113,6 +125,11 @@ function updateClock() {
   const s = last;
   if (!s) return;
   const sport = s.sport || 'baseball';
+  if (sport === 'soccer') {
+    const e = fmtClock(soccerElapsed(s));
+    document.querySelectorAll('.js-clock').forEach((c) => { c.hidden = false; c.textContent = e; c.classList.remove('low', 'zero'); });
+    return;
+  }
   const rem = remainingSeconds(s);
   // Football/soccer clock is core (shows whenever a length is set); baseball's is
   // an optional time limit gated by show_clock.
@@ -132,11 +149,21 @@ function toDots(n) { let out = ''; for (let i = 0; i < 3; i++) out += i < (n | 0
 function updateDetail(s) {
   const el2 = document.getElementById('detail');
   const parts = [];
-  if ((s.sport || 'baseball') === 'football') {
+  const sport = s.sport || 'baseball';
+  if (sport === 'football') {
     const st = s.state || {};
     parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')} TO</span>${toDots(st.away_timeouts ?? 3)}</span>`);
     parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')} TO</span>${toDots(st.home_timeouts ?? 3)}</span>`);
     el2.innerHTML = parts.join(''); el2.hidden = false;
+    return;
+  }
+  if (sport === 'soccer') {
+    const c = (s.state && s.state.cards) || { home: {}, away: {} };
+    const cardStr = (t) => `${'🟨'.repeat(c[t]?.y || 0)}${'🟥'.repeat(c[t]?.r || 0)}` || '';
+    const a = cardStr('away'), h = cardStr('home');
+    if (a) parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')}</span>${a}</span>`);
+    if (h) parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')}</span>${h}</span>`);
+    if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; } else el2.hidden = true;
     return;
   }
   if (s.show_batter && (s.batter_name || s.batter_number)) {

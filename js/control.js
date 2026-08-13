@@ -2,6 +2,7 @@ import { supabase, db } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USER_EMAIL_DOMAIN } from './config.js';
 import * as L from './logic.js';
 import * as F from './football.js';
+import * as S from './soccer.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -171,6 +172,23 @@ $('fx-fieldgoal').onclick = () => fireAnim('fieldgoal');
 $('fx-turnover').onclick = () => fireAnim('turnover');
 $('fx-bigplay').onclick = () => fireAnim('bigplay');
 
+// Soccer buttons
+$('sc-goal-away').onclick = () => commit(S.goal(game, 'away'));
+$('sc-goal-home').onclick = () => commit(S.goal(game, 'home'));
+$('sc-half-1').onclick = () => commit(S.setHalf(game, 1));
+$('sc-half-2').onclick = () => commit(S.setHalf(game, 2));
+$('sc-stop-dn').onclick = () => commit(S.stoppageDelta(game, -1));
+$('sc-stop-up').onclick = () => commit(S.stoppageDelta(game, 1));
+$('sc-yc-away').onclick = () => commit(S.card(game, 'away', 'y'));
+$('sc-rc-away').onclick = () => commit(S.card(game, 'away', 'r'));
+$('sc-yc-home').onclick = () => commit(S.card(game, 'home', 'y'));
+$('sc-rc-home').onclick = () => commit(S.card(game, 'home', 'r'));
+$('sc-away-dn').onclick = () => commit(S.manualScore(game, 'away', -1));
+$('sc-away-up').onclick = () => commit(S.manualScore(game, 'away', 1));
+$('sc-home-dn').onclick = () => commit(S.manualScore(game, 'home', -1));
+$('sc-home-up').onclick = () => commit(S.manualScore(game, 'home', 1));
+$('fx-goal').onclick = () => fireAnim('goal');
+
 // Moments / FX
 $('fx-homerun').onclick = () => fireAnim('homerun');
 $('fx-k').onclick       = () => fireAnim('strikeout');
@@ -236,8 +254,9 @@ $('setup-save').onclick = async () => {
   };
   // Reset the clock's remaining time if the limit changed and it isn't running.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
-  // Initialize football situation the first time a game becomes football.
+  // Initialize sport-specific situation the first time a game switches sport.
   if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
+  if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
   $('setup-sheet').hidden = true;
   await writeField(patch);
 };
@@ -249,14 +268,30 @@ function clockRemaining(g) {
   return g.clock_remaining_seconds ?? g.time_limit_seconds;
 }
 $('clock-start').onclick = () => {
+  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockStart(game, new Date().toISOString()));
   if (!game.time_limit_seconds) return;
   const rem = game.clock_remaining_seconds ?? game.time_limit_seconds;
   writeField({ clock_running: true, clock_ends_at: new Date(Date.now() + rem * 1000).toISOString(), clock_remaining_seconds: rem });
 };
-$('clock-pause').onclick = () => writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: Math.max(0, Math.round(clockRemaining(game))) });
-$('clock-reset').onclick = () => writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds });
+$('clock-pause').onclick = () => {
+  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockPause(game, Date.now()));
+  writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: Math.max(0, Math.round(clockRemaining(game))) });
+};
+$('clock-reset').onclick = () => {
+  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockReset(game));
+  writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds });
+};
 function renderClock() {
   const row = $('clock-row');
+  const sport = game.sport || 'baseball';
+  if (sport === 'soccer') {
+    row.hidden = false;
+    const e = S.elapsedSeconds(game, Date.now());
+    const st = S.scState(game);
+    $('clock-display').textContent = Math.floor(e / 60) + ':' + String(Math.max(0, Math.round(e % 60))).padStart(2, '0') + (st.stoppage ? ` +${st.stoppage}` : '');
+    $('clock-display').classList.remove('low');
+    return;
+  }
   if (!game || !game.time_limit_seconds) { row.hidden = true; return; }
   row.hidden = false;
   const rem = Math.max(0, Math.round(clockRemaining(game)));
@@ -274,7 +309,9 @@ $('demo-btn').onclick = () => {
   $('demo-btn').textContent = demoTimer ? '■ Stop Demo' : '▶ Demo Mode';
 };
 function demoStep() {
-  if ((game.sport || 'baseball') === 'football') return demoStepFootball();
+  const sport = game.sport || 'baseball';
+  if (sport === 'football') return demoStepFootball();
+  if (sport === 'soccer') return demoStepSoccer();
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
@@ -301,10 +338,24 @@ function demoStepFootball() {
   return commit(F.nextQuarter(game));
 }
 
+function demoStepSoccer() {
+  const r = Math.random();
+  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
+  if (r < 0.14) return fireAnim('goal');
+  if (r < 0.22) return commit(S.goal(game, team()));
+  if (r < 0.36) return commit(S.card(game, team(), Math.random() < 0.85 ? 'y' : 'r'));
+  if (r < 0.52) return commit(S.stoppageDelta(game, Math.random() < 0.5 ? -1 : 1));
+  if (r < 0.58) return commit(S.setHalf(game, S.scState(game).half === 1 ? 2 : 1));
+  // otherwise idle; the match clock keeps ticking if running
+}
+
 $('preview-fx-btn').onclick = async () => {
-  const baseball = ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
-  const football = ['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'charge'];
-  const types = (game.sport || 'baseball') === 'football' ? football : baseball;
+  const sets = {
+    baseball: ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'],
+    football: ['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'charge'],
+    soccer: ['goal', 'charge'],
+  };
+  const types = sets[game.sport || 'baseball'] || sets.baseball;
   for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
 };
 
@@ -398,6 +449,7 @@ function renderGame() {
   $('g-away-runs').textContent = game.away_score;
   $('g-home-runs').textContent = game.home_score;
   if (sport === 'football') renderFootballControl();
+  else if (sport === 'soccer') renderSoccerControl();
   else renderBaseballControl();
   renderRally();
   renderAudio();
@@ -423,6 +475,15 @@ function renderFootballControl() {
   $('fb-poss-away').classList.toggle('on', st.possession === 'away');
   $('fb-poss-home').classList.toggle('on', st.possession === 'home');
   for (const d of [1, 2, 3, 4]) $('fb-down-' + d).classList.toggle('on', st.down === d);
+}
+function renderSoccerControl() {
+  const st = S.scState(game);
+  $('sc-mid').innerHTML = `<span class="sc-inning">${st.half === 2 ? '2nd' : '1st'} Half</span>` +
+    `<span class="sc-count">⚽</span><span class="sc-outs">${st.stoppage ? '+' + st.stoppage : ''}</span>`;
+  $('g-batting').textContent = 'Soccer';
+  $('sc-stop-val').textContent = '+' + st.stoppage;
+  $('sc-half-1').classList.toggle('on', st.half === 1);
+  $('sc-half-2').classList.toggle('on', st.half === 2);
 }
 
 $('copy-url-btn').onclick = async () => {

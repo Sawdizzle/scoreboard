@@ -47,7 +47,13 @@ export function playAnimation(anim) {
     case 'fieldgoal':  return lowerThird('FIELD GOAL', '3 POINTS');
     case 'turnover':   return lowerThird('TURNOVER', 'CHANGE OF POSSESSION', 'turn');
     case 'bigplay':    return lowerThird('BIG PLAY', '');
+    case 'goal':       return goalCelebration();
   }
+}
+
+function goalCelebration() {
+  const el = mount('fx-walkoff', `<div class="wo-text">GOAL!</div><div class="wo-particles"></div>`, 4200);
+  burst(el.querySelector('.wo-particles'), 40, 'confetti', 0.15, ['#8fb6de', '#e8b23a', '#f4f7fb', '#3b6fd6', '#d1483f']);
 }
 
 function touchdown() {

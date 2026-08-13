@@ -151,6 +151,43 @@
       </div>
     </div>
 
+    <!-- ============ SOCCER ============ -->
+    <div class="sport-only" data-sport="soccer" hidden>
+      <span class="bases-label">Goals</span>
+      <div class="pad">
+        <button id="sc-goal-away" class="key run">◄ AWAY GOAL</button>
+        <button id="sc-goal-home" class="key run">HOME GOAL ►</button>
+      </div>
+
+      <span class="bases-label">Half &amp; stoppage</span>
+      <div class="bases-row">
+        <button id="sc-half-1" class="base-btn">1st Half</button>
+        <button id="sc-half-2" class="base-btn">2nd Half</button>
+        <button id="sc-stop-dn" class="base-btn">– Stop</button>
+        <b id="sc-stop-val" class="fb-dist">+0</b>
+        <button id="sc-stop-up" class="base-btn">+ Stop</button>
+      </div>
+
+      <span class="bases-label">Cards</span>
+      <div class="bases-row">
+        <button id="sc-yc-away" class="base-btn">Away 🟨</button>
+        <button id="sc-rc-away" class="base-btn">Away 🟥</button>
+        <button id="sc-yc-home" class="base-btn">Home 🟨</button>
+        <button id="sc-rc-home" class="base-btn">Home 🟥</button>
+      </div>
+      <div class="bases-row">
+        <button id="sc-away-dn" class="base-btn">Away –</button>
+        <button id="sc-away-up" class="base-btn">Away +</button>
+        <button id="sc-home-dn" class="base-btn">Home –</button>
+        <button id="sc-home-up" class="base-btn">Home +</button>
+      </div>
+
+      <div class="fx-pad">
+        <span class="bases-label">Moments</span>
+        <button id="fx-goal" class="fxbtn hr">⚽ GOAL!</button>
+      </div>
+    </div>
+
     <!-- shared momentum + organ (all sports) -->
     <div class="shared-fx">
       <button id="fx-rally" class="fxbtn rally-toggle">Rally: OFF</button>
@@ -241,6 +278,7 @@
           <select id="su-sport">
             <option value="baseball">Baseball</option>
             <option value="football">Football</option>
+            <option value="soccer">Soccer</option>
           </select>
         </label>
         <label class="sel">Style
