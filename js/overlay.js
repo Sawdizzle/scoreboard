@@ -74,6 +74,7 @@ function render(s) {
 
   updateClock();
   updateDetail(s);
+  renderCard(s);
   el.bug.dataset.ready = '1';
 
   // Sport, theme, position, and scale (live).
@@ -208,6 +209,56 @@ function updateDetail(s) {
   else el2.hidden = true;
 }
 const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---- Persistent broadcast cards (matchup / final / due-up / sponsor) -------
+let lastCardKey = null;
+function renderCard(s) {
+  const layer = document.getElementById('card');
+  const c = s.card;
+  const key = c && c.type ? `${c.type}:${c.nonce || 0}` : null;
+  if (key === lastCardKey) return; // only rebuild when the card actually changes
+  lastCardKey = key;
+  if (!key) { layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('lower'); return; }
+  layer.classList.toggle('lower', c.type === 'dueup');
+  layer.innerHTML = buildCard(c, s);
+  layer.hidden = false;
+}
+function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
+const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
+function buildCard(c, s) {
+  const meta = c.meta || {};
+  const aAbbr = escapeHtml(s.away_abbr || s.away_name || 'AWAY');
+  const hAbbr = escapeHtml(s.home_abbr || s.home_name || 'HOME');
+  if (c.type === 'matchup') {
+    return `<div class="card matchup"><div class="card-vs">
+      <div class="side">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
+      <div class="vs">VS</div>
+      <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
+    </div>${meta.text ? `<div class="card-meta">${escapeHtml(meta.text)}</div>` : ''}</div>`;
+  }
+  if (c.type === 'final') {
+    let ls = '';
+    if ((s.sport || 'baseball') === 'baseball' && Array.isArray(s.line_score) && s.line_score.length) {
+      const cells = (side) => s.line_score.map((x) => `<td>${x?.[side] ?? 0}</td>`).join('');
+      const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
+      ls = `<table class="linescore"><tr><th></th>${heads}<th>R</th></tr>
+        <tr><th>${aAbbr}</th>${cells('top')}<td>${s.away_score | 0}</td></tr>
+        <tr><th>${hAbbr}</th>${cells('bottom')}<td>${s.home_score | 0}</td></tr></table>`;
+    }
+    return `<div class="card final"><div class="card-sub">Final</div>
+      <div class="card-scoreline">
+        <div class="side"><span class="n">${aAbbr}</span><span class="r">${s.away_score | 0}</span></div>
+        <div class="side"><span class="n">${hAbbr}</span><span class="r">${s.home_score | 0}</span></div>
+      </div>${ls}</div>`;
+  }
+  if (c.type === 'dueup') {
+    return `<div class="card lower-card"><b>Due Up</b><span>${escapeHtml(meta.text || '')}</span></div>`;
+  }
+  if (c.type === 'sponsor') {
+    return `<div class="card sponsor"><div class="card-sub">Brought to you by</div><div class="card-title">${escapeHtml(meta.text || 'Sponsor')}</div></div>`;
+  }
+  return '';
+}
 
 async function fetchState() {
   if (!gameId) return;

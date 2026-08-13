@@ -189,6 +189,26 @@ $('sc-home-dn').onclick = () => commit(S.manualScore(game, 'home', -1));
 $('sc-home-up').onclick = () => commit(S.manualScore(game, 'home', 1));
 $('fx-goal').onclick = () => fireAnim('goal');
 
+// Broadcast cards (persistent until cleared)
+async function showCard(type) {
+  const meta = {};
+  const text = $('card-text').value.trim();
+  if (text) meta.text = text;
+  const card = { type, meta, nonce: Date.now() };
+  game = { ...game, card };
+  const { error } = await db.from('games').update({ card }).eq('id', game.id);
+  if (error) console.warn('card failed', error.message);
+}
+$('card-matchup').onclick = () => showCard('matchup');
+$('card-final').onclick = () => showCard('final');
+$('card-dueup').onclick = () => showCard('dueup');
+$('card-sponsor').onclick = () => showCard('sponsor');
+$('card-clear').onclick = async () => {
+  game = { ...game, card: null };
+  const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
+  if (error) console.warn('card clear failed', error.message);
+};
+
 // Moments / FX
 $('fx-homerun').onclick = () => fireAnim('homerun');
 $('fx-k').onclick       = () => fireAnim('strikeout');

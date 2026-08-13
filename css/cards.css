@@ -1,0 +1,40 @@
+/* Persistent broadcast cards (shown until cleared). Themed via the same vars.
+   #card is a full-screen layer; the .card inside animates in. */
+#card { position: fixed; inset: 0; z-index: 12; pointer-events: none;
+  display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); }
+#card[hidden] { display: none; }
+#card.lower { place-items: end center; padding-bottom: 22vh; background: transparent; }
+
+.card { font-family: var(--disp); color: var(--chalk); text-align: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); padding: 40px 56px;
+  animation: card-in 0.5s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes card-in { 0% { opacity: 0; transform: translateY(24px) scale(.96); } 100% { opacity: 1; transform: none; } }
+
+.card .card-sub { color: var(--steel); letter-spacing: 0.16em; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; }
+.card .card-title { font-size: 68px; font-weight: 900; letter-spacing: 0.03em; line-height: 1; }
+
+/* Matchup */
+.card.matchup .card-vs { display: flex; align-items: center; gap: 44px; }
+.card.matchup .side { display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 220px; }
+.card.matchup .side img { width: 120px; height: 120px; object-fit: contain; }
+.card.matchup .cname { font-size: 40px; font-weight: 800; }
+.card.matchup .vs { font-size: 44px; font-weight: 900; color: var(--accent); }
+.card.matchup .card-meta { margin-top: 20px; color: var(--steel); font-size: 22px; letter-spacing: 0.04em; }
+
+/* Final */
+.card.final .card-scoreline { display: flex; gap: 60px; justify-content: center; margin-top: 12px; font-weight: 800; }
+.card.final .card-scoreline .r { font-family: var(--num); font-size: 72px; }
+.card.final .card-scoreline .n { font-size: 30px; color: var(--steel); }
+.card.final .side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.card.final .linescore { margin-top: 22px; border-collapse: collapse; font-family: var(--num); margin-left: auto; margin-right: auto; }
+.card.final .linescore td, .card.final .linescore th { padding: 4px 9px; border: 1px solid var(--line); font-size: 17px; }
+.card.final .linescore th { color: var(--steel); font-weight: 700; }
+
+/* Due Up (lower third) */
+.card.lower-card { padding: 18px 40px; text-align: left; }
+.card.lower-card b { display: block; color: var(--accent); letter-spacing: 0.14em; font-size: 16px; text-transform: uppercase; }
+.card.lower-card span { font-size: 30px; font-weight: 800; }
+
+/* Sponsor */
+.card.sponsor .card-title { font-size: 56px; color: var(--chalk); }
