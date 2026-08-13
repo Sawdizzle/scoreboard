@@ -82,6 +82,15 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .sheet-actions { display: flex; gap: 12px; margin-top: 8px; }
 .sheet-actions .ghost, .sheet-actions .primary { margin-top: 0; }
 
+/* Moments / FX pad */
+.fx-pad { margin-top: 16px; }
+.fxbtn { padding: 15px 6px; font-size: 14px; font-weight: 700; background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); border-radius: 12px; }
+.fxbtn:active { filter: brightness(1.15); transform: translateY(1px); }
+.fxbtn.hr { width: 100%; margin-bottom: 8px; padding: 20px; font-size: 19px; letter-spacing: 0.05em; color: #fff; background: linear-gradient(180deg, #2b3648, #141b28); border-color: #3a4a63; }
+.fx-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.rally-toggle { background: #2a2033; }
+.rally-toggle.on { background: var(--out); border-color: var(--out); color: #fff; }
+
 .urlbar { display: flex; gap: 8px; margin-top: 16px; }
 .urlbar input { font-family: var(--num); font-size: 12px; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.5; }

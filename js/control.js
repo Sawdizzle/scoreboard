@@ -104,6 +104,18 @@ async function commit(res) {
   const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: res.type, p_new: res.patch, p_payload: res.payload || {} });
   if (error) { game = prev; renderGame(); return alert(error.message); }
   game = data; renderGame();
+  // Auto-fire the matching stinger for scoring / strikeout actions.
+  if (res.type === 'run' || (res.type === 'walk' && res.payload?.runs)) fireAnim('run');
+  else if (res.type === 'strikeout') fireAnim('strikeout');
+}
+
+// Fire a transient overlay stinger (not an undoable action — a plain trigger write).
+async function fireAnim(type, meta = {}) {
+  if (!game) return;
+  const current_animation = { type, nonce: Date.now(), meta };
+  game = { ...game, current_animation };
+  const { error } = await db.from('games').update({ current_animation }).eq('id', game.id);
+  if (error) console.warn('anim failed', error.message);
 }
 
 async function doUndo() {
@@ -127,6 +139,26 @@ $('base-1').onclick      = () => commit(L.toggleBase(game, 'first'));
 $('base-2').onclick      = () => commit(L.toggleBase(game, 'second'));
 $('base-3').onclick      = () => commit(L.toggleBase(game, 'third'));
 $('undo-btn').onclick    = doUndo;
+
+// Moments / FX
+$('fx-homerun').onclick = () => fireAnim('homerun');
+$('fx-k').onclick       = () => fireAnim('strikeout');
+$('fx-dp').onclick      = () => fireAnim('doubleplay');
+$('fx-gem').onclick     = () => fireAnim('webgem');
+$('fx-sb').onclick      = () => fireAnim('stolenbase');
+$('fx-walkoff').onclick = () => fireAnim('walkoff');
+$('fx-rally').onclick   = async () => {
+  const rally_mode = !game.rally_mode;
+  game = { ...game, rally_mode };
+  renderRally();
+  const { error } = await db.from('games').update({ rally_mode }).eq('id', game.id);
+  if (error) console.warn('rally failed', error.message);
+};
+function renderRally() {
+  const b = $('fx-rally');
+  b.textContent = `Rally: ${game.rally_mode ? 'ON' : 'OFF'}`;
+  b.classList.toggle('on', !!game.rally_mode);
+}
 
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
@@ -168,6 +200,7 @@ function renderGame() {
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
+  renderRally();
 }
 
 $('copy-url-btn').onclick = async () => {

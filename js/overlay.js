@@ -1,5 +1,6 @@
 import { supabase, db } from './supabase.js';
 import { safeBases } from './logic.js';
+import { playAnimation, setRally } from './anim.js';
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
@@ -18,6 +19,7 @@ const el = {
 };
 
 let last = null; // keep last-known state; never blank on disconnect
+let lastAnimNonce = 0; // only play strictly-newer triggers (reload/undo never replay)
 
 function render(s) {
   if (!s) return;
@@ -35,6 +37,19 @@ function render(s) {
   document.getElementById('b2').classList.toggle('on', b.second);
   document.getElementById('b3').classList.toggle('on', b.third);
   el.bug.dataset.ready = '1';
+
+  // Ambient rally state (persistent).
+  setRally(s.rally_mode);
+
+  // Transient animation trigger: play only if the nonce is strictly newer than
+  // the last one we saw. On first paint we just record it (no replay on load),
+  // and because nonces are timestamps, an undo restoring an older one won't fire.
+  const a = s.current_animation;
+  const nonce = a && Number(a.nonce);
+  if (nonce) {
+    if (lastAnimNonce === 0) lastAnimNonce = nonce;      // first paint: adopt, don't play
+    else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); }
+  }
 }
 
 async function fetchState() {
