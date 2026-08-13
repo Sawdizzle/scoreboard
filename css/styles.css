@@ -1,0 +1,32 @@
+/* The `style` dimension = layout/look (independent of sport + theme).
+   Default 'bar' (wide horizontal strip) lives in overlay.css. Here: 'bug' —
+   a compact stacked broadcast bug (teams stacked, score right-aligned, the
+   sport's situation row below). Works for every sport since they share the DOM. */
+
+body[data-style="bug"] #bug-wrap { gap: 0; }
+
+body[data-style="bug"] .bug {
+  display: grid;
+  grid-auto-flow: row;
+  min-width: 232px;
+}
+body[data-style="bug"] .team {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  border-left: none;
+  border-bottom: 1px solid var(--line);
+}
+body[data-style="bug"] .team.home { border-left: none; }
+body[data-style="bug"] .team .abbr { font-size: 22px; }
+body[data-style="bug"] .team .runs { font-size: 24px; }
+
+body[data-style="bug"] .situation {
+  border-left: none;
+  justify-content: center;
+  gap: 14px;
+  padding: 9px 16px;
+}
+
+/* Detail line (batter / timeouts / cards) hugs the bug width. */
+body[data-style="bug"] .detail { align-self: stretch; justify-content: center; }
