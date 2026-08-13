@@ -90,6 +90,25 @@
         <button id="fx-walkoff" class="fxbtn">Walk-Off</button>
         <button id="fx-rally" class="fxbtn rally-toggle">Rally: OFF</button>
       </div>
+      <button id="fx-charge" class="fxbtn charge">🎺 Charge!</button>
+    </div>
+
+    <div class="audio-pad">
+      <span class="bases-label">Sound</span>
+      <div class="audio-row">
+        <label class="sel">Pack
+          <select id="sound-pack">
+            <option value="bigleague">Big League (organ)</option>
+            <option value="modern">Modern (hits/whooshes)</option>
+            <option value="sandlot">Sandlot (playful)</option>
+          </select>
+        </label>
+        <button id="mute-btn" class="fxbtn mute">Mute</button>
+      </div>
+      <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+      <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
+      <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
+      <p class="hint">Sound plays on the overlay (so OBS captures it). Open the overlay tab and click it once to enable audio when testing in a browser.</p>
     </div>
 
     <div class="urlbar">

@@ -49,3 +49,7 @@ body.debug {
 .outs .dot.on { background: var(--accent); border-color: var(--accent); opacity: 1; }
 
 .err { padding: 12px 18px; color: #fff; background: rgba(190, 40, 40, 0.85); border-radius: 8px; font-family: var(--disp); }
+
+#sound-hint { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 30;
+  padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+  background: rgba(16, 22, 33, 0.92); color: var(--chalk); font-family: var(--disp); font-size: 14px; }

@@ -1,10 +1,11 @@
 import { supabase, db } from './supabase.js';
 import { safeBases } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
+import * as audio from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
-if (params.get('debug')) document.body.classList.add('debug');
+if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
 
 const el = {
   bug: document.getElementById('bug'),
@@ -38,8 +39,10 @@ function render(s) {
   document.getElementById('b3').classList.toggle('on', b.third);
   el.bug.dataset.ready = '1';
 
-  // Ambient rally state (persistent).
+  // Ambient rally state (persistent) + audio settings/pack.
   setRally(s.rally_mode);
+  audio.setPack(s.sound_pack);
+  audio.setSettings(s.audio);
 
   // Transient animation trigger: play only if the nonce is strictly newer than
   // the last one we saw. On first paint we just record it (no replay on load),
@@ -48,9 +51,16 @@ function render(s) {
   const nonce = a && Number(a.nonce);
   if (nonce) {
     if (lastAnimNonce === 0) lastAnimNonce = nonce;      // first paint: adopt, don't play
-    else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); }
+    else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); audio.play(a.type); }
   }
 }
+
+// Audio needs one gesture in a normal browser; OBS browser sources autoplay.
+audio.resume();
+document.addEventListener('pointerdown', () => { audio.resume(); setTimeout(refreshSoundHint, 60); });
+function refreshSoundHint() { const h = document.getElementById('sound-hint'); if (h) h.hidden = !audio.isSuspended(); }
+window.setTimeout(refreshSoundHint, 600);
+document.getElementById('sound-hint')?.addEventListener('click', () => { Promise.resolve(audio.resume()).then(() => setTimeout(refreshSoundHint, 60)); });
 
 async function fetchState() {
   if (!gameId) return;

@@ -160,6 +160,38 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
+$('fx-charge').onclick = () => fireAnim('charge');
+
+const audioOf = () => game.audio || { muted: false, master: 0.8, cats: { moments: 1, organ: 1 } };
+async function writeAudio(patch) {
+  const cur = audioOf();
+  const audio = { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } };
+  game = { ...game, audio };
+  renderAudio();
+  const { error } = await db.from('games').update({ audio }).eq('id', game.id);
+  if (error) console.warn('audio write failed', error.message);
+}
+$('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
+$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
+$('vol-moments').addEventListener('change', (e) => writeAudio({ cats: { moments: +e.target.value } }));
+$('vol-organ').addEventListener('change', (e) => writeAudio({ cats: { organ: +e.target.value } }));
+$('sound-pack').addEventListener('change', async (e) => {
+  game = { ...game, sound_pack: e.target.value };
+  const { error } = await db.from('games').update({ sound_pack: e.target.value }).eq('id', game.id);
+  if (error) console.warn('pack write failed', error.message);
+});
+
+function renderAudio() {
+  const a = audioOf();
+  $('vol-master').value = a.master ?? 0.8;
+  $('vol-moments').value = a.cats?.moments ?? 1;
+  $('vol-organ').value = a.cats?.organ ?? 1;
+  $('mute-btn').classList.toggle('on', !!a.muted);
+  $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
+  $('sound-pack').value = game.sound_pack || 'bigleague';
+}
+
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
 function paintWalk() {
@@ -201,6 +233,7 @@ function renderGame() {
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
   renderRally();
+  renderAudio();
 }
 
 $('copy-url-btn').onclick = async () => {
