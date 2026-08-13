@@ -1,0 +1,51 @@
+/* Overlay = transparent OBS Browser Source. No external fonts (no ballpark
+   network dependency, no layout shift). Themed fonts arrive in Stage 6. */
+:root {
+  --panel: rgba(16, 22, 33, 0.92);
+  --panel-2: rgba(0, 0, 0, 0.28);
+  --line: rgba(255, 255, 255, 0.14);
+  --chalk: #f4f7fb;
+  --steel: #8fb6de;
+  --accent: #e8b23a;
+  --num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --disp: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+/* ?debug=1 paints a backdrop so you can see the bug locally before OBS. */
+body.debug {
+  background:
+    repeating-conic-gradient(#3a3f47 0% 25%, #2b2f36 0% 50%) 0 0 / 48px 48px,
+    linear-gradient(120deg, #1f6f3e, #2f8f52);
+}
+
+.bug {
+  position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%);
+  display: flex; align-items: stretch;
+  font-family: var(--disp); color: var(--chalk);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.bug[data-ready="1"] { opacity: 1; }
+
+.team { display: flex; align-items: center; gap: 14px; padding: 11px 18px; }
+.team.away { background: linear-gradient(180deg, rgba(143, 182, 222, 0.10), transparent); }
+.team.home { background: linear-gradient(180deg, rgba(232, 178, 58, 0.10), transparent); border-left: 1px solid var(--line); }
+.team .abbr { font-weight: 800; letter-spacing: 0.04em; font-size: 23px; }
+.team .runs { font-family: var(--num); font-size: 27px; font-weight: 700; min-width: 1.5ch; text-align: center; }
+
+.situation { display: flex; align-items: center; gap: 18px; padding: 11px 20px; background: var(--panel-2); border-left: 1px solid var(--line); }
+.inning { color: var(--steel); font-weight: 800; font-size: 20px; }
+.count { font-family: var(--num); font-size: 21px; font-weight: 700; }
+.count em { opacity: 0.55; font-style: normal; padding: 0 3px; }
+.diamond { width: 34px; height: 34px; }
+.diamond .base rect { fill: transparent; stroke: var(--chalk); stroke-width: 1.5; opacity: 0.55; transition: all 0.15s ease; }
+.diamond .base.on rect { fill: var(--accent); stroke: var(--accent); opacity: 1; }
+
+.outs { display: inline-flex; gap: 7px; }
+.outs .dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--chalk); opacity: 0.45; transition: all 0.15s ease; }
+.outs .dot.on { background: var(--accent); border-color: var(--accent); opacity: 1; }
+
+.err { padding: 12px 18px; color: #fff; background: rgba(190, 40, 40, 0.85); border-radius: 8px; font-family: var(--disp); }

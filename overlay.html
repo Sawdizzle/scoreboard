@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <title>Scoreboard Overlay</title>
+  <link rel="stylesheet" href="/css/overlay.css" />
+</head>
+<body>
+  <!-- Display-only. Transparent background for OBS Browser Source. -->
+  <div id="bug" class="bug" data-ready="0">
+    <div class="team away">
+      <span class="abbr" id="away-abbr">VIS</span>
+      <span class="runs" id="away-runs">0</span>
+    </div>
+    <div class="team home">
+      <span class="abbr" id="home-abbr">HOME</span>
+      <span class="runs" id="home-runs">0</span>
+    </div>
+    <div class="situation">
+      <span class="inning" id="inning">▲1</span>
+      <svg class="diamond" viewBox="0 0 48 48" aria-hidden="true">
+        <g class="base" id="b2"><rect x="19" y="3" width="10" height="10" transform="rotate(45 24 8)"/></g>
+        <g class="base" id="b3"><rect x="3" y="19" width="10" height="10" transform="rotate(45 8 24)"/></g>
+        <g class="base" id="b1"><rect x="35" y="19" width="10" height="10" transform="rotate(45 40 24)"/></g>
+      </svg>
+      <span class="count"><b id="balls">0</b><em>-</em><b id="strikes">0</b></span>
+      <span class="outs" id="outs"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span>
+    </div>
+  </div>
+  <script type="module" src="/js/overlay.js"></script>
+</body>
+</html>
