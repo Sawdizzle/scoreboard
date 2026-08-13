@@ -24,7 +24,7 @@ body.debug {
   display: flex; align-items: stretch;
   font-family: var(--disp); color: var(--chalk);
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: var(--bd-width, 1px) solid var(--line);
   border-radius: var(--radius); overflow: hidden;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
   opacity: 0; transition: opacity 0.25s ease;
@@ -41,7 +41,7 @@ body[data-pos="top-bar"]    #bug-wrap { bottom: auto; top: 32px; left: 50%; alig
 body[data-pos="top-left"]   #bug-wrap { bottom: auto; top: 32px; left: 44px; align-items: flex-start; transform: scale(var(--scale)); transform-origin: top left; }
 
 .team { display: flex; align-items: center; gap: 12px; padding: 11px 18px; }
-.team .logo { height: 30px; width: 30px; object-fit: contain; }
+.team .logo { height: var(--logo-size, 30px); width: var(--logo-size, 30px); object-fit: contain; }
 .team.away { background: linear-gradient(180deg, rgba(143, 182, 222, 0.10), transparent); }
 .team.home { background: linear-gradient(180deg, rgba(232, 178, 58, 0.10), transparent); border-left: 1px solid var(--line); }
 .team .abbr { font-weight: 800; letter-spacing: 0.04em; font-size: 23px; }

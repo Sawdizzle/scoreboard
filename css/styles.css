@@ -39,7 +39,22 @@ body[data-style="minimal"] .team .logo { height: 22px; width: 22px; }
 body[data-style="minimal"] .situation { padding: 7px 14px; gap: 12px; }
 body[data-style="minimal"] .bug { border-radius: calc(var(--radius) + 6px); }
 
+/* 'lowerthird' — flatter broadcast banner with an accent tab on the leading edge. */
+body[data-style="lowerthird"] .bug { border-radius: 4px; }
+body[data-style="lowerthird"] .bug::before { content: ''; width: 8px; background: var(--accent); flex: 0 0 auto; }
+body[data-style="lowerthird"] .team { padding: 12px 22px; }
+body[data-style="lowerthird"] .situation { padding: 12px 22px; }
+
+/* 'ticker' — thin, minimal corner strip. */
+body[data-style="ticker"] .bug { border-radius: 4px; }
+body[data-style="ticker"] .team { padding: 5px 12px; gap: 8px; }
+body[data-style="ticker"] .team .abbr { font-size: 15px; }
+body[data-style="ticker"] .team .runs { font-size: 16px; }
+body[data-style="ticker"] .team .logo { height: 18px; width: 18px; }
+body[data-style="ticker"] .situation { padding: 5px 12px; gap: 10px; font-size: 14px; }
+
 /* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
+body.team-bars .team { box-shadow: inset 0 -3px 0 var(--tc, transparent); }
 body.no-logos .team .logo { display: none !important; }
 body.no-detail .detail { display: none !important; }
 body.no-shadow .bug { box-shadow: none !important; }

@@ -115,16 +115,24 @@ const LOOK_FONTS = {
   system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
 };
 function setVar(el, name, val) { if (val) el.style.setProperty(name, val); else el.style.removeProperty(name); }
+const LOGO_SIZES = { sm: '22px', lg: '40px' };
 function applyLook(s) {
   const L = s.look || {};
   const b = document.body;
   setVar(b, '--accent', L.accent);
   setVar(b, '--disp', L.font ? LOOK_FONTS[L.font] : '');
   setVar(b, '--radius', (L.radius != null && L.radius !== '') ? parseInt(L.radius, 10) + 'px' : '');
+  setVar(b, '--logo-size', L.logoSize ? LOGO_SIZES[L.logoSize] : '');
+  setVar(b, '--bd-width', (L.border != null && L.border !== '') ? parseInt(L.border, 10) + 'px' : '');
   b.classList.toggle('no-logos', !!L.hideLogos);
   b.classList.toggle('no-detail', !!L.hideDetail);
   b.classList.toggle('no-shadow', !!L.noShadow);
   b.classList.toggle('uppercase', !!L.uppercase);
+  b.classList.toggle('team-bars', !!L.teamBars);
+  // per-team accent for color bars
+  const aw = document.querySelector('.team.away'), hm = document.querySelector('.team.home');
+  if (aw) aw.style.setProperty('--tc', s.away_color || '#888');
+  if (hm) hm.style.setProperty('--tc', s.home_color || '#888');
 }
 
 function setLogo(id, url) {

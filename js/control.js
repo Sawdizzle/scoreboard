@@ -396,6 +396,9 @@ $('cust-logos').addEventListener('change', (e) => writeLook({ hideLogos: e.targe
 $('cust-detail').addEventListener('change', (e) => writeLook({ hideDetail: e.target.checked }));
 $('cust-shadow').addEventListener('change', (e) => writeLook({ noShadow: e.target.checked }));
 $('cust-uppercase').addEventListener('change', (e) => writeLook({ uppercase: e.target.checked }));
+$('cust-logosize').addEventListener('change', (e) => writeLook({ logoSize: e.target.value }));
+$('cust-border').addEventListener('change', (e) => writeLook({ border: e.target.value }));
+$('cust-teambars').addEventListener('change', (e) => writeLook({ teamBars: e.target.checked }));
 $('cust-reset').onclick = async () => {
   game = { ...game, look: {} };
   renderCustomize();
@@ -410,6 +413,9 @@ function renderCustomize() {
   $('cust-detail').checked = !!L.hideDetail;
   $('cust-shadow').checked = !!L.noShadow;
   $('cust-uppercase').checked = !!L.uppercase;
+  $('cust-logosize').value = L.logoSize || '';
+  $('cust-border').value = L.border != null ? String(L.border) : '';
+  $('cust-teambars').checked = !!L.teamBars;
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)

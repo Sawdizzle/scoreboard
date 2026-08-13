@@ -207,6 +207,10 @@
             <option value="sunset">Sunset</option>
             <option value="ice">Ice (light)</option>
             <option value="mono">Newsprint</option>
+            <option value="gold">Gold</option>
+            <option value="carbon">Carbon</option>
+            <option value="vapor">Vaporwave</option>
+            <option value="royal">Royal</option>
           </select>
         </label>
         <label class="sel">Position
@@ -243,7 +247,25 @@
           </select>
         </label>
       </div>
+      <div class="audio-row">
+        <label class="sel">Logo size
+          <select id="cust-logosize">
+            <option value="">Default</option>
+            <option value="sm">Small</option>
+            <option value="lg">Large</option>
+          </select>
+        </label>
+        <label class="sel">Border
+          <select id="cust-border">
+            <option value="">Theme</option>
+            <option value="0">None</option>
+            <option value="2">Thick</option>
+            <option value="3">Bold</option>
+          </select>
+        </label>
+      </div>
       <div class="toggles">
+        <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
         <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
         <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
         <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
@@ -322,6 +344,8 @@
             <option value="bar">Bar (wide strip)</option>
             <option value="bug">Bug (stacked)</option>
             <option value="minimal">Minimal (slim)</option>
+            <option value="lowerthird">Lower-third</option>
+            <option value="ticker">Ticker (thin)</option>
           </select>
         </label>
       </div>
