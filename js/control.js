@@ -55,7 +55,7 @@ $('logout-btn').addEventListener('click', async () => {
 // ---------------------------------------------------------------- Lobby
 async function loadGames() {
   const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_runs,away_runs,status')
+    .select('id,home_name,away_name,home_score,away_score,status')
     .eq('owner_id', user.id).order('updated_at', { ascending: false });
   const list = $('games-list'); list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
@@ -63,7 +63,7 @@ async function loadGames() {
   for (const g of data) {
     const b = document.createElement('button');
     b.className = 'game-row';
-    b.innerHTML = `<strong>${esc(g.away_name)} @ ${esc(g.home_name)}</strong><span>${g.away_runs}–${g.home_runs} · ${g.status}</span>`;
+    b.innerHTML = `<strong>${esc(g.away_name)} @ ${esc(g.home_name)}</strong><span>${g.away_score}–${g.home_score} · ${g.status}</span>`;
     b.onclick = () => openGame(g.id);
     list.appendChild(b);
   }
@@ -338,8 +338,8 @@ function renderGame() {
   const b = L.safeBases(game.bases);
   $('g-away-name').textContent = game.away_name;
   $('g-home-name').textContent = game.home_name;
-  $('g-away-runs').textContent = game.away_runs;
-  $('g-home-runs').textContent = game.home_runs;
+  $('g-away-runs').textContent = game.away_score;
+  $('g-home-runs').textContent = game.home_score;
   $('g-inning').textContent = `${game.half === 'top' ? '▲' : '▼'} ${game.inning}`;
   $('g-count').textContent = `${game.balls} - ${game.strikes}`;
   $('g-outs').textContent = `${game.outs} out`;

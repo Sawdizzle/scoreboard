@@ -27,8 +27,8 @@ function render(s) {
   last = s;
   el.awayAbbr.textContent = s.away_abbr || s.away_name;
   el.homeAbbr.textContent = s.home_abbr || s.home_name;
-  el.awayRuns.textContent = s.away_runs;
-  el.homeRuns.textContent = s.home_runs;
+  el.awayRuns.textContent = s.away_score;
+  el.homeRuns.textContent = s.home_score;
   el.inning.textContent = `${s.half === 'top' ? '▲' : '▼'}${s.inning}`;
   el.balls.textContent = s.balls;
   el.strikes.textContent = s.strikes;
@@ -44,7 +44,9 @@ function render(s) {
   updateDetail(s);
   el.bug.dataset.ready = '1';
 
-  // Theme, position, and scale (live).
+  // Sport, theme, position, and scale (live). Sport drives per-sport layout later.
+  document.body.dataset.sport = s.sport || 'baseball';
+  document.body.dataset.style = s.style || 'bar';
   document.body.dataset.theme = s.theme || 'nightgame';
   document.body.dataset.pos = s.scorebug_position || 'bottom-bar';
   document.body.style.setProperty('--scale', s.scorebug_scale || 1);
@@ -108,7 +110,7 @@ function updateDetail(s) {
   }
   if (s.show_pitcher && s.pitcher_name) parts.push(`<span><span class="k">P</span>${escapeHtml(s.pitcher_name)}</span>`);
   if (s.show_pitchcount) parts.push(`<span><span class="k">PC</span>${s.pitch_count | 0}</span>`);
-  if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_runs | 0) - (s.away_runs | 0)) >= s.run_rule_diff) {
+  if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_score | 0) - (s.away_score | 0)) >= s.run_rule_diff) {
     parts.push('<span class="runrule">RUN RULE</span>');
   }
   if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; }

@@ -13,7 +13,7 @@ State syncs control → Postgres → Realtime → overlay in ~250ms. The overlay
 - **Smart control:** 4th ball auto-walks (with a force-advance confirm sheet), 3rd strike auto-outs, 3rd out rolls the half-inning. Multi-level **undo** backed by a Postgres event log (survives reloads/disconnects).
 - **Moments:** run flash, full-screen **home run**, **K** stamp, double play, web gem, stolen base, walk-off, **rally mode**, and a manual bugle **Charge!**. Fired from the control panel, GPU-friendly, alpha-transparent, safe mid-play.
 - **Sound:** three synthesized packs (Big League / Modern / Sandlot) played in the overlay so OBS captures them; master mute + per-category volume.
-- **Themes:** Blue Steel Night Game (default), Broadcast Minimal, Retro 8-bit, Classic Green. Selectable per game. Scorebug position (bottom / top / top-left) and scale.
+- **Themes:** Midnight (default), Broadcast Minimal, Retro 8-bit, Classic Green. Selectable per game. Scorebug position (bottom / top / top-left) and scale.
 - **Time-limit clock:** countdown for select-ball time limits; start / pause / reset from the control panel.
 - **Extras (toggle per game):** batter name/number, pitcher, pitch count, run-rule watch.
 - **Practice / Demo mode:** simulate a game and preview every animation + sound without going live.

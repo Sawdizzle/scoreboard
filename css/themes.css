@@ -1,4 +1,4 @@
-/* Theme palettes. Default (Blue Steel "Night Game") lives in overlay.css :root.
+/* Theme palettes. Default ("Midnight") lives in overlay.css :root.
    Each theme just overrides CSS variables + a few structural touches. The bug,
    diamond, count, and even the animations recolor automatically from these vars.
    Fonts are system stacks (no web-font load = no layout shift); self-hosted brand

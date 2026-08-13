@@ -21,8 +21,8 @@ export function runsPatch(g, n) {
   const cell = ls[g.inning - 1];
   cell[g.half] = (cell[g.half] || 0) + n;
   return home
-    ? { home_runs: (g.home_runs | 0) + n, line_score: ls }
-    : { away_runs: (g.away_runs | 0) + n, line_score: ls };
+    ? { home_score: (g.home_score | 0) + n, line_score: ls }
+    : { away_score: (g.away_score | 0) + n, line_score: ls };
 }
 
 // Standard force-advance walk. Returns resulting bases + runs forced in.
