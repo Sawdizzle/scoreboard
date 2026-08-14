@@ -138,7 +138,7 @@ function riser(c, out, t, { f0 = 100, f1 = 1800, dur = 1, gain = 0.2 } = {}) {
   o.connect(g); g.connect(out); env(g, t, dur * 0.7, dur * 0.3, gain); o.start(t); o.stop(t + dur + 0.05);
   noise(c, out, t, { dur, type: 'highpass', freq: 2500, gain: gain * 0.5, a: dur * 0.8, d: dur * 0.2 });
 }
-function ftone(c, out, t, { f, type = 'square', dur = 0.3, gain = 0.3, fc = 1700, q = 5 } = {}) {
+function ftone(c, out, t, { f, type = 'square', dur = 0.3, gain = 0.55, fc = 1700, q = 2.2 } = {}) {
   const o = c.createOscillator(), g = c.createGain(), bp = c.createBiquadFilter();
   bp.type = 'bandpass'; bp.frequency.value = fc; bp.Q.value = q;
   o.type = type; o.frequency.value = f; o.connect(bp); bp.connect(g); g.connect(out);
@@ -237,36 +237,36 @@ const PACKS = {
   // Pipe organ — full church organ, big chords + pedal bass.
   organ: {
     run: (c, o, t) => { [392, 523, 659].forEach((f) => organ(c, o, t, f, 0.5, 0.16)); organ(c, o, t, 131, 0.5, 0.14); },
-    homerun: (c, o, t) => { [131, 262, 330, 392, 523].forEach((f) => organ(c, o, t, f, 2.2, 0.14)); organ(c, o, t, 65, 2.2, 0.16); organ(c, o, t + 1.8, 523, 0.9, 0.2); },
-    strikeout: (c, o, t) => { organ(c, o, t, 175, 0.6, 0.22); organ(c, o, t, 87, 0.6, 0.18); },
+    homerun: (c, o, t) => { [131, 262, 330, 392, 523].forEach((f) => organ(c, o, t, f, 2.2, 0.085)); organ(c, o, t, 65, 2.2, 0.1); organ(c, o, t + 1.8, 523, 0.9, 0.16); },
+    strikeout: (c, o, t) => { organ(c, o, t, 175, 0.6, 0.2); organ(c, o, t, 87, 0.6, 0.16); },
     doubleplay: (c, o, t) => { organ(c, o, t, 392, 0.2, 0.18); organ(c, o, t + 0.2, 523, 0.4, 0.2); },
     webgem: (c, o, t) => { [392, 523, 659, 784].forEach((f, i) => organ(c, o, t + i * 0.1, f, 0.4, 0.18)); },
     stolenbase: (c, o, t) => { organ(c, o, t, 262, 0.3, 0.18); organ(c, o, t + 0.15, 392, 0.4, 0.2); },
-    walkoff: (c, o, t) => { [131, 165, 196, 262, 330, 392].forEach((f) => organ(c, o, t, f, 2.4, 0.13)); organ(c, o, t, 65, 2.4, 0.16); },
+    walkoff: (c, o, t) => { [131, 165, 196, 262, 330, 392].forEach((f) => organ(c, o, t, f, 2.4, 0.08)); organ(c, o, t, 65, 2.4, 0.1); },
     charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => { organ(cx, ou, tt, f, d, g); organ(cx, ou, tt, f / 2, d, g * 0.7); }),
   },
 
   // Vintage radio — band-passed, lo-fi, with a little crackle.
   radio: {
-    run: (c, o, t) => { ftone(c, o, t, { f: 660, dur: 0.2, gain: 0.3 }); crackle(c, o, t, 0.25); },
-    homerun: (c, o, t) => { [523, 659, 784, 1047].forEach((f, i) => ftone(c, o, t + i * 0.12, { f, dur: 0.25, gain: 0.3 })); ftone(c, o, t + 0.5, { f: 1047, dur: 0.6, gain: 0.3 }); crackle(c, o, t, 1.1, 0.08); },
-    strikeout: (c, o, t) => { ftone(c, o, t, { f: 440, dur: 0.3, gain: 0.3, type: 'sawtooth' }); ftone(c, o, t + 0.22, { f: 262, dur: 0.4, gain: 0.28, type: 'sawtooth' }); crackle(c, o, t, 0.5); },
-    doubleplay: (c, o, t) => { ftone(c, o, t, { f: 659, dur: 0.14, gain: 0.28 }); ftone(c, o, t + 0.14, { f: 880, dur: 0.24, gain: 0.3 }); },
-    webgem: (c, o, t) => { [784, 988, 1319].forEach((f, i) => ftone(c, o, t + i * 0.08, { f, dur: 0.12, gain: 0.26 })); crackle(c, o, t, 0.4); },
-    stolenbase: (c, o, t) => { ftone(c, o, t, { f: 330, dur: 0.3, gain: 0.28, type: 'sawtooth' }); crackle(c, o, t, 0.4); },
-    walkoff: (c, o, t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => ftone(c, o, t + i * 0.12, { f, dur: 0.3, gain: 0.28 })); crackle(c, o, t, 1.4, 0.08); },
-    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => ftone(cx, ou, tt, { f, dur: d, gain: g })),
+    run: (c, o, t) => { ftone(c, o, t, { f: 660, dur: 0.2, gain: 0.6 }); crackle(c, o, t, 0.25); },
+    homerun: (c, o, t) => { [523, 659, 784, 1047].forEach((f, i) => ftone(c, o, t + i * 0.12, { f, dur: 0.25, gain: 0.55 })); ftone(c, o, t + 0.5, { f: 1047, dur: 0.6, gain: 0.6 }); crackle(c, o, t, 1.1, 0.09); },
+    strikeout: (c, o, t) => { ftone(c, o, t, { f: 440, dur: 0.3, gain: 0.55, type: 'sawtooth' }); ftone(c, o, t + 0.22, { f: 262, dur: 0.4, gain: 0.5, type: 'sawtooth' }); crackle(c, o, t, 0.5); },
+    doubleplay: (c, o, t) => { ftone(c, o, t, { f: 659, dur: 0.14, gain: 0.5 }); ftone(c, o, t + 0.14, { f: 880, dur: 0.24, gain: 0.6 }); },
+    webgem: (c, o, t) => { [784, 988, 1319].forEach((f, i) => ftone(c, o, t + i * 0.08, { f, dur: 0.12, gain: 0.5 })); crackle(c, o, t, 0.4); },
+    stolenbase: (c, o, t) => { ftone(c, o, t, { f: 330, dur: 0.3, gain: 0.55, type: 'sawtooth' }); crackle(c, o, t, 0.4); },
+    walkoff: (c, o, t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => ftone(c, o, t + i * 0.12, { f, dur: 0.3, gain: 0.5 })); crackle(c, o, t, 1.4, 0.09); },
+    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => ftone(cx, ou, tt, { f, dur: d, gain: g + 0.25 })),
   },
 
   // EDM — supersaws, risers, and big drops.
   edm: {
     run: (c, o, t) => { supersaw(c, o, t, { f: 523, dur: 0.25, gain: 0.18 }); },
-    homerun: (c, o, t) => { riser(c, o, t, { f0: 110, f1: 1600, dur: 0.9, gain: 0.18 }); boom(c, o, t + 0.9, { f: 55, dur: 0.9, gain: 0.4 }); [220, 277, 330].forEach((f) => supersaw(c, o, t + 0.9, { f, dur: 1.0, gain: 0.13 })); },
-    strikeout: (c, o, t) => { supersaw(c, o, t, { f: 330, dur: 0.35, gain: 0.18 }); boom(c, o, t, { f: 60, dur: 0.4, gain: 0.3 }); },
-    doubleplay: (c, o, t) => { supersaw(c, o, t, { f: 440, dur: 0.14, gain: 0.16 }); supersaw(c, o, t + 0.16, { f: 587, dur: 0.28, gain: 0.18 }); },
-    webgem: (c, o, t) => { [587, 740, 880].forEach((f, i) => supersaw(c, o, t + i * 0.08, { f, dur: 0.3, gain: 0.15 })); },
+    homerun: (c, o, t) => { riser(c, o, t, { f0: 110, f1: 1600, dur: 0.9, gain: 0.16 }); boom(c, o, t + 0.9, { f: 55, dur: 0.9, gain: 0.32 }); [220, 277, 330].forEach((f) => supersaw(c, o, t + 0.9, { f, dur: 1.0, gain: 0.08 })); },
+    strikeout: (c, o, t) => { supersaw(c, o, t, { f: 330, dur: 0.35, gain: 0.16 }); boom(c, o, t, { f: 60, dur: 0.4, gain: 0.28 }); },
+    doubleplay: (c, o, t) => { supersaw(c, o, t, { f: 440, dur: 0.14, gain: 0.14 }); supersaw(c, o, t + 0.16, { f: 587, dur: 0.28, gain: 0.16 }); },
+    webgem: (c, o, t) => { [587, 740, 880].forEach((f, i) => supersaw(c, o, t + i * 0.08, { f, dur: 0.3, gain: 0.13 })); },
     stolenbase: (c, o, t) => { riser(c, o, t, { f0: 200, f1: 1200, dur: 0.4, gain: 0.16 }); },
-    walkoff: (c, o, t) => { riser(c, o, t, { f0: 90, f1: 1800, dur: 1.1, gain: 0.18 }); boom(c, o, t + 1.1, { f: 48, dur: 1.2, gain: 0.44 }); [196, 247, 294, 392].forEach((f) => supersaw(c, o, t + 1.1, { f, dur: 1.2, gain: 0.12 })); },
+    walkoff: (c, o, t) => { riser(c, o, t, { f0: 90, f1: 1800, dur: 1.1, gain: 0.16 }); boom(c, o, t + 1.1, { f: 48, dur: 1.2, gain: 0.32 }); [196, 247, 294, 392].forEach((f) => supersaw(c, o, t + 1.1, { f, dur: 1.2, gain: 0.08 })); },
     charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => supersaw(cx, ou, tt, { f, dur: d, gain: g })),
   },
 };
