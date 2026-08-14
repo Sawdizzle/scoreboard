@@ -41,6 +41,18 @@
 .card.lower-card .du-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
 .card.lower-card .du-list span { font-size: 26px; line-height: 1.15; }
 
+/* Batting order / lineup card */
+.card.lineupcard { padding: 22px 34px; min-width: 400px; }
+.card.lineupcard .card-sub { margin-bottom: 16px; }
+.lc-table { border-collapse: collapse; margin: 0 auto; }
+.lc-table td { padding: 7px 14px; font-size: 27px; }
+.lc-table .lc-ord { color: var(--steel); font-family: var(--num); font-weight: 800; text-align: right; width: 1.6em; }
+.lc-table .lc-num { font-family: var(--num); color: var(--steel); text-align: right; width: 2.4em; }
+.lc-table .lc-name { font-weight: 800; text-align: left; }
+.lc-table .lc-pos { color: var(--accent); font-weight: 700; text-align: right; width: 2.6em; }
+.lc-table .lc-cur { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.lc-table .lc-cur .lc-name, .lc-table .lc-cur .lc-ord { color: var(--accent); }
+
 /* Defensive alignment */
 .card.defense { padding: 20px 26px; }
 .card.defense .card-sub { margin-bottom: 14px; }

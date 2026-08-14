@@ -185,6 +185,29 @@ export function fielderAt(g, side, pos) {
   return filled(b) ? b : null;
 }
 
+// Ordered batting lineup for a side, each row tagged with its fielding position
+// (P for the pitcher, the assigned spot, or '' for DH/unset) and whether it's the
+// hitter at bat — for the lineup broadcast card.
+export function battingOrderCard(g, side) {
+  const t = teamLineup(g, side);
+  const positions = teamPositions(g, side);
+  const posByIdx = {};
+  for (const [pos, idx] of Object.entries(positions)) posByIdx[idx] = pos;
+  const p = t.pitcher || {};
+  const hasP = p.num || p.name;
+  const curIdx = currentBatterIdx(g, side);
+  const out = [];
+  t.batters.forEach((b, i) => {
+    if (!filled(b)) return;
+    // Assigned field spot; the pitcher wins P; anyone in the order but not on the
+    // field reads as DH.
+    let pos = posByIdx[i] || 'DH';
+    if (hasP && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || '')) pos = 'P';
+    out.push({ order: out.length + 1, num: b.num || '', name: b.name || '', pos, current: i === curIdx });
+  });
+  return out;
+}
+
 // ---- Pitch count (auto, per pitcher) --------------------------------------
 // Counts live in state.pitches keyed by side; the count shown is the fielding
 // team's (the pitcher on the mound). withPitch() adds one pitch to that tally

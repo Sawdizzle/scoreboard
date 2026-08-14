@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, fielderAt, FIELD_POSITIONS } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 
@@ -301,6 +301,14 @@ function buildCard(c, s) {
       ? `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`
       : `<span>${escapeHtml(meta.text || '')}</span>`;
     return `<div class="card lower-card"><b>Due Up</b>${body}</div>`;
+  }
+  if (c.type === 'lineup') {
+    const side = meta.side || battingSide(s);
+    const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
+    const rows = battingOrderCard(s, side).map((r) =>
+      `<tr class="${r.current ? 'lc-cur' : ''}"><td class="lc-ord">${r.order}</td><td class="lc-num">${r.num ? escapeHtml(r.num) : ''}</td><td class="lc-name">${escapeHtml(r.name)}</td><td class="lc-pos">${escapeHtml(r.pos)}</td></tr>`
+    ).join('');
+    return `<div class="card lineupcard"><div class="card-sub">Lineup — ${teamName}</div><table class="lc-table">${rows || '<tr><td class="lc-name">No lineup set</td></tr>'}</table></div>`;
   }
   if (c.type === 'defense') {
     const side = meta.side || fieldingSide(s);

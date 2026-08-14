@@ -279,7 +279,7 @@ $('preset-del').onclick = async () => {
 };
 
 // Broadcast cards (persistent until cleared)
-async function showCard(type) {
+async function showCard(type, opts = {}) {
   const meta = {};
   const text = $('card-text').value.trim();
   if (text) meta.text = text;
@@ -290,6 +290,8 @@ async function showCard(type) {
   }
   // Defense card snapshots the fielding side (top → home, bottom → away).
   if (type === 'defense') meta.side = L.fieldingSide(game);
+  // Lineup card shows the chosen team (defaults to the batting side).
+  if (type === 'lineup') meta.side = opts.side || L.battingSide(game);
   const card = { type, meta, nonce: Date.now() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
@@ -313,6 +315,15 @@ async function clearCard() {
   showToast('Card cleared');
 }
 $('card-clear').onclick = clearCard;
+// Per-team lineup card toggles (live in the Teams & lineups panel).
+async function toggleLineupCard(side) {
+  const c = game.card;
+  if (c && c.type === 'lineup' && (c.meta || {}).side === side) await clearCard();
+  else await showCard('lineup', { side });
+  renderLineups();
+}
+$('card-lineup-away').onclick = () => toggleLineupCard('away');
+$('card-lineup-home').onclick = () => toggleLineupCard('home');
 
 // Moments / FX
 $('fx-homerun').onclick = () => openHrSheet();
@@ -774,6 +785,9 @@ function renderLineups() {
   const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lineup-team');
   if (!editing) { fillLineup('away'); fillLineup('home'); }
   renderCurrentHitter('away'); renderCurrentHitter('home');
+  const lc = (game.card && game.card.type === 'lineup') ? (game.card.meta || {}).side : null;
+  $('card-lineup-away').textContent = lc === 'away' ? '📺 Hide Away lineup card' : '📺 Show Away lineup card';
+  $('card-lineup-home').textContent = lc === 'home' ? '📺 Hide Home lineup card' : '📺 Show Home lineup card';
 }
 
 // Defense (positions) — pointer-based drag & drop (works on mouse + touch) ---
