@@ -45,7 +45,7 @@ export function playAnimation(anim) {
     case 'goal':            return goalCelebration();  // stays centered
     // These slide out from behind the bug:
     case 'doubleplay': return reveal('DOUBLE PLAY');
-    case 'webgem':     return reveal('WEB GEM');
+    case 'webgem':     return reveal('WALK');
     case 'stolenbase': return reveal('STOLEN BASE');
     case 'fieldgoal':  return reveal('FIELD GOAL');
     case 'turnover':   return reveal('TURNOVER');
