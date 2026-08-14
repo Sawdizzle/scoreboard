@@ -30,6 +30,9 @@
 .card.final .linescore { margin-top: 22px; border-collapse: collapse; font-family: var(--num); margin-left: auto; margin-right: auto; }
 .card.final .linescore td, .card.final .linescore th { padding: 4px 9px; border: 1px solid var(--line); font-size: 17px; }
 .card.final .linescore th { color: var(--steel); font-weight: 700; }
+.card.final .linescore .rhe { font-weight: 800; }
+.card.final .linescore td.rhe { color: var(--accent); }
+.card.final .linescore th.rhe { color: var(--chalk); }
 
 /* Due Up (lower third) */
 .card.lower-card { padding: 18px 40px; text-align: left; }

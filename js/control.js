@@ -145,7 +145,7 @@ async function commit(res) {
   game = data; renderGame();
   // Auto-fire the matching stinger.
   if (res.anim) fireAnim(res.anim);
-  else if (res.type === 'run' || (res.type === 'walk' && res.payload?.runs)) fireAnim('run');
+  else if (res.type === 'run' || res.payload?.runs) fireAnim('run');
   else if (res.type === 'strikeout') fireAnim('strikeout');
 }
 
@@ -171,6 +171,10 @@ $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-out').onclick     = () => commit(L.onOut(game));
 $('btn-run').onclick     = () => commit(L.onRun(game));
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
+$('hit-1b').onclick      = () => commit(L.onHit(game, 1));
+$('hit-2b').onclick      = () => commit(L.onHit(game, 2));
+$('hit-3b').onclick      = () => commit(L.onHit(game, 3));
+$('hit-e').onclick       = () => commit(L.onError(game));
 $('btn-reset').onclick   = () => commit(L.onResetCount(game));
 $('btn-endhalf').onclick = () => commit(L.onEndHalf(game));
 $('btn-advance').onclick = () => commit(L.onAdvance(game));
@@ -453,7 +457,7 @@ function demoStep() {
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.withPitch(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs } }); }
+    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs } }); }
     else commit({ type: 'ball', patch: { balls: (game.balls | 0) + 1 } });
     return;
   }
@@ -753,7 +757,7 @@ $('walk-cancel').onclick = () => { $('walk-sheet').hidden = true; };
 $('walk-confirm').onclick = () => {
   $('walk-sheet').hidden = true;
   const bases = { first: wState.first, second: wState.second, third: wState.third };
-  commit({ type: 'walk', patch: L.withPitch(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs } });
+  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs } });
 };
 
 // Render --------------------------------------------------------------------

@@ -275,9 +275,9 @@ function buildCard(c, s) {
     if ((s.sport || 'baseball') === 'baseball' && Array.isArray(s.line_score) && s.line_score.length) {
       const cells = (side) => s.line_score.map((x) => `<td>${x?.[side] ?? 0}</td>`).join('');
       const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
-      ls = `<table class="linescore"><tr><th></th>${heads}<th>R</th></tr>
-        <tr><th>${aAbbr}</th>${cells('top')}<td>${s.away_score | 0}</td></tr>
-        <tr><th>${hAbbr}</th>${cells('bottom')}<td>${s.home_score | 0}</td></tr></table>`;
+      ls = `<table class="linescore"><tr><th></th>${heads}<th class="rhe">R</th><th class="rhe">H</th><th class="rhe">E</th></tr>
+        <tr><th>${aAbbr}</th>${cells('top')}<td class="rhe">${s.away_score | 0}</td><td class="rhe">${s.away_hits | 0}</td><td class="rhe">${s.away_errors | 0}</td></tr>
+        <tr><th>${hAbbr}</th>${cells('bottom')}<td class="rhe">${s.home_score | 0}</td><td class="rhe">${s.home_hits | 0}</td><td class="rhe">${s.home_errors | 0}</td></tr></table>`;
     }
     return `<div class="card final"><div class="card-sub">Final</div>
       <div class="card-scoreline">

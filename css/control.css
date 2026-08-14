@@ -87,6 +87,8 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .base-btn { flex: 1 1 auto; min-width: 56px; padding: 16px 8px; font-size: 16px; background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); }
 .base-btn.wide { flex: 2 1 auto; }
 .base-btn.on { background: var(--out); border-color: var(--out); color: #fff; }
+.base-btn.hit { background: #14432c; border-color: #1f6b45; color: #eafff2; font-weight: 800; }
+.base-btn.hit:active { filter: brightness(1.25); }
 .base-btn:active { filter: brightness(1.1); }
 
 .util-row { display: flex; gap: 12px; margin-top: 12px; }

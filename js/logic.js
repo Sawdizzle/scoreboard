@@ -48,9 +48,11 @@ export function computeHomeRun(bases) {
   return { runs };
 }
 export function homeRunPatch(g, runs) {
-  return withPitch(g, {
+  const hk = battingSide(g) === 'home' ? 'home_hits' : 'away_hits';
+  return endPA(g, {
     balls: 0, strikes: 0,
     bases: { first: false, second: false, third: false },
+    [hk]: (g[hk] | 0) + 1,
     ...runsPatch(g, runs),
   });
 }
@@ -100,8 +102,9 @@ export function onBall(g) {
 
 export function onStrike(g) {
   const strikes = (g.strikes | 0) + 1;
-  const res = strikes >= 3 ? outResult(g, 'strikeout') : { type: 'strike', patch: { strikes } };
-  return { ...res, patch: withPitch(g, res.patch) };
+  // 3rd strike ends the at-bat (pitch + advance batter); earlier strikes just count the pitch.
+  if (strikes >= 3) { const res = outResult(g, 'strikeout'); return { ...res, patch: endPA(g, res.patch) }; }
+  return { type: 'strike', patch: withPitch(g, { strikes }) };
 }
 
 export function onFoul(g) {
@@ -110,9 +113,35 @@ export function onFoul(g) {
   return { type: 'foul', patch: withPitch(g, patch) };
 }
 
-export function onOut(g) { return outResult(g, 'out'); }
+// A ball-in-play out (the OUT button) ends the at-bat: pitch + advance batter.
+// Strikeouts go through onStrike, so this path is only in-play outs.
+export function onOut(g) { const res = outResult(g, 'out'); return { ...res, patch: endPA(g, res.patch) }; }
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
+
+// A base hit reaching `reached` (1/2/3). Smart default: every existing runner
+// advances `reached` bases; the batter takes `reached`. Runners past 3rd score.
+// Records a hit for the batting team, counts the pitch, advances the order.
+export function onHit(g, reached) {
+  const b = safeBases(g.bases);
+  const occ = [b.first, b.second, b.third];
+  const keys = ['first', 'second', 'third'];
+  const nb = { first: false, second: false, third: false };
+  let runs = 0;
+  occ.forEach((on, i) => { if (!on) return; const dest = i + reached; if (dest >= 3) runs += 1; else nb[keys[dest]] = true; });
+  const bdest = reached - 1;
+  if (bdest >= 3) runs += 1; else nb[keys[bdest]] = true;
+  const hk = battingSide(g) === 'home' ? 'home_hits' : 'away_hits';
+  const patch = endPA(g, { balls: 0, strikes: 0, bases: nb, [hk]: (g[hk] | 0) + 1, ...runsPatch(g, runs) });
+  return { type: 'hit', patch, payload: { reached, runs }, anim: reached === 3 ? 'bigplay' : null };
+}
+
+// An error is charged to the fielding (defensive) team. Stat only — place the
+// runner with the base buttons; does not end the at-bat or count a pitch.
+export function onError(g) {
+  const ek = fieldingSide(g) === 'home' ? 'home_errors' : 'away_errors';
+  return { type: 'error', patch: { [ek]: (g[ek] | 0) + 1 } };
+}
 
 // The team currently at bat (top = away hits, bottom = home hits) and the team
 // in the field (which is the one whose pitcher is on the mound).
@@ -185,18 +214,31 @@ function nextFilledIdx(batters, cur) {
   return cur;
 }
 
-// Next Batter: clears the count and, if the batting team has a lineup, advances
-// that team's current-hitter index (stored in state.batIdx) to the next filled slot.
-export function onNextBatter(g) {
-  const patch = { balls: 0, strikes: 0 };
+// Advance the batting team's lineup index to the next filled slot. Returns the
+// new batIdx map, or null if that team has no lineup entered.
+function advanceBatterState(g) {
   const side = battingSide(g);
   const t = (g.lineups || {})[side] || {};
   const batters = Array.isArray(t.batters) ? t.batters : [];
-  if (batters.some((b) => b && (b.name || b.num))) {
-    const bi = (g.state && g.state.batIdx) || {};
-    const next = nextFilledIdx(batters, bi[side] | 0);
-    patch.state = { ...(g.state || {}), batIdx: { ...bi, [side]: next } };
-  }
+  if (!batters.some((b) => b && (b.name || b.num))) return null;
+  const bi = (g.state && g.state.batIdx) || {};
+  return { ...bi, [side]: nextFilledIdx(batters, bi[side] | 0) };
+}
+
+// End a plate appearance: count the pitch for the fielding pitcher AND advance
+// the batting order to the next hitter. Used by every terminal outcome
+// (out, strikeout, walk, hit, home run) so one tap moves everything.
+export function endPA(g, patch) {
+  const bi = advanceBatterState(g);
+  const withBatter = bi ? { ...patch, state: { ...(patch.state || g.state || {}), batIdx: bi } } : patch;
+  return withPitch(g, withBatter);
+}
+
+// Next Batter (manual): clears the count and advances the order, no pitch.
+export function onNextBatter(g) {
+  const bi = advanceBatterState(g);
+  const patch = { balls: 0, strikes: 0 };
+  if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
   return { type: 'batter', patch };
 }
 
