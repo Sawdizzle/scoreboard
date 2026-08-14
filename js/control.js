@@ -300,13 +300,19 @@ $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');
 $('card-sponsor').onclick = () => showCard('sponsor');
-$('card-defense').onclick = () => showCard('defense');
-$('card-clear').onclick = async () => {
+// Defense card is a toggle so it can be hidden right where it was shown.
+$('card-defense').onclick = async () => {
+  if (game.card && game.card.type === 'defense') await clearCard();
+  else await showCard('defense');
+  renderDefense();
+};
+async function clearCard() {
   game = { ...game, card: null };
   const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
   if (error) return console.warn('card clear failed', error.message);
   showToast('Card cleared');
-};
+}
+$('card-clear').onclick = clearCard;
 
 // Moments / FX
 $('fx-homerun').onclick = () => openHrSheet();
@@ -773,6 +779,14 @@ function renderLineups() {
 // Defense (positions) — pointer-based drag & drop (works on mouse + touch) ---
 let defSide = 'away';
 const chipLabel = (b) => (b.num ? '#' + b.num + ' ' : '') + (b.name || '');
+// The batting-order index whose num+name matches the team's pitcher, or -1
+// (the pitcher is stored as {num,name}; this links it back to a lineup slot).
+function pitcherIdx(team) {
+  const p = team.pitcher || {};
+  if (!(p.num || p.name)) return -1;
+  const bs = Array.isArray(team.batters) ? team.batters : [];
+  return bs.findIndex((b) => b && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || ''));
+}
 function renderDefense() {
   if (!game || (game.sport || 'baseball') !== 'baseball') return;
   $('def-away').classList.toggle('on', defSide === 'away');
@@ -780,11 +794,14 @@ function renderDefense() {
   const team = (game.lineups || {})[defSide] || {};
   const batters = Array.isArray(team.batters) ? team.batters : [];
   const positions = team.positions || {};
+  const pIdx = pitcherIdx(team);
   $('diamond-edit').innerHTML = L.FIELD_POSITIONS.map((pos) => {
     if (pos === 'P') {
       const p = team.pitcher || {};
-      const lbl = (p.num || p.name) ? esc(chipLabel(p)) : '<i class="dz-ph">—</i>';
-      return `<div class="dz-slot fixed" data-pos="${pos}"><span class="dz-slot-lab">P</span><span class="dz-slot-name">${lbl}</span></div>`;
+      const inner = !(p.num || p.name) ? '<i class="dz-ph">drop</i>'
+        : (pIdx >= 0 ? `<span class="dz-chip in-slot" data-idx="${pIdx}">${esc(chipLabel(p))}</span>`
+                     : `<span class="dz-slot-name">${esc(chipLabel(p))}</span>`);
+      return `<div class="dz-slot" data-slot="P" data-pos="P"><span class="dz-slot-lab">P</span>${inner}</div>`;
     }
     const idx = positions[pos];
     const b = (idx != null) ? batters[idx] : null;
@@ -794,17 +811,19 @@ function renderDefense() {
     return `<div class="dz-slot" data-slot="${pos}" data-pos="${pos}"><span class="dz-slot-lab">${pos}</span>${inner}</div>`;
   }).join('');
   const assigned = new Set(Object.values(positions));
+  if (pIdx >= 0) assigned.add(pIdx);
   $('def-bench').innerHTML = batters.map((b, i) =>
     (b && (b.num || b.name) && !assigned.has(i)) ? `<div class="dz-chip" data-idx="${i}">${esc(chipLabel(b))}</div>` : ''
   ).join('');
+  $('card-defense').textContent = (game.card && game.card.type === 'defense') ? '📺 Hide Defense card' : '📺 Show Defense card';
 }
-async function saveDefPositions(positions) {
+async function saveDefTeam(patch) {
   const side = defSide;
-  const lineups = { ...(game.lineups || {}), [side]: { ...((game.lineups || {})[side] || {}), positions } };
+  const lineups = { ...(game.lineups || {}), [side]: { ...((game.lineups || {})[side] || {}), ...patch } };
   game = { ...game, lineups };
   renderDefense();
   const { error } = await db.from('games').update({ lineups }).eq('id', game.id);
-  if (error) console.warn('positions write failed', error.message);
+  if (error) console.warn('defense write failed', error.message);
 }
 $('def-away').onclick = () => { defSide = 'away'; renderDefense(); };
 $('def-home').onclick = () => { defSide = 'home'; renderDefense(); };
@@ -836,10 +855,19 @@ function defUp(e) {
   window.removeEventListener('pointermove', defMove);
   window.removeEventListener('pointerup', defUp);
   if (!t.el) return;
-  const positions = { ...((game.lineups || {})[defSide] || {}).positions };
+  const team = (game.lineups || {})[defSide] || {};
+  const batters = Array.isArray(team.batters) ? team.batters : [];
+  const positions = { ...(team.positions || {}) };
+  let pitcher = { ...(team.pitcher || {}) };
+  // Vacate this player from any field position; if they were the pitcher, clear the mound.
   for (const k of Object.keys(positions)) if (positions[k] === idx) delete positions[k];
-  if (t.type === 'slot' && t.pos !== 'P') positions[t.pos] = idx; // bench drop just clears (done above)
-  saveDefPositions(positions);
+  if (pitcherIdx(team) === idx) pitcher = { num: '', name: '' };
+  if (t.type === 'slot') {
+    if (t.pos === 'P') pitcher = { num: batters[idx] ? (batters[idx].num || '') : '', name: batters[idx] ? (batters[idx].name || '') : '' };
+    else positions[t.pos] = idx;
+  }
+  // A bench drop just leaves the player unassigned (handled by the removals above).
+  saveDefTeam({ positions, pitcher });
 }
 $('def-panel').addEventListener('pointerdown', (e) => {
   const chip = e.target.closest('.dz-chip');
