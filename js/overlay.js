@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases } from './logic.js';
+import { safeBases, currentBatter, currentPitcher } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 
@@ -221,11 +221,20 @@ function updateDetail(s) {
     if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; } else el2.hidden = true;
     return;
   }
-  if (s.show_batter && (s.batter_name || s.batter_number)) {
-    const num = s.batter_number ? `#${s.batter_number} ` : '';
-    parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(s.batter_name || '')}</span>`);
+  // Batter/pitcher prefer the live lineup (at-bat hitter, fielding-team pitcher),
+  // falling back to the hand-typed fields when a team has no lineup entered.
+  const lb = currentBatter(s);
+  const batName = lb ? lb.name : s.batter_name, batNum = lb ? lb.num : s.batter_number;
+  if (s.show_batter && (batName || batNum)) {
+    const num = batNum ? `#${batNum} ` : '';
+    parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(batName || '')}</span>`);
   }
-  if (s.show_pitcher && s.pitcher_name) parts.push(`<span><span class="k">P</span>${escapeHtml(s.pitcher_name)}</span>`);
+  const lp = currentPitcher(s);
+  const pitName = lp ? lp.name : s.pitcher_name, pitNum = lp ? lp.num : '';
+  if (s.show_pitcher && (pitName || pitNum)) {
+    const num = pitNum ? `#${pitNum} ` : '';
+    parts.push(`<span><span class="k">P</span>${num}${escapeHtml(pitName || '')}</span>`);
+  }
   if (s.show_pitchcount) parts.push(`<span><span class="k">PC</span>${s.pitch_count | 0}</span>`);
   if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_score | 0) - (s.away_score | 0)) >= s.run_rule_diff) {
     parts.push('<span class="runrule">RUN RULE</span>');
@@ -277,7 +286,11 @@ function buildCard(c, s) {
       </div>${ls}</div>`;
   }
   if (c.type === 'dueup') {
-    return `<div class="card lower-card"><b>Due Up</b><span>${escapeHtml(meta.text || '')}</span></div>`;
+    // Prefer the auto-snapshot of the next 3 hitters; fall back to typed text.
+    const body = Array.isArray(meta.lines) && meta.lines.length
+      ? `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`
+      : `<span>${escapeHtml(meta.text || '')}</span>`;
+    return `<div class="card lower-card"><b>Due Up</b>${body}</div>`;
   }
   if (c.type === 'sponsor') {
     return `<div class="card sponsor"><div class="card-sub">Brought to you by</div><div class="card-title">${escapeHtml(meta.text || 'Sponsor')}</div></div>`;

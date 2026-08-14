@@ -40,6 +40,31 @@ export function computeWalk(bases) {
   return { bases: { first, second, third }, runs };
 }
 
+// Home run: the batter and every runner on base scores, the bases clear, and the
+// at-bat ends (count reset). Returns the auto-computed run count for the sheet.
+export function computeHomeRun(bases) {
+  const b = safeBases(bases);
+  const runs = (b.first ? 1 : 0) + (b.second ? 1 : 0) + (b.third ? 1 : 0) + 1;
+  return { runs };
+}
+export function homeRunPatch(g, runs) {
+  return {
+    balls: 0, strikes: 0,
+    bases: { first: false, second: false, third: false },
+    ...runsPatch(g, runs),
+  };
+}
+
+// Direct inning/half correction (no count/out/base reset — this is a fix-it tool,
+// not the normal End-½ flow). Nudging the inning extends the line score to match.
+export function onNudgeInning(g, d) {
+  const inning = Math.max(1, (g.inning | 0) + d);
+  return { type: 'inning', patch: { inning, line_score: lineScore({ ...g, inning }) } };
+}
+export function onToggleHalf(g) {
+  return { type: 'half', patch: { half: g.half === 'top' ? 'bottom' : 'top' } };
+}
+
 // Roll to the next half-inning: clear count/outs/bases, flip half, bump inning.
 export function endHalfPatch(g) {
   const toBottom = g.half === 'top';
@@ -86,7 +111,71 @@ export function onOut(g) { return outResult(g, 'out'); }
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
 
-export function onNextBatter(g) { return { type: 'batter', patch: { balls: 0, strikes: 0 } }; }
+// The team currently at bat (top = away hits, bottom = home hits) and the team
+// in the field (which is the one whose pitcher is on the mound).
+export function battingSide(g) { return g.half === 'bottom' ? 'home' : 'away'; }
+export function fieldingSide(g) { return battingSide(g) === 'away' ? 'home' : 'away'; }
+
+// ---- Lineup accessors (shared by control + overlay) -----------------------
+const filled = (b) => !!(b && (b.name || b.num));
+export function teamLineup(g, side) {
+  const t = (g.lineups || {})[side] || {};
+  return { pitcher: t.pitcher || { name: '', num: '' }, batters: Array.isArray(t.batters) ? t.batters : [] };
+}
+export function currentBatterIdx(g, side) {
+  return (((g.state && g.state.batIdx) || {})[side] | 0);
+}
+// The hitter at bat for the batting team, or null if that team has no lineup.
+export function currentBatter(g) {
+  const side = battingSide(g);
+  const { batters } = teamLineup(g, side);
+  const b = batters[currentBatterIdx(g, side)];
+  return filled(b) ? b : null;
+}
+// The pitcher on the mound = the fielding team's pitcher, or null if unset.
+export function currentPitcher(g) {
+  const p = teamLineup(g, fieldingSide(g)).pitcher;
+  return filled(p) ? p : null;
+}
+// The next `n` filled hitters after the current one, wrapping (for Due Up).
+export function dueUp(g, n = 3) {
+  const side = battingSide(g);
+  const { batters } = teamLineup(g, side);
+  const total = batters.length;
+  const out = [];
+  let j = currentBatterIdx(g, side), seen = 0;
+  while (out.length < n && seen < total) {
+    j = (j + 1) % total; seen++;
+    if (filled(batters[j])) out.push(batters[j]);
+  }
+  return out;
+}
+
+// Index of the next non-empty batter after `cur`, wrapping. Returns cur if none.
+function nextFilledIdx(batters, cur) {
+  const n = batters.length;
+  for (let step = 1; step <= n; step++) {
+    const j = (cur + step) % n;
+    const b = batters[j];
+    if (b && (b.name || b.num)) return j;
+  }
+  return cur;
+}
+
+// Next Batter: clears the count and, if the batting team has a lineup, advances
+// that team's current-hitter index (stored in state.batIdx) to the next filled slot.
+export function onNextBatter(g) {
+  const patch = { balls: 0, strikes: 0 };
+  const side = battingSide(g);
+  const t = (g.lineups || {})[side] || {};
+  const batters = Array.isArray(t.batters) ? t.batters : [];
+  if (batters.some((b) => b && (b.name || b.num))) {
+    const bi = (g.state && g.state.batIdx) || {};
+    const next = nextFilledIdx(batters, bi[side] | 0);
+    patch.state = { ...(g.state || {}), batIdx: { ...bi, [side]: next } };
+  }
+  return { type: 'batter', patch };
+}
 
 export function onResetCount(g) { return { type: 'count', patch: { balls: 0, strikes: 0 } }; }
 

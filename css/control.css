@@ -144,6 +144,22 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .cards-pad input { width: 100%; margin-top: 8px; padding: 12px; font-size: 15px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
 .fxbtn.cardclear { width: 100%; margin-top: 8px; background: #3a1f1f; }
 
+/* Teams & lineups */
+.lineup-team { margin-top: 8px; background: var(--bg-2); }
+.lineup-team > summary { padding: 12px 14px; font-size: 13px; }
+.lineup-list { margin-top: 4px; }
+.lineup-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.lineup-row input { width: auto; margin-top: 0; padding: 10px; font-size: 15px; border-radius: 10px; }
+.lineup-row .b-num { flex: 0 0 3.2ch; text-align: center; font-family: var(--num); padding-left: 4px; padding-right: 4px; }
+.lineup-row .b-name { flex: 1 1 auto; min-width: 0; }
+.lineup-row .ord { flex: 0 0 1.6ch; text-align: center; font-family: var(--num); font-size: 13px; color: var(--muted); }
+.lineup-row .ord.p { color: var(--steel); font-weight: 800; }
+.lineup-row.pitcher { margin-top: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
+.cur-dot { flex: 0 0 auto; width: 34px; height: 34px; font-size: 16px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; }
+.lineup-row.at-bat .cur-dot { background: var(--out); border-color: var(--out); color: #fff; }
+.lineup-row.at-bat .b-name { border-color: var(--out); }
+.lineup-row.at-bat .ord { color: var(--chalk); }
+
 /* Clock row */
 .clock-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .clock-row[hidden] { display: none; }

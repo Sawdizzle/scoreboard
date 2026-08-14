@@ -82,6 +82,11 @@
         <button id="btn-reset" class="key util">Reset Count</button>
         <button id="btn-endhalf" class="key util">End ½ Inning</button>
       </div>
+      <div class="util-row">
+        <button id="btn-inning-dn" class="key util">◄ Inning</button>
+        <button id="btn-half" class="key util">Flip ½</button>
+        <button id="btn-inning-up" class="key util">Inning ►</button>
+      </div>
       <div class="fx-pad">
         <span class="bases-label">Moments</span>
         <button id="fx-homerun" class="fxbtn hr">💥 HOME RUN</button>
@@ -208,6 +213,39 @@
         <button id="card-clear" class="fxbtn cardclear">✕ Clear card</button>
       </div>
     </details>
+
+    <div class="sport-only" data-sport="baseball">
+      <details class="panel">
+        <summary>👥 Teams &amp; lineups</summary>
+        <div class="panel-body">
+          <p class="hint">The <b>◎</b> marks who's at bat — tap to set it; <b>Next Batter</b> advances it automatically. At-bat hitter + the fielding team's pitcher feed the overlay.</p>
+
+          <details class="panel lineup-team" open>
+            <summary>◄ Away — <span id="lineup-away-team">Visitor</span></summary>
+            <div class="panel-body">
+              <div class="lineup-row pitcher">
+                <span class="ord p">P</span>
+                <input id="lp-num-away" class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />
+                <input id="lp-name-away" class="b-name" placeholder="Pitcher name" />
+              </div>
+              <div class="lineup-list" id="lineup-away"></div>
+            </div>
+          </details>
+
+          <details class="panel lineup-team">
+            <summary>► Home — <span id="lineup-home-team">Home</span></summary>
+            <div class="panel-body">
+              <div class="lineup-row pitcher">
+                <span class="ord p">P</span>
+                <input id="lp-num-home" class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />
+                <input id="lp-name-home" class="b-name" placeholder="Pitcher name" />
+              </div>
+              <div class="lineup-list" id="lineup-home"></div>
+            </div>
+          </details>
+        </div>
+      </details>
+    </div>
 
     <details class="panel">
       <summary>💾 Look presets</summary>
@@ -412,6 +450,24 @@
       <div class="sheet-actions">
         <button id="walk-cancel" class="ghost">Cancel</button>
         <button id="walk-confirm" class="primary">Confirm Walk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME RUN SHEET -->
+  <div id="hr-sheet" class="sheet" hidden>
+    <div class="sheet-card">
+      <h3>Home Run — confirm runs</h3>
+      <p class="muted">Batter plus every runner scores and the bases clear. Adjust the total if needed, then confirm.</p>
+      <div class="runs-stepper">
+        <span>Runs on play</span>
+        <button id="hr-runs-dn" class="step">–</button>
+        <b id="hr-runs">1</b>
+        <button id="hr-runs-up" class="step">+</button>
+      </div>
+      <div class="sheet-actions">
+        <button id="hr-cancel" class="ghost">Cancel</button>
+        <button id="hr-confirm" class="primary">Confirm Home Run</button>
       </div>
     </div>
   </div>

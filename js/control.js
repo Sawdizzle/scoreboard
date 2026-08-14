@@ -276,6 +276,11 @@ async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
   if (text) meta.text = text;
+  // Due Up auto-fills the batting team's next 3 hitters (unless you typed names).
+  if (type === 'dueup' && !text) {
+    const lines = L.dueUp(game, 3).map((b) => (b.num ? `#${b.num} ` : '') + b.name).filter((s) => s.trim());
+    if (lines.length) meta.lines = lines;
+  }
   const card = { type, meta, nonce: Date.now() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
@@ -294,7 +299,7 @@ $('card-clear').onclick = async () => {
 };
 
 // Moments / FX
-$('fx-homerun').onclick = () => fireAnim('homerun');
+$('fx-homerun').onclick = () => openHrSheet();
 $('fx-k').onclick       = () => fireAnim('strikeout');
 $('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
 $('fx-dp').onclick      = () => fireAnim('doubleplay');
@@ -343,6 +348,7 @@ $('reset-game').onclick = async () => {
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
     bases: { first: false, second: false, third: false }, pitch_count: 0,
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 } },
   });
   else if (sport === 'football') patch.state = F.fbState({});
   else if (sport === 'soccer') patch.state = S.scState({});
@@ -628,6 +634,107 @@ function renderAudio() {
   $('sound-pack').value = game.sound_pack || 'bigleague';
 }
 
+// Home-run sheet ------------------------------------------------------------
+// Batter + every runner scores and the bases clear; the sheet just confirms the
+// run total (pre-filled from who's on base) before committing + firing the anim.
+let hrRuns = 1;
+function paintHr() { $('hr-runs').textContent = hrRuns; }
+function openHrSheet() {
+  hrRuns = L.computeHomeRun(game.bases).runs;
+  paintHr(); $('hr-sheet').hidden = false;
+}
+$('hr-runs-up').onclick = () => { hrRuns = Math.min(hrRuns + 1, 4); paintHr(); };
+$('hr-runs-dn').onclick = () => { hrRuns = Math.max(hrRuns - 1, 1); paintHr(); };
+$('hr-cancel').onclick = () => { $('hr-sheet').hidden = true; };
+$('hr-confirm').onclick = () => {
+  $('hr-sheet').hidden = true;
+  commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns), payload: { runs: hrRuns }, anim: 'homerun' });
+};
+
+// Inning editor (baseball) --------------------------------------------------
+$('btn-inning-dn').onclick = () => commit(L.onNudgeInning(game, -1));
+$('btn-inning-up').onclick = () => commit(L.onNudgeInning(game, 1));
+$('btn-half').onclick = () => commit(L.onToggleHalf(game));
+
+// Teams & lineups (baseball) ------------------------------------------------
+// Rosters live in the `lineups` jsonb column (written directly, not undoable).
+// The current-hitter index lives in state.batIdx (undoable via apply_event).
+const LINEUP_SLOTS = 12;
+let lineupBuiltFor = null;
+
+const teamOf = (side) => {
+  const t = (game.lineups || {})[side] || {};
+  return { pitcher: t.pitcher || { name: '', num: '' }, batters: Array.isArray(t.batters) ? t.batters : [] };
+};
+const batIdxOf = (side) => (((game.state && game.state.batIdx) || {})[side] | 0);
+
+function buildLineup(side) {
+  let html = '';
+  for (let i = 0; i < LINEUP_SLOTS; i++) {
+    html += `<div class="lineup-row" data-i="${i}">` +
+      `<button class="cur-dot" data-i="${i}" title="Set at-bat">◎</button>` +
+      `<span class="ord">${i + 1}</span>` +
+      `<input class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />` +
+      `<input class="b-name" placeholder="Batter ${i + 1}" /></div>`;
+  }
+  $('lineup-' + side).innerHTML = html;
+}
+function fillLineup(side) {
+  const t = teamOf(side);
+  $('lp-num-' + side).value = t.pitcher.num || '';
+  $('lp-name-' + side).value = t.pitcher.name || '';
+  $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row, i) => {
+    const b = t.batters[i] || {};
+    row.querySelector('.b-num').value = b.num || '';
+    row.querySelector('.b-name').value = b.name || '';
+  });
+}
+function renderCurrentHitter(side) {
+  const idx = batIdxOf(side);
+  $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row, i) => {
+    const on = i === idx;
+    row.classList.toggle('at-bat', on);
+    row.querySelector('.cur-dot').textContent = on ? '◉' : '◎';
+  });
+}
+function readLineup(side) {
+  const batters = [];
+  $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row) => {
+    batters.push({ num: row.querySelector('.b-num').value.trim(), name: row.querySelector('.b-name').value.trim() });
+  });
+  return { pitcher: { num: $('lp-num-' + side).value.trim(), name: $('lp-name-' + side).value.trim() }, batters };
+}
+async function saveLineup(side) {
+  const lineups = { ...(game.lineups || {}), [side]: readLineup(side) };
+  game = { ...game, lineups };
+  const { error } = await db.from('games').update({ lineups }).eq('id', game.id);
+  if (error) console.warn('lineup write failed', error.message);
+}
+function setCurrentHitter(side, i) {
+  const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
+  commit({ type: 'batidx', patch: { state: { ...(game.state || {}), batIdx } }, payload: { side, i } });
+}
+// Wire the static containers/inputs once (rows are delegated, so rebuilds are safe).
+['away', 'home'].forEach((side) => {
+  const list = $('lineup-' + side);
+  list.addEventListener('change', () => saveLineup(side));
+  list.addEventListener('click', (e) => {
+    const dot = e.target.closest('.cur-dot');
+    if (dot) setCurrentHitter(side, +dot.dataset.i);
+  });
+  $('lp-num-' + side).addEventListener('change', () => saveLineup(side));
+  $('lp-name-' + side).addEventListener('change', () => saveLineup(side));
+});
+function renderLineups() {
+  if (lineupBuiltFor !== game.id) { buildLineup('away'); buildLineup('home'); lineupBuiltFor = game.id; }
+  $('lineup-away-team').textContent = game.away_name || 'Visitor';
+  $('lineup-home-team').textContent = game.home_name || 'Home';
+  // Don't overwrite inputs the user is actively typing into; always refresh the marker.
+  const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lineup-team');
+  if (!editing) { fillLineup('away'); fillLineup('home'); }
+  renderCurrentHitter('away'); renderCurrentHitter('home');
+}
+
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
 function paintWalk() {
@@ -682,6 +789,7 @@ function renderBaseballControl() {
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
+  renderLineups();
 }
 function renderFootballControl() {
   const st = F.fbState(game);
