@@ -1,28 +1,56 @@
 # Broadcast Scoreboard
 
-Live, phone-controlled baseball scorebug overlays for OBS. Two static pages backed by Supabase (Postgres + Realtime + Auth), no build step.
+A live, phone-controlled **multi-sport** scoreboard overlay suite for OBS. Two static pages backed by Supabase (Postgres + Realtime + Auth), no build step.
 
 - **`/overlay`** — transparent OBS Browser Source (1920×1080). Display-only.
 - **`/control`** — phone-first control panel. Username + PIN login. Writes game state.
 
-State syncs control → Postgres → Realtime → overlay in ~250ms. The overlay auto-reconnects and keeps last-known state on flaky networks (it never blanks mid-broadcast).
+State syncs control → Postgres → Realtime → overlay in ~250 ms. The overlay auto-reconnects and keeps last-known state on flaky networks (it never blanks mid-broadcast).
 
-## Features
+## Sports
 
-- **Scorebug:** score, inning + top/bottom arrow, balls/strikes, outs, base diamond, team names/abbr/logos/colors, R line.
-- **Smart control:** 4th ball auto-walks (with a force-advance confirm sheet), 3rd strike auto-outs, 3rd out rolls the half-inning. Multi-level **undo** backed by a Postgres event log (survives reloads/disconnects).
-- **Moments:** run flash, full-screen **home run**, **K** stamp, double play, web gem, stolen base, walk-off, **rally mode**, and a manual bugle **Charge!**. Fired from the control panel, GPU-friendly, alpha-transparent, safe mid-play.
-- **Sound:** three synthesized packs (Big League / Modern / Sandlot) played in the overlay so OBS captures them; master mute + per-category volume.
-- **Themes:** Midnight (default), Broadcast Minimal, Retro 8-bit, Classic Green. Selectable per game. Scorebug position (bottom / top / top-left) and scale.
-- **Time-limit clock:** countdown for select-ball time limits; start / pause / reset from the control panel.
+Pick the sport when you create a game; the control panel and overlay both swap to that sport's controls and layout.
+
+- **Baseball** — inning + ▲/▼, balls/strikes, outs, base diamond, R/H/E, line score. Smart logic: 4th ball auto-walks (force-advance confirm sheet), 3rd strike auto-outs, 3rd out rolls the half-inning. Multi-level **undo** backed by a Postgres event log (survives reloads/disconnects).
+- **Football** — quarter clock, down & distance (incl. *& Goal* / *1st & 10*), possession, timeouts. Scoring: TD +6, XP +1, 2-PT +2, FG +3, Safety +2, plus manual ±.
+- **Soccer** — count-up match clock + stoppage time, halves, goals, yellow/red cards.
+
+## Scorebug styles
+
+Selectable per game (default **Scorebox**):
+
+- **Scorebox** — traditional full broadcast box: teams stacked with logo + runs, a large bases diamond, inning, and labeled **B / S / O** dot counts.
+- **Bar** (wide strip) · **Bug** (stacked) · **Minimal** (slim) · **Lower-third** (accent tab) · **Ticker** (thin).
+
+## Themes & customization
+
+- **12 themes:** Midnight, Broadcast Minimal, Retro 8-bit, Classic Green, Neon, Sunset, Ice, Newsprint, Gold, Carbon, Vaporwave, Royal.
+- **Customize** (per game, on top of any theme): accent color, font, corner radius, logo size, border width, team color bars, and toggles for hide-logos / hide-detail / no-shadow / uppercase.
+- **Position:** full 3×3 grid — {top, middle, bottom} × {left, center, right} — plus a scale slider.
+- **Look presets:** save an entire look (theme + style + position + scale + sound + customize) under a name and one-tap apply it to any game.
+
+## Moments & sound
+
+- **Animations** fired from the control panel: run flash, full-screen **home run**, **K** stamp, double play, web gem, stolen base, walk-off, **touchdown**, field goal, turnover, big play, **GOAL!**, rally mode, and a manual bugle **Charge!**. GPU-friendly, alpha-transparent, safe mid-play; each auto-plays its matching sound.
+- **Sound:** three synthesized packs (Big League / Modern / Sandlot — nothing sampled) played in the overlay so OBS captures them; master mute + per-category volume.
+
+## Broadcast cards
+
+Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
+
+## Game management
+
+- **Game / time-limit clock:** start / pause / reset from the control panel (countdown for baseball/football, count-up for soccer).
 - **Extras (toggle per game):** batter name/number, pitcher, pitch count, run-rule watch.
+- **New game:** choose sport, then scorebug style.
+- **Delete** a game (lobby trash button or Setup) and **Reset** a game to 0 (Setup — sport-aware; clears score/situation/clock/cards/undo, keeps teams + look).
 - **Practice / Demo mode:** simulate a game and preview every animation + sound without going live.
 
 ## Stack
 
 - Vanilla HTML/CSS/JS (ES modules), `@supabase/supabase-js` via ESM CDN — nothing to compile.
-- Supabase project `PickEm` (`yeykyutsbeqjcgdxlucn`), schema **`scoreboard`** (tables `games`, `events`; RPCs `apply_event`, `undo`; edge function `signup`).
-- Per-user ownership via RLS; public read for overlays, owner-only writes.
+- Supabase project `PickEm` (`yeykyutsbeqjcgdxlucn`), schema **`scoreboard`** (tables `games`, `events`, `presets`; RPCs `apply_event`, `undo`; edge function `signup`).
+- Per-user ownership via RLS; public read for overlays, owner-only writes. Presentation (theme/style/look/audio/card) syncs to the overlay via Realtime.
 - Deploys as static files on Vercel (`cleanUrls` gives `/control` and `/overlay`).
 
 ## Run locally
@@ -51,7 +79,7 @@ python3 -m http.server 5173
 4. Leave the default Custom CSS (the page is already transparent).
 5. **Uncheck "Shutdown source when not visible"** — keeps the realtime connection alive between scenes.
 6. **Audio:** check **"Control audio via OBS"** so the overlay's sounds go into your stream mix. Then in the Audio Mixer, set the source's Audio Monitoring to "Monitor and Output" if you also want to hear it in your headphones.
-7. Position/scale the source in your scene. The bug also has its own position (bottom/top/top-left) and scale slider in the control panel — use whichever is easier per field.
+7. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel — use whichever is easier per field.
 
 ## Deploy (Vercel)
 
@@ -59,4 +87,4 @@ Push to `main` → Vercel auto-deploys. Framework preset **Other**, no build com
 
 ## Auth (username + PIN)
 
-Usernames map to an internal synthetic email; the PIN is the password. Signup goes through the `signup` Edge Function (creates a pre-confirmed account with the service role), so there's no email verification and no secret in the browser.
+Usernames map to an internal synthetic email; the PIN is the password. Signup goes through the `signup` Edge Function (creates a pre-confirmed account with the service role), so there's no email verification and no secret in the browser. Each user owns and only sees their own games and presets.
