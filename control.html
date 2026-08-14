@@ -238,13 +238,18 @@
             <option value="royal">Royal</option>
           </select>
         </label>
-        <label class="sel">Position
-          <select id="pos-sel">
-            <option value="bottom-bar">Bottom</option>
-            <option value="top-bar">Top</option>
-            <option value="top-left">Top-left</option>
-          </select>
-        </label>
+      </div>
+      <span class="sublabel">Position</span>
+      <div class="pos-grid" id="pos-grid">
+        <button data-pos="top-left" title="Top-left">↖</button>
+        <button data-pos="top-center" title="Top-center">↑</button>
+        <button data-pos="top-right" title="Top-right">↗</button>
+        <button data-pos="mid-left" title="Middle-left">←</button>
+        <button data-pos="mid-center" title="Center">＋</button>
+        <button data-pos="mid-right" title="Middle-right">→</button>
+        <button data-pos="bottom-left" title="Bottom-left">↙</button>
+        <button data-pos="bottom-center" title="Bottom-center">↓</button>
+        <button data-pos="bottom-right" title="Bottom-right">↘</button>
       </div>
       <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
     </div>

@@ -488,12 +488,14 @@ async function writeField(patch) {
   if (error) console.warn('look write failed', error.message);
 }
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
-$('pos-sel').addEventListener('change', (e) => writeField({ scorebug_position: e.target.value }));
+document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
 $('scale-sel').addEventListener('input', (e) => { $('scale-val').textContent = (+e.target.value).toFixed(2) + '×'; });
 $('scale-sel').addEventListener('change', (e) => writeField({ scorebug_scale: +e.target.value }));
+const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
 function renderLook() {
   $('theme-sel').value = game.theme || 'nightgame';
-  $('pos-sel').value = game.scorebug_position || 'bottom-bar';
+  const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
+  document.querySelectorAll('#pos-grid button').forEach((b) => b.classList.toggle('on', b.dataset.pos === cur));
   const sc = game.scorebug_scale || 1;
   $('scale-sel').value = sc;
   $('scale-val').textContent = (+sc).toFixed(2) + '×';

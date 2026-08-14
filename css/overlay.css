@@ -36,9 +36,21 @@ body.debug {
    stale top/bottom. transform-origin matches the anchor so scaling looks right. */
 #bug-wrap { position: fixed; display: flex; flex-direction: column; align-items: center; gap: 6px;
   top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
-body[data-pos="bottom-bar"] #bug-wrap { top: auto; bottom: 46px; left: 50%; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
-body[data-pos="top-bar"]    #bug-wrap { bottom: auto; top: 32px; left: 50%; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
-body[data-pos="top-left"]   #bug-wrap { bottom: auto; top: 32px; left: 44px; align-items: flex-start; transform: scale(var(--scale)); transform-origin: top left; }
+
+/* Full 3×3 grid: {top,mid,bottom} × {left,center,right}. Each sets both edges
+   (unused one = auto), the matching transform, and transform-origin. */
+body[data-pos="top-left"]      #bug-wrap { top: 32px; bottom: auto; left: 44px; right: auto; align-items: flex-start; transform: scale(var(--scale)); transform-origin: top left; }
+body[data-pos="top-center"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
+body[data-pos="top-right"]     #bug-wrap { top: 32px; bottom: auto; right: 44px; left: auto; align-items: flex-end; transform: scale(var(--scale)); transform-origin: top right; }
+body[data-pos="mid-left"]      #bug-wrap { top: 50%; bottom: auto; left: 44px; right: auto; align-items: flex-start; transform: translateY(-50%) scale(var(--scale)); transform-origin: center left; }
+body[data-pos="mid-center"]    #bug-wrap { top: 50%; bottom: auto; left: 50%; right: auto; align-items: center; transform: translate(-50%, -50%) scale(var(--scale)); transform-origin: center; }
+body[data-pos="mid-right"]     #bug-wrap { top: 50%; bottom: auto; right: 44px; left: auto; align-items: flex-end; transform: translateY(-50%) scale(var(--scale)); transform-origin: center right; }
+body[data-pos="bottom-left"]   #bug-wrap { bottom: 46px; top: auto; left: 44px; right: auto; align-items: flex-start; transform: scale(var(--scale)); transform-origin: bottom left; }
+body[data-pos="bottom-center"] #bug-wrap { bottom: 46px; top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="bottom-right"]  #bug-wrap { bottom: 46px; top: auto; right: 44px; left: auto; align-items: flex-end; transform: scale(var(--scale)); transform-origin: bottom right; }
+/* legacy aliases (older games) */
+body[data-pos="bottom-bar"] #bug-wrap { bottom: 46px; top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="top-bar"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
 
 .team { display: flex; align-items: center; gap: 12px; padding: 11px 18px; }
 .team .logo { height: var(--logo-size, 30px); width: var(--logo-size, 30px); object-fit: contain; }
