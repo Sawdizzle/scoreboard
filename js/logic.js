@@ -195,13 +195,16 @@ export function battingOrderCard(g, side) {
   for (const [pos, idx] of Object.entries(positions)) posByIdx[idx] = pos;
   const p = t.pitcher || {};
   const hasP = p.num || p.name;
+  // Only fill "DH" once a defense actually exists; otherwise leave it blank so a
+  // half-set-up lineup doesn't read as all-DH.
+  const hasDefense = Object.keys(positions).length > 0 || !!hasP;
   const curIdx = currentBatterIdx(g, side);
   const out = [];
   t.batters.forEach((b, i) => {
     if (!filled(b)) return;
-    // Assigned field spot; the pitcher wins P; anyone in the order but not on the
-    // field reads as DH.
-    let pos = posByIdx[i] || 'DH';
+    // Assigned field spot; the pitcher wins P; an in-order batter not on the field
+    // reads as DH (once a defense is set).
+    let pos = posByIdx[i] || (hasDefense ? 'DH' : '');
     if (hasP && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || '')) pos = 'P';
     out.push({ order: out.length + 1, num: b.num || '', name: b.name || '', pos, current: i === curIdx });
   });
