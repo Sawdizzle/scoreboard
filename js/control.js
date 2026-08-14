@@ -172,10 +172,25 @@ async function commit(res) {
   const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: res.type, p_new: res.patch, p_payload: res.payload || {} });
   if (error) { game = prev; renderGame(); return alert(error.message); }
   game = data; renderGame();
-  // Auto-fire the matching stinger.
-  if (res.anim) fireAnim(res.anim);
+  // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
+  if (maybeWalkoff(prev, game)) { /* walk-off fired */ }
+  else if (res.anim) fireAnim(res.anim);
   else if (res.type === 'run' || res.payload?.runs) fireAnim('run');
   else if (res.type === 'strikeout') fireAnim('strikeout');
+}
+
+// Home takes the lead in the bottom of the final (regulation+) inning → walk-off.
+// Opt-in: only when regulation_innings is set (> 0). Returns true if it fired.
+function maybeWalkoff(before, after) {
+  const reg = after.regulation_innings | 0;
+  if ((after.sport || 'baseball') !== 'baseball' || !reg) return false;
+  if (after.half === 'bottom' && (after.inning | 0) >= reg &&
+      (after.home_score | 0) > (after.away_score | 0) &&
+      (before.home_score | 0) <= (before.away_score | 0)) {
+    fireAnim('walkoff');
+    return true;
+  }
+  return false;
 }
 
 // Strictly-increasing nonce so two triggers in the same millisecond don't collide
@@ -517,6 +532,7 @@ function fillSetup() {
   $('su-home-logo').value = game.home_logo_url || '';
   $('su-home-color').value = game.home_color || '#1b2a41';
   $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
+  $('su-regulation').value = game.regulation_innings || '';
   $('su-show-clock').checked = !!game.show_clock;
   $('su-show-batter').checked = !!game.show_batter;
   $('su-show-pitcher').checked = !!game.show_pitcher;
@@ -538,6 +554,7 @@ $('setup-save').onclick = async () => {
     show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
     show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
     show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
+    regulation_innings: parseInt($('su-regulation').value, 10) || 0,
   };
   // Reset the clock's remaining time if the limit changed and it isn't running.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
@@ -1044,6 +1061,15 @@ $('walk-confirm').onclick = () => {
 
 // Render --------------------------------------------------------------------
 const ordinal = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || n + 'th');
+// Pop the control's score when it goes up (operator feedback), like the overlay.
+const ctrlPrevScore = { away: null, home: null };
+function ctrlScorePop(side, val, id) {
+  const el2 = $(id);
+  if (el2 && ctrlPrevScore[side] != null && val > ctrlPrevScore[side]) {
+    el2.classList.remove('pop'); void el2.offsetWidth; el2.classList.add('pop');
+  }
+  ctrlPrevScore[side] = val;
+}
 function showSport(sport) {
   document.querySelectorAll('.sport-only').forEach((el) => { el.hidden = el.dataset.sport !== sport; });
 }
@@ -1055,6 +1081,8 @@ function renderGame() {
   $('g-home-name').textContent = game.home_name;
   $('g-away-runs').textContent = game.away_score;
   $('g-home-runs').textContent = game.home_score;
+  ctrlScorePop('away', game.away_score, 'g-away-runs');
+  ctrlScorePop('home', game.home_score, 'g-home-runs');
   if (sport === 'football') renderFootballControl();
   else if (sport === 'soccer') renderSoccerControl();
   else renderBaseballControl();
