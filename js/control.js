@@ -1160,7 +1160,10 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
-    const map = { b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-batter' };
+    const map = {
+      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-batter',
+      1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', e: 'hit-e', a: 'btn-advance', c: 'btn-clear',
+    };
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });

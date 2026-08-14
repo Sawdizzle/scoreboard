@@ -31,6 +31,18 @@ body.debug {
 }
 .bug[data-ready="1"] { opacity: 1; }
 
+/* Polish: a subtle slide-in on load, and a pop when a team scores. Both are
+   motion-safe — disabled for viewers who prefer reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .bug[data-ready="1"] { animation: bug-in 0.55s cubic-bezier(.2, .8, .2, 1) both; }
+  @keyframes bug-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+  .team .runs.scored { animation: score-pop 0.9s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes score-pop { 0% { transform: scale(1); } 28% { transform: scale(1.42); color: var(--accent); } 100% { transform: scale(1); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bug, .diamond .base rect, .outs .dot { transition: none; }
+}
+
 /* Reveal layer: a same-width card that slides out from BEHIND the bug. The bug
    and detail sit above it (z-index 2); the card hides behind the bug at rest. */
 #bug-wrap > .bug, #bug-wrap > .detail { position: relative; z-index: 2; }

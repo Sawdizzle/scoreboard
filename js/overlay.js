@@ -69,6 +69,8 @@ function render(s) {
   el.homeAbbr.textContent = s.home_abbr || s.home_name;
   el.awayRuns.textContent = s.away_score;
   el.homeRuns.textContent = s.home_score;
+  popOnScore('away', s.away_score);
+  popOnScore('home', s.home_score);
   setLogo('away-logo', s.away_logo_url);
   setLogo('home-logo', s.home_logo_url);
 
@@ -171,10 +173,25 @@ function applyLook(s) {
   if (hm) hm.style.setProperty('--tc', s.home_color || '#888');
 }
 
+// Pop a team's runs when the score goes UP (a run scored). Skips the first paint
+// and reconnects (prev is null) and manual decrements.
+const prevScore = { away: null, home: null };
+function popOnScore(side, val) {
+  const el2 = document.getElementById(side + '-runs');
+  if (el2 && prevScore[side] != null && val > prevScore[side]) {
+    el2.classList.remove('scored'); void el2.offsetWidth; el2.classList.add('scored');
+  }
+  prevScore[side] = val;
+}
+
+const failedLogos = new Set();
 function setLogo(id, url) {
   const img = document.getElementById(id);
-  if (url) { if (img.getAttribute('src') !== url) img.src = url; img.hidden = false; }
-  else { img.hidden = true; img.removeAttribute('src'); }
+  if (url && !failedLogos.has(url)) {
+    if (img.getAttribute('src') !== url) img.src = url;
+    img.onerror = () => { failedLogos.add(url); img.hidden = true; img.removeAttribute('src'); };
+    img.hidden = false;
+  } else { img.hidden = true; img.removeAttribute('src'); }
 }
 
 function fmtClock(sec) {
