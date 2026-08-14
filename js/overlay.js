@@ -130,6 +130,16 @@ function applyLook(s) {
   setVar(b, '--radius', (L.radius != null && L.radius !== '') ? parseInt(L.radius, 10) + 'px' : '');
   setVar(b, '--logo-size', L.logoSize ? LOGO_SIZES[L.logoSize] : '');
   setVar(b, '--bd-width', (L.border != null && L.border !== '') ? parseInt(L.border, 10) + 'px' : '');
+  // Build-your-own colors: text / highlight / border overrides + panel fill (solid or gradient).
+  setVar(b, '--chalk', L.text);
+  setVar(b, '--steel', L.steel);
+  setVar(b, '--line', L.line);
+  const bugEl = document.getElementById('bug');
+  if (bugEl) {
+    if (L.panelType === 'gradient' && L.panelC1 && L.panelC2) bugEl.style.background = `linear-gradient(${L.panelAngle ?? 180}deg, ${L.panelC1}, ${L.panelC2})`;
+    else if (L.panelType === 'solid' && L.panelC1) bugEl.style.background = L.panelC1;
+    else bugEl.style.background = '';
+  }
   b.classList.toggle('no-logos', !!L.hideLogos);
   b.classList.toggle('no-detail', !!L.hideDetail);
   b.classList.toggle('no-shadow', !!L.noShadow);

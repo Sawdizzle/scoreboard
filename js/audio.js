@@ -98,6 +98,32 @@ function organ(c, out, t, f, dur, gain = 0.25) {
   });
 }
 function blip(c, out, t, f, dur = 0.12, gain = 0.28, type = 'square') { tone(c, out, t, { f, type, dur, gain, a: 0.005, d: dur }); }
+// Sub boom (pitch-drops), detuned brass stack, FM-ish bell, and a stadium air horn.
+function boom(c, out, t, { f = 80, dur = 0.7, gain = 0.4 } = {}) {
+  const o = c.createOscillator(), g = c.createGain(); o.type = 'sine';
+  o.frequency.setValueAtTime(f * 2.4, t); o.frequency.exponentialRampToValueAtTime(f * 0.6, t + dur);
+  o.connect(g); g.connect(out); env(g, t, 0.005, dur, gain); o.start(t); o.stop(t + dur + 0.05);
+}
+function brass(c, out, t, { f = 220, dur = 0.5, gain = 0.22, a = 0.02 } = {}) {
+  const g = c.createGain(); const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f * 6 + 400;
+  g.connect(lp); lp.connect(out); env(g, t, a, dur, gain);
+  [-7, 0, 7].forEach((det) => { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * Math.pow(2, det / 1200); o.connect(g); o.start(t); o.stop(t + dur + 0.05); });
+}
+function bell(c, out, t, f, dur = 0.6, gain = 0.3) {
+  [[1, gain], [2.76, gain * 0.45], [5.4, gain * 0.2]].forEach(([m, gg]) => {
+    const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * m;
+    o.connect(g); g.connect(out); env(g, t, 0.002, dur, gg); o.start(t); o.stop(t + dur + 0.05);
+  });
+}
+function horn(c, out, t, { f = 330, dur = 0.6, gain = 0.28 } = {}) {
+  const g = c.createGain(); g.connect(out); env(g, t, 0.02, dur, gain);
+  [0, 4, 7, 12].forEach((semi) => {
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * Math.pow(2, semi / 12);
+    const lfo = c.createOscillator(); lfo.frequency.value = 6; const lg = c.createGain(); lg.gain.value = 5;
+    lfo.connect(lg); lg.connect(o.frequency); o.connect(g);
+    o.start(t); o.stop(t + dur + 0.05); lfo.start(t); lfo.stop(t + dur + 0.05);
+  });
+}
 
 // Bugle "Charge!" motif (public-domain cadence), voiced by whatever noteFn is passed.
 function charge(c, out, t, noteFn) {
@@ -137,5 +163,53 @@ const PACKS = {
     stolenbase: (c, o, t) => { tone(c, o, t, { f: 200, glideTo: 1000, type: 'square', dur: 0.3, gain: 0.25, d: 0.3 }); },
     walkoff: (c, o, t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => blip(c, o, t + i * 0.12, f, 0.3, 0.3)); },
     charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => blip(cx, ou, tt, f, d, g)),
+  },
+
+  // Arcade — richer chiptune, triangle+square arpeggios.
+  arcade: {
+    run: (c, o, t) => { [659, 784, 988].forEach((f, i) => blip(c, o, t + i * 0.06, f, 0.09, 0.26, 'triangle')); },
+    homerun: (c, o, t) => { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => blip(c, o, t + i * 0.09, f, 0.12, 0.28)); blip(c, o, t + 0.6, 1568, 0.5, 0.3, 'triangle'); },
+    strikeout: (c, o, t) => { [440, 349, 262].forEach((f, i) => blip(c, o, t + i * 0.12, f, 0.16, 0.3, 'square')); },
+    doubleplay: (c, o, t) => { blip(c, o, t, 784, 0.08); blip(c, o, t + 0.09, 988, 0.08); blip(c, o, t + 0.18, 1319, 0.18, 0.3); },
+    webgem: (c, o, t) => { [988, 1319, 1568, 2093].forEach((f, i) => blip(c, o, t + i * 0.06, f, 0.1, 0.24, 'triangle')); },
+    stolenbase: (c, o, t) => { tone(c, o, t, { f: 262, glideTo: 1568, type: 'square', dur: 0.28, gain: 0.24, d: 0.28 }); },
+    walkoff: (c, o, t) => { [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => blip(c, o, t + i * 0.1, f, 0.22, 0.28)); },
+    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => blip(cx, ou, tt, f, d, g, 'triangle')),
+  },
+
+  // Cinematic — orchestral hits, brass swells, sub booms.
+  cinematic: {
+    run: (c, o, t) => { brass(c, o, t, { f: 262, dur: 0.35, gain: 0.22 }); boom(c, o, t, { f: 70, dur: 0.4, gain: 0.3 }); },
+    homerun: (c, o, t) => { boom(c, o, t, { f: 55, dur: 1.4, gain: 0.45 }); [131, 165, 196, 262].forEach((f) => brass(c, o, t + 0.1, { f, dur: 1.5, gain: 0.16, a: 0.25 })); noise(c, o, t, { dur: 1.2, type: 'lowpass', freq: 1400, gain: 0.14, a: 0.5, d: 0.8 }); brass(c, o, t + 1.3, { f: 262, dur: 0.7, gain: 0.24 }); },
+    strikeout: (c, o, t) => { brass(c, o, t, { f: 175, dur: 0.4, gain: 0.24 }); boom(c, o, t, { f: 60, dur: 0.5, gain: 0.35 }); },
+    doubleplay: (c, o, t) => { brass(c, o, t, { f: 196, dur: 0.22, gain: 0.22 }); brass(c, o, t + 0.24, { f: 262, dur: 0.4, gain: 0.24 }); },
+    webgem: (c, o, t) => { [196, 262, 330].forEach((f, i) => brass(c, o, t + i * 0.1, { f, dur: 0.5, gain: 0.18 })); },
+    stolenbase: (c, o, t) => { noise(c, o, t, { dur: 0.5, type: 'highpass', freq: 1200, gain: 0.2, d: 0.5 }); boom(c, o, t + 0.1, { f: 65, dur: 0.5, gain: 0.3 }); },
+    walkoff: (c, o, t) => { boom(c, o, t, { f: 50, dur: 2, gain: 0.5 }); [131, 165, 196, 262, 330].forEach((f, i) => brass(c, o, t + 0.1 + i * 0.08, { f, dur: 1.6, gain: 0.14, a: 0.2 })); noise(c, o, t, { dur: 1.8, type: 'lowpass', freq: 1600, gain: 0.12, a: 0.7, d: 1.2 }); },
+    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => brass(cx, ou, tt, { f, dur: d, gain: g })),
+  },
+
+  // Stadium — air horns + bass drops.
+  airhorn: {
+    run: (c, o, t) => { horn(c, o, t, { f: 330, dur: 0.3, gain: 0.26 }); },
+    homerun: (c, o, t) => { horn(c, o, t, { f: 294, dur: 1.4, gain: 0.3 }); boom(c, o, t + 1.2, { f: 55, dur: 0.7, gain: 0.4 }); },
+    strikeout: (c, o, t) => { horn(c, o, t, { f: 262, dur: 0.5, gain: 0.28 }); },
+    doubleplay: (c, o, t) => { horn(c, o, t, { f: 349, dur: 0.22, gain: 0.24 }); horn(c, o, t + 0.26, { f: 440, dur: 0.3, gain: 0.26 }); },
+    webgem: (c, o, t) => { horn(c, o, t, { f: 392, dur: 0.5, gain: 0.26 }); },
+    stolenbase: (c, o, t) => { horn(c, o, t, { f: 330, dur: 0.4, gain: 0.24 }); noise(c, o, t, { dur: 0.4, type: 'highpass', freq: 1800, gain: 0.15, d: 0.4 }); },
+    walkoff: (c, o, t) => { horn(c, o, t, { f: 294, dur: 1.8, gain: 0.32 }); boom(c, o, t + 0.6, { f: 48, dur: 1.2, gain: 0.42 }); },
+    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => horn(cx, ou, tt, { f, dur: d, gain: g })),
+  },
+
+  // Chill — soft bells / marimba, pentatonic.
+  chill: {
+    run: (c, o, t) => { bell(c, o, t, 784, 0.5, 0.28); },
+    homerun: (c, o, t) => { [523, 587, 784, 880, 1047].forEach((f, i) => bell(c, o, t + i * 0.13, f, 0.9, 0.24)); },
+    strikeout: (c, o, t) => { bell(c, o, t, 440, 0.5, 0.26); bell(c, o, t + 0.18, 330, 0.7, 0.22); },
+    doubleplay: (c, o, t) => { bell(c, o, t, 659, 0.4, 0.24); bell(c, o, t + 0.14, 988, 0.6, 0.24); },
+    webgem: (c, o, t) => { [880, 1047, 1319].forEach((f, i) => bell(c, o, t + i * 0.1, f, 0.5, 0.22)); },
+    stolenbase: (c, o, t) => { bell(c, o, t, 587, 0.4, 0.24); bell(c, o, t + 0.12, 784, 0.5, 0.22); },
+    walkoff: (c, o, t) => { [523, 659, 784, 880, 1047, 1319].forEach((f, i) => bell(c, o, t + i * 0.14, f, 0.9, 0.22)); },
+    charge: (c, o, t) => charge(c, o, t, (cx, ou, tt, f, d, g) => bell(cx, ou, tt, f, d, g)),
   },
 };

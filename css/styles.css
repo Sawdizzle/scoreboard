@@ -75,6 +75,28 @@ body[data-style="scorebox"] .sit-baseball .outs { display: none; }
 body[data-style="scorebox"] .sit-baseball .bso { display: flex; }
 body[data-style="scorebox"] .inning { font-size: 24px; }
 
+/* 'jumbotron' — chunky stadium LED board with a dot texture + glow. */
+body[data-style="jumbotron"] .bug { border-width: 3px; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.4px); background-size: 6px 6px; }
+body[data-style="jumbotron"] .team { padding: 12px 20px; }
+body[data-style="jumbotron"] .team .abbr { font-size: 25px; letter-spacing: 0.08em; }
+body[data-style="jumbotron"] .team .runs { font-size: 32px; }
+body[data-style="jumbotron"] .situation { padding: 12px 20px; }
+body[data-style="jumbotron"] .team .runs, body[data-style="jumbotron"] .count,
+body[data-style="jumbotron"] .inning, body[data-style="jumbotron"] .fb-q { text-shadow: 0 0 9px var(--accent); }
+
+/* 'outline' — frosted transparent panel, outlined text for legibility over video. */
+body[data-style="outline"] .bug { background: transparent; border-width: 2px; box-shadow: none; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+body[data-style="outline"] .team .abbr, body[data-style="outline"] .team .runs,
+body[data-style="outline"] .situation { text-shadow: 0 2px 7px rgba(0, 0, 0, 0.9); }
+body[data-style="outline"] .team.home { border-left-color: var(--accent); }
+
+/* 'stack' — separated floating modules (each team + the situation is its own card). */
+body[data-style="stack"] .bug { background: transparent; border: none; box-shadow: none; gap: 8px; overflow: visible; }
+body[data-style="stack"] .team, body[data-style="stack"] .situation {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+body[data-style="stack"] .team.home, body[data-style="stack"] .situation { border-left: 1px solid var(--line); }
+
 /* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
 body.team-bars .team { box-shadow: inset 0 -3px 0 var(--tc, transparent); }
 body.no-logos .team .logo { display: none !important; }

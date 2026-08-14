@@ -309,6 +309,26 @@
           <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
           <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
         </div>
+
+        <span class="sublabel">Build your own colors</span>
+        <div class="audio-row">
+          <label class="sel">Panel fill
+            <select id="cust-paneltype">
+              <option value="">Theme</option>
+              <option value="solid">Solid</option>
+              <option value="gradient">Gradient</option>
+            </select>
+          </label>
+          <label class="sel">Panel A<input id="cust-panelc1" type="color" /></label>
+          <label class="sel">Panel B<input id="cust-panelc2" type="color" /></label>
+        </div>
+        <label class="slider">Gradient angle <input id="cust-panelangle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
+        <div class="audio-row">
+          <label class="sel">Text<input id="cust-text" type="color" /></label>
+          <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
+          <label class="sel">Border<input id="cust-line" type="color" /></label>
+        </div>
+
         <button id="cust-reset" class="fxbtn">Reset customizations</button>
       </div>
     </details>
@@ -322,6 +342,10 @@
               <option value="bigleague">Big League (organ)</option>
               <option value="modern">Modern (hits/whooshes)</option>
               <option value="sandlot">Sandlot (playful)</option>
+              <option value="arcade">Arcade (chiptune)</option>
+              <option value="cinematic">Cinematic (orchestral)</option>
+              <option value="airhorn">Stadium (air horns)</option>
+              <option value="chill">Chill (bells)</option>
             </select>
           </label>
           <button id="mute-btn" class="fxbtn mute">Mute</button>
@@ -397,6 +421,9 @@
             <option value="minimal">Minimal (slim)</option>
             <option value="lowerthird">Lower-third</option>
             <option value="ticker">Ticker (thin)</option>
+            <option value="jumbotron">Jumbotron (LED)</option>
+            <option value="outline">Outline (frosted)</option>
+            <option value="stack">Stack (modules)</option>
           </select>
         </label>
       </div>
@@ -469,6 +496,9 @@
           <option value="minimal">Minimal (slim)</option>
           <option value="lowerthird">Lower-third</option>
           <option value="ticker">Ticker (thin)</option>
+          <option value="jumbotron">Jumbotron (LED)</option>
+          <option value="outline">Outline (frosted)</option>
+          <option value="stack">Stack (modules)</option>
         </select>
       </label>
       <div class="sheet-actions">

@@ -539,6 +539,14 @@ $('cust-uppercase').addEventListener('change', (e) => writeLook({ uppercase: e.t
 $('cust-logosize').addEventListener('change', (e) => writeLook({ logoSize: e.target.value }));
 $('cust-border').addEventListener('change', (e) => writeLook({ border: e.target.value }));
 $('cust-teambars').addEventListener('change', (e) => writeLook({ teamBars: e.target.checked }));
+$('cust-paneltype').addEventListener('change', (e) => writeLook({ panelType: e.target.value }));
+$('cust-panelc1').addEventListener('change', (e) => writeLook({ panelC1: e.target.value }));
+$('cust-panelc2').addEventListener('change', (e) => writeLook({ panelC2: e.target.value }));
+$('cust-panelangle').addEventListener('input', (e) => { $('cust-angle-val').textContent = e.target.value + '°'; });
+$('cust-panelangle').addEventListener('change', (e) => writeLook({ panelAngle: +e.target.value }));
+$('cust-text').addEventListener('change', (e) => writeLook({ text: e.target.value }));
+$('cust-steel').addEventListener('change', (e) => writeLook({ steel: e.target.value }));
+$('cust-line').addEventListener('change', (e) => writeLook({ line: e.target.value }));
 $('cust-reset').onclick = async () => {
   game = { ...game, look: {} };
   renderCustomize();
@@ -557,6 +565,14 @@ function renderCustomize() {
   $('cust-logosize').value = L.logoSize || '';
   $('cust-border').value = L.border != null ? String(L.border) : '';
   $('cust-teambars').checked = !!L.teamBars;
+  $('cust-paneltype').value = L.panelType || '';
+  $('cust-panelc1').value = L.panelC1 || '#1b2a41';
+  $('cust-panelc2').value = L.panelC2 || '#0e1421';
+  $('cust-panelangle').value = L.panelAngle ?? 180;
+  $('cust-angle-val').textContent = (L.panelAngle ?? 180) + '°';
+  $('cust-text').value = L.text || '#f4f7fb';
+  $('cust-steel').value = L.steel || '#8fb6de';
+  $('cust-line').value = L.line || '#2a3550';
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
