@@ -122,38 +122,41 @@ const LOOK_FONTS = {
 };
 function setVar(el, name, val) { if (val) el.style.setProperty(name, val); else el.style.removeProperty(name); }
 const LOGO_SIZES = { sm: '22px', lg: '40px' };
+function fillOf(el, type, c1, c2, angle) {
+  if (!el) return;
+  if (type === 'gradient' && c1 && c2) el.style.background = `linear-gradient(${angle ?? 180}deg, ${c1}, ${c2})`;
+  else if (type === 'solid' && c1) el.style.background = c1;
+  else el.style.background = '';
+}
 function applyLook(s) {
-  const L = s.look || {};
   const b = document.body;
+  // Customizations apply ONLY to the Custom theme; built-in themes stay as designed.
+  const L = (s.theme === 'custom') ? (s.look || {}) : {};
+  const bugEl = document.getElementById('bug');
+  const aw = document.querySelector('.team.away'), hm = document.querySelector('.team.home');
+
   setVar(b, '--accent', L.accent);
+  setVar(b, '--chalk', L.text);
+  setVar(b, '--steel', L.steel);
+  setVar(b, '--line', L.line);
   setVar(b, '--disp', L.font ? LOOK_FONTS[L.font] : '');
   setVar(b, '--radius', (L.radius != null && L.radius !== '') ? parseInt(L.radius, 10) + 'px' : '');
   setVar(b, '--logo-size', L.logoSize ? LOGO_SIZES[L.logoSize] : '');
   setVar(b, '--bd-width', (L.border != null && L.border !== '') ? parseInt(L.border, 10) + 'px' : '');
-  // Build-your-own colors: text / highlight / border overrides + panel fill (solid or gradient).
-  setVar(b, '--chalk', L.text);
-  setVar(b, '--steel', L.steel);
-  setVar(b, '--line', L.line);
-  const bugEl = document.getElementById('bug');
-  if (bugEl) {
-    if (L.panelType === 'gradient' && L.panelC1 && L.panelC2) bugEl.style.background = `linear-gradient(${L.panelAngle ?? 180}deg, ${L.panelC1}, ${L.panelC2})`;
-    else if (L.panelType === 'solid' && L.panelC1) bugEl.style.background = L.panelC1;
-    else bugEl.style.background = '';
-  }
-  // Situation-section fill (solid/gradient) + per-team color fill.
-  document.querySelectorAll('.situation').forEach((sit) => {
-    if (L.sitType === 'gradient' && L.sitC1 && L.sitC2) sit.style.background = `linear-gradient(${L.sitAngle ?? 180}deg, ${L.sitC1}, ${L.sitC2})`;
-    else if (L.sitType === 'solid' && L.sitC1) sit.style.background = L.sitC1;
-    else sit.style.background = '';
-  });
+
+  // Per-row / panel fills (shared gradient angle).
+  fillOf(bugEl, L.panelType, L.panelC1, L.panelC2, L.angle);
+  fillOf(aw, L.awayType, L.awayC1, L.awayC2, L.angle);
+  fillOf(hm, L.homeType, L.homeC1, L.homeC2, L.angle);
+  document.querySelectorAll('.situation').forEach((sit) => fillOf(sit, L.sitType, L.sitC1, L.sitC2, L.angle));
+
   b.classList.toggle('team-fill', !!L.teamFill);
   b.classList.toggle('no-logos', !!L.hideLogos);
   b.classList.toggle('no-detail', !!L.hideDetail);
   b.classList.toggle('no-shadow', !!L.noShadow);
   b.classList.toggle('uppercase', !!L.uppercase);
   b.classList.toggle('team-bars', !!L.teamBars);
-  // per-team accent for color bars
-  const aw = document.querySelector('.team.away'), hm = document.querySelector('.team.home');
+  // Team colors (for team-bars / team-fill) always come from the game, not the look.
   if (aw) aw.style.setProperty('--tc', s.away_color || '#888');
   if (hm) hm.style.setProperty('--tc', s.home_color || '#888');
 }

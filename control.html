@@ -230,6 +230,7 @@
         <div class="audio-row">
           <label class="sel">Theme
             <select id="theme-sel">
+              <option value="custom">✦ Custom (your colors)</option>
               <option value="nightgame">Midnight</option>
               <option value="espn">Broadcast Minimal</option>
               <option value="retro">Retro 8-bit</option>
@@ -262,13 +263,42 @@
     </details>
 
     <details class="panel">
-      <summary>🎛️ Customize</summary>
+      <summary>🎛️ Custom theme</summary>
       <div class="panel-body">
+        <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
+
+        <span class="sublabel">Row fills</span>
+        <div class="fill-row"><span class="fill-label">Away (row 1)</span>
+          <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+          <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
+        </div>
+        <div class="fill-row"><span class="fill-label">Home (row 2)</span>
+          <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+          <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
+        </div>
+        <div class="fill-row"><span class="fill-label">Details (bottom)</span>
+          <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+          <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
+        </div>
+        <div class="fill-row"><span class="fill-label">Panel (behind)</span>
+          <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+          <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
+        </div>
+        <label class="slider">Gradient angle <input id="cust-angle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
+
+        <span class="sublabel">Text &amp; accents</span>
         <div class="audio-row">
+          <label class="sel">Text<input id="cust-text" type="color" /></label>
           <label class="sel">Accent<input id="cust-accent" type="color" /></label>
+          <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
+          <label class="sel">Border<input id="cust-line" type="color" /></label>
+        </div>
+
+        <span class="sublabel">Type &amp; layout</span>
+        <div class="audio-row">
           <label class="sel">Font
             <select id="cust-font">
-              <option value="">Theme default</option>
+              <option value="">Default</option>
               <option value="condensed">Condensed</option>
               <option value="clean">Clean sans</option>
               <option value="mono">Monospace</option>
@@ -278,7 +308,7 @@
           </label>
           <label class="sel">Corners
             <select id="cust-radius">
-              <option value="">Theme</option>
+              <option value="">Default</option>
               <option value="16">Round</option>
               <option value="8">Soft</option>
               <option value="0">Sharp</option>
@@ -295,7 +325,7 @@
           </label>
           <label class="sel">Border
             <select id="cust-border">
-              <option value="">Theme</option>
+              <option value="">Default</option>
               <option value="0">None</option>
               <option value="2">Thick</option>
               <option value="3">Bold</option>
@@ -304,44 +334,11 @@
         </div>
         <div class="toggles">
           <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
+          <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
           <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
           <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
           <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
           <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
-        </div>
-
-        <span class="sublabel">Build your own colors</span>
-        <div class="audio-row">
-          <label class="sel">Panel fill
-            <select id="cust-paneltype">
-              <option value="">Theme</option>
-              <option value="solid">Solid</option>
-              <option value="gradient">Gradient</option>
-            </select>
-          </label>
-          <label class="sel">Panel A<input id="cust-panelc1" type="color" /></label>
-          <label class="sel">Panel B<input id="cust-panelc2" type="color" /></label>
-        </div>
-        <label class="slider">Gradient angle <input id="cust-panelangle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
-        <div class="audio-row">
-          <label class="sel">Text<input id="cust-text" type="color" /></label>
-          <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
-          <label class="sel">Border<input id="cust-line" type="color" /></label>
-        </div>
-        <div class="audio-row">
-          <label class="sel">Situation fill
-            <select id="cust-sittype">
-              <option value="">Theme</option>
-              <option value="solid">Solid</option>
-              <option value="gradient">Gradient</option>
-            </select>
-          </label>
-          <label class="sel">Sit A<input id="cust-sitc1" type="color" /></label>
-          <label class="sel">Sit B<input id="cust-sitc2" type="color" /></label>
-        </div>
-        <label class="slider">Sit angle <input id="cust-sitangle" type="range" min="0" max="360" step="15" /><b id="cust-sitangle-val">180°</b></label>
-        <div class="toggles">
-          <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
         </div>
 
         <button id="cust-reset" class="fxbtn">Reset customizations</button>
