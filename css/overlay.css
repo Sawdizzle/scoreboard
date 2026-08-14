@@ -65,6 +65,12 @@ body[data-pos="top-bar"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; righ
 .team.home { background: linear-gradient(180deg, rgba(232, 178, 58, 0.10), transparent); border-left: 1px solid var(--line); }
 .team .abbr { font-weight: 800; letter-spacing: 0.04em; font-size: 23px; }
 .team .runs { font-family: var(--num); font-size: 27px; font-weight: 700; min-width: 1.5ch; text-align: center; }
+/* Optional live H/E block next to runs (R is the .runs number). Off unless body.rhe. */
+.team .rhe { display: none; }
+body.rhe .team .rhe { display: inline-flex; gap: 9px; margin-left: 2px; }
+.team .rhe .he { display: inline-flex; align-items: baseline; gap: 3px; }
+.team .rhe .he i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--steel); }
+.team .rhe .he b { font-family: var(--num); font-size: 16px; font-weight: 700; }
 
 .situation { display: flex; align-items: center; gap: 18px; padding: 11px 20px; background: var(--panel-2); border-left: 1px solid var(--line); }
 .situation[hidden] { display: none; }

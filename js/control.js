@@ -378,6 +378,7 @@ function fillSetup() {
   $('su-show-pitcher').checked = !!game.show_pitcher;
   $('su-show-pitchcount').checked = !!game.show_pitchcount;
   $('su-show-runrule').checked = !!game.show_runrule;
+  $('su-show-rhe').checked = !!game.show_rhe;
 }
 $('setup-save').onclick = async () => {
   const mins = parseInt($('su-time').value, 10);
@@ -392,7 +393,7 @@ $('setup-save').onclick = async () => {
     time_limit_seconds,
     show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
     show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
-    show_runrule: $('su-show-runrule').checked,
+    show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
   };
   // Reset the clock's remaining time if the limit changed and it isn't running.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;

@@ -72,6 +72,16 @@ function render(s) {
   setLogo('away-logo', s.away_logo_url);
   setLogo('home-logo', s.home_logo_url);
 
+  // Compact live H/E next to each team's runs (baseball only, opt-in toggle).
+  const rheOn = !!s.show_rhe && sport === 'baseball';
+  document.body.classList.toggle('rhe', rheOn);
+  if (rheOn) {
+    document.getElementById('away-h').textContent = s.away_hits | 0;
+    document.getElementById('away-e').textContent = s.away_errors | 0;
+    document.getElementById('home-h').textContent = s.home_hits | 0;
+    document.getElementById('home-e').textContent = s.home_errors | 0;
+  }
+
   showSituation(sport);
   if (sport === 'football') renderFootball(s);
   else if (sport === 'soccer') renderSoccer(s);
