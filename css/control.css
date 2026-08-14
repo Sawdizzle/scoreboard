@@ -212,6 +212,11 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .pc-row .step { width: 44px; height: 44px; }
 .pc-row #pc-val { font-family: var(--num); font-size: 22px; min-width: 2.5ch; text-align: center; }
 
+/* Saved-team load/save row */
+.team-load { display: flex; gap: 6px; align-items: stretch; margin-bottom: 10px; }
+.team-load select { flex: 1; min-width: 0; padding: 10px; font-size: 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
+.team-load .fxbtn { flex: 0 0 auto; padding: 10px 12px; }
+
 /* Teams & lineups */
 .lineup-team { margin-top: 8px; background: var(--bg-2); }
 .lineup-team > summary { padding: 12px 14px; font-size: 13px; }

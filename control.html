@@ -271,6 +271,11 @@
           <details class="panel lineup-team" open>
             <summary>◄ Away — <span id="lineup-away-team">Visitor</span></summary>
             <div class="panel-body">
+              <div class="team-load">
+                <select id="team-sel-away"><option value="">— load saved team —</option></select>
+                <button id="team-save-away" class="fxbtn">💾 Save</button>
+                <button id="team-del-away" class="fxbtn cardclear">🗑</button>
+              </div>
               <div class="lineup-row pitcher">
                 <span class="ord p">P</span>
                 <input id="lp-num-away" class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />
@@ -284,6 +289,11 @@
           <details class="panel lineup-team">
             <summary>► Home — <span id="lineup-home-team">Home</span></summary>
             <div class="panel-body">
+              <div class="team-load">
+                <select id="team-sel-home"><option value="">— load saved team —</option></select>
+                <button id="team-save-home" class="fxbtn">💾 Save</button>
+                <button id="team-del-home" class="fxbtn cardclear">🗑</button>
+              </div>
               <div class="lineup-row pitcher">
                 <span class="ord p">P</span>
                 <input id="lp-num-home" class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />

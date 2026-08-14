@@ -27,7 +27,7 @@ let channel = null;
 async function refreshSession() {
   const { data } = await supabase.auth.getSession();
   user = data.session?.user ?? null;
-  if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); await loadPresets(); }
+  if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); await loadPresets(); await loadTeams(); }
   else show('auth');
 }
 const setAuthMsg = (m) => { $('auth-msg').textContent = m; };
@@ -277,6 +277,68 @@ $('preset-del').onclick = async () => {
   await loadPresets();
   showToast('Preset deleted');
 };
+
+// ---- Saved teams (reusable rosters) ---------------------------------------
+// A team = identity (name/abbr/color/logo) + roster (a lineups[side] blob).
+let savedTeams = [];
+async function loadTeams() {
+  if (!user) return;
+  const { data, error } = await db.from('teams').select('*').eq('owner_id', user.id).order('name');
+  if (error) { console.warn('teams load failed', error.message); return; }
+  savedTeams = data || [];
+  for (const side of ['away', 'home']) {
+    const sel = $('team-sel-' + side); if (!sel) continue;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— load saved team —</option>' +
+      savedTeams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+    if (savedTeams.some((t) => t.id === cur)) sel.value = cur;
+  }
+}
+async function saveTeam(side) {
+  if (!game) return;
+  const name = String(game[side + '_name'] || '').trim();
+  if (!name || name === 'Visitor' || name === 'Home') return showToast('Name the team in Setup first');
+  const row = {
+    owner_id: user.id, name,
+    abbr: game[side + '_abbr'] || null,
+    color: game[side + '_color'] || null,
+    logo_url: game[side + '_logo_url'] || null,
+    roster: (game.lineups || {})[side] || {},
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from('teams').upsert(row, { onConflict: 'owner_id,name' });
+  if (error) return alert(error.message);
+  await loadTeams();
+  showToast(`💾 Saved "${name}"`);
+}
+async function loadTeamInto(side, id) {
+  const t = savedTeams.find((x) => x.id === id);
+  if (!t) return;
+  const patch = { lineups: { ...(game.lineups || {}), [side]: t.roster || {} } };
+  patch[side + '_name'] = t.name;
+  if (t.abbr) patch[side + '_abbr'] = t.abbr;
+  if (t.color) patch[side + '_color'] = t.color;
+  patch[side + '_logo_url'] = t.logo_url || null;
+  await writeField(patch);
+  fillLineup(side); // force-refresh inputs even though focus sits in this panel
+  renderGame();
+  showToast(`📥 Loaded "${t.name}"`);
+}
+async function deleteTeam(side) {
+  const id = $('team-sel-' + side).value;
+  if (!id) return showToast('Pick a saved team to delete');
+  const t = savedTeams.find((x) => x.id === id);
+  if (!confirm(`Delete saved team "${t ? t.name : ''}"? This won't change any game.`)) return;
+  const { error } = await db.from('teams').delete().eq('id', id);
+  if (error) return alert(error.message);
+  await loadTeams();
+  showToast('Saved team deleted');
+}
+for (const side of ['away', 'home']) {
+  $('team-sel-' + side).addEventListener('change', (e) => { if (e.target.value) loadTeamInto(side, e.target.value); });
+  $('team-save-' + side).onclick = () => saveTeam(side);
+  $('team-del-' + side).onclick = () => deleteTeam(side);
+}
 
 // Broadcast cards (persistent until cleared)
 async function showCard(type, opts = {}) {
