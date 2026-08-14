@@ -186,3 +186,85 @@ body[data-theme="sunrise"] {
   --line: rgba(255, 122, 77, 0.3); --chalk: #402014; --steel: #d17a34; --accent: #ff6a3d; --radius: 12px;
 }
 body[data-theme="sunrise"] .bug { background: linear-gradient(180deg, rgba(255, 240, 225, 0.96), rgba(255, 224, 205, 0.96)); box-shadow: 0 8px 24px rgba(255, 122, 77, 0.25); }
+
+/* ===== Full themes promoted from the former "skins" ==================== */
+
+/* Ticker — thin minimal strip, crisp broadcast palette. */
+body[data-theme="ticker"] {
+  --panel: rgba(12, 14, 18, 0.94); --panel-2: rgba(0, 0, 0, 0.32);
+  --line: rgba(255, 255, 255, 0.14); --chalk: #ffffff; --steel: #b8c0cc; --accent: #ff3b30; --radius: 3px;
+}
+body[data-theme="ticker"] .bug { border-radius: 4px; }
+body[data-theme="ticker"] .team { padding: 5px 12px; gap: 8px; }
+body[data-theme="ticker"] .team .abbr { font-size: 15px; }
+body[data-theme="ticker"] .team .runs { font-size: 16px; }
+body[data-theme="ticker"] .team .logo { height: 18px; width: 18px; }
+body[data-theme="ticker"] .situation { padding: 5px 12px; gap: 10px; font-size: 14px; }
+
+/* Jumbotron — stadium LED board: amber glow + dot texture. */
+body[data-theme="jumbotron"] {
+  --panel: rgba(8, 8, 10, 0.95); --panel-2: rgba(0, 0, 0, 0.45);
+  --line: rgba(255, 180, 0, 0.32); --chalk: #fff6e0; --steel: #ffcf6b; --accent: #ffb400; --radius: 6px;
+}
+body[data-theme="jumbotron"] .bug { border-width: 3px; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.4px); background-size: 6px 6px; }
+body[data-theme="jumbotron"] .team { padding: 12px 20px; }
+body[data-theme="jumbotron"] .team .abbr { font-size: 25px; letter-spacing: 0.08em; }
+body[data-theme="jumbotron"] .team .runs { font-size: 32px; }
+body[data-theme="jumbotron"] .situation { padding: 12px 20px; }
+body[data-theme="jumbotron"] .team .runs, body[data-theme="jumbotron"] .count,
+body[data-theme="jumbotron"] .inning, body[data-theme="jumbotron"] .fb-q { text-shadow: 0 0 9px var(--accent); }
+
+/* Outline — frosted transparent panel, outlined text for legibility over video. */
+body[data-theme="outline"] {
+  --panel: rgba(18, 24, 34, 0.9); --panel-2: rgba(0, 0, 0, 0.2);
+  --line: rgba(255, 255, 255, 0.55); --chalk: #ffffff; --steel: #dfe6ee; --accent: #4fd6ff; --radius: 8px;
+}
+body[data-theme="outline"] .bug { background: transparent; border-width: 2px; box-shadow: none; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+body[data-theme="outline"] .team .abbr, body[data-theme="outline"] .team .runs,
+body[data-theme="outline"] .situation { text-shadow: 0 2px 7px rgba(0, 0, 0, 0.9); }
+body[data-theme="outline"] .team.home { border-left-color: var(--accent); }
+
+/* Stack — separated floating modules, clean palette. */
+body[data-theme="stack"] {
+  --panel: rgba(20, 24, 32, 0.92); --panel-2: rgba(0, 0, 0, 0.4);
+  --line: rgba(255, 255, 255, 0.12); --chalk: #f2f5fa; --steel: #9fb0c4; --accent: #48d597; --radius: 12px;
+}
+body[data-theme="stack"] .bug { background: transparent; border: none; box-shadow: none; gap: 8px; overflow: visible; }
+body[data-theme="stack"] .team, body[data-theme="stack"] .situation {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+body[data-theme="stack"] .team.home, body[data-theme="stack"] .situation { border-left: 1px solid var(--line); }
+
+/* CRT — retro amber phosphor: scanlines + glow + mono type. */
+body[data-theme="crt"] {
+  --panel: rgba(6, 10, 6, 0.95); --panel-2: rgba(0, 0, 0, 0.4);
+  --line: rgba(255, 176, 0, 0.32); --chalk: #ffd98a; --steel: #a6d96a; --accent: #ffb000; --radius: 2px;
+  --disp: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+body[data-theme="crt"] .bug { position: relative; }
+body[data-theme="crt"] .bug::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px); }
+body[data-theme="crt"] .team .abbr, body[data-theme="crt"] .team .runs,
+body[data-theme="crt"] .count, body[data-theme="crt"] .inning, body[data-theme="crt"] .fb-q { text-shadow: 0 0 6px var(--accent), 0 0 2px var(--chalk); }
+
+/* Neon Sign — glowing tubes on a dark panel, hot neon palette. */
+body[data-theme="neonsign"] {
+  --panel: rgba(6, 8, 16, 0.6); --panel-2: rgba(0, 0, 0, 0.4);
+  --line: rgba(255, 60, 166, 0.5); --chalk: #f6f0ff; --steel: #29d3ff; --accent: #ff3ca6; --radius: 10px;
+}
+body[data-theme="neonsign"] .bug { background: rgba(6, 8, 16, 0.6); border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent), inset 0 0 14px rgba(0, 0, 0, 0.7); }
+body[data-theme="neonsign"] .team .abbr, body[data-theme="neonsign"] .team .runs,
+body[data-theme="neonsign"] .count, body[data-theme="neonsign"] .inning, body[data-theme="neonsign"] .fb-q { color: #fff; text-shadow: 0 0 6px var(--accent), 0 0 15px var(--accent); }
+body[data-theme="neonsign"] .team.home, body[data-theme="neonsign"] .situation { border-left: 2px solid var(--accent); }
+
+/* Chrome — glossy brushed metal, dark engraved text. */
+body[data-theme="chrome"] {
+  --panel: #c6cdd6; --panel-2: rgba(0, 0, 0, 0.12);
+  --line: rgba(0, 0, 0, 0.2); --chalk: #17202e; --steel: #4a5568; --accent: #3b6fd6; --radius: 8px;
+}
+body[data-theme="chrome"] .bug { background: linear-gradient(180deg, #e9edf3 0%, #aeb7c3 46%, #7d8794 54%, #c6cdd6 100%); border: 1px solid #6b7480; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: #17202e; }
+body[data-theme="chrome"] .team .abbr, body[data-theme="chrome"] .team .runs,
+body[data-theme="chrome"] .count, body[data-theme="chrome"] .inning, body[data-theme="chrome"] .fb-q { color: #17202e; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65); }
+body[data-theme="chrome"] .situation { background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.16)); border-left: 1px solid rgba(0, 0, 0, 0.2); }
+body[data-theme="chrome"] .team.home { border-left: 1px solid rgba(0, 0, 0, 0.2); }
