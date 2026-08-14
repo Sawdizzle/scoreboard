@@ -1,7 +1,10 @@
-/* The `style` dimension = layout/look (independent of sport + theme).
-   Default 'bar' (wide horizontal strip) lives in overlay.css. Here: 'bug' —
-   a compact stacked broadcast bug (teams stacked, score right-aligned, the
-   sport's situation row below). Works for every sport since they share the DOM. */
+/* The `style` dimension = the scorebug LAYOUT: bar (default, in overlay.css),
+   bug, minimal, lowerthird, scorebox. Chosen in Game Setup.
+
+   The decorative SKINS (ticker, jumbotron, outline, stack, crt, neonsign,
+   chrome) live further down but are keyed on `data-theme`, not `data-style` —
+   they're selected from the Theme dropdown (Look & position) and layer on top
+   of whichever layout is active. Palette themes live in themes.css. */
 
 body[data-style="bug"] #bug-wrap { gap: 0; }
 
@@ -45,13 +48,15 @@ body[data-style="lowerthird"] .bug::before { content: ''; width: 8px; background
 body[data-style="lowerthird"] .team { padding: 12px 22px; }
 body[data-style="lowerthird"] .situation { padding: 12px 22px; }
 
+/* ---- Skins (data-theme, selected from the Theme dropdown) ----------------- */
+
 /* 'ticker' — thin, minimal corner strip. */
-body[data-style="ticker"] .bug { border-radius: 4px; }
-body[data-style="ticker"] .team { padding: 5px 12px; gap: 8px; }
-body[data-style="ticker"] .team .abbr { font-size: 15px; }
-body[data-style="ticker"] .team .runs { font-size: 16px; }
-body[data-style="ticker"] .team .logo { height: 18px; width: 18px; }
-body[data-style="ticker"] .situation { padding: 5px 12px; gap: 10px; font-size: 14px; }
+body[data-theme="ticker"] .bug { border-radius: 4px; }
+body[data-theme="ticker"] .team { padding: 5px 12px; gap: 8px; }
+body[data-theme="ticker"] .team .abbr { font-size: 15px; }
+body[data-theme="ticker"] .team .runs { font-size: 16px; }
+body[data-theme="ticker"] .team .logo { height: 18px; width: 18px; }
+body[data-theme="ticker"] .situation { padding: 5px 12px; gap: 10px; font-size: 14px; }
 
 /* Labeled B/S/O block — hidden except in the scorebox style. */
 .bso { display: none; flex-direction: column; gap: 4px; }
@@ -76,46 +81,46 @@ body[data-style="scorebox"] .sit-baseball .bso { display: flex; }
 body[data-style="scorebox"] .inning { font-size: 24px; }
 
 /* 'jumbotron' — chunky stadium LED board with a dot texture + glow. */
-body[data-style="jumbotron"] .bug { border-width: 3px; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.4px); background-size: 6px 6px; }
-body[data-style="jumbotron"] .team { padding: 12px 20px; }
-body[data-style="jumbotron"] .team .abbr { font-size: 25px; letter-spacing: 0.08em; }
-body[data-style="jumbotron"] .team .runs { font-size: 32px; }
-body[data-style="jumbotron"] .situation { padding: 12px 20px; }
-body[data-style="jumbotron"] .team .runs, body[data-style="jumbotron"] .count,
-body[data-style="jumbotron"] .inning, body[data-style="jumbotron"] .fb-q { text-shadow: 0 0 9px var(--accent); }
+body[data-theme="jumbotron"] .bug { border-width: 3px; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.4px); background-size: 6px 6px; }
+body[data-theme="jumbotron"] .team { padding: 12px 20px; }
+body[data-theme="jumbotron"] .team .abbr { font-size: 25px; letter-spacing: 0.08em; }
+body[data-theme="jumbotron"] .team .runs { font-size: 32px; }
+body[data-theme="jumbotron"] .situation { padding: 12px 20px; }
+body[data-theme="jumbotron"] .team .runs, body[data-theme="jumbotron"] .count,
+body[data-theme="jumbotron"] .inning, body[data-theme="jumbotron"] .fb-q { text-shadow: 0 0 9px var(--accent); }
 
 /* 'outline' — frosted transparent panel, outlined text for legibility over video. */
-body[data-style="outline"] .bug { background: transparent; border-width: 2px; box-shadow: none; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-body[data-style="outline"] .team .abbr, body[data-style="outline"] .team .runs,
-body[data-style="outline"] .situation { text-shadow: 0 2px 7px rgba(0, 0, 0, 0.9); }
-body[data-style="outline"] .team.home { border-left-color: var(--accent); }
+body[data-theme="outline"] .bug { background: transparent; border-width: 2px; box-shadow: none; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+body[data-theme="outline"] .team .abbr, body[data-theme="outline"] .team .runs,
+body[data-theme="outline"] .situation { text-shadow: 0 2px 7px rgba(0, 0, 0, 0.9); }
+body[data-theme="outline"] .team.home { border-left-color: var(--accent); }
 
 /* 'stack' — separated floating modules (each team + the situation is its own card). */
-body[data-style="stack"] .bug { background: transparent; border: none; box-shadow: none; gap: 8px; overflow: visible; }
-body[data-style="stack"] .team, body[data-style="stack"] .situation {
+body[data-theme="stack"] .bug { background: transparent; border: none; box-shadow: none; gap: 8px; overflow: visible; }
+body[data-theme="stack"] .team, body[data-theme="stack"] .situation {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
-body[data-style="stack"] .team.home, body[data-style="stack"] .situation { border-left: 1px solid var(--line); }
+body[data-theme="stack"] .team.home, body[data-theme="stack"] .situation { border-left: 1px solid var(--line); }
 
 /* 'crt' — retro CRT with scanlines + phosphor glow. */
-body[data-style="crt"] .bug { position: relative; }
-body[data-style="crt"] .bug::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+body[data-theme="crt"] .bug { position: relative; }
+body[data-theme="crt"] .bug::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
   background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px); }
-body[data-style="crt"] .team .abbr, body[data-style="crt"] .team .runs,
-body[data-style="crt"] .count, body[data-style="crt"] .inning, body[data-style="crt"] .fb-q { text-shadow: 0 0 6px var(--accent), 0 0 2px var(--chalk); }
+body[data-theme="crt"] .team .abbr, body[data-theme="crt"] .team .runs,
+body[data-theme="crt"] .count, body[data-theme="crt"] .inning, body[data-theme="crt"] .fb-q { text-shadow: 0 0 6px var(--accent), 0 0 2px var(--chalk); }
 
 /* 'neonsign' — glowing neon tubes on a dark semi-transparent panel. */
-body[data-style="neonsign"] .bug { background: rgba(6, 8, 16, 0.6); border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent), inset 0 0 14px rgba(0, 0, 0, 0.7); }
-body[data-style="neonsign"] .team .abbr, body[data-style="neonsign"] .team .runs,
-body[data-style="neonsign"] .count, body[data-style="neonsign"] .inning, body[data-style="neonsign"] .fb-q { color: #fff; text-shadow: 0 0 6px var(--accent), 0 0 15px var(--accent); }
-body[data-style="neonsign"] .team.home, body[data-style="neonsign"] .situation { border-left: 2px solid var(--accent); }
+body[data-theme="neonsign"] .bug { background: rgba(6, 8, 16, 0.6); border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent), inset 0 0 14px rgba(0, 0, 0, 0.7); }
+body[data-theme="neonsign"] .team .abbr, body[data-theme="neonsign"] .team .runs,
+body[data-theme="neonsign"] .count, body[data-theme="neonsign"] .inning, body[data-theme="neonsign"] .fb-q { color: #fff; text-shadow: 0 0 6px var(--accent), 0 0 15px var(--accent); }
+body[data-theme="neonsign"] .team.home, body[data-theme="neonsign"] .situation { border-left: 2px solid var(--accent); }
 
 /* 'chrome' — glossy brushed metal, dark engraved text. */
-body[data-style="chrome"] .bug { background: linear-gradient(180deg, #e9edf3 0%, #aeb7c3 46%, #7d8794 54%, #c6cdd6 100%); border: 1px solid #6b7480; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: #17202e; }
-body[data-style="chrome"] .team .abbr, body[data-style="chrome"] .team .runs,
-body[data-style="chrome"] .count, body[data-style="chrome"] .inning, body[data-style="chrome"] .fb-q { color: #17202e; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65); }
-body[data-style="chrome"] .situation { background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.16)); border-left: 1px solid rgba(0, 0, 0, 0.2); }
-body[data-style="chrome"] .team.home { border-left: 1px solid rgba(0, 0, 0, 0.2); }
+body[data-theme="chrome"] .bug { background: linear-gradient(180deg, #e9edf3 0%, #aeb7c3 46%, #7d8794 54%, #c6cdd6 100%); border: 1px solid #6b7480; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: #17202e; }
+body[data-theme="chrome"] .team .abbr, body[data-theme="chrome"] .team .runs,
+body[data-theme="chrome"] .count, body[data-theme="chrome"] .inning, body[data-theme="chrome"] .fb-q { color: #17202e; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65); }
+body[data-theme="chrome"] .situation { background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.16)); border-left: 1px solid rgba(0, 0, 0, 0.2); }
+body[data-theme="chrome"] .team.home { border-left: 1px solid rgba(0, 0, 0, 0.2); }
 
 /* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
 body.team-bars .team { box-shadow: inset 0 -3px 0 var(--tc, transparent); }
