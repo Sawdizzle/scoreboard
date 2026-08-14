@@ -262,3 +262,15 @@ export function toggleBase(g, key) {
   const b = safeBases(g.bases);
   return { type: 'base', patch: { bases: { ...b, [key]: !b[key] } } };
 }
+
+// ---- Manual adjusters (direct edits; undoable via apply_event) -------------
+// Each nudges a single field by d, clamped to its DB constraint. Score/hits/
+// errors adjust the running total only (line score is left to game-flow plays).
+const clampAdj = (v, lo, hi) => Math.max(lo, hi == null ? v : Math.min(hi, v));
+const sideKey = (side, stat) => (side === 'home' ? 'home_' : 'away_') + stat;
+export function adjustScore(g, side, d)  { const k = sideKey(side, 'score');  return { type: 'adj-score',  patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
+export function adjustHits(g, side, d)   { const k = sideKey(side, 'hits');   return { type: 'adj-hits',   patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
+export function adjustErrors(g, side, d) { const k = sideKey(side, 'errors'); return { type: 'adj-errors', patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
+export function adjustOuts(g, d)    { return { type: 'adj-outs',    patch: { outs: clampAdj((g.outs | 0) + d, 0, 3) } }; }
+export function adjustBalls(g, d)   { return { type: 'adj-balls',   patch: { balls: clampAdj((g.balls | 0) + d, 0, 4) } }; }
+export function adjustStrikes(g, d) { return { type: 'adj-strikes', patch: { strikes: clampAdj((g.strikes | 0) + d, 0, 3) } }; }

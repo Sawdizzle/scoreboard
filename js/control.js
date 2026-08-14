@@ -208,9 +208,10 @@ $('fb-home-up').onclick = () => commit(F.manualScore(game, 'home', 1));
 $('fb-to-away').onclick = () => commit(F.timeout(game, 'away'));
 $('fb-to-home').onclick = () => commit(F.timeout(game, 'home'));
 $('fb-to-reset').onclick = () => commit(F.resetTimeouts(game));
+$('fb-kickoff').onclick = () => commit(F.kickoff(game));
 $('fx-touchdown').onclick = () => fireAnim('touchdown');
 $('fx-fieldgoal').onclick = () => fireAnim('fieldgoal');
-$('fx-turnover').onclick = () => fireAnim('turnover');
+$('fx-turnover').onclick = () => commit(F.turnover(game));
 $('fx-bigplay').onclick = () => fireAnim('bigplay');
 
 // Soccer buttons
@@ -657,6 +658,34 @@ $('btn-half').onclick = () => commit(L.onToggleHalf(game));
 $('pc-dn').onclick = () => commit(L.adjustPitch(game, -1));
 $('pc-up').onclick = () => commit(L.adjustPitch(game, 1));
 
+// Manual adjust panel (baseball) — one delegated handler over data-adj steppers.
+const ADJ = {
+  'score-away': (d) => L.adjustScore(game, 'away', d),
+  'score-home': (d) => L.adjustScore(game, 'home', d),
+  'hits-away': (d) => L.adjustHits(game, 'away', d),
+  'hits-home': (d) => L.adjustHits(game, 'home', d),
+  'errors-away': (d) => L.adjustErrors(game, 'away', d),
+  'errors-home': (d) => L.adjustErrors(game, 'home', d),
+  'outs': (d) => L.adjustOuts(game, d),
+  'balls': (d) => L.adjustBalls(game, d),
+  'strikes': (d) => L.adjustStrikes(game, d),
+  'inning': (d) => L.onNudgeInning(game, d),
+};
+$('adj-panel').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-adj]');
+  if (!btn || !ADJ[btn.dataset.adj]) return;
+  commit(ADJ[btn.dataset.adj](+btn.dataset.d));
+});
+$('adj-half').onclick = () => commit(L.onToggleHalf(game));
+function renderAdjust() {
+  const set = (id, v) => { $(id).textContent = v | 0; };
+  set('adj-score-away', game.away_score); set('adj-score-home', game.home_score);
+  set('adj-inning', game.inning); set('adj-outs', game.outs);
+  set('adj-balls', game.balls); set('adj-strikes', game.strikes);
+  set('adj-hits-away', game.away_hits); set('adj-hits-home', game.home_hits);
+  set('adj-errors-away', game.away_errors); set('adj-errors-home', game.home_errors);
+}
+
 // Teams & lineups (baseball) ------------------------------------------------
 // Rosters live in the `lineups` jsonb column (written directly, not undoable).
 // The current-hitter index lives in state.batIdx (undoable via apply_event).
@@ -788,6 +817,7 @@ function renderBaseballControl() {
     `<span class="sc-count">${game.balls} - ${game.strikes}</span><span class="sc-outs">${game.outs} out</span>`;
   $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
   $('pc-val').textContent = L.pitchCount(game);
+  renderAdjust();
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);

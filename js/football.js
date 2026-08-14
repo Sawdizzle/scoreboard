@@ -37,13 +37,29 @@ export function nextQuarter(g) {
 
 export function offenseTeam(g) { return fbState(g).possession || 'home'; }
 export function defenseTeam(g) { return offenseTeam(g) === 'home' ? 'away' : 'home'; }
+const otherTeam = (t) => (t === 'home' ? 'away' : 'home');
 const scoreOf = (g, team, pts) => ({ [team === 'home' ? 'home_score' : 'away_score']: (g[team === 'home' ? 'home_score' : 'away_score'] | 0) + pts });
 
+// After a score or turnover the other team takes over on a new drive: flip
+// possession and reset to 1st & 10. Timeouts and quarter are preserved.
+function flipDrive(g) {
+  const st = fbState(g);
+  return { possession: st.possession ? otherTeam(st.possession) : 'home', down: 1, distance: 10 };
+}
+
+// Touchdown holds possession for the PAT (the XP / 2-PT flips the drive after).
 export function touchdown(g) { return { type: 'td', patch: scoreOf(g, offenseTeam(g), 6), anim: 'touchdown' }; }
-export function fieldGoal(g) { return { type: 'fg', patch: scoreOf(g, offenseTeam(g), 3), anim: 'fieldgoal' }; }
-export function extraPoint(g) { return { type: 'xp', patch: scoreOf(g, offenseTeam(g), 1) }; }
-export function twoPoint(g) { return { type: '2pt', patch: scoreOf(g, offenseTeam(g), 2) }; }
-export function safety(g) { return { type: 'safety', patch: scoreOf(g, defenseTeam(g), 2), anim: 'fieldgoal' }; }
+// FG / XP / 2-PT / safety all end the possession → score, then kickoff to the other team.
+export function fieldGoal(g) { return { type: 'fg', patch: { ...scoreOf(g, offenseTeam(g), 3), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' }; }
+export function extraPoint(g) { return { type: 'xp', patch: { ...scoreOf(g, offenseTeam(g), 1), ...withState(g, flipDrive(g)) } }; }
+export function twoPoint(g) { return { type: '2pt', patch: { ...scoreOf(g, offenseTeam(g), 2), ...withState(g, flipDrive(g)) } }; }
+export function safety(g) { return { type: 'safety', patch: { ...scoreOf(g, defenseTeam(g), 2), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' }; }
+
+// Turnover (INT/fumble): the other team takes over, 1st & 10, with a stinger.
+export function turnover(g) { return { type: 'turnover', patch: withState(g, flipDrive(g)), anim: 'turnover' }; }
+// Kickoff / change of possession (punt, missed FG, TD with no try): flip, 1st & 10, no points.
+export function kickoff(g) { return { type: 'fb-kick', patch: withState(g, flipDrive(g)) }; }
+
 export function manualScore(g, team, d) {
   const key = team === 'home' ? 'home_score' : 'away_score';
   return { type: 'score', patch: { [key]: Math.max(0, (g[key] | 0) + d) } };

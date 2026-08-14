@@ -146,6 +146,13 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .cards-pad input { width: 100%; margin-top: 8px; padding: 12px; font-size: 15px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
 .fxbtn.cardclear { width: 100%; margin-top: 8px; background: #3a1f1f; }
 
+/* Manual adjust panel */
+.adj-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.adj-row .adj-lab { flex: 1; color: var(--muted); font-size: 14px; }
+.adj-row .step { width: 42px; height: 42px; }
+.adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
+.adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
+
 /* Pitch count stepper */
 .pc-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .pc-row .pc-label { flex: 1; color: var(--muted); font-size: 13px; }

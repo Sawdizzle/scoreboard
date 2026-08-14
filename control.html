@@ -119,6 +119,7 @@
       <span class="bases-label">Possession</span>
       <div class="bases-row">
         <button id="fb-poss-away" class="base-btn">◄ Away ball</button>
+        <button id="fb-kickoff" class="base-btn">Kickoff ⇄</button>
         <button id="fb-poss-home" class="base-btn">Home ball ►</button>
       </div>
 
@@ -228,6 +229,23 @@
     </details>
 
     <div class="sport-only" data-sport="baseball">
+      <details class="panel">
+        <summary>✏️ Manual adjust</summary>
+        <div class="panel-body" id="adj-panel">
+          <p class="hint">Direct edits for corrections — each is undoable. Runs/hits/errors change the total only.</p>
+          <div class="adj-row"><span class="adj-lab">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button><button id="adj-half" class="base-btn">Flip ½</button></div>
+          <div class="adj-row"><span class="adj-lab">Outs</span><button class="step" data-adj="outs" data-d="-1">–</button><b id="adj-outs">0</b><button class="step" data-adj="outs" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Balls</span><button class="step" data-adj="balls" data-d="-1">–</button><b id="adj-balls">0</b><button class="step" data-adj="balls" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Strikes</span><button class="step" data-adj="strikes" data-d="-1">–</button><b id="adj-strikes">0</b><button class="step" data-adj="strikes" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Home hits</span><button class="step" data-adj="hits-home" data-d="-1">–</button><b id="adj-hits-home">0</b><button class="step" data-adj="hits-home" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Away errors</span><button class="step" data-adj="errors-away" data-d="-1">–</button><b id="adj-errors-away">0</b><button class="step" data-adj="errors-away" data-d="1">+</button></div>
+          <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
+        </div>
+      </details>
+
       <details class="panel">
         <summary>👥 Teams &amp; lineups</summary>
         <div class="panel-body">
