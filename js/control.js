@@ -55,26 +55,53 @@ $('logout-btn').addEventListener('click', async () => {
 });
 
 // ---------------------------------------------------------------- Lobby
+const SPORT_LABEL = { baseball: '⚾', football: '🏈', soccer: '⚽' };
 async function loadGames() {
   const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_score,away_score,status')
+    .select('id,home_name,away_name,home_score,away_score,status,sport')
     .eq('owner_id', user.id).order('updated_at', { ascending: false });
   const list = $('games-list'); list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
   if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
   for (const g of data) {
-    const b = document.createElement('button');
-    b.className = 'game-row';
-    b.innerHTML = `<strong>${esc(g.away_name)} @ ${esc(g.home_name)}</strong><span>${g.away_score}–${g.home_score} · ${g.status}</span>`;
-    b.onclick = () => openGame(g.id);
-    list.appendChild(b);
+    const row = document.createElement('div');
+    row.className = 'game-row';
+    const open = document.createElement('button');
+    open.className = 'game-open';
+    open.innerHTML = `<strong>${SPORT_LABEL[g.sport] || '⚾'} ${esc(g.away_name)} @ ${esc(g.home_name)}</strong><span>${g.away_score}–${g.home_score} · ${esc(g.status)}</span>`;
+    open.onclick = () => openGame(g.id);
+    const del = document.createElement('button');
+    del.className = 'game-del';
+    del.textContent = '🗑';
+    del.title = 'Delete game';
+    del.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${g.away_name} @ ${g.home_name}"? This permanently removes the game and cannot be undone.`)) return;
+      await deleteGame(g.id);
+    };
+    row.appendChild(open); row.appendChild(del);
+    list.appendChild(row);
   }
 }
-$('new-game-btn').addEventListener('click', async () => {
-  const { data, error } = await db.from('games').insert({ status: 'live' }).select().single();
+async function deleteGame(id) {
+  const { error } = await db.from('games').delete().eq('id', id);
   if (error) return alert(error.message);
+  await loadGames();
+}
+
+// New game: pick sport + style first, then create with the right initial state.
+$('new-game-btn').addEventListener('click', () => { $('newgame-sheet').hidden = false; });
+$('ng-cancel').onclick = () => { $('newgame-sheet').hidden = true; };
+$('ng-create').onclick = async () => {
+  const sport = $('ng-sport').value, style = $('ng-style').value;
+  const row = { status: 'live', sport, style };
+  if (sport === 'football') row.state = F.fbState({});
+  else if (sport === 'soccer') row.state = S.scState({});
+  const { data, error } = await db.from('games').insert(row).select().single();
+  if (error) return alert(error.message);
+  $('newgame-sheet').hidden = true;
   openGame(data.id);
-});
+};
 
 // ---------------------------------------------------------------- Game
 async function openGame(id) {
@@ -275,6 +302,38 @@ function renderRally() {
 const suVal = (id) => $(id).value.trim();
 $('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
 $('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
+
+$('delete-game').onclick = async () => {
+  if (!game) return;
+  if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
+  const id = game.id;
+  $('setup-sheet').hidden = true;
+  await teardownChannel();
+  const { error } = await db.from('games').delete().eq('id', id);
+  if (error) return alert(error.message);
+  game = null; show('lobby'); await loadGames();
+};
+
+$('reset-game').onclick = async () => {
+  if (!game) return;
+  if (!confirm('Reset this game to 0? Score, situation, clock, cards and undo history are cleared. Teams and look are kept.')) return;
+  const sport = game.sport || 'baseball';
+  const patch = {
+    status: 'live', home_score: 0, away_score: 0,
+    home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0,
+    line_score: [], current_animation: null, card: null, rally_mode: false,
+    clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds || null,
+  };
+  if (sport === 'baseball') Object.assign(patch, {
+    inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
+    bases: { first: false, second: false, third: false }, pitch_count: 0,
+  });
+  else if (sport === 'football') patch.state = F.fbState({});
+  else if (sport === 'soccer') patch.state = S.scState({});
+  await db.from('events').delete().eq('game_id', game.id); // wipe undo history
+  $('setup-sheet').hidden = true;
+  await writeField(patch);
+};
 function fillSetup() {
   $('su-sport').value = game.sport || 'baseball';
   $('su-style').value = game.style || 'bar';

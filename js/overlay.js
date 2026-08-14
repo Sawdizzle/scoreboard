@@ -25,11 +25,16 @@ let lastAnimNonce = 0; // only play strictly-newer triggers (reload/undo never r
 function showSituation(sport) {
   document.querySelectorAll('.situation').forEach((n) => { n.hidden = !n.classList.contains('sit-' + sport); });
 }
+function setDots(id, n) {
+  const c = document.getElementById(id);
+  if (c) c.querySelectorAll('.d').forEach((d, i) => d.classList.toggle('on', i < (n | 0)));
+}
 function renderBaseball(s) {
   el.inning.textContent = `${s.half === 'top' ? '▲' : '▼'}${s.inning}`;
   el.balls.textContent = s.balls;
   el.strikes.textContent = s.strikes;
   el.outs.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i < (s.outs | 0)));
+  setDots('bso-b', s.balls); setDots('bso-s', s.strikes); setDots('bso-o', s.outs);
   const b = safeBases(s.bases);
   document.getElementById('b1').classList.toggle('on', b.first);
   document.getElementById('b2').classList.toggle('on', b.second);

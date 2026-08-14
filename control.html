@@ -366,6 +366,7 @@
         </label>
         <label class="sel">Style
           <select id="su-style">
+            <option value="scorebox">Scorebox (full broadcast)</option>
             <option value="bar">Bar (wide strip)</option>
             <option value="bug">Bug (stacked)</option>
             <option value="minimal">Minimal (slim)</option>
@@ -413,9 +414,41 @@
         </div>
       </div>
 
+      <div class="danger-row">
+        <button id="reset-game" class="fxbtn">↺ Reset game</button>
+        <button id="delete-game" class="fxbtn cardclear">🗑 Delete game</button>
+      </div>
       <div class="sheet-actions">
         <button id="setup-cancel" class="ghost">Close</button>
         <button id="setup-save" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW GAME SHEET -->
+  <div id="newgame-sheet" class="sheet" hidden>
+    <div class="sheet-card">
+      <h3>New Game</h3>
+      <label class="sel">Sport
+        <select id="ng-sport">
+          <option value="baseball">Baseball</option>
+          <option value="football">Football</option>
+          <option value="soccer">Soccer</option>
+        </select>
+      </label>
+      <label class="sel" style="margin-top:12px">Scorebug style
+        <select id="ng-style">
+          <option value="scorebox">Scorebox (full broadcast)</option>
+          <option value="bar">Bar (wide strip)</option>
+          <option value="bug">Bug (stacked)</option>
+          <option value="minimal">Minimal (slim)</option>
+          <option value="lowerthird">Lower-third</option>
+          <option value="ticker">Ticker (thin)</option>
+        </select>
+      </label>
+      <div class="sheet-actions">
+        <button id="ng-cancel" class="ghost">Cancel</button>
+        <button id="ng-create" class="primary">Create Game</button>
       </div>
     </div>
   </div>
