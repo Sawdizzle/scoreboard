@@ -135,3 +135,54 @@ body[data-theme="royal"] {
   --line: rgba(212, 175, 55, 0.35); --chalk: #f2f4ff; --steel: #8fa8ff; --accent: #e8c559; --radius: 9px;
 }
 body[data-theme="royal"] .bug { border: 1px solid rgba(212, 175, 55, 0.3); }
+
+/* ===== v3.13 theme drop ============================================== */
+
+/* Volt — blacked-out with an electric-lime charge (modern athletic). */
+body[data-theme="volt"] {
+  --panel: rgba(12, 14, 12, 0.95); --panel-2: rgba(0, 0, 0, 0.42);
+  --line: rgba(198, 255, 0, 0.35); --chalk: #f3ffe9; --steel: #a6e84f; --accent: #c6ff00; --radius: 8px;
+}
+body[data-theme="volt"] .bug { border: 1px solid var(--accent); box-shadow: 0 0 22px rgba(198, 255, 0, 0.22), 0 10px 30px rgba(0, 0, 0, 0.6); }
+body[data-theme="volt"] .team .runs, body[data-theme="volt"] .count, body[data-theme="volt"] .fb-q { text-shadow: 0 0 10px rgba(198, 255, 0, 0.6); }
+
+/* Ember — molten dark red with an orange glow. */
+body[data-theme="ember"] {
+  --panel: rgba(26, 9, 6, 0.95); --panel-2: rgba(0, 0, 0, 0.4);
+  --line: rgba(255, 106, 26, 0.38); --chalk: #ffede0; --steel: #ff9d5c; --accent: #ff6a1a; --radius: 8px;
+}
+body[data-theme="ember"] .bug { background: linear-gradient(180deg, rgba(46, 14, 8, 0.95), rgba(18, 6, 4, 0.95)); box-shadow: 0 0 26px rgba(255, 106, 26, 0.22), 0 10px 30px rgba(0, 0, 0, 0.6); }
+body[data-theme="ember"] .team .runs, body[data-theme="ember"] .count, body[data-theme="ember"] .fb-q { text-shadow: 0 0 12px rgba(255, 106, 26, 0.65); }
+
+/* Blueprint — cyan schematic on navy with a drafting grid. */
+body[data-theme="blueprint"] {
+  --panel: rgba(8, 20, 40, 0.96); --panel-2: rgba(0, 0, 0, 0.35);
+  --line: rgba(90, 200, 255, 0.4); --chalk: #eaf6ff; --steel: #6fb8e6; --accent: #4fd6ff; --radius: 2px;
+  --disp: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+body[data-theme="blueprint"] .bug { border: 1px solid var(--line);
+  background-image: linear-gradient(rgba(90, 200, 255, 0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(90, 200, 255, 0.09) 1px, transparent 1px);
+  background-size: 14px 14px; }
+body[data-theme="blueprint"] .team .abbr { letter-spacing: 0.06em; }
+
+/* Bubblegum — light candy pink (playful, youth-friendly). */
+body[data-theme="bubblegum"] {
+  --panel: rgba(255, 240, 248, 0.96); --panel-2: rgba(255, 214, 235, 0.7);
+  --line: rgba(255, 79, 154, 0.32); --chalk: #3d1030; --steel: #b054c9; --accent: #ff4f9a; --radius: 16px;
+}
+body[data-theme="bubblegum"] .bug { box-shadow: 0 10px 26px rgba(255, 79, 154, 0.28); }
+
+/* Cosmic — deep-space violet with a soft nebula glow. */
+body[data-theme="cosmic"] {
+  --panel: rgba(18, 14, 40, 0.95); --panel-2: rgba(0, 0, 0, 0.4);
+  --line: rgba(150, 120, 255, 0.34); --chalk: #f1eeff; --steel: #8aa2ff; --accent: #b98cff; --radius: 10px;
+}
+body[data-theme="cosmic"] .bug { background: linear-gradient(180deg, rgba(38, 24, 74, 0.95), rgba(14, 10, 34, 0.95)); box-shadow: 0 0 24px rgba(150, 120, 255, 0.25), 0 10px 30px rgba(0, 0, 0, 0.55); }
+body[data-theme="cosmic"] .team .runs, body[data-theme="cosmic"] .count, body[data-theme="cosmic"] .fb-q { text-shadow: 0 0 10px rgba(185, 140, 255, 0.6); }
+
+/* Sunrise — warm light peach/coral (bright-daylight friendly). */
+body[data-theme="sunrise"] {
+  --panel: rgba(255, 247, 238, 0.96); --panel-2: rgba(255, 226, 200, 0.7);
+  --line: rgba(255, 122, 77, 0.3); --chalk: #402014; --steel: #d17a34; --accent: #ff6a3d; --radius: 12px;
+}
+body[data-theme="sunrise"] .bug { background: linear-gradient(180deg, rgba(255, 240, 225, 0.96), rgba(255, 224, 205, 0.96)); box-shadow: 0 8px 24px rgba(255, 122, 77, 0.25); }
