@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, fielderAt, FIELD_POSITIONS } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 
@@ -301,6 +301,19 @@ function buildCard(c, s) {
       ? `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`
       : `<span>${escapeHtml(meta.text || '')}</span>`;
     return `<div class="card lower-card"><b>Due Up</b>${body}</div>`;
+  }
+  if (c.type === 'defense') {
+    const side = meta.side || fieldingSide(s);
+    const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
+    const spot = (pos) => {
+      const f = fielderAt(s, side, pos);
+      const who = f
+        ? `${f.num ? `<span class="dc-num">${escapeHtml(f.num)}</span>` : ''}<span class="dc-name">${escapeHtml(f.name || '')}</span>`
+        : '<span class="dc-empty">—</span>';
+      return `<div class="dc-pos" data-pos="${pos}"><span class="dc-lab">${pos}</span>${who}</div>`;
+    };
+    return `<div class="card defense"><div class="card-sub">Defense — ${teamName}</div>
+      <div class="dc-field">${FIELD_POSITIONS.map(spot).join('')}</div></div>`;
   }
   if (c.type === 'sponsor') {
     return `<div class="card sponsor"><div class="card-sub">Brought to you by</div><div class="card-title">${escapeHtml(meta.text || 'Sponsor')}</div></div>`;

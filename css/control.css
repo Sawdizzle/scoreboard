@@ -153,6 +153,59 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* Guided setup checklist */
+.setup-guide { background: var(--card); border: 1px solid var(--steel); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.setup-guide[hidden] { display: none; }
+.setup-guide.complete { border-color: var(--ball); }
+.sg-head { width: 100%; display: flex; align-items: center; gap: 10px; background: transparent; border: none; color: var(--chalk); padding: 13px 14px; font-size: 15px; cursor: pointer; }
+.sg-progress { margin-left: auto; font-family: var(--num); color: var(--steel); font-weight: 700; }
+.sg-chev { color: var(--muted); transition: transform 0.2s; }
+.setup-guide.collapsed .sg-chev { transform: rotate(-90deg); }
+.setup-guide.collapsed .sg-body { display: none; }
+.sg-body { padding: 0 14px 12px; }
+.sg-sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.sg-step { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.sg-step[hidden] { display: none; }
+.sg-dot { width: 26px; height: 26px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 800; color: var(--muted); flex: 0 0 auto; }
+.sg-step.done .sg-dot { background: var(--ball); border-color: var(--ball); color: #fff; }
+.sg-lab { flex: 1; font-size: 14px; }
+.sg-step.done .sg-lab { color: var(--muted); text-decoration: line-through; }
+.sg-go { background: var(--steel); color: #fff; border: none; border-radius: 10px; padding: 9px 15px; font-weight: 700; font-size: 13px; }
+.sg-step.done .sg-go { background: var(--bg-2); color: var(--muted); border: 1px solid var(--line); }
+
+/* Defense (positions) drag-drop editor */
+.team-toggle { display: flex; gap: 8px; margin: 4px 0 12px; }
+.team-toggle .base-btn { flex: 1; }
+.diamond-edit { position: relative; height: 300px; margin: 4px 0 12px; touch-action: none;
+  background: radial-gradient(120% 95% at 50% 100%, #2f6b3f, #1f4a2b 65%, #16341e);
+  border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.diamond-edit::before { content: ''; position: absolute; width: 150px; height: 150px; left: 50%; top: 57%;
+  transform: translate(-50%, -50%) rotate(45deg); border: 2px solid rgba(255,255,255,.45);
+  background: rgba(176,120,66,.28); border-radius: 4px; }
+.dz-slot { position: absolute; transform: translate(-50%, -50%); width: 90px; padding: 3px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 10px; }
+.dz-slot.hot { background: rgba(232,178,58,.28); box-shadow: 0 0 0 2px var(--accent); }
+.dz-slot-lab { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: .06em; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.dz-slot-name { font-size: 12px; font-weight: 700; color: #fff; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.dz-slot .dz-ph { font-style: normal; font-size: 10px; color: rgba(255,255,255,.6); border: 1px dashed rgba(255,255,255,.4); border-radius: 8px; padding: 3px 7px; }
+.dz-slot[data-pos="CF"] { top: 11%; left: 50%; }
+.dz-slot[data-pos="LF"] { top: 24%; left: 19%; }
+.dz-slot[data-pos="RF"] { top: 24%; left: 81%; }
+.dz-slot[data-pos="SS"] { top: 45%; left: 36%; }
+.dz-slot[data-pos="2B"] { top: 45%; left: 64%; }
+.dz-slot[data-pos="3B"] { top: 56%; left: 18%; }
+.dz-slot[data-pos="1B"] { top: 56%; left: 82%; }
+.dz-slot[data-pos="P"]  { top: 62%; left: 50%; }
+.dz-slot[data-pos="C"]  { top: 90%; left: 50%; }
+.dz-chip { display: inline-block; background: var(--steel); color: #fff; font-size: 12px; font-weight: 700;
+  padding: 6px 10px; border-radius: 999px; touch-action: none; cursor: grab; user-select: none;
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-chip.in-slot { background: var(--out); font-size: 11px; padding: 4px 8px; }
+.bench { display: flex; flex-wrap: wrap; gap: 6px; min-height: 46px; padding: 8px; margin-bottom: 10px;
+  border: 1px dashed var(--line); border-radius: 10px; touch-action: none; }
+.bench.hot { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.dz-ghost { position: fixed; z-index: 9999; transform: translate(-50%, -50%); pointer-events: none; opacity: .92; }
+
 /* Pitch count stepper */
 .pc-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .pc-row .pc-label { flex: 1; color: var(--muted); font-size: 13px; }

@@ -45,6 +45,19 @@
       <span id="g-batting" class="tag">Batting: —</span>
     </header>
 
+    <div id="setup-guide" class="setup-guide" hidden>
+      <button id="sg-head" class="sg-head" type="button">
+        <b>📋 Game setup</b><span class="sg-progress" id="sg-progress">0/4</span><span class="sg-chev">▾</span>
+      </button>
+      <div class="sg-body">
+        <p class="sg-sub">Get the overlay broadcast-ready before first pitch.</p>
+        <div class="sg-step" data-step="teams"><span class="sg-dot">1</span><span class="sg-lab">Teams &amp; style</span><button class="sg-go" data-go="teams">Set →</button></div>
+        <div class="sg-step" data-step="lineups"><span class="sg-dot">2</span><span class="sg-lab">Lineups (P + batting order)</span><button class="sg-go" data-go="lineups">Set →</button></div>
+        <div class="sg-step" data-step="defense"><span class="sg-dot">3</span><span class="sg-lab">Defense positions</span><button class="sg-go" data-go="defense">Set →</button></div>
+        <div class="sg-step" data-step="overlay"><span class="sg-dot">4</span><span class="sg-lab">Overlay link for OBS</span><button class="sg-go" data-go="overlay">Copy →</button></div>
+      </div>
+    </div>
+
     <div class="clock-row" id="clock-row" hidden>
       <span id="clock-display" class="clock-disp">--:--</span>
       <button id="clock-start" class="ghost small">▶ Start</button>
@@ -246,7 +259,7 @@
         </div>
       </details>
 
-      <details class="panel">
+      <details class="panel" id="panel-lineups">
         <summary>👥 Teams &amp; lineups</summary>
         <div class="panel-body">
           <p class="hint">The <b>◎</b> marks who's at bat — tap to set it; <b>Next Batter</b> advances it automatically. At-bat hitter + the fielding team's pitcher feed the overlay.</p>
@@ -274,6 +287,21 @@
               <div class="lineup-list" id="lineup-home"></div>
             </div>
           </details>
+        </div>
+      </details>
+
+      <details class="panel" id="panel-defense">
+        <summary>🧤 Defense (positions)</summary>
+        <div class="panel-body" id="def-panel">
+          <p class="hint">Drag a player onto a spot. <b>P</b> is your lineup's pitcher. Drag a filled spot back to the bench to clear it.</p>
+          <div class="team-toggle">
+            <button id="def-away" class="base-btn on">◄ Away</button>
+            <button id="def-home" class="base-btn">Home ►</button>
+          </div>
+          <div class="diamond-edit" id="diamond-edit"></div>
+          <span class="bases-label">Bench — drag onto the field</span>
+          <div class="bench" id="def-bench" data-pool="1"></div>
+          <button id="card-defense" class="fxbtn">📺 Show Defense card</button>
         </div>
       </details>
     </div>
@@ -441,7 +469,7 @@
       </div>
     </details>
 
-    <details class="panel">
+    <details class="panel" id="panel-overlay">
       <summary>🔗 Overlay link &amp; practice</summary>
       <div class="panel-body">
         <div class="urlbar">

@@ -169,6 +169,22 @@ export function currentPitcher(g) {
   const p = teamLineup(g, fieldingSide(g)).pitcher;
   return filled(p) ? p : null;
 }
+// ---- Defensive positions --------------------------------------------------
+// The 9 field spots. P is always the team's pitcher; the other 8 map to a
+// batting-order index via lineups[side].positions = { C: idx, '1B': idx, ... }.
+export const FIELD_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+export function teamPositions(g, side) {
+  return (g.lineups && g.lineups[side] && g.lineups[side].positions) || {};
+}
+// Resolve a position to its {num,name}, or null if unset. P = the pitcher box.
+export function fielderAt(g, side, pos) {
+  if (pos === 'P') { const p = teamLineup(g, side).pitcher; return filled(p) ? p : null; }
+  const idx = teamPositions(g, side)[pos];
+  if (idx == null) return null;
+  const b = teamLineup(g, side).batters[idx];
+  return filled(b) ? b : null;
+}
+
 // ---- Pitch count (auto, per pitcher) --------------------------------------
 // Counts live in state.pitches keyed by side; the count shown is the fielding
 // team's (the pitcher on the mound). withPitch() adds one pitch to that tally

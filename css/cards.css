@@ -41,5 +41,30 @@
 .card.lower-card .du-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
 .card.lower-card .du-list span { font-size: 26px; line-height: 1.15; }
 
+/* Defensive alignment */
+.card.defense { padding: 20px 26px; }
+.card.defense .card-sub { margin-bottom: 14px; }
+.dc-field { position: relative; width: 760px; height: 560px; margin: 0 auto;
+  background: radial-gradient(120% 95% at 50% 100%, #2f6b3f 0%, #24522f 58%, #1b3c24 100%);
+  border-radius: 16px; overflow: hidden; box-shadow: inset 0 0 60px rgba(0,0,0,.35); }
+.dc-field::before { content: ''; position: absolute; width: 300px; height: 300px; left: 50%; top: 57%;
+  transform: translate(-50%, -50%) rotate(45deg); border: 3px solid rgba(255,255,255,.5);
+  background: rgba(176,120,66,.28); border-radius: 6px; }
+.dc-pos { position: absolute; transform: translate(-50%, -50%); text-align: center; min-width: 90px;
+  color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.75); }
+.dc-pos .dc-lab { display: block; font-size: 14px; font-weight: 800; color: var(--accent); letter-spacing: 0.08em; }
+.dc-pos .dc-num { font-family: var(--num); font-size: 21px; font-weight: 800; margin-right: 6px; }
+.dc-pos .dc-name { font-size: 21px; font-weight: 700; }
+.dc-pos .dc-empty { color: rgba(255,255,255,.4); font-size: 20px; }
+.dc-pos[data-pos="CF"] { top: 9%;  left: 50%; }
+.dc-pos[data-pos="LF"] { top: 21%; left: 19%; }
+.dc-pos[data-pos="RF"] { top: 21%; left: 81%; }
+.dc-pos[data-pos="SS"] { top: 43%; left: 37%; }
+.dc-pos[data-pos="2B"] { top: 43%; left: 63%; }
+.dc-pos[data-pos="3B"] { top: 54%; left: 19%; }
+.dc-pos[data-pos="1B"] { top: 54%; left: 81%; }
+.dc-pos[data-pos="P"]  { top: 61%; left: 50%; }
+.dc-pos[data-pos="C"]  { top: 91%; left: 50%; }
+
 /* Sponsor */
 .card.sponsor .card-title { font-size: 56px; color: var(--chalk); }

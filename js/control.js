@@ -109,14 +109,16 @@ $('ng-create').onclick = async () => {
   const { data, error } = await db.from('games').insert(row).select().single();
   if (error) return alert(error.message);
   $('newgame-sheet').hidden = true;
-  openGame(data.id);
+  await openGame(data.id);
+  openSetupGuide(); // fresh game → expand the checklist
 };
 
 // ---------------------------------------------------------------- Game
 async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
-  game = data; show('game'); renderGame();
+  game = data; overlayCopied = false; guideCollapsed = setupAllDone();
+  show('game'); renderGame();
   $('overlay-url').value = `${location.origin}/overlay?game=${id}`;
   await subscribe(id);
 }
@@ -286,6 +288,8 @@ async function showCard(type) {
     const lines = L.dueUp(game, 3).map((b) => (b.num ? `#${b.num} ` : '') + b.name).filter((s) => s.trim());
     if (lines.length) meta.lines = lines;
   }
+  // Defense card snapshots the fielding side (top → home, bottom → away).
+  if (type === 'defense') meta.side = L.fieldingSide(game);
   const card = { type, meta, nonce: Date.now() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
@@ -296,6 +300,7 @@ $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');
 $('card-sponsor').onclick = () => showCard('sponsor');
+$('card-defense').onclick = () => showCard('defense');
 $('card-clear').onclick = async () => {
   game = { ...game, card: null };
   const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
@@ -765,6 +770,90 @@ function renderLineups() {
   renderCurrentHitter('away'); renderCurrentHitter('home');
 }
 
+// Defense (positions) — pointer-based drag & drop (works on mouse + touch) ---
+let defSide = 'away';
+const chipLabel = (b) => (b.num ? '#' + b.num + ' ' : '') + (b.name || '');
+function renderDefense() {
+  if (!game || (game.sport || 'baseball') !== 'baseball') return;
+  $('def-away').classList.toggle('on', defSide === 'away');
+  $('def-home').classList.toggle('on', defSide === 'home');
+  const team = (game.lineups || {})[defSide] || {};
+  const batters = Array.isArray(team.batters) ? team.batters : [];
+  const positions = team.positions || {};
+  $('diamond-edit').innerHTML = L.FIELD_POSITIONS.map((pos) => {
+    if (pos === 'P') {
+      const p = team.pitcher || {};
+      const lbl = (p.num || p.name) ? esc(chipLabel(p)) : '<i class="dz-ph">—</i>';
+      return `<div class="dz-slot fixed" data-pos="${pos}"><span class="dz-slot-lab">P</span><span class="dz-slot-name">${lbl}</span></div>`;
+    }
+    const idx = positions[pos];
+    const b = (idx != null) ? batters[idx] : null;
+    const inner = (b && (b.num || b.name))
+      ? `<span class="dz-chip in-slot" data-idx="${idx}">${esc(chipLabel(b))}</span>`
+      : '<i class="dz-ph">drop</i>';
+    return `<div class="dz-slot" data-slot="${pos}" data-pos="${pos}"><span class="dz-slot-lab">${pos}</span>${inner}</div>`;
+  }).join('');
+  const assigned = new Set(Object.values(positions));
+  $('def-bench').innerHTML = batters.map((b, i) =>
+    (b && (b.num || b.name) && !assigned.has(i)) ? `<div class="dz-chip" data-idx="${i}">${esc(chipLabel(b))}</div>` : ''
+  ).join('');
+}
+async function saveDefPositions(positions) {
+  const side = defSide;
+  const lineups = { ...(game.lineups || {}), [side]: { ...((game.lineups || {})[side] || {}), positions } };
+  game = { ...game, lineups };
+  renderDefense();
+  const { error } = await db.from('games').update({ lineups }).eq('id', game.id);
+  if (error) console.warn('positions write failed', error.message);
+}
+$('def-away').onclick = () => { defSide = 'away'; renderDefense(); };
+$('def-home').onclick = () => { defSide = 'home'; renderDefense(); };
+
+let dnd = null;
+function dropTargetAt(e) {
+  dnd.ghost.style.display = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  dnd.ghost.style.display = '';
+  if (!el) return {};
+  const slot = el.closest('.dz-slot[data-slot]');
+  if (slot) return { type: 'slot', pos: slot.dataset.slot, el: slot };
+  const bench = el.closest('.bench');
+  if (bench) return { type: 'bench', el: bench };
+  return {};
+}
+function clearHot() { document.querySelectorAll('.dz-slot.hot, .bench.hot').forEach((el) => el.classList.remove('hot')); }
+function defMove(e) {
+  if (!dnd) return;
+  e.preventDefault();
+  dnd.ghost.style.left = e.clientX + 'px'; dnd.ghost.style.top = e.clientY + 'px';
+  clearHot(); const t = dropTargetAt(e); if (t.el) t.el.classList.add('hot');
+}
+function defUp(e) {
+  if (!dnd) return;
+  const t = dropTargetAt(e);
+  dnd.ghost.remove(); clearHot();
+  const idx = dnd.idx; dnd = null;
+  window.removeEventListener('pointermove', defMove);
+  window.removeEventListener('pointerup', defUp);
+  if (!t.el) return;
+  const positions = { ...((game.lineups || {})[defSide] || {}).positions };
+  for (const k of Object.keys(positions)) if (positions[k] === idx) delete positions[k];
+  if (t.type === 'slot' && t.pos !== 'P') positions[t.pos] = idx; // bench drop just clears (done above)
+  saveDefPositions(positions);
+}
+$('def-panel').addEventListener('pointerdown', (e) => {
+  const chip = e.target.closest('.dz-chip');
+  if (!chip) return;
+  e.preventDefault();
+  const ghost = chip.cloneNode(true);
+  ghost.classList.add('dz-ghost');
+  document.body.appendChild(ghost);
+  dnd = { idx: +chip.dataset.idx, ghost };
+  ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+  window.addEventListener('pointermove', defMove);
+  window.addEventListener('pointerup', defUp);
+});
+
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
 function paintWalk() {
@@ -810,7 +899,55 @@ function renderGame() {
   renderAudio();
   renderLook();
   renderClock();
+  renderSetupGuide();
 }
+
+// ---- Guided game-setup checklist ------------------------------------------
+let overlayCopied = false;
+let guideCollapsed = true;
+const STEP_NUM = { teams: 1, lineups: 2, defense: 3, overlay: 4 };
+function setupSteps() {
+  const sport = game.sport || 'baseball';
+  const teams = (game.away_name && game.away_name !== 'Visitor') || (game.home_name && game.home_name !== 'Home');
+  const teamHas = (s) => { const t = (game.lineups || {})[s] || {}; return (t.pitcher && (t.pitcher.name || t.pitcher.num)) || (Array.isArray(t.batters) && t.batters.some((b) => b && (b.name || b.num))); };
+  const hasLineup = teamHas('away') || teamHas('home');
+  const hasDefense = ['away', 'home'].some((s) => Object.keys(((game.lineups || {})[s] || {}).positions || {}).length > 0);
+  return sport === 'baseball'
+    ? [['teams', !!teams], ['lineups', hasLineup], ['defense', hasDefense], ['overlay', overlayCopied]]
+    : [['teams', !!teams], ['overlay', overlayCopied]];
+}
+const setupAllDone = () => setupSteps().every(([, ok]) => ok);
+function renderSetupGuide() {
+  const el = $('setup-guide'); if (!el || !game) return;
+  el.hidden = false;
+  const sport = game.sport || 'baseball';
+  el.querySelector('.sg-step[data-step="lineups"]').hidden = sport !== 'baseball';
+  el.querySelector('.sg-step[data-step="defense"]').hidden = sport !== 'baseball';
+  const steps = setupSteps();
+  let done = 0;
+  for (const [key, ok] of steps) {
+    const row = el.querySelector(`.sg-step[data-step="${key}"]`);
+    if (!row) continue;
+    row.classList.toggle('done', ok);
+    row.querySelector('.sg-dot').textContent = ok ? '✓' : String(STEP_NUM[key]);
+    if (ok) done++;
+  }
+  $('sg-progress').textContent = `${done}/${steps.length}`;
+  el.classList.toggle('collapsed', guideCollapsed);
+  el.classList.toggle('complete', done === steps.length);
+}
+function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
+$('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
+function jumpPanel(id) { const p = $(id); if (!p) return; p.open = true; p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+$('setup-guide').addEventListener('click', (e) => {
+  const b = e.target.closest('.sg-go'); if (!b) return;
+  const go = b.dataset.go;
+  if (go === 'teams') { fillSetup(); $('setup-sheet').hidden = false; }
+  else if (go === 'lineups') jumpPanel('panel-lineups');
+  else if (go === 'defense') jumpPanel('panel-defense');
+  else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
+});
+
 function renderBaseballControl() {
   const b = L.safeBases(game.bases);
   $('sc-mid').innerHTML = `<span class="sc-inning">${game.half === 'top' ? '▲' : '▼'} ${game.inning}</span>` +
@@ -822,6 +959,7 @@ function renderBaseballControl() {
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
   renderLineups();
+  renderDefense();
 }
 function renderFootballControl() {
   const st = F.fbState(game);
@@ -846,8 +984,9 @@ function renderSoccerControl() {
 
 $('copy-url-btn').onclick = async () => {
   try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; showToast('🔗 Overlay URL copied'); setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
+  overlayCopied = true; renderSetupGuide();
 };
-$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); };
+$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); overlayCopied = true; renderSetupGuide(); };
 
 // Keyboard shortcuts (desktop control): ignore while typing in a field.
 document.addEventListener('keydown', (e) => {
