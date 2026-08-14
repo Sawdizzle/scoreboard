@@ -10,6 +10,15 @@ const show = (view) => { for (const k in views) views[k].hidden = (k !== view); 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const emailFor = (u) => `${u.trim().toLowerCase()}@${USER_EMAIL_DOMAIN}`;
 
+let toastTimer;
+function showToast(msg) {
+  const t = $('toast'); if (!t) return;
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 1600);
+}
+const haptic = () => { try { navigator.vibrate && navigator.vibrate(8); } catch {} };
+
 let user = null;
 let game = null;
 let channel = null;
@@ -127,6 +136,7 @@ async function teardownChannel() { if (channel) { await supabase.removeChannel(c
 // Atomic apply via RPC (snapshots prev_state for undo). Optimistic UI.
 async function commit(res) {
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
+  haptic();
   const prev = game;
   game = { ...game, ...res.patch };
   renderGame();
@@ -240,6 +250,7 @@ $('preset-save').onclick = async () => {
   if (error) return alert(error.message);
   $('preset-name').value = '';
   await loadPresets();
+  showToast('💾 Preset saved');
 };
 $('preset-apply').onclick = async () => {
   const opt = $('preset-sel').selectedOptions[0];
@@ -250,12 +261,14 @@ $('preset-apply').onclick = async () => {
     scorebug_position: s.scorebug_position || 'bottom-bar', scorebug_scale: s.scorebug_scale || 1,
     sound_pack: s.sound_pack || 'bigleague', look: s.look || {},
   });
+  showToast(`🎨 Applied "${opt.textContent}"`);
 };
 $('preset-del').onclick = async () => {
   const opt = $('preset-sel').selectedOptions[0];
   if (!opt || !opt.value) return;
   await db.from('presets').delete().eq('id', opt.value);
   await loadPresets();
+  showToast('Preset deleted');
 };
 
 // Broadcast cards (persistent until cleared)
@@ -266,7 +279,8 @@ async function showCard(type) {
   const card = { type, meta, nonce: Date.now() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
-  if (error) console.warn('card failed', error.message);
+  if (error) return console.warn('card failed', error.message);
+  showToast(`🎬 ${type[0].toUpperCase() + type.slice(1)} card up`);
 }
 $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
@@ -275,7 +289,8 @@ $('card-sponsor').onclick = () => showCard('sponsor');
 $('card-clear').onclick = async () => {
   game = { ...game, card: null };
   const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
-  if (error) console.warn('card clear failed', error.message);
+  if (error) return console.warn('card clear failed', error.message);
+  showToast('Card cleared');
 };
 
 // Moments / FX
@@ -334,6 +349,7 @@ $('reset-game').onclick = async () => {
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
   $('setup-sheet').hidden = true;
   await writeField(patch);
+  showToast('↺ Game reset');
 };
 function fillSetup() {
   $('su-sport').value = game.sport || 'baseball';
@@ -527,6 +543,7 @@ $('cust-reset').onclick = async () => {
   game = { ...game, look: {} };
   renderCustomize();
   await db.from('games').update({ look: {} }).eq('id', game.id);
+  showToast('Customize reset');
 };
 function renderCustomize() {
   const L = lookOf();
@@ -651,7 +668,21 @@ function renderSoccerControl() {
 }
 
 $('copy-url-btn').onclick = async () => {
-  try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
+  try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; showToast('🔗 Overlay URL copied'); setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
 };
+$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); };
+
+// Keyboard shortcuts (desktop control): ignore while typing in a field.
+document.addEventListener('keydown', (e) => {
+  if (views.game.hidden || !game) return;
+  const tag = (e.target && e.target.tagName || '').toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'u') { e.preventDefault(); return doUndo(); }
+  if ((game.sport || 'baseball') === 'baseball') {
+    const map = { b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-batter' };
+    if (map[k]) { e.preventDefault(); $(map[k]).click(); }
+  }
+});
 
 refreshSession();

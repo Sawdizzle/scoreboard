@@ -88,6 +88,7 @@ body[data-pos="top-bar"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; righ
 @keyframes clock-blink { 50% { opacity: 0.35; } }
 
 /* Detail line under the bug: batter / pitcher / pitch count / run-rule */
+.detail[hidden] { display: none; }
 .detail { display: flex; gap: 14px; align-items: center; font-family: var(--disp); color: var(--chalk);
   background: var(--panel-2); border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px);
   padding: 5px 14px; font-size: 15px; }

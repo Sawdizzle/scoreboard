@@ -195,145 +195,164 @@
       <button id="fx-charge" class="fxbtn charge">🎺 Charge!</button>
     </div>
 
-    <div class="cards-pad">
-      <span class="bases-label">Broadcast cards (stay up until cleared)</span>
-      <div class="fx-grid">
-        <button id="card-matchup" class="fxbtn">Matchup</button>
-        <button id="card-final" class="fxbtn">Final</button>
-        <button id="card-dueup" class="fxbtn">Due Up</button>
-        <button id="card-sponsor" class="fxbtn">Sponsor</button>
+    <details class="panel">
+      <summary>🎬 Broadcast cards</summary>
+      <div class="panel-body">
+        <div class="fx-grid">
+          <button id="card-matchup" class="fxbtn">Matchup</button>
+          <button id="card-final" class="fxbtn">Final</button>
+          <button id="card-dueup" class="fxbtn">Due Up</button>
+          <button id="card-sponsor" class="fxbtn">Sponsor</button>
+        </div>
+        <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
+        <button id="card-clear" class="fxbtn cardclear">✕ Clear card</button>
       </div>
-      <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
-      <button id="card-clear" class="fxbtn cardclear">✕ Clear card</button>
-    </div>
+    </details>
 
-    <div class="cards-pad">
-      <span class="bases-label">Look presets (theme + style + customize)</span>
-      <div class="audio-row">
-        <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
-        <button id="preset-apply" class="fxbtn">Apply</button>
+    <details class="panel">
+      <summary>💾 Look presets</summary>
+      <div class="panel-body">
+        <div class="audio-row">
+          <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
+          <button id="preset-apply" class="fxbtn">Apply</button>
+        </div>
+        <input id="preset-name" placeholder="Name this look…" />
+        <div class="shared-fx">
+          <button id="preset-save" class="fxbtn">💾 Save current</button>
+          <button id="preset-del" class="fxbtn cardclear">Delete</button>
+        </div>
       </div>
-      <input id="preset-name" placeholder="Name this look…" />
-      <div class="shared-fx">
-        <button id="preset-save" class="fxbtn">💾 Save current</button>
-        <button id="preset-del" class="fxbtn cardclear">Delete</button>
-      </div>
-    </div>
+    </details>
 
-    <div class="look-pad">
-      <span class="bases-label">Look</span>
-      <div class="audio-row">
-        <label class="sel">Theme
-          <select id="theme-sel">
-            <option value="nightgame">Midnight</option>
-            <option value="espn">Broadcast Minimal</option>
-            <option value="retro">Retro 8-bit</option>
-            <option value="green">Classic Green</option>
-            <option value="neon">Neon</option>
-            <option value="sunset">Sunset</option>
-            <option value="ice">Ice (light)</option>
-            <option value="mono">Newsprint</option>
-            <option value="gold">Gold</option>
-            <option value="carbon">Carbon</option>
-            <option value="vapor">Vaporwave</option>
-            <option value="royal">Royal</option>
-          </select>
-        </label>
+    <details class="panel">
+      <summary>🎨 Look &amp; position</summary>
+      <div class="panel-body">
+        <div class="audio-row">
+          <label class="sel">Theme
+            <select id="theme-sel">
+              <option value="nightgame">Midnight</option>
+              <option value="espn">Broadcast Minimal</option>
+              <option value="retro">Retro 8-bit</option>
+              <option value="green">Classic Green</option>
+              <option value="neon">Neon</option>
+              <option value="sunset">Sunset</option>
+              <option value="ice">Ice (light)</option>
+              <option value="mono">Newsprint</option>
+              <option value="gold">Gold</option>
+              <option value="carbon">Carbon</option>
+              <option value="vapor">Vaporwave</option>
+              <option value="royal">Royal</option>
+            </select>
+          </label>
+        </div>
+        <span class="sublabel">Position</span>
+        <div class="pos-grid" id="pos-grid">
+          <button data-pos="top-left" title="Top-left">↖</button>
+          <button data-pos="top-center" title="Top-center">↑</button>
+          <button data-pos="top-right" title="Top-right">↗</button>
+          <button data-pos="mid-left" title="Middle-left">←</button>
+          <button data-pos="mid-center" title="Center">＋</button>
+          <button data-pos="mid-right" title="Middle-right">→</button>
+          <button data-pos="bottom-left" title="Bottom-left">↙</button>
+          <button data-pos="bottom-center" title="Bottom-center">↓</button>
+          <button data-pos="bottom-right" title="Bottom-right">↘</button>
+        </div>
+        <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
       </div>
-      <span class="sublabel">Position</span>
-      <div class="pos-grid" id="pos-grid">
-        <button data-pos="top-left" title="Top-left">↖</button>
-        <button data-pos="top-center" title="Top-center">↑</button>
-        <button data-pos="top-right" title="Top-right">↗</button>
-        <button data-pos="mid-left" title="Middle-left">←</button>
-        <button data-pos="mid-center" title="Center">＋</button>
-        <button data-pos="mid-right" title="Middle-right">→</button>
-        <button data-pos="bottom-left" title="Bottom-left">↙</button>
-        <button data-pos="bottom-center" title="Bottom-center">↓</button>
-        <button data-pos="bottom-right" title="Bottom-right">↘</button>
-      </div>
-      <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
-    </div>
+    </details>
 
-    <div class="look-pad">
-      <span class="bases-label">Customize</span>
-      <div class="audio-row">
-        <label class="sel">Accent<input id="cust-accent" type="color" /></label>
-        <label class="sel">Font
-          <select id="cust-font">
-            <option value="">Theme default</option>
-            <option value="condensed">Condensed</option>
-            <option value="clean">Clean sans</option>
-            <option value="mono">Monospace</option>
-            <option value="serif">Serif</option>
-            <option value="system">System</option>
-          </select>
-        </label>
-        <label class="sel">Corners
-          <select id="cust-radius">
-            <option value="">Theme</option>
-            <option value="16">Round</option>
-            <option value="8">Soft</option>
-            <option value="0">Sharp</option>
-          </select>
-        </label>
+    <details class="panel">
+      <summary>🎛️ Customize</summary>
+      <div class="panel-body">
+        <div class="audio-row">
+          <label class="sel">Accent<input id="cust-accent" type="color" /></label>
+          <label class="sel">Font
+            <select id="cust-font">
+              <option value="">Theme default</option>
+              <option value="condensed">Condensed</option>
+              <option value="clean">Clean sans</option>
+              <option value="mono">Monospace</option>
+              <option value="serif">Serif</option>
+              <option value="system">System</option>
+            </select>
+          </label>
+          <label class="sel">Corners
+            <select id="cust-radius">
+              <option value="">Theme</option>
+              <option value="16">Round</option>
+              <option value="8">Soft</option>
+              <option value="0">Sharp</option>
+            </select>
+          </label>
+        </div>
+        <div class="audio-row">
+          <label class="sel">Logo size
+            <select id="cust-logosize">
+              <option value="">Default</option>
+              <option value="sm">Small</option>
+              <option value="lg">Large</option>
+            </select>
+          </label>
+          <label class="sel">Border
+            <select id="cust-border">
+              <option value="">Theme</option>
+              <option value="0">None</option>
+              <option value="2">Thick</option>
+              <option value="3">Bold</option>
+            </select>
+          </label>
+        </div>
+        <div class="toggles">
+          <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
+          <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
+          <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
+          <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
+          <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
+        </div>
+        <button id="cust-reset" class="fxbtn">Reset customizations</button>
       </div>
-      <div class="audio-row">
-        <label class="sel">Logo size
-          <select id="cust-logosize">
-            <option value="">Default</option>
-            <option value="sm">Small</option>
-            <option value="lg">Large</option>
-          </select>
-        </label>
-        <label class="sel">Border
-          <select id="cust-border">
-            <option value="">Theme</option>
-            <option value="0">None</option>
-            <option value="2">Thick</option>
-            <option value="3">Bold</option>
-          </select>
-        </label>
-      </div>
-      <div class="toggles">
-        <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
-        <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
-        <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
-        <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
-        <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
-      </div>
-      <button id="cust-reset" class="fxbtn">Reset customizations</button>
-    </div>
+    </details>
 
-    <div class="audio-pad">
-      <span class="bases-label">Sound</span>
-      <div class="audio-row">
-        <label class="sel">Pack
-          <select id="sound-pack">
-            <option value="bigleague">Big League (organ)</option>
-            <option value="modern">Modern (hits/whooshes)</option>
-            <option value="sandlot">Sandlot (playful)</option>
-          </select>
-        </label>
-        <button id="mute-btn" class="fxbtn mute">Mute</button>
+    <details class="panel">
+      <summary>🔊 Sound</summary>
+      <div class="panel-body">
+        <div class="audio-row">
+          <label class="sel">Pack
+            <select id="sound-pack">
+              <option value="bigleague">Big League (organ)</option>
+              <option value="modern">Modern (hits/whooshes)</option>
+              <option value="sandlot">Sandlot (playful)</option>
+            </select>
+          </label>
+          <button id="mute-btn" class="fxbtn mute">Mute</button>
+        </div>
+        <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+        <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
+        <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
+        <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
       </div>
-      <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
-      <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
-      <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
-      <p class="hint">Sound plays on the overlay (so OBS captures it). Open the overlay tab and click it once to enable audio when testing in a browser.</p>
-    </div>
+    </details>
 
-    <div class="practice-row">
-      <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
-      <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
-    </div>
+    <details class="panel">
+      <summary>🔗 Overlay link &amp; practice</summary>
+      <div class="panel-body">
+        <div class="urlbar">
+          <input id="overlay-url" readonly />
+          <button id="copy-url-btn" class="ghost small">Copy</button>
+          <button id="open-url-btn" class="ghost small">Open ▸</button>
+        </div>
+        <p class="hint">Add this URL to OBS as a Browser Source (1920×1080).</p>
+        <div class="practice-row">
+          <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
+          <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
+        </div>
+      </div>
+    </details>
 
-    <div class="urlbar">
-      <input id="overlay-url" readonly />
-      <button id="copy-url-btn" class="ghost small">Copy</button>
-    </div>
-    <p class="hint">Overlay URL for OBS (Stage 7). Open it in another tab now to watch live.</p>
+    <p class="hint kbd-hint">Keyboard (desktop): B S F O R = ball/strike/foul/out/run · N next batter · U undo</p>
   </section>
+
+  <div id="toast" class="toast" hidden></div>
 
   <!-- WALK SHEET -->
   <div id="walk-sheet" class="sheet" hidden>
