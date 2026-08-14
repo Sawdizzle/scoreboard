@@ -325,6 +325,27 @@ async function toggleLineupCard(side) {
 $('card-lineup-away').onclick = () => toggleLineupCard('away');
 $('card-lineup-home').onclick = () => toggleLineupCard('home');
 
+// Current-inning auto cards (Broadcast panel): batting order = batting side,
+// defense = fielding side, flipping with the half.
+async function toggleAutoCard(type) {
+  const target = type === 'lineup' ? L.battingSide(game) : L.fieldingSide(game);
+  const c = game.card;
+  if (c && c.type === type && (c.meta || {}).side === target) await clearCard();
+  else await showCard(type); // showCard auto-picks batting/fielding side
+  renderAutoCardLabels();
+}
+$('card-bat-auto').onclick = () => toggleAutoCard('lineup');
+$('card-def-auto').onclick = () => toggleAutoCard('defense');
+function renderAutoCardLabels() {
+  if (!game || (game.sport || 'baseball') !== 'baseball') return;
+  const abbr = (s) => (s === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
+  const bat = L.battingSide(game), def = L.fieldingSide(game), c = game.card;
+  const batUp = c && c.type === 'lineup' && (c.meta || {}).side === bat;
+  const defUp = c && c.type === 'defense' && (c.meta || {}).side === def;
+  $('card-bat-auto').textContent = batUp ? '📋 Hide batting' : `📋 Batting: ${abbr(bat)}`;
+  $('card-def-auto').textContent = defUp ? '🧤 Hide defense' : `🧤 Defense: ${abbr(def)}`;
+}
+
 // Moments / FX
 $('fx-homerun').onclick = () => openHrSheet();
 $('fx-k').onclick       = () => fireAnim('strikeout');
@@ -1002,6 +1023,7 @@ function renderBaseballControl() {
   $('base-3').classList.toggle('on', b.third);
   renderLineups();
   renderDefense();
+  renderAutoCardLabels();
 }
 function renderFootballControl() {
   const st = F.fbState(game);
