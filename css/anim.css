@@ -54,7 +54,27 @@
   animation: chalk-fly 1.4s ease-out forwards; }
 @keyframes chalk-fly { 0% { opacity: 0; transform: translate(0,0) scale(1.2) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(.35) rotate(var(--r)); } }
 
-/* ---- Strikeout: K stamp ---- */
+/* ---- Reveal card: slides out from behind the bug ---- */
+.reveal-card { width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  background: var(--panel); color: var(--chalk); font-family: var(--disp); font-weight: 900;
+  letter-spacing: 0.05em; text-align: center; padding: 11px 18px; font-size: 22px;
+  border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+@keyframes reveal-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  10% { opacity: 1; } 17% { transform: translateY(0); }
+  84% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+@keyframes reveal-down {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; } 17% { transform: translateY(0); }
+  84% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 0; }
+}
+
+/* ---- Strikeout: K stamp (backwards K = called strikeout / looking) ---- */
+.fx-stamp.backwards { transform: scaleX(-1); }
 .fx-stamp { display: grid; place-items: center; }
 .fx-stamp span { font: 900 40vh/1 var(--disp); opacity: 0; transform: scale(3) rotate(-13deg); filter: blur(6px);
   color: #fff; text-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: stamp 1.8s cubic-bezier(.2,.8,.2,1) forwards; }

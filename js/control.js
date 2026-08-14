@@ -281,6 +281,7 @@ $('card-clear').onclick = async () => {
 // Moments / FX
 $('fx-homerun').onclick = () => fireAnim('homerun');
 $('fx-k').onclick       = () => fireAnim('strikeout');
+$('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
 $('fx-dp').onclick      = () => fireAnim('doubleplay');
 $('fx-gem').onclick     = () => fireAnim('webgem');
 $('fx-sb').onclick      = () => fireAnim('stolenbase');

@@ -36,19 +36,35 @@ export function setRally(on) {
 
 export function playAnimation(anim) {
   switch (anim && anim.type) {
-    case 'run':        return runFlash();
-    case 'homerun':    return homerun();
-    case 'strikeout':  return stamp('K', 'fx-k');
-    case 'doubleplay': return lowerThird('DOUBLE PLAY', '6 · 4 · 3');
-    case 'webgem':     return lowerThird('WEB GEM', 'WHAT A PLAY', 'gem');
-    case 'stolenbase': return stolen();
-    case 'walkoff':    return walkoff();
-    case 'touchdown':  return touchdown();
-    case 'fieldgoal':  return lowerThird('FIELD GOAL', '3 POINTS');
-    case 'turnover':   return lowerThird('TURNOVER', 'CHANGE OF POSSESSION', 'turn');
-    case 'bigplay':    return lowerThird('BIG PLAY', '');
-    case 'goal':       return goalCelebration();
+    case 'run':             return runFlash();
+    case 'homerun':         return homerun();          // stays centered
+    case 'strikeout':       return stamp('K', 'fx-k'); // stays centered
+    case 'strikeoutlooking':return stamp('K', 'fx-k backwards'); // backwards K, centered
+    case 'touchdown':       return touchdown();        // stays centered
+    case 'walkoff':         return walkoff();          // stays centered
+    case 'goal':            return goalCelebration();  // stays centered
+    // These slide out from behind the bug:
+    case 'doubleplay': return reveal('DOUBLE PLAY');
+    case 'webgem':     return reveal('WEB GEM');
+    case 'stolenbase': return reveal('STOLEN BASE');
+    case 'fieldgoal':  return reveal('FIELD GOAL');
+    case 'turnover':   return reveal('TURNOVER');
+    case 'bigplay':    return reveal('BIG PLAY');
   }
+}
+
+// A same-size card that slides out from behind the bug — up if the bug sits low,
+// down if it's anchored at the top. Ends hidden behind the bug again.
+function reveal(title) {
+  const layer = document.getElementById('reveal');
+  if (!layer) return;
+  const down = (document.body.dataset.pos || 'bottom-center').startsWith('top');
+  layer.className = down ? 'from-top' : 'from-bottom';
+  layer.innerHTML = `<div class="reveal-card">${title}</div>`;
+  const card = layer.querySelector('.reveal-card');
+  card.style.animation = `${down ? 'reveal-down' : 'reveal-up'} 2.6s cubic-bezier(.2, .8, .2, 1) both`;
+  clearTimeout(layer._t);
+  layer._t = window.setTimeout(() => { layer.className = ''; layer.innerHTML = ''; }, 2700);
 }
 
 function goalCelebration() {

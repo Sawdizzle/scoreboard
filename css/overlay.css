@@ -31,6 +31,13 @@ body.debug {
 }
 .bug[data-ready="1"] { opacity: 1; }
 
+/* Reveal layer: a same-width card that slides out from BEHIND the bug. The bug
+   and detail sit above it (z-index 2); the card hides behind the bug at rest. */
+#bug-wrap > .bug, #bug-wrap > .detail { position: relative; z-index: 2; }
+#reveal { position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none; }
+#reveal.from-bottom { bottom: 100%; top: auto; padding-bottom: 6px; }
+#reveal.from-top { top: 100%; bottom: auto; padding-top: 6px; }
+
 /* The wrapper is the positioned element (bug + detail line flow inside it).
    Each rule sets BOTH edges (one to auto) so switching position never leaves a
    stale top/bottom. transform-origin matches the anchor so scaling looks right. */
