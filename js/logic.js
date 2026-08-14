@@ -293,7 +293,7 @@ export function onAdvance(g) {
   const b = safeBases(g.bases);
   const bases = { first: false, second: b.first, third: b.second };
   const runs = b.third ? 1 : 0;
-  return { type: 'advance', patch: { bases, ...runsPatch(g, runs) } };
+  return { type: 'advance', patch: { bases, ...runsPatch(g, runs) }, payload: { runs } };
 }
 
 export function onClearBases(g) {

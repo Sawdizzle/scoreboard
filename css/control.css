@@ -153,6 +153,13 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* Connection status dot */
+.conn-dot { margin-left: auto; align-self: center; font-size: 13px; line-height: 1; }
+.conn-dot[data-state="live"] { color: var(--ball); }
+.conn-dot[data-state="connecting"] { color: var(--out); }
+.conn-dot[data-state="down"] { color: var(--strike); animation: conn-blink 1s steps(2, start) infinite; }
+@keyframes conn-blink { 50% { opacity: 0.25; } }
+
 /* Guided setup checklist */
 .setup-guide { background: var(--card); border: 1px solid var(--steel); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
 .setup-guide[hidden] { display: none; }

@@ -255,16 +255,43 @@ function updateDetail(s) {
 const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ---- Persistent broadcast cards (matchup / final / due-up / sponsor) -------
-let lastCardKey = null;
+// Snapshot cards rebuild only on a new nonce. Lineup/defense cards also carry a
+// live "signature" (batting side + current hitter + roster) so the on-air
+// highlight and fielders track the game while the card stays up — refreshed in
+// place so the entrance animation doesn't replay each update.
+let lastCardKey = null, lastCardSig = null;
+function cardSig(c, s) {
+  if (c.type === 'lineup') {
+    const side = (c.meta && c.meta.auto) ? battingSide(s) : ((c.meta && c.meta.side) || battingSide(s));
+    const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
+    return `${side}:${idx}:${JSON.stringify((s.lineups || {})[side] || {})}`;
+  }
+  if (c.type === 'defense') {
+    const side = fieldingSide(s);
+    return `${side}:${JSON.stringify((s.lineups || {})[side] || {})}`;
+  }
+  return null; // other cards are pure snapshots
+}
 function renderCard(s) {
   const layer = document.getElementById('card');
   const c = s.card;
   const key = c && c.type ? `${c.type}:${c.nonce || 0}` : null;
-  if (key === lastCardKey) return; // only rebuild when the card actually changes
-  lastCardKey = key;
+  const sig = key ? cardSig(c, s) : null;
+  if (key === lastCardKey && sig === lastCardSig) return;
+  const remount = key !== lastCardKey;
+  lastCardKey = key; lastCardSig = sig;
   if (!key) { layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('lower'); return; }
-  layer.classList.toggle('lower', c.type === 'dueup');
-  layer.innerHTML = buildCard(c, s);
+  const html = buildCard(c, s);
+  const cur = layer.querySelector('.card');
+  if (remount || !cur) {
+    layer.classList.toggle('lower', c.type === 'dueup');
+    layer.innerHTML = html; // fresh card → play the entrance animation
+  } else {
+    const tmp = document.createElement('div'); tmp.innerHTML = html;
+    const next = tmp.firstElementChild;
+    if (next) cur.replaceChildren(...next.childNodes); // live refresh, no re-animation
+    else layer.innerHTML = html;
+  }
   layer.hidden = false;
 }
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
@@ -303,7 +330,7 @@ function buildCard(c, s) {
     return `<div class="card lower-card"><b>Due Up</b>${body}</div>`;
   }
   if (c.type === 'lineup') {
-    const side = meta.side || battingSide(s);
+    const side = meta.auto ? battingSide(s) : (meta.side || battingSide(s));
     const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
     const rows = battingOrderCard(s, side).map((r) =>
       `<tr class="${r.current ? 'lc-cur' : ''}"><td class="lc-ord">${r.order}</td><td class="lc-num">${r.num ? escapeHtml(r.num) : ''}</td><td class="lc-name">${escapeHtml(r.name)}</td><td class="lc-pos">${escapeHtml(r.pos)}</td></tr>`
@@ -311,7 +338,7 @@ function buildCard(c, s) {
     return `<div class="card lineupcard"><div class="card-sub">Lineup — ${teamName}</div><table class="lc-table">${rows || '<tr><td class="lc-name">No lineup set</td></tr>'}</table></div>`;
   }
   if (c.type === 'defense') {
-    const side = meta.side || fieldingSide(s);
+    const side = fieldingSide(s); // defense always tracks the team in the field
     const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
     const spot = (pos) => {
       const f = fielderAt(s, side, pos);

@@ -126,14 +126,41 @@ $('back-btn').addEventListener('click', async () => {
   await teardownChannel(); game = null; show('lobby'); await loadGames();
 });
 
+let ctrlReconnect = null;
+function setConn(state) {
+  const d = $('conn-dot'); if (!d) return;
+  d.dataset.state = state;
+  d.title = state === 'live' ? 'Live — synced' : state === 'down' ? 'Offline — reconnecting…' : 'Connecting…';
+}
+// Re-pull the authoritative row (heals any updates missed while disconnected).
+async function reloadGame(id) {
+  const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
+  if (!error && data) { game = data; renderGame(); }
+}
 async function subscribe(id) {
   await teardownChannel();
+  setConn('connecting');
   channel = supabase.channel(`ctrl:${id}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${id}` },
       (payload) => { game = payload.new; renderGame(); })
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') { setConn('live'); reloadGame(id); }
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        setConn('down');
+        if (!ctrlReconnect && game && game.id === id) {
+          ctrlReconnect = setTimeout(() => { ctrlReconnect = null; if (game && game.id === id) subscribe(id); }, 2500);
+        }
+      }
+    });
 }
-async function teardownChannel() { if (channel) { await supabase.removeChannel(channel); channel = null; } }
+async function teardownChannel() {
+  if (ctrlReconnect) { clearTimeout(ctrlReconnect); ctrlReconnect = null; }
+  if (channel) { const c = channel; channel = null; await supabase.removeChannel(c); }
+}
+// Heal state when the network or tab comes back (flaky-LTE guard, like the overlay).
+addEventListener('online', () => { if (game) reloadGame(game.id); });
+addEventListener('offline', () => setConn('down'));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && game) reloadGame(game.id); });
 
 // Atomic apply via RPC (snapshots prev_state for undo). Optimistic UI.
 async function commit(res) {
@@ -151,10 +178,15 @@ async function commit(res) {
   else if (res.type === 'strikeout') fireAnim('strikeout');
 }
 
+// Strictly-increasing nonce so two triggers in the same millisecond don't collide
+// (the overlay only plays a stinger whose nonce is greater than the last one seen).
+let lastNonce = 0;
+const nextNonce = () => (lastNonce = Math.max(Date.now(), lastNonce + 1));
+
 // Fire a transient overlay stinger (not an undoable action — a plain trigger write).
 async function fireAnim(type, meta = {}) {
   if (!game) return;
-  const current_animation = { type, nonce: Date.now(), meta };
+  const current_animation = { type, nonce: nextNonce(), meta };
   game = { ...game, current_animation };
   const { error } = await db.from('games').update({ current_animation }).eq('id', game.id);
   if (error) console.warn('anim failed', error.message);
@@ -319,6 +351,13 @@ async function loadTeamInto(side, id) {
   if (t.abbr) patch[side + '_abbr'] = t.abbr;
   if (t.color) patch[side + '_color'] = t.color;
   patch[side + '_logo_url'] = t.logo_url || null;
+  // Fresh roster → reset that side's current hitter and pitch count.
+  const st = game.state || {};
+  patch.state = {
+    ...st,
+    batIdx: { ...(st.batIdx || {}), [side]: 0 },
+    pitches: { ...(st.pitches || {}), [side]: 0 },
+  };
   await writeField(patch);
   fillLineup(side); // force-refresh inputs even though focus sits in this panel
   renderGame();
@@ -350,11 +389,10 @@ async function showCard(type, opts = {}) {
     const lines = L.dueUp(game, 3).map((b) => (b.num ? `#${b.num} ` : '') + b.name).filter((s) => s.trim());
     if (lines.length) meta.lines = lines;
   }
-  // Defense card snapshots the fielding side (top → home, bottom → away).
-  if (type === 'defense') meta.side = L.fieldingSide(game);
-  // Lineup card shows the chosen team (defaults to the batting side).
-  if (type === 'lineup') meta.side = opts.side || L.battingSide(game);
-  const card = { type, meta, nonce: Date.now() };
+  // Defense card always tracks the fielding team live (resolved in the overlay).
+  // Lineup card: an explicit team is frozen; the auto version tracks the batting side.
+  if (type === 'lineup') { if (opts.side) meta.side = opts.side; else meta.auto = true; }
+  const card = { type, meta, nonce: nextNonce() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
   if (error) return console.warn('card failed', error.message);
@@ -390,10 +428,10 @@ $('card-lineup-home').onclick = () => toggleLineupCard('home');
 // Current-inning auto cards (Broadcast panel): batting order = batting side,
 // defense = fielding side, flipping with the half.
 async function toggleAutoCard(type) {
-  const target = type === 'lineup' ? L.battingSide(game) : L.fieldingSide(game);
   const c = game.card;
-  if (c && c.type === type && (c.meta || {}).side === target) await clearCard();
-  else await showCard(type); // showCard auto-picks batting/fielding side
+  const up = c && c.type === type && (type === 'lineup' ? (c.meta || {}).auto : true);
+  if (up) await clearCard();
+  else await showCard(type); // auto: overlay tracks batting/fielding side live
   renderAutoCardLabels();
 }
 $('card-bat-auto').onclick = () => toggleAutoCard('lineup');
@@ -402,8 +440,8 @@ function renderAutoCardLabels() {
   if (!game || (game.sport || 'baseball') !== 'baseball') return;
   const abbr = (s) => (s === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
   const bat = L.battingSide(game), def = L.fieldingSide(game), c = game.card;
-  const batUp = c && c.type === 'lineup' && (c.meta || {}).side === bat;
-  const defUp = c && c.type === 'defense' && (c.meta || {}).side === def;
+  const batUp = c && c.type === 'lineup' && (c.meta || {}).auto;
+  const defUp = c && c.type === 'defense';
   $('card-bat-auto').textContent = batUp ? '📋 Hide batting' : `📋 Batting: ${abbr(bat)}`;
   $('card-def-auto').textContent = defUp ? '🧤 Hide defense' : `🧤 Defense: ${abbr(def)}`;
 }
@@ -565,7 +603,7 @@ function demoStep() {
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
     if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs } }); }
-    else commit({ type: 'ball', patch: { balls: (game.balls | 0) + 1 } });
+    else commit({ type: 'ball', patch: L.withPitch(game, { balls: (game.balls | 0) + 1 }) });
     return;
   }
   if (r < 0.54) return commit(L.onStrike(game));
