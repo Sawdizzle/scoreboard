@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 
@@ -235,7 +235,7 @@ function updateDetail(s) {
     const num = pitNum ? `#${pitNum} ` : '';
     parts.push(`<span><span class="k">P</span>${num}${escapeHtml(pitName || '')}</span>`);
   }
-  if (s.show_pitchcount) parts.push(`<span><span class="k">PC</span>${s.pitch_count | 0}</span>`);
+  if (s.show_pitchcount) parts.push(`<span><span class="k">PC</span>${pitchCount(s)}</span>`);
   if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_score | 0) - (s.away_score | 0)) >= s.run_rule_diff) {
     parts.push('<span class="runrule">RUN RULE</span>');
   }

@@ -48,11 +48,11 @@ export function computeHomeRun(bases) {
   return { runs };
 }
 export function homeRunPatch(g, runs) {
-  return {
+  return withPitch(g, {
     balls: 0, strikes: 0,
     bases: { first: false, second: false, third: false },
     ...runsPatch(g, runs),
-  };
+  });
 }
 
 // Direct inning/half correction (no count/out/base reset — this is a fix-it tool,
@@ -90,21 +90,24 @@ export function onBall(g) {
   const balls = (g.balls | 0) + 1;
   if (balls >= 4) {
     const w = computeWalk(g.bases);
+    // The 4th ball is a pitch, but the walk is confirmed on the sheet (which
+    // rebuilds the patch); the pitch is added there via withPitch, not here.
     const patch = { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) };
     return { type: 'walk', patch, sheet: 'walk', payload: { runs: w.runs } };
   }
-  return { type: 'ball', patch: { balls } };
+  return { type: 'ball', patch: withPitch(g, { balls }) };
 }
 
 export function onStrike(g) {
   const strikes = (g.strikes | 0) + 1;
-  if (strikes >= 3) return outResult(g, 'strikeout');
-  return { type: 'strike', patch: { strikes } };
+  const res = strikes >= 3 ? outResult(g, 'strikeout') : { type: 'strike', patch: { strikes } };
+  return { ...res, patch: withPitch(g, res.patch) };
 }
 
 export function onFoul(g) {
-  if ((g.strikes | 0) >= 2) return { type: 'foul', patch: {} }; // foul with 2 strikes: no change
-  return { type: 'foul', patch: { strikes: (g.strikes | 0) + 1 } };
+  // A foul is always a pitch, even when it doesn't change the count (2 strikes).
+  const patch = (g.strikes | 0) >= 2 ? {} : { strikes: (g.strikes | 0) + 1 };
+  return { type: 'foul', patch: withPitch(g, patch) };
 }
 
 export function onOut(g) { return outResult(g, 'out'); }
@@ -137,6 +140,26 @@ export function currentPitcher(g) {
   const p = teamLineup(g, fieldingSide(g)).pitcher;
   return filled(p) ? p : null;
 }
+// ---- Pitch count (auto, per pitcher) --------------------------------------
+// Counts live in state.pitches keyed by side; the count shown is the fielding
+// team's (the pitcher on the mound). withPitch() adds one pitch to that tally
+// while preserving any other state (batIdx) already in the game/patch.
+export function pitchCount(g) {
+  return (((g.state && g.state.pitches) || {})[fieldingSide(g)] | 0);
+}
+export function withPitch(g, patch) {
+  const side = fieldingSide(g);
+  const cur = (g.state && g.state.pitches) || {};
+  const baseState = patch.state || (g.state || {});
+  return { ...patch, state: { ...baseState, pitches: { ...cur, [side]: (cur[side] | 0) + 1 } } };
+}
+export function adjustPitch(g, d) {
+  const side = fieldingSide(g);
+  const cur = (g.state && g.state.pitches) || {};
+  const next = Math.max(0, (cur[side] | 0) + d);
+  return { type: 'pitchadj', patch: { state: { ...(g.state || {}), pitches: { ...cur, [side]: next } } } };
+}
+
 // The next `n` filled hitters after the current one, wrapping (for Due Up).
 export function dueUp(g, n = 3) {
   const side = battingSide(g);

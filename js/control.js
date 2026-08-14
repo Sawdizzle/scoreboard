@@ -348,7 +348,7 @@ $('reset-game').onclick = async () => {
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
     bases: { first: false, second: false, third: false }, pitch_count: 0,
-    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 } },
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 } },
   });
   else if (sport === 'football') patch.state = F.fbState({});
   else if (sport === 'soccer') patch.state = S.scState({});
@@ -374,10 +374,6 @@ function fillSetup() {
   $('su-show-pitcher').checked = !!game.show_pitcher;
   $('su-show-pitchcount').checked = !!game.show_pitchcount;
   $('su-show-runrule').checked = !!game.show_runrule;
-  $('su-batter-name').value = game.batter_name || '';
-  $('su-batter-num').value = game.batter_number || '';
-  $('su-pitcher-name').value = game.pitcher_name || '';
-  $('su-pitch-count').value = game.pitch_count || '';
 }
 $('setup-save').onclick = async () => {
   const mins = parseInt($('su-time').value, 10);
@@ -393,8 +389,6 @@ $('setup-save').onclick = async () => {
     show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
     show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
     show_runrule: $('su-show-runrule').checked,
-    batter_name: suVal('su-batter-name') || null, batter_number: suVal('su-batter-num') || null,
-    pitcher_name: suVal('su-pitcher-name') || null, pitch_count: parseInt($('su-pitch-count').value, 10) || 0,
   };
   // Reset the clock's remaining time if the limit changed and it isn't running.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
@@ -459,7 +453,7 @@ function demoStep() {
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }, payload: { runs: w.runs } }); }
+    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.withPitch(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs } }); }
     else commit({ type: 'ball', patch: { balls: (game.balls | 0) + 1 } });
     return;
   }
@@ -655,6 +649,8 @@ $('hr-confirm').onclick = () => {
 $('btn-inning-dn').onclick = () => commit(L.onNudgeInning(game, -1));
 $('btn-inning-up').onclick = () => commit(L.onNudgeInning(game, 1));
 $('btn-half').onclick = () => commit(L.onToggleHalf(game));
+$('pc-dn').onclick = () => commit(L.adjustPitch(game, -1));
+$('pc-up').onclick = () => commit(L.adjustPitch(game, 1));
 
 // Teams & lineups (baseball) ------------------------------------------------
 // Rosters live in the `lineups` jsonb column (written directly, not undoable).
@@ -757,7 +753,7 @@ $('walk-cancel').onclick = () => { $('walk-sheet').hidden = true; };
 $('walk-confirm').onclick = () => {
   $('walk-sheet').hidden = true;
   const bases = { first: wState.first, second: wState.second, third: wState.third };
-  commit({ type: 'walk', patch: { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }, payload: { runs: wState.runs } });
+  commit({ type: 'walk', patch: L.withPitch(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs } });
 };
 
 // Render --------------------------------------------------------------------
@@ -786,6 +782,7 @@ function renderBaseballControl() {
   $('sc-mid').innerHTML = `<span class="sc-inning">${game.half === 'top' ? '▲' : '▼'} ${game.inning}</span>` +
     `<span class="sc-count">${game.balls} - ${game.strikes}</span><span class="sc-outs">${game.outs} out</span>`;
   $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
+  $('pc-val').textContent = L.pitchCount(game);
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);

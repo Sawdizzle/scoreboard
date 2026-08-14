@@ -87,6 +87,12 @@
         <button id="btn-half" class="key util">Flip ½</button>
         <button id="btn-inning-up" class="key util">Inning ►</button>
       </div>
+      <div class="pc-row">
+        <span class="pc-label">Pitch count (current P)</span>
+        <button id="pc-dn" class="step">–</button>
+        <b id="pc-val">0</b>
+        <button id="pc-up" class="step">+</button>
+      </div>
       <div class="fx-pad">
         <span class="bases-label">Moments</span>
         <button id="fx-homerun" class="fxbtn hr">💥 HOME RUN</button>
@@ -529,16 +535,7 @@
         <label><input type="checkbox" id="su-show-runrule" /> Run-rule</label>
       </div>
 
-      <div class="setup-cols">
-        <div class="setup-col">
-          <input id="su-batter-name" placeholder="Batter name" />
-          <input id="su-batter-num" placeholder="Batter #" />
-        </div>
-        <div class="setup-col">
-          <input id="su-pitcher-name" placeholder="Pitcher name" />
-          <input id="su-pitch-count" type="number" placeholder="Pitch count" inputmode="numeric" />
-        </div>
-      </div>
+      <p class="hint">Batter, pitcher &amp; pitch count are driven by <b>Teams &amp; lineups</b> now — set them there. The toggles above just show/hide those lines on the overlay.</p>
 
       <div class="danger-row">
         <button id="reset-game" class="fxbtn">↺ Reset game</button>
