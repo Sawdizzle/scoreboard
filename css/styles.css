@@ -97,8 +97,29 @@ body[data-style="stack"] .team, body[data-style="stack"] .situation {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
 body[data-style="stack"] .team.home, body[data-style="stack"] .situation { border-left: 1px solid var(--line); }
 
+/* 'crt' — retro CRT with scanlines + phosphor glow. */
+body[data-style="crt"] .bug { position: relative; }
+body[data-style="crt"] .bug::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px); }
+body[data-style="crt"] .team .abbr, body[data-style="crt"] .team .runs,
+body[data-style="crt"] .count, body[data-style="crt"] .inning, body[data-style="crt"] .fb-q { text-shadow: 0 0 6px var(--accent), 0 0 2px var(--chalk); }
+
+/* 'neonsign' — glowing neon tubes on a dark semi-transparent panel. */
+body[data-style="neonsign"] .bug { background: rgba(6, 8, 16, 0.6); border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent), inset 0 0 14px rgba(0, 0, 0, 0.7); }
+body[data-style="neonsign"] .team .abbr, body[data-style="neonsign"] .team .runs,
+body[data-style="neonsign"] .count, body[data-style="neonsign"] .inning, body[data-style="neonsign"] .fb-q { color: #fff; text-shadow: 0 0 6px var(--accent), 0 0 15px var(--accent); }
+body[data-style="neonsign"] .team.home, body[data-style="neonsign"] .situation { border-left: 2px solid var(--accent); }
+
+/* 'chrome' — glossy brushed metal, dark engraved text. */
+body[data-style="chrome"] .bug { background: linear-gradient(180deg, #e9edf3 0%, #aeb7c3 46%, #7d8794 54%, #c6cdd6 100%); border: 1px solid #6b7480; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: #17202e; }
+body[data-style="chrome"] .team .abbr, body[data-style="chrome"] .team .runs,
+body[data-style="chrome"] .count, body[data-style="chrome"] .inning, body[data-style="chrome"] .fb-q { color: #17202e; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65); }
+body[data-style="chrome"] .situation { background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.16)); border-left: 1px solid rgba(0, 0, 0, 0.2); }
+body[data-style="chrome"] .team.home { border-left: 1px solid rgba(0, 0, 0, 0.2); }
+
 /* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
 body.team-bars .team { box-shadow: inset 0 -3px 0 var(--tc, transparent); }
+body.team-fill .team { background: linear-gradient(180deg, var(--tc, transparent), transparent); }
 body.no-logos .team .logo { display: none !important; }
 body.no-detail .detail { display: none !important; }
 body.no-shadow .bug { box-shadow: none !important; }

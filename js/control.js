@@ -547,6 +547,12 @@ $('cust-panelangle').addEventListener('change', (e) => writeLook({ panelAngle: +
 $('cust-text').addEventListener('change', (e) => writeLook({ text: e.target.value }));
 $('cust-steel').addEventListener('change', (e) => writeLook({ steel: e.target.value }));
 $('cust-line').addEventListener('change', (e) => writeLook({ line: e.target.value }));
+$('cust-sittype').addEventListener('change', (e) => writeLook({ sitType: e.target.value }));
+$('cust-sitc1').addEventListener('change', (e) => writeLook({ sitC1: e.target.value }));
+$('cust-sitc2').addEventListener('change', (e) => writeLook({ sitC2: e.target.value }));
+$('cust-sitangle').addEventListener('input', (e) => { $('cust-sitangle-val').textContent = e.target.value + '°'; });
+$('cust-sitangle').addEventListener('change', (e) => writeLook({ sitAngle: +e.target.value }));
+$('cust-teamfill').addEventListener('change', (e) => writeLook({ teamFill: e.target.checked }));
 $('cust-reset').onclick = async () => {
   game = { ...game, look: {} };
   renderCustomize();
@@ -573,6 +579,12 @@ function renderCustomize() {
   $('cust-text').value = L.text || '#f4f7fb';
   $('cust-steel').value = L.steel || '#8fb6de';
   $('cust-line').value = L.line || '#2a3550';
+  $('cust-sittype').value = L.sitType || '';
+  $('cust-sitc1').value = L.sitC1 || '#0e1421';
+  $('cust-sitc2').value = L.sitC2 || '#1b2a41';
+  $('cust-sitangle').value = L.sitAngle ?? 180;
+  $('cust-sitangle-val').textContent = (L.sitAngle ?? 180) + '°';
+  $('cust-teamfill').checked = !!L.teamFill;
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)

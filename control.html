@@ -328,6 +328,21 @@
           <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
           <label class="sel">Border<input id="cust-line" type="color" /></label>
         </div>
+        <div class="audio-row">
+          <label class="sel">Situation fill
+            <select id="cust-sittype">
+              <option value="">Theme</option>
+              <option value="solid">Solid</option>
+              <option value="gradient">Gradient</option>
+            </select>
+          </label>
+          <label class="sel">Sit A<input id="cust-sitc1" type="color" /></label>
+          <label class="sel">Sit B<input id="cust-sitc2" type="color" /></label>
+        </div>
+        <label class="slider">Sit angle <input id="cust-sitangle" type="range" min="0" max="360" step="15" /><b id="cust-sitangle-val">180°</b></label>
+        <div class="toggles">
+          <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
+        </div>
 
         <button id="cust-reset" class="fxbtn">Reset customizations</button>
       </div>
@@ -346,6 +361,9 @@
               <option value="cinematic">Cinematic (orchestral)</option>
               <option value="airhorn">Stadium (air horns)</option>
               <option value="chill">Chill (bells)</option>
+              <option value="organ">Pipe Organ</option>
+              <option value="radio">Vintage Radio</option>
+              <option value="edm">EDM (drops)</option>
             </select>
           </label>
           <button id="mute-btn" class="fxbtn mute">Mute</button>
@@ -424,6 +442,9 @@
             <option value="jumbotron">Jumbotron (LED)</option>
             <option value="outline">Outline (frosted)</option>
             <option value="stack">Stack (modules)</option>
+            <option value="crt">CRT (scanlines)</option>
+            <option value="neonsign">Neon Sign (tubes)</option>
+            <option value="chrome">Chrome (metal)</option>
           </select>
         </label>
       </div>
@@ -499,6 +520,9 @@
           <option value="jumbotron">Jumbotron (LED)</option>
           <option value="outline">Outline (frosted)</option>
           <option value="stack">Stack (modules)</option>
+          <option value="crt">CRT (scanlines)</option>
+          <option value="neonsign">Neon Sign (tubes)</option>
+          <option value="chrome">Chrome (metal)</option>
         </select>
       </label>
       <div class="sheet-actions">

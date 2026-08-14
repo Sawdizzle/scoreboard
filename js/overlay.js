@@ -140,6 +140,13 @@ function applyLook(s) {
     else if (L.panelType === 'solid' && L.panelC1) bugEl.style.background = L.panelC1;
     else bugEl.style.background = '';
   }
+  // Situation-section fill (solid/gradient) + per-team color fill.
+  document.querySelectorAll('.situation').forEach((sit) => {
+    if (L.sitType === 'gradient' && L.sitC1 && L.sitC2) sit.style.background = `linear-gradient(${L.sitAngle ?? 180}deg, ${L.sitC1}, ${L.sitC2})`;
+    else if (L.sitType === 'solid' && L.sitC1) sit.style.background = L.sitC1;
+    else sit.style.background = '';
+  });
+  b.classList.toggle('team-fill', !!L.teamFill);
   b.classList.toggle('no-logos', !!L.hideLogos);
   b.classList.toggle('no-detail', !!L.hideDetail);
   b.classList.toggle('no-shadow', !!L.noShadow);
