@@ -268,3 +268,108 @@ body[data-theme="chrome"] .team .abbr, body[data-theme="chrome"] .team .runs,
 body[data-theme="chrome"] .count, body[data-theme="chrome"] .inning, body[data-theme="chrome"] .fb-q { color: #17202e; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65); }
 body[data-theme="chrome"] .situation { background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.16)); border-left: 1px solid rgba(0, 0, 0, 0.2); }
 body[data-theme="chrome"] .team.home { border-left: 1px solid rgba(0, 0, 0, 0.2); }
+
+/* ===== v3.17 creative drop ============================================= */
+
+/* Chalkboard — sandlot chalk on a slate-green board. */
+body[data-theme="chalkboard"] {
+  --panel: rgba(18, 44, 33, 0.97); --panel-2: rgba(0, 0, 0, 0.24);
+  --line: rgba(246, 243, 230, 0.5); --chalk: #f6f3e6; --steel: #ffd977; --accent: #ffd977; --radius: 6px;
+  --disp: "Chalkboard SE", "Comic Sans MS", "Segoe Print", cursive;
+  --num: "Chalkboard SE", "Comic Sans MS", "Segoe Print", cursive;
+}
+body[data-theme="chalkboard"] .bug { border: 2px dashed rgba(246, 243, 230, 0.65);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 12%, transparent 13%),
+                    radial-gradient(rgba(255, 255, 255, 0.04) 10%, transparent 11%);
+  background-size: 90px 90px, 61px 61px; background-position: 0 0, 30px 41px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.5); }
+body[data-theme="chalkboard"] .team .abbr, body[data-theme="chalkboard"] .team .runs,
+body[data-theme="chalkboard"] .count, body[data-theme="chalkboard"] .inning,
+body[data-theme="chalkboard"] .fb-q { text-shadow: 0 0 1px rgba(246, 243, 230, 0.8); }
+body[data-theme="chalkboard"] .team.home, body[data-theme="chalkboard"] .situation { border-left: 2px dashed rgba(246, 243, 230, 0.4); }
+
+/* Green Monster — hand-painted manual scoreboard: matte green, cream paint. */
+body[data-theme="monster"] {
+  --panel: #17402c; --panel-2: rgba(0, 0, 0, 0.18);
+  --line: rgba(243, 238, 217, 0.8); --chalk: #f3eed9; --steel: #cfe6cf; --accent: #f3eed9; --radius: 0px;
+  --disp: "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+}
+body[data-theme="monster"] .bug { border: 2px solid var(--line);
+  background: linear-gradient(180deg, #1a4832, #133823);
+  box-shadow: 0 0 0 4px #123021, 0 12px 30px rgba(0, 0, 0, 0.55); }
+body[data-theme="monster"] .team .abbr { letter-spacing: 0.1em; }
+body[data-theme="monster"] .team .abbr, body[data-theme="monster"] .team .runs,
+body[data-theme="monster"] .count, body[data-theme="monster"] .inning { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
+body[data-theme="monster"] .team.home, body[data-theme="monster"] .situation { border-left: 2px solid var(--line); }
+
+/* Marquee — stadium marquee: deep crimson with a ring of warm bulbs. */
+body[data-theme="marquee"] {
+  --panel: rgba(44, 10, 15, 0.97); --panel-2: rgba(22, 4, 7, 0.6);
+  --line: rgba(255, 200, 90, 0.4); --chalk: #fff3d6; --steel: #ffb84d; --accent: #ffd166; --radius: 14px;
+}
+body[data-theme="marquee"] .bug { position: relative; border: 2px solid #7a4a12;
+  background: linear-gradient(180deg, rgba(58, 13, 19, 0.97), rgba(34, 7, 11, 0.97));
+  box-shadow: 0 0 28px rgba(255, 190, 80, 0.22), 0 10px 30px rgba(0, 0, 0, 0.6); }
+body[data-theme="marquee"] .bug::after { content: ''; position: absolute; inset: 3px; z-index: 3;
+  pointer-events: none; border-radius: inherit; padding: 8px;
+  background: radial-gradient(circle, #ffe9a8 0 1.8px, rgba(255, 190, 80, 0.4) 2.6px, transparent 3.6px) 0 0 / 15px 15px round;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; }
+body[data-theme="marquee"] .team { padding: 14px 22px; }
+body[data-theme="marquee"] .situation { padding: 14px 22px; }
+body[data-theme="marquee"] .team .runs, body[data-theme="marquee"] .inning { text-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+
+/* Comic — pop-art panel: halftone dots, ink outline, hard offset shadow. */
+body[data-theme="comic"] {
+  --panel: #fdf3dc; --panel-2: rgba(240, 227, 197, 0.94);
+  --line: #101014; --chalk: #14141a; --steel: #1257d5; --accent: #e5262c; --radius: 6px;
+  --disp: "Marker Felt", "Comic Sans MS", "Segoe Print", sans-serif;
+}
+body[data-theme="comic"] .detail { border: 2px solid #101014; }
+body[data-theme="comic"] .bug { border: 3px solid #101014; box-shadow: 6px 6px 0 rgba(16, 16, 20, 0.9);
+  background-image: radial-gradient(rgba(229, 38, 44, 0.14) 1.2px, transparent 1.8px); background-size: 9px 9px;
+  background-color: #fdf3dc; }
+body[data-theme="comic"] .team .abbr { text-transform: uppercase; letter-spacing: 0.03em; }
+body[data-theme="comic"] .team.home, body[data-theme="comic"] .situation { border-left: 3px solid #101014; }
+
+/* Americana — ballpark bunting: navy with a stars-and-stripes ribbon. */
+body[data-theme="americana"] {
+  --panel: rgba(16, 26, 58, 0.96); --panel-2: rgba(6, 12, 32, 0.55);
+  --line: rgba(255, 246, 230, 0.28); --chalk: #fff6e6; --steel: #a8c0e8; --accent: #e0393e; --radius: 8px;
+}
+body[data-theme="americana"] .bug {
+  background-image: repeating-linear-gradient(90deg, #b22234 0 22px, #f5ede0 22px 44px);
+  background-size: 100% 6px; background-repeat: no-repeat; background-position: top left;
+  background-color: rgba(16, 26, 58, 0.96);
+  border-top: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55); }
+body[data-theme="americana"] .inning, body[data-theme="americana"] .fb-q { color: #ffd166; }
+
+/* Holo Foil — refractor card: rainbow border, iridescent sheen, prismatic numbers. */
+body[data-theme="foil"] {
+  --panel: rgba(16, 16, 22, 0.96); --panel-2: rgba(0, 0, 0, 0.35);
+  --line: rgba(255, 255, 255, 0.25); --chalk: #f4f6ff; --steel: #9ee8ff; --accent: #ff9ad5; --radius: 10px;
+}
+body[data-theme="foil"] .bug { border: 2px solid transparent;
+  background-image:
+    linear-gradient(115deg, transparent 18%, rgba(154, 229, 255, 0.12) 34%, rgba(255, 154, 213, 0.11) 50%, rgba(184, 255, 154, 0.09) 66%, transparent 82%),
+    linear-gradient(rgba(16, 16, 22, 0.96), rgba(16, 16, 22, 0.96)),
+    conic-gradient(from 210deg, #ff8a8a, #ffd58a, #b8ff9a, #8ad5ff, #b89aff, #ff9ad5, #ff8a8a);
+  background-origin: padding-box, padding-box, border-box;
+  background-clip: padding-box, padding-box, border-box;
+  box-shadow: 0 0 22px rgba(154, 213, 255, 0.18), 0 10px 30px rgba(0, 0, 0, 0.6); }
+body[data-theme="foil"] .team .runs, body[data-theme="foil"] .count {
+  text-shadow: -1px 0 rgba(0, 229, 255, 0.45), 1px 0 rgba(255, 43, 214, 0.45); }
+
+/* Dugout — vintage woodgrain (baseball-card border) with routed cream letters. */
+body[data-theme="dugout"] {
+  --panel: rgba(46, 28, 16, 0.97); --panel-2: rgba(20, 12, 6, 0.5);
+  --line: rgba(222, 184, 135, 0.4); --chalk: #f2e3c8; --steel: #d9a95f; --accent: #e8b23a; --radius: 8px;
+}
+body[data-theme="dugout"] .bug { border: 3px solid #5a3a1e;
+  background-image:
+    repeating-linear-gradient(93deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.09) 9px 12px, transparent 12px 23px),
+    linear-gradient(180deg, #4a2d15, #33200e);
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.55); }
+body[data-theme="dugout"] .team .abbr, body[data-theme="dugout"] .team .runs,
+body[data-theme="dugout"] .count, body[data-theme="dugout"] .inning { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55); }
