@@ -337,9 +337,10 @@
       </details>
     </div>
 
-    <details class="panel">
-      <summary>💾 Look presets</summary>
+    <details class="panel" id="panel-appearance">
+      <summary>🎨 Appearance</summary>
       <div class="panel-body">
+        <span class="sublabel">Saved looks</span>
         <div class="audio-row">
           <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
           <button id="preset-apply" class="fxbtn">Apply</button>
@@ -349,12 +350,7 @@
           <button id="preset-save" class="fxbtn">💾 Save current</button>
           <button id="preset-del" class="fxbtn cardclear">Delete</button>
         </div>
-      </div>
-    </details>
 
-    <details class="panel">
-      <summary>🎨 Look &amp; position</summary>
-      <div class="panel-body">
         <div class="audio-row">
           <label class="sel">Theme
             <select id="theme-sel">
@@ -407,12 +403,10 @@
           <button data-pos="bottom-right" title="Bottom-right">↘</button>
         </div>
         <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
-      </div>
-    </details>
 
-    <details class="panel">
-      <summary>🎛️ Custom theme</summary>
-      <div class="panel-body">
+        <details class="panel">
+          <summary>🎛️ Custom theme</summary>
+          <div class="panel-body">
         <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
 
         <span class="sublabel">Row fills</span>
@@ -489,7 +483,9 @@
           <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
         </div>
 
-        <button id="cust-reset" class="fxbtn">Reset customizations</button>
+            <button id="cust-reset" class="fxbtn">Reset customizations</button>
+          </div>
+        </details>
       </div>
     </details>
 

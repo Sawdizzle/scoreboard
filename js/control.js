@@ -1150,6 +1150,17 @@ function renderSetupGuide() {
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
 function jumpPanel(id) { const p = $(id); if (!p) return; p.open = true; p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+// Accordion: opening a top-level panel closes the others, so the page never
+// grows past one open panel. Nested sub-panels (lineups, custom theme) are
+// exempt. 'toggle' doesn't bubble — listen in the capture phase.
+const isTopPanel = (el) => el instanceof HTMLDetailsElement && el.classList.contains('panel') && !el.parentElement.closest('details.panel');
+document.addEventListener('toggle', (e) => {
+  if (!isTopPanel(e.target) || !e.target.open) return;
+  document.querySelectorAll('details.panel[open]').forEach((o) => {
+    if (o !== e.target && isTopPanel(o)) o.open = false;
+  });
+}, true);
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;

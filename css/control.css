@@ -248,9 +248,9 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .team-load select { flex: 1; min-width: 0; padding: 10px; font-size: 16px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
 .team-load .fxbtn { flex: 0 0 auto; padding: 10px 12px; }
 
-/* Teams & lineups */
-.lineup-team { margin-top: 8px; background: var(--bg-2); }
-.lineup-team > summary { padding: 12px 14px; font-size: 13px; }
+/* Nested sub-panels (lineup teams, custom theme) — compact, accordion-exempt */
+.panel .panel { margin-top: 8px; background: var(--bg-2); }
+.panel .panel > summary { padding: 12px 14px; font-size: 13px; }
 .lineup-list { margin-top: 4px; }
 .lineup-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .lineup-row input { width: auto; margin-top: 0; padding: 10px; font-size: 16px; border-radius: 10px; }
