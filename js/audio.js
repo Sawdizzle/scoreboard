@@ -35,8 +35,11 @@ export function setSettings(s) {
   applyGains();
 }
 
-// Football moments reuse existing pack sounds.
-const ALIAS = { touchdown: 'homerun', fieldgoal: 'webgem', turnover: 'strikeout', bigplay: 'webgem', goal: 'walkoff' };
+// Football / volleyball / basketball moments reuse existing pack sounds.
+const ALIAS = {
+  touchdown: 'homerun', fieldgoal: 'webgem', turnover: 'strikeout', bigplay: 'webgem', goal: 'walkoff',
+  ace: 'strikeout', setwin: 'walkoff', three: 'webgem',
+};
 
 export function play(type) {
   ensure();

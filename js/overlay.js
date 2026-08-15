@@ -50,6 +50,22 @@ function renderFootball(s) {
   document.getElementById('fb-poss').textContent = poss === 'away' ? `🏈 ${s.away_abbr || ''}` : poss === 'home' ? `${s.home_abbr || ''} 🏈` : '';
 }
 
+function renderVolleyball(s) {
+  const st = s.state || {};
+  const sets = st.sets || {};
+  document.getElementById('vb-set').textContent = 'SET ' + (st.set || 1);
+  document.getElementById('vb-sets').textContent = `Sets ${sets.away || 0}–${sets.home || 0}`;
+  const abbr = st.serve === 'away' ? (s.away_abbr || 'AWAY') : st.serve === 'home' ? (s.home_abbr || 'HOME') : '';
+  document.getElementById('vb-serve').textContent = abbr ? `● ${abbr}` : '';
+}
+
+function renderBasketball(s) {
+  const st = s.state || {};
+  const f = st.fouls || {};
+  document.getElementById('bk-q').textContent = 'Q' + (st.period || 1);
+  document.getElementById('bk-fouls').textContent = `FOULS ${f.away | 0}·${f.home | 0}`;
+}
+
 function ordinalHalf(h) { return h === 2 ? '2nd' : h === 1 ? '1st' : String(h); }
 function soccerElapsed(s) {
   const c = (s.state && s.state.clock) || {};
@@ -87,6 +103,8 @@ function render(s) {
   showSituation(sport);
   if (sport === 'football') renderFootball(s);
   else if (sport === 'soccer') renderSoccer(s);
+  else if (sport === 'volleyball') renderVolleyball(s);
+  else if (sport === 'basketball') renderBasketball(s);
   else renderBaseball(s);
 
   updateClock();
@@ -234,7 +252,7 @@ function updateClock() {
 // Local 4Hz tick so the countdown is smooth without hammering the DB.
 setInterval(updateClock, 250);
 
-function toDots(n) { let out = ''; for (let i = 0; i < 3; i++) out += i < (n | 0) ? '●' : '○'; return out; }
+function toDots(n, max = 3) { let out = ''; for (let i = 0; i < max; i++) out += i < (n | 0) ? '●' : '○'; return out; }
 function updateDetail(s) {
   const el2 = document.getElementById('detail');
   const parts = [];
@@ -243,6 +261,26 @@ function updateDetail(s) {
     const st = s.state || {};
     parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')} TO</span>${toDots(st.away_timeouts ?? 3)}</span>`);
     parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')} TO</span>${toDots(st.home_timeouts ?? 3)}</span>`);
+    el2.innerHTML = parts.join(''); el2.hidden = false;
+    return;
+  }
+  if (sport === 'volleyball') {
+    const st = s.state || {};
+    if (st.target && st.target !== 25) parts.push(`<span><span class="k">SET TO</span>${st.target | 0}</span>`);
+    if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; } else el2.hidden = true;
+    return;
+  }
+  if (sport === 'basketball') {
+    const st = s.state || {};
+    const to = st.timeouts || {};
+    const f = st.fouls || {};
+    parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')} TO</span>${toDots(to.away ?? 4, 4)}</span>`);
+    parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')} TO</span>${toDots(to.home ?? 4, 4)}</span>`);
+    // Bonus: opponent team fouls put you in it (7 = one-and-one, 10 = double).
+    const bonus = (team) => { const opp = team === 'home' ? (f.away | 0) : (f.home | 0); return opp >= 10 ? 'BONUS+' : opp >= 7 ? 'BONUS' : ''; };
+    const ab = bonus('away'), hb = bonus('home');
+    if (ab) parts.push(`<span class="runrule">${escapeHtml(s.away_abbr || 'AWAY')} ${ab}</span>`);
+    if (hb) parts.push(`<span class="runrule">${escapeHtml(s.home_abbr || 'HOME')} ${hb}</span>`);
     el2.innerHTML = parts.join(''); el2.hidden = false;
     return;
   }

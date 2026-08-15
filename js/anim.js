@@ -50,6 +50,9 @@ export function playAnimation(anim) {
     case 'fieldgoal':  return reveal('FIELD GOAL');
     case 'turnover':   return reveal('TURNOVER');
     case 'bigplay':    return reveal('BIG PLAY');
+    case 'ace':        return reveal('ACE!');
+    case 'setwin':     return reveal('SET WON');
+    case 'three':      return reveal('THREE!');
   }
 }
 

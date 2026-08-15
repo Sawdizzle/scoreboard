@@ -22,6 +22,8 @@
   <link rel="modulepreload" href="/js/logic.js" />
   <link rel="modulepreload" href="/js/football.js" />
   <link rel="modulepreload" href="/js/soccer.js" />
+  <link rel="modulepreload" href="/js/volleyball.js" />
+  <link rel="modulepreload" href="/js/basketball.js" />
   <link rel="stylesheet" href="/css/control.css" />
 </head>
 <body>
@@ -188,10 +190,8 @@
       </div>
 
       <div class="fx-pad">
-        <span class="bases-label">Moments</span>
-        <button id="fx-touchdown" class="fxbtn hr">🏈 TOUCHDOWN</button>
+        <span class="bases-label">Moments — TD / FG / Safety animate from the score buttons</span>
         <div class="fx-grid">
-          <button id="fx-fieldgoal" class="fxbtn">Field Goal</button>
           <button id="fx-turnover" class="fxbtn">Turnover</button>
           <button id="fx-bigplay" class="fxbtn">Big Play</button>
         </div>
@@ -200,7 +200,7 @@
 
     <!-- ============ SOCCER ============ -->
     <div class="sport-only" data-sport="soccer" hidden>
-      <span class="bases-label">Goals</span>
+      <span class="bases-label">Goals (fires the GOAL! celebration)</span>
       <div class="pad">
         <button id="sc-goal-away" class="key run">◄ AWAY GOAL</button>
         <button id="sc-goal-home" class="key run">HOME GOAL ►</button>
@@ -228,10 +228,87 @@
         <button id="sc-home-dn" class="base-btn">Home –</button>
         <button id="sc-home-up" class="base-btn">Home +</button>
       </div>
+    </div>
+
+    <!-- ============ VOLLEYBALL ============ -->
+    <div class="sport-only" data-sport="volleyball" hidden>
+      <span class="bases-label">Rally point (serve follows the scorer)</span>
+      <div class="pad">
+        <button id="vb-point-away" class="key run">◄ AWAY +1</button>
+        <button id="vb-point-home" class="key run">HOME +1 ►</button>
+      </div>
+
+      <span class="bases-label">Serve &amp; set target</span>
+      <div class="bases-row">
+        <button id="vb-serve-away" class="base-btn">◄ Away serve</button>
+        <button id="vb-serve-home" class="base-btn">Home serve ►</button>
+        <button id="vb-target" class="base-btn">To 25</button>
+      </div>
+
+      <span class="bases-label">Sets — auto-won at target with a 2-point lead</span>
+      <div class="bases-row">
+        <button id="vb-endset" class="base-btn wide">End Set → leader</button>
+        <button id="vb-set-dn" class="base-btn">– Set</button>
+        <b id="vb-set-val" class="fb-dist">1</b>
+        <button id="vb-set-up" class="base-btn">+ Set</button>
+      </div>
+      <div class="bases-row">
+        <button id="vb-sets-away-dn" class="base-btn">Away sets –</button>
+        <button id="vb-sets-away-up" class="base-btn">Away sets +</button>
+        <button id="vb-sets-home-dn" class="base-btn">Home sets –</button>
+        <button id="vb-sets-home-up" class="base-btn">Home sets +</button>
+      </div>
+      <div class="bases-row">
+        <button id="vb-away-dn" class="base-btn">Away point –</button>
+        <button id="vb-home-dn" class="base-btn">Home point –</button>
+      </div>
 
       <div class="fx-pad">
         <span class="bases-label">Moments</span>
-        <button id="fx-goal" class="fxbtn hr">⚽ GOAL!</button>
+        <button id="fx-ace" class="fxbtn hr">🏐 ACE — point to the serving team</button>
+      </div>
+    </div>
+
+    <!-- ============ BASKETBALL ============ -->
+    <div class="sport-only" data-sport="basketball" hidden>
+      <span class="bases-label">Score (+3 fires the THREE! stinger)</span>
+      <div class="pad">
+        <button id="bk-away-2" class="key run">◄ AWAY +2</button>
+        <button id="bk-home-2" class="key run">HOME +2 ►</button>
+      </div>
+      <div class="bases-row">
+        <button id="bk-away-1" class="base-btn hit">Away +1</button>
+        <button id="bk-away-3" class="base-btn hit">Away +3</button>
+        <button id="bk-home-1" class="base-btn hit">Home +1</button>
+        <button id="bk-home-3" class="base-btn hit">Home +3</button>
+      </div>
+      <div class="bases-row">
+        <button id="bk-away-dn" class="base-btn">Away –1</button>
+        <button id="bk-home-dn" class="base-btn">Home –1</button>
+      </div>
+
+      <span class="bases-label">Period &amp; team fouls (bonus at 7, double at 10)</span>
+      <div class="bases-row">
+        <button id="bk-period-dn" class="base-btn">– Qtr</button>
+        <b id="bk-period-val" class="fb-dist">Q1</b>
+        <button id="bk-period-up" class="base-btn">+ Qtr</button>
+        <button id="bk-nextperiod" class="base-btn wide">Next Qtr ▸ fouls reset</button>
+      </div>
+      <div class="bases-row">
+        <button id="bk-foul-away" class="base-btn">Away foul +</button>
+        <button id="bk-foul-away-dn" class="base-btn">–</button>
+        <button id="bk-foul-home" class="base-btn">Home foul +</button>
+        <button id="bk-foul-home-dn" class="base-btn">–</button>
+      </div>
+      <div class="util-row">
+        <button id="bk-to-away" class="key util">Away Timeout</button>
+        <button id="bk-to-home" class="key util">Home Timeout</button>
+        <button id="bk-to-reset" class="key util">Reset TOs</button>
+      </div>
+
+      <div class="fx-pad">
+        <span class="bases-label">Moments</span>
+        <button id="fx-bigplay-bk" class="fxbtn hr">🏀 BIG PLAY</button>
       </div>
     </div>
 
@@ -591,6 +668,8 @@
             <option value="baseball">Baseball</option>
             <option value="football">Football</option>
             <option value="soccer">Soccer</option>
+            <option value="volleyball">Volleyball</option>
+            <option value="basketball">Basketball</option>
           </select>
         </label>
         <label class="sel">Style
@@ -655,6 +734,8 @@
           <option value="baseball">Baseball</option>
           <option value="football">Football</option>
           <option value="soccer">Soccer</option>
+          <option value="volleyball">Volleyball</option>
+          <option value="basketball">Basketball</option>
         </select>
       </label>
       <label class="sel" style="margin-top:12px">Scorebug style
