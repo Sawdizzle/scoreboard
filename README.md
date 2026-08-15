@@ -5,6 +5,8 @@ A live, phone-controlled **multi-sport** scoreboard overlay suite for OBS. Two s
 - **`/overlay`** — transparent OBS Browser Source (1920×1080). Display-only.
 - **`/control`** — phone-first control panel. Username + PIN login. Writes game state.
 
+**Install on your phone:** open `/control` in Safari → Share → **Add to Home Screen**. It launches full-screen like a native app (no browser chrome, no accidental pull-to-refresh). On an iPad it lays out as two columns: live controls left, panels right.
+
 State syncs control → Postgres → Realtime → overlay in ~250 ms. The overlay auto-reconnects and keeps last-known state on flaky networks (it never blanks mid-broadcast).
 
 ## Sports
@@ -31,7 +33,7 @@ Selectable per game (default **Scorebox**):
 
 ## Moments & sound
 
-- **Animations** fired from the control panel: run flash, full-screen **home run**, **K** stamp, double play, web gem, stolen base, walk-off, **touchdown**, field goal, turnover, big play, **GOAL!**, rally mode, and a manual bugle **Charge!**. GPU-friendly, alpha-transparent, safe mid-play; each auto-plays its matching sound.
+- **Animations** fired from the control panel: run flash, full-screen **home run**, **K** stamp, double play, stolen base, walk-off, **touchdown**, field goal, turnover, big play, **GOAL!**, rally mode, and a manual bugle **Charge!**. Runs, strikeouts, and walks fire their stinger automatically when committed. GPU-friendly, alpha-transparent, safe mid-play; each auto-plays its matching sound.
 - **Sound:** three synthesized packs (Big League / Modern / Sandlot — nothing sampled) played in the overlay so OBS captures them; master mute + per-category volume.
 
 ## Broadcast cards

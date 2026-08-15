@@ -256,7 +256,6 @@ $('hit-1b').onclick      = () => commit(L.onHit(game, 1));
 $('hit-2b').onclick      = () => commit(L.onHit(game, 2));
 $('hit-3b').onclick      = () => commit(L.onHit(game, 3));
 $('hit-e').onclick       = () => commit(L.onError(game));
-$('btn-reset').onclick   = () => commit(L.onResetCount(game));
 $('btn-endhalf').onclick = () => commit(L.onEndHalf(game));
 $('btn-advance').onclick = () => commit(L.onAdvance(game));
 $('btn-clear').onclick   = () => commit(L.onClearBases(game));
@@ -427,7 +426,7 @@ for (const side of ['away', 'home']) {
 }
 
 // Broadcast cards (persistent until cleared)
-async function showCard(type, opts = {}) {
+async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
   if (text) meta.text = text;
@@ -436,9 +435,9 @@ async function showCard(type, opts = {}) {
     const lines = L.dueUp(game, 3).map((b) => (b.num ? `#${b.num} ` : '') + b.name).filter((s) => s.trim());
     if (lines.length) meta.lines = lines;
   }
-  // Defense card always tracks the fielding team live (resolved in the overlay).
-  // Lineup card: an explicit team is frozen; the auto version tracks the batting side.
-  if (type === 'lineup') { if (opts.side) meta.side = opts.side; else meta.auto = true; }
+  // Defense card always tracks the fielding team live (resolved in the overlay);
+  // the lineup card tracks the batting side the same way.
+  if (type === 'lineup') meta.auto = true;
   const card = { type, meta, nonce: nextNonce() };
   game = { ...game, card };
   const { error } = await db.from('games').update({ card }).eq('id', game.id);
@@ -449,12 +448,6 @@ $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');
 $('card-sponsor').onclick = () => showCard('sponsor');
-// Defense card is a toggle so it can be hidden right where it was shown.
-$('card-defense').onclick = async () => {
-  if (game.card && game.card.type === 'defense') await clearCard();
-  else await showCard('defense');
-  renderDefense();
-};
 async function clearCard() {
   game = { ...game, card: null };
   const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
@@ -462,15 +455,6 @@ async function clearCard() {
   showToast('Card cleared');
 }
 $('card-clear').onclick = clearCard;
-// Per-team lineup card toggles (live in the Teams & lineups panel).
-async function toggleLineupCard(side) {
-  const c = game.card;
-  if (c && c.type === 'lineup' && (c.meta || {}).side === side) await clearCard();
-  else await showCard('lineup', { side });
-  renderLineups();
-}
-$('card-lineup-away').onclick = () => toggleLineupCard('away');
-$('card-lineup-home').onclick = () => toggleLineupCard('home');
 
 // Current-inning auto cards (Broadcast panel): batting order = batting side,
 // defense = fielding side, flipping with the half.
@@ -498,7 +482,6 @@ $('fx-homerun').onclick = () => openHrSheet();
 $('fx-k').onclick       = () => fireAnim('strikeout');
 $('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
 $('fx-dp').onclick      = () => fireAnim('doubleplay');
-$('fx-gem').onclick     = () => fireAnim('webgem');
 $('fx-sb').onclick      = () => fireAnim('stolenbase');
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 $('fx-rally').onclick   = async () => {
@@ -662,7 +645,7 @@ function demoStep() {
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs } }); }
+    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs }, anim: 'webgem' }); }
     else commit({ type: 'ball', patch: L.withPitch(game, { balls: (game.balls | 0) + 1 }) });
     return;
   }
@@ -854,10 +837,7 @@ $('hr-confirm').onclick = () => {
   commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns), payload: { runs: hrRuns }, anim: 'homerun' });
 };
 
-// Inning editor (baseball) --------------------------------------------------
-$('btn-inning-dn').onclick = () => commit(L.onNudgeInning(game, -1));
-$('btn-inning-up').onclick = () => commit(L.onNudgeInning(game, 1));
-$('btn-half').onclick = () => commit(L.onToggleHalf(game));
+// Pitch-count stepper (baseball) --------------------------------------------
 $('pc-dn').onclick = () => commit(L.adjustPitch(game, -1));
 $('pc-up').onclick = () => commit(L.adjustPitch(game, 1));
 
@@ -966,9 +946,6 @@ function renderLineups() {
   const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lineup-team');
   if (!editing) { fillLineup('away'); fillLineup('home'); }
   renderCurrentHitter('away'); renderCurrentHitter('home');
-  const lc = (game.card && game.card.type === 'lineup') ? (game.card.meta || {}).side : null;
-  $('card-lineup-away').textContent = lc === 'away' ? '📺 Hide Away lineup card' : '📺 Show Away lineup card';
-  $('card-lineup-home').textContent = lc === 'home' ? '📺 Hide Home lineup card' : '📺 Show Home lineup card';
 }
 
 // Defense (positions) — pointer-based drag & drop (works on mouse + touch) ---
@@ -1010,7 +987,6 @@ function renderDefense() {
   $('def-bench').innerHTML = batters.map((b, i) =>
     (b && (b.num || b.name) && !assigned.has(i)) ? `<div class="dz-chip" data-idx="${i}">${esc(chipLabel(b))}</div>` : ''
   ).join('');
-  $('card-defense').textContent = (game.card && game.card.type === 'defense') ? '📺 Hide Defense card' : '📺 Show Defense card';
 }
 async function saveDefTeam(patch) {
   const side = defSide;
@@ -1099,7 +1075,8 @@ $('walk-cancel').onclick = () => { $('walk-sheet').hidden = true; };
 $('walk-confirm').onclick = () => {
   $('walk-sheet').hidden = true;
   const bases = { first: wState.first, second: wState.second, third: wState.third };
-  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs } });
+  // anim: the WALK reveal fires automatically, like run/strikeout do.
+  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs }, anim: 'webgem' });
 };
 
 // Render --------------------------------------------------------------------

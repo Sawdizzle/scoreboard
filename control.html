@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0e1421" />
   <title>Scoreboard Control</title>
+  <!-- Add to Home Screen → runs full-screen like a native app (no Safari chrome). -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scoreboard" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icon-180.png" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <!-- Warm the connections + module graph early: cold loads on field LTE. -->
   <link rel="preconnect" href="https://yeykyutsbeqjcgdxlucn.supabase.co" crossorigin />
@@ -68,6 +75,10 @@
       </div>
     </div>
 
+    <!-- Two columns on tablet: live controls left, panels right. One column on phones. -->
+    <div class="game-cols">
+    <div class="col-live">
+
     <div class="clock-row" id="clock-row" hidden>
       <span id="clock-display" class="clock-disp">--:--</span>
       <button id="clock-start" class="ghost small">▶ Start</button>
@@ -109,13 +120,7 @@
         </div>
       </div>
       <div class="util-row">
-        <button id="btn-reset" class="key util">Reset Count</button>
         <button id="btn-endhalf" class="key util">End ½ Inning</button>
-      </div>
-      <div class="util-row">
-        <button id="btn-inning-dn" class="key util">◄ Inning</button>
-        <button id="btn-half" class="key util">Flip ½</button>
-        <button id="btn-inning-up" class="key util">Inning ►</button>
       </div>
       <div class="pc-row">
         <span class="pc-label">Pitch count (current P)</span>
@@ -130,7 +135,6 @@
           <button id="fx-k" class="fxbtn">K</button>
           <button id="fx-klook" class="fxbtn">ꓘ Looking</button>
           <button id="fx-dp" class="fxbtn">Double Play</button>
-          <button id="fx-gem" class="fxbtn">Walk / BB</button>
           <button id="fx-sb" class="fxbtn">Stolen Base</button>
           <button id="fx-walkoff" class="fxbtn">Walk-Off</button>
         </div>
@@ -237,6 +241,9 @@
       <button id="fx-charge" class="fxbtn charge">🎺 Charge!</button>
     </div>
 
+    </div><!-- /.col-live -->
+    <div class="col-panels">
+
     <details class="panel">
       <summary>🎬 Broadcast cards</summary>
       <div class="panel-body">
@@ -292,7 +299,6 @@
                 <input id="lp-name-away" class="b-name" placeholder="Pitcher name" />
               </div>
               <div class="lineup-list" id="lineup-away"></div>
-              <button id="card-lineup-away" class="fxbtn">📺 Show Away lineup card</button>
             </div>
           </details>
 
@@ -310,7 +316,6 @@
                 <input id="lp-name-home" class="b-name" placeholder="Pitcher name" />
               </div>
               <div class="lineup-list" id="lineup-home"></div>
-              <button id="card-lineup-home" class="fxbtn">📺 Show Home lineup card</button>
             </div>
           </details>
         </div>
@@ -327,7 +332,7 @@
           <div class="diamond-edit" id="diamond-edit"></div>
           <span class="bases-label">Bench — drag onto the field</span>
           <div class="bench" id="def-bench" data-pool="1"></div>
-          <button id="card-defense" class="fxbtn">📺 Show Defense card</button>
+          <p class="hint">On-air card: Broadcast cards → Defense.</p>
         </div>
       </details>
     </div>
@@ -525,6 +530,9 @@
     </details>
 
     <p class="hint kbd-hint">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
+
+    </div><!-- /.col-panels -->
+    </div><!-- /.game-cols -->
   </section>
 
   <div id="toast" class="toast" hidden></div>
