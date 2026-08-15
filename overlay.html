@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=1920, initial-scale=1" />
   <title>Scoreboard Overlay</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <!-- Warm the connections + module graph early: the bug paints sooner in OBS. -->
+  <link rel="preconnect" href="https://yeykyutsbeqjcgdxlucn.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://esm.sh" crossorigin />
+  <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" />
+  <link rel="modulepreload" href="/js/supabase.js" />
+  <link rel="modulepreload" href="/js/config.js" />
+  <link rel="modulepreload" href="/js/logic.js" />
+  <link rel="modulepreload" href="/js/anim.js" />
+  <link rel="modulepreload" href="/js/audio.js" />
   <link rel="stylesheet" href="/css/overlay.css" />
   <link rel="stylesheet" href="/css/themes.css" />
   <link rel="stylesheet" href="/css/styles.css" />
@@ -17,13 +26,13 @@
     <div id="reveal"></div>
     <div id="bug" class="bug" data-ready="0">
       <div class="team away">
-        <img class="logo" id="away-logo" alt="" hidden />
+        <img class="logo" id="away-logo" alt="" decoding="async" hidden />
         <span class="abbr" id="away-abbr">VIS</span>
         <span class="runs" id="away-runs">0</span>
         <span class="rhe" aria-hidden="true"><span class="he"><i>H</i><b id="away-h">0</b></span><span class="he"><i>E</i><b id="away-e">0</b></span></span>
       </div>
       <div class="team home">
-        <img class="logo" id="home-logo" alt="" hidden />
+        <img class="logo" id="home-logo" alt="" decoding="async" hidden />
         <span class="abbr" id="home-abbr">HOME</span>
         <span class="runs" id="home-runs">0</span>
         <span class="rhe" aria-hidden="true"><span class="he"><i>H</i><b id="home-h">0</b></span><span class="he"><i>E</i><b id="home-e">0</b></span></span>

@@ -11,11 +11,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const emailFor = (u) => `${u.trim().toLowerCase()}@${USER_EMAIL_DOMAIN}`;
 
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, ms = 1600) {
   const t = $('toast'); if (!t) return;
   t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 1600);
+  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
 }
 const haptic = () => { try { navigator.vibrate && navigator.vibrate(8); } catch {} };
 
@@ -65,11 +65,23 @@ $('logout-btn').addEventListener('click', async () => {
 
 // ---------------------------------------------------------------- Lobby
 const SPORT_LABEL = { baseball: '⚾', football: '🏈', soccer: '⚽' };
+// Compact "how stale is this game" stamp for the lobby list.
+function timeAgo(iso) {
+  if (!iso) return '';
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 90) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 7 * 86400) return Math.floor(s / 86400) + 'd ago';
+  return new Date(iso).toLocaleDateString();
+}
 async function loadGames() {
+  const list = $('games-list');
+  list.innerHTML = '<p class="muted">Loading…</p>';
   const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_score,away_score,status,sport')
+    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at')
     .eq('owner_id', user.id).order('updated_at', { ascending: false });
-  const list = $('games-list'); list.innerHTML = '';
+  list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
   if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
   for (const g of data) {
@@ -77,12 +89,14 @@ async function loadGames() {
     row.className = 'game-row';
     const open = document.createElement('button');
     open.className = 'game-open';
-    open.innerHTML = `<strong>${SPORT_LABEL[g.sport] || '⚾'} ${esc(g.away_name)} @ ${esc(g.home_name)}</strong><span>${g.away_score}–${g.home_score} · ${esc(g.status)}</span>`;
+    open.innerHTML = `<strong>${SPORT_LABEL[g.sport] || '⚾'} ${esc(g.away_name)} @ ${esc(g.home_name)}</strong>` +
+      `<span>${g.away_score}–${g.home_score} · ${esc(g.status)}<span class="ago">${timeAgo(g.updated_at)}</span></span>`;
     open.onclick = () => openGame(g.id);
     const del = document.createElement('button');
     del.className = 'game-del';
     del.textContent = '🗑';
     del.title = 'Delete game';
+    del.setAttribute('aria-label', `Delete ${g.away_name} at ${g.home_name}`);
     del.onclick = async (e) => {
       e.stopPropagation();
       if (!confirm(`Delete "${g.away_name} @ ${g.home_name}"? This permanently removes the game and cannot be undone.`)) return;
@@ -114,17 +128,31 @@ $('ng-create').onclick = async () => {
 };
 
 // ---------------------------------------------------------------- Game
+// Keep the phone awake while a game is open — a sleeping screen mid-inning
+// kills the realtime feed and costs taps. Progressive enhancement only.
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch {} // denied (low battery etc.) — not critical
+}
 async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   game = data; overlayCopied = false; guideCollapsed = setupAllDone();
   show('game'); renderGame();
   $('overlay-url').value = `${location.origin}/overlay?game=${id}`;
+  keepAwake(true);
   await subscribe(id);
 }
-$('back-btn').addEventListener('click', async () => {
+async function closeGame() {
+  stopDemo(); keepAwake(false);
   await teardownChannel(); game = null; show('lobby'); await loadGames();
-});
+}
+$('back-btn').addEventListener('click', closeGame);
 
 let ctrlReconnect = null;
 function setConn(state) {
@@ -160,7 +188,9 @@ async function teardownChannel() {
 // Heal state when the network or tab comes back (flaky-LTE guard, like the overlay).
 addEventListener('online', () => { if (game) reloadGame(game.id); });
 addEventListener('offline', () => setConn('down'));
-document.addEventListener('visibilitychange', () => { if (!document.hidden && game) reloadGame(game.id); });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && game) { reloadGame(game.id); keepAwake(true); } // the OS drops wake locks on hide
+});
 
 // Atomic apply via RPC (snapshots prev_state for undo). Optimistic UI.
 async function commit(res) {
@@ -170,7 +200,8 @@ async function commit(res) {
   game = { ...game, ...res.patch };
   renderGame();
   const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: res.type, p_new: res.patch, p_payload: res.payload || {} });
-  if (error) { game = prev; renderGame(); return alert(error.message); }
+  // Non-blocking: an alert() here would freeze the pad mid-broadcast.
+  if (error) { game = prev; renderGame(); return showToast(`⚠️ Didn't save — ${error.message}`, 3000); }
   game = data; renderGame();
   // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
   if (maybeWalkoff(prev, game)) { /* walk-off fired */ }
@@ -209,8 +240,9 @@ async function fireAnim(type, meta = {}) {
 
 async function doUndo() {
   const { data, error } = await db.rpc('undo', { p_game: game.id });
-  if (error) return alert(error.message);
-  if (data) { game = data; renderGame(); }
+  if (error) return showToast(`⚠️ ${error.message}`, 3000);
+  if (data) { game = data; renderGame(); showToast('↶ Undone'); }
+  else showToast('Nothing to undo');
 }
 
 // Buttons
@@ -492,6 +524,7 @@ $('delete-game').onclick = async () => {
   if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
   const id = game.id;
   $('setup-sheet').hidden = true;
+  stopDemo(); keepAwake(false);
   await teardownChannel();
   const { error } = await db.from('games').delete().eq('id', id);
   if (error) return alert(error.message);
@@ -585,6 +618,8 @@ $('clock-reset').onclick = () => {
   if ((game.sport || 'baseball') === 'soccer') return commit(S.clockReset(game));
   writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds });
 };
+// This runs on a 4 Hz tick — only touch the DOM when the string actually changes.
+const setClockText = (v) => { const n = $('clock-display'); if (n.textContent !== v) n.textContent = v; };
 function renderClock() {
   const row = $('clock-row');
   const sport = game.sport || 'baseball';
@@ -592,27 +627,35 @@ function renderClock() {
     row.hidden = false;
     const e = S.elapsedSeconds(game, Date.now());
     const st = S.scState(game);
-    $('clock-display').textContent = Math.floor(e / 60) + ':' + String(Math.max(0, Math.round(e % 60))).padStart(2, '0') + (st.stoppage ? ` +${st.stoppage}` : '');
+    setClockText(Math.floor(e / 60) + ':' + String(Math.max(0, Math.round(e % 60))).padStart(2, '0') + (st.stoppage ? ` +${st.stoppage}` : ''));
     $('clock-display').classList.remove('low');
     return;
   }
   if (!game || !game.time_limit_seconds) { row.hidden = true; return; }
   row.hidden = false;
   const rem = Math.max(0, Math.round(clockRemaining(game)));
-  $('clock-display').textContent = Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0');
+  setClockText(Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0'));
   $('clock-display').classList.toggle('low', rem <= 60);
 }
 setInterval(() => { if (game) renderClock(); }, 250);
 
 // ---- Practice / demo mode -------------------------------------------------
 let demoTimer = null;
+function paintDemoBtn() {
+  $('demo-btn').classList.toggle('on', !!demoTimer);
+  $('demo-btn').textContent = demoTimer ? '■ Stop Demo' : '▶ Demo Mode';
+}
+function stopDemo() {
+  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+  paintDemoBtn();
+}
 $('demo-btn').onclick = () => {
   if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
   else demoTimer = setInterval(demoStep, 1800);
-  $('demo-btn').classList.toggle('on', !!demoTimer);
-  $('demo-btn').textContent = demoTimer ? '■ Stop Demo' : '▶ Demo Mode';
+  paintDemoBtn();
 };
 function demoStep() {
+  if (!game) return stopDemo(); // game closed under us
   const sport = game.sport || 'baseball';
   if (sport === 'football') return demoStepFootball();
   if (sport === 'soccer') return demoStepSoccer();

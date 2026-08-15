@@ -203,26 +203,33 @@ function remainingSeconds(s) {
   if (s.clock_running && s.clock_ends_at) return (new Date(s.clock_ends_at).getTime() - Date.now()) / 1000;
   return s.clock_remaining_seconds ?? s.time_limit_seconds;
 }
+// The clock elements are static; cache them and skip DOM writes when nothing
+// changed — this ticks at 4 Hz forever inside OBS, so idle ticks must be free.
+const clockEls = [...document.querySelectorAll('.js-clock')];
+let clockPainted = null;
+function paintClock(hidden, text, low, zero) {
+  const key = `${hidden}|${text}|${low}|${zero}`;
+  if (key === clockPainted) return;
+  clockPainted = key;
+  for (const c of clockEls) {
+    c.hidden = hidden;
+    if (hidden) continue;
+    c.textContent = text;
+    c.classList.toggle('low', low);
+    c.classList.toggle('zero', zero);
+  }
+}
 function updateClock() {
   const s = last;
   if (!s) return;
   const sport = s.sport || 'baseball';
-  if (sport === 'soccer') {
-    const e = fmtClock(soccerElapsed(s));
-    document.querySelectorAll('.js-clock').forEach((c) => { c.hidden = false; c.textContent = e; c.classList.remove('low', 'zero'); });
-    return;
-  }
+  if (sport === 'soccer') return paintClock(false, fmtClock(soccerElapsed(s)), false, false);
   const rem = remainingSeconds(s);
   // Football/soccer clock is core (shows whenever a length is set); baseball's is
   // an optional time limit gated by show_clock.
   const showable = rem !== null && (sport !== 'baseball' || s.show_clock);
-  document.querySelectorAll('.js-clock').forEach((c) => {
-    c.hidden = !showable;
-    if (!showable) return;
-    c.textContent = fmtClock(rem);
-    c.classList.toggle('low', rem <= 60 && rem > 0);
-    c.classList.toggle('zero', rem <= 0);
-  });
+  if (!showable) return paintClock(true, '', false, false);
+  paintClock(false, fmtClock(rem), rem <= 60 && rem > 0, rem <= 0);
 }
 // Local 4Hz tick so the countdown is smooth without hammering the DB.
 setInterval(updateClock, 250);

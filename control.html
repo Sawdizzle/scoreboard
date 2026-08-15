@@ -6,6 +6,15 @@
   <meta name="theme-color" content="#0e1421" />
   <title>Scoreboard Control</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <!-- Warm the connections + module graph early: cold loads on field LTE. -->
+  <link rel="preconnect" href="https://yeykyutsbeqjcgdxlucn.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://esm.sh" crossorigin />
+  <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" />
+  <link rel="modulepreload" href="/js/supabase.js" />
+  <link rel="modulepreload" href="/js/config.js" />
+  <link rel="modulepreload" href="/js/logic.js" />
+  <link rel="modulepreload" href="/js/football.js" />
+  <link rel="modulepreload" href="/js/soccer.js" />
   <link rel="stylesheet" href="/css/control.css" />
 </head>
 <body>
@@ -15,7 +24,7 @@
       <h1>Scoreboard <span>Control</span></h1>
       <form id="login-form" autocomplete="off">
         <label>Username<input id="username" inputmode="text" autocapitalize="none" autocomplete="username" placeholder="e.g. shawn" /></label>
-        <label>PIN<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="4–8 digits" /></label>
+        <label>PIN<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" enterkeyhint="go" placeholder="4–8 digits" /></label>
         <button type="submit" class="primary">Log In</button>
         <button type="button" id="signup-btn" class="ghost">Create Account</button>
       </form>
