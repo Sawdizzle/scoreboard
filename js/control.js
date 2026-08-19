@@ -147,6 +147,7 @@ async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   game = data; overlayCopied = false; guideCollapsed = setupAllDone();
+  resetReplayUi();
   show('game'); renderGame();
   $('overlay-url').value = `${location.origin}/overlay?game=${id}`;
   keepAwake(true);
@@ -534,6 +535,77 @@ function renderRally() {
   const b = $('fx-rally');
   b.textContent = `Rally: ${game.rally_mode ? 'ON' : 'OFF'}`;
   b.classList.toggle('on', !!game.rally_mode);
+}
+
+// ---- OBS replay buffer ----------------------------------------------------
+// This pad has no window.obsstudio, so we can't clip directly: we stamp a nonce
+// and the overlay browser source (which IS inside OBS) calls saveReplayBuffer()
+// and acks back. Everything the user sees here comes from that ack.
+const REPLAY_FAIL = {
+  noperm: '⚠️ OBS page permissions too low — set the overlay source to “Basic access to OBS”.',
+  nobuffer: '⚠️ Replay buffer isn’t running in OBS.',
+  failed: '⚠️ OBS refused the clip.',
+};
+let replayPending = 0;    // nonce we're waiting on (0 = idle)
+let replayNote = null;    // {ok, text} shown under the button
+let replayTimer = null;
+let lastHelloAt = null;  // the 'at' of the last capability report we folded in
+
+async function saveReplay() {
+  if (!game || replayPending) return;
+  haptic();
+  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString() };
+  replayPending = replay_cmd.nonce;
+  game = { ...game, replay_cmd };
+  renderReplay();
+  const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
+  if (error) { replayPending = 0; replayNote = { ok: false, text: `⚠️ ${error.message}` }; return renderReplay(); }
+  clearTimeout(replayTimer);
+  replayTimer = setTimeout(() => {
+    if (replayPending !== replay_cmd.nonce) return;
+    replayPending = 0;
+    replayNote = { ok: false, text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
+    renderReplay();
+  }, 6000);
+}
+$('fx-replay').onclick = saveReplay;
+
+function renderReplay() {
+  const b = $('fx-replay'); if (!b) return;
+  const ack = game && game.replay_ack;
+  // Resolve the press we're waiting on (acks arrive as a plain row UPDATE).
+  if (ack && replayPending && Number(ack.nonce) === replayPending) {
+    replayPending = 0;
+    clearTimeout(replayTimer);
+    const text = ack.ok ? '🎞️ Clip saved to your replay folder.' : (REPLAY_FAIL[ack.code] || '⚠️ Clip failed.');
+    replayNote = { ok: !!ack.ok, text };
+    showToast(ack.ok ? '🎞️ Clip saved' : text, ack.ok ? 1600 : 4000);
+    // Successes fade back to the idle status line; failures stay put, since
+    // they're the only place you'd read what to go fix in OBS.
+    if (ack.ok) setTimeout(() => { if (replayNote && replayNote.ok) { replayNote = null; renderReplay(); } }, 12000);
+  }
+  // A fresh capability report (the overlay reloaded) clears a stale verdict.
+  if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
+
+  b.textContent = replayPending ? '🎞️ Saving…' : '🎞️ Clip';
+  b.classList.toggle('busy', !!replayPending);
+
+  const hint = $('replay-hint');
+  if (!hint) return;
+  let note = replayNote;
+  if (!note && !replayPending) {
+    // Idle: reflect whatever the overlay last told us about itself — a load-time
+    // hello or the outcome of an earlier press, they answer the same question.
+    if (!ack) note = { ok: false, text: 'Open the overlay in OBS to enable clips.' };
+    else if (ack.ok) note = { ok: true, text: '🎞️ OBS link ready.' };
+    else note = { ok: false, text: REPLAY_FAIL[ack.code] || '⚠️ Clips unavailable.' };
+  }
+  hint.hidden = !note || !!replayPending;
+  if (note) { hint.textContent = note.text; hint.classList.toggle('bad', !note.ok); }
+}
+function resetReplayUi() {
+  replayPending = 0; replayNote = null; lastHelloAt = null;
+  clearTimeout(replayTimer);
 }
 
 // ---- Game setup sheet -----------------------------------------------------
@@ -1174,6 +1246,7 @@ function renderGame() {
   else if (sport === 'basketball') renderBasketballControl();
   else renderBaseballControl();
   renderRally();
+  renderReplay();
   renderAudio();
   renderLook();
   renderClock();

@@ -6,6 +6,9 @@ import * as audio from './audio.js';
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
 if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
+// The OBS replay relay is on by default. Add &replay=0 to any EXTRA copy of the
+// overlay (a second scene, a preview tab) so one press doesn't save two clips.
+const replayEnabled = !/^(0|off|no|false)$/i.test(params.get('replay') || '');
 
 const el = {
   bug: document.getElementById('bug'),
@@ -21,6 +24,8 @@ const el = {
 
 let last = null; // keep last-known state; never blank on disconnect
 let lastAnimNonce = 0; // only play strictly-newer triggers (reload/undo never replay)
+let animPrimed = false; // set on the first render, so a game whose trigger is still
+                        // null doesn't swallow its very first stinger
 
 function showSituation(sport) {
   document.querySelectorAll('.situation').forEach((n) => { n.hidden = !n.classList.contains('sit-' + sport); });
@@ -129,11 +134,12 @@ function render(s) {
   // the last one we saw. On first paint we just record it (no replay on load),
   // and because nonces are timestamps, an undo restoring an older one won't fire.
   const a = s.current_animation;
-  const nonce = a && Number(a.nonce);
-  if (nonce) {
-    if (lastAnimNonce === 0) lastAnimNonce = nonce;      // first paint: adopt, don't play
-    else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); audio.play(a.type); }
-  }
+  const nonce = (a && Number(a.nonce)) || 0;
+  if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
+  else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); audio.play(a.type); }
+
+  replayHello();
+  handleReplay(s.replay_cmd);
 }
 
 // Audio needs one gesture in a normal browser; OBS browser sources autoplay.
@@ -416,6 +422,77 @@ function buildCard(c, s) {
     return `<div class="card sponsor"><div class="card-sub">Brought to you by</div><div class="card-title">${escapeHtml(meta.text || 'Sponsor')}</div></div>`;
   }
   return '';
+}
+
+// ---- OBS replay buffer ----------------------------------------------------
+// OBS injects window.obsstudio into every browser source. saveReplayBuffer()
+// needs the source's Page permissions at BASIC (level 3) or higher. The control
+// pad can't call it — there's no obsstudio outside OBS — so it stamps
+// replay_cmd.nonce and we relay it here, then ack back so the pad can say what
+// actually happened. The overlay is anonymous, hence the definer RPC.
+const REPLAY_TIMEOUT = 700; // obsstudio callbacks are local; this is just a guard
+
+function obsAsk(fn, fallback) {
+  return new Promise((resolve) => {
+    const o = window.obsstudio;
+    if (!o || typeof o[fn] !== 'function') return resolve(fallback);
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    try { o[fn]((v) => finish(v)); } catch { return finish(fallback); }
+    setTimeout(() => finish(fallback), REPLAY_TIMEOUT);
+  });
+}
+// -1 = not running inside OBS at all. getControlLevel needs no permission, so a
+// missing answer means an old obs-browser: infer from saveReplayBuffer itself.
+async function obsControlLevel() {
+  const o = window.obsstudio;
+  if (!o) return -1;
+  const guess = typeof o.saveReplayBuffer === 'function' ? 3 : 0;
+  const lvl = await obsAsk('getControlLevel', null);
+  return lvl == null ? guess : (lvl | 0);
+}
+const canSaveReplay = (level) => level >= 3 && typeof window.obsstudio?.saveReplayBuffer === 'function';
+
+function ackReplay(nonce, ok, code, level, buffering) {
+  return db.rpc('ack_replay', {
+    p_game: gameId, p_nonce: nonce, p_ok: ok, p_code: code,
+    p_level: level ?? null, p_buffering: buffering ?? null,
+  }).then(({ error }) => { if (error) console.warn('replay ack failed', error.message); });
+}
+
+// One capability report per load, so the pad knows the link is alive before the
+// first press. Stays silent outside OBS — a preview tab must not clobber the
+// real source's status.
+let helloSent = false;
+async function replayHello() {
+  if (helloSent || !replayEnabled || !gameId) return;
+  helloSent = true;
+  const level = await obsControlLevel();
+  if (level < 0) return;
+  const st = await obsAsk('getStatus', null);
+  await ackReplay(0, canSaveReplay(level), 'hello', level, st ? !!st.replaybuffer : null);
+}
+
+let lastReplayNonce = 0;
+let replayPrimed = false;
+async function handleReplay(cmd) {
+  if (!replayEnabled || !gameId) return;
+  const nonce = (cmd && Number(cmd.nonce)) || 0;
+  // Adopt whatever is on the row at first paint (usually nothing) so a reload
+  // never re-clips, then fire on anything strictly newer.
+  if (!replayPrimed) { replayPrimed = true; lastReplayNonce = nonce; return; }
+  if (!nonce || nonce <= lastReplayNonce) return;
+  lastReplayNonce = nonce;
+
+  const level = await obsControlLevel();
+  if (level < 0) return; // plain browser tab: stay silent so it can't clobber the real source's ack
+  if (!canSaveReplay(level)) return ackReplay(nonce, false, 'noperm', level, null);
+  const st = await obsAsk('getStatus', null);
+  const buffering = st ? !!st.replaybuffer : null;
+  if (buffering === false) return ackReplay(nonce, false, 'nobuffer', level, false);
+  try { window.obsstudio.saveReplayBuffer(); }
+  catch (e) { return ackReplay(nonce, false, 'failed', level, buffering); }
+  return ackReplay(nonce, true, 'saved', level, buffering);
 }
 
 async function fetchState() {

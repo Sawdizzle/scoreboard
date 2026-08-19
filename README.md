@@ -38,6 +38,16 @@ Selectable per game (default **Scorebox**):
 - **Animations** fired from the control panel: run flash, full-screen **home run**, **K** stamp, double play, stolen base, walk-off, **touchdown**, field goal, turnover, big play, **GOAL!**, rally mode, and a manual bugle **Charge!**. Runs, strikeouts, and walks fire their stinger automatically when committed. GPU-friendly, alpha-transparent, safe mid-play; each auto-plays its matching sound.
 - **Sound:** three synthesized packs (Big League / Modern / Sandlot — nothing sampled) played in the overlay so OBS captures them; master mute + per-category volume.
 
+## Instant replay (OBS replay buffer)
+
+A **🎞️ Clip** button on the control pad saves the OBS replay buffer, so a great play is on disk before anyone asks for it.
+
+The pad can't talk to OBS directly (it runs on your phone), so it stamps `replay_cmd` on the game row; the overlay — which *is* a browser source inside OBS — sees it over Realtime and calls `window.obsstudio.saveReplayBuffer()`, then acks back with what happened. The pad reports the real outcome: clip saved, buffer not running, permissions too low, or no answer from the overlay.
+
+Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mode has an "Enable Replay Buffer" checkbox, Advanced mode a Replay Buffer tab) and **started**, plus the Scorebug source's **Page permissions** set to at least **"Basic access to OBS"** (they default to none). Settings → General → Output has "Automatically start replay buffer when streaming" so you never forget.
+
+If the overlay runs as a browser source in more than one scene, add **`&replay=0`** to the extra copies — otherwise one press saves one clip per source.
+
 ## Broadcast cards
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
@@ -82,8 +92,9 @@ python3 -m http.server 5173
 3. **Width `1920`, Height `1080`**, FPS 30 (or 60).
 4. Leave the default Custom CSS (the page is already transparent).
 5. **Uncheck "Shutdown source when not visible"** — keeps the realtime connection alive between scenes.
-6. **Audio:** check **"Control audio via OBS"** so the overlay's sounds go into your stream mix. Then in the Audio Mixer, set the source's Audio Monitoring to "Monitor and Output" if you also want to hear it in your headphones.
-7. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel — use whichever is easier per field.
+6. **Page permissions: "Basic access to OBS"** — required for the 🎞️ Clip button to save the replay buffer. Leave it at the default if you don't want the overlay touching OBS.
+7. **Audio:** check **"Control audio via OBS"** so the overlay's sounds go into your stream mix. Then in the Audio Mixer, set the source's Audio Monitoring to "Monitor and Output" if you also want to hear it in your headphones.
+8. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel — use whichever is easier per field.
 
 ## Deploy (Vercel)
 
