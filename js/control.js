@@ -237,6 +237,7 @@ const nextNonce = () => (lastNonce = Math.max(Date.now(), lastNonce + 1));
 // Fire a transient overlay stinger (not an undoable action — a plain trigger write).
 async function fireAnim(type, meta = {}) {
   if (!game) return;
+  if (game.auto_clip && AUTOCLIP.has(type)) saveReplay(true); // fire-and-forget; the buffer is retroactive
   const current_animation = { type, nonce: nextNonce(), meta };
   game = { ...game, current_animation };
   const { error } = await db.from('games').update({ current_animation }).eq('id', game.id);
@@ -540,35 +541,54 @@ function renderRally() {
 // ---- OBS replay buffer ----------------------------------------------------
 // This pad has no window.obsstudio, so we can't clip directly: we stamp a nonce
 // and the overlay browser source (which IS inside OBS) calls saveReplayBuffer()
-// and acks back. Everything the user sees here comes from that ack.
+// and acks back. Everything shown here comes from that ack — including whether
+// the buffer is even running, which is the thing you want to know before first
+// pitch rather than after the play.
 const REPLAY_FAIL = {
-  noperm: '⚠️ OBS page permissions too low — set the overlay source to “Basic access to OBS”.',
-  nobuffer: '⚠️ Replay buffer isn’t running in OBS.',
-  failed: '⚠️ OBS refused the clip.',
+  noperm: { tone: 'bad', text: '⚠️ OBS page permissions too low — set the overlay source to “Basic access to OBS”.' },
+  nobuffer: { tone: 'bad', text: '⚠️ Replay buffer isn’t running in OBS.' },
+  failed: { tone: 'bad', text: '⚠️ OBS refused the clip.' },
+  noconfirm: { tone: 'warn', text: '🎞️ Sent, but OBS didn’t confirm — check your replay folder.' },
+  superseded: { tone: 'warn', text: '🎞️ Replaced by a newer clip.' },
 };
-let replayPending = 0;    // nonce we're waiting on (0 = idle)
-let replayNote = null;    // {ok, text} shown under the button
-let replayTimer = null;
-let lastHelloAt = null;  // the 'at' of the last capability report we folded in
+// Moments worth a highlight clip. Deliberately not every stinger — runs,
+// strikeouts and walks would bury the good ones in noise.
+const AUTOCLIP = new Set(['homerun', 'walkoff', 'doubleplay', 'bigplay', 'touchdown', 'goal']);
 
-async function saveReplay() {
+let replayPending = 0;   // nonce we're waiting on (0 = idle)
+let replayNote = null;   // {tone, text} verdict from the last press
+let replayTimer = null;
+let lastHelloAt = null;  // 'at' of the last status report we folded in
+
+async function saveReplay(auto = false) {
   if (!game || replayPending) return;
-  haptic();
-  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString() };
+  if (!auto) haptic();
+  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), auto };
   replayPending = replay_cmd.nonce;
   game = { ...game, replay_cmd };
   renderReplay();
   const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
-  if (error) { replayPending = 0; replayNote = { ok: false, text: `⚠️ ${error.message}` }; return renderReplay(); }
+  if (error) { replayPending = 0; replayNote = { tone: 'bad', text: `⚠️ ${error.message}` }; return renderReplay(); }
   clearTimeout(replayTimer);
   replayTimer = setTimeout(() => {
     if (replayPending !== replay_cmd.nonce) return;
     replayPending = 0;
-    replayNote = { ok: false, text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
+    replayNote = { tone: 'bad', text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
     renderReplay();
-  }, 6000);
+  }, 8000);
 }
-$('fx-replay').onclick = saveReplay;
+$('fx-replay').onclick = () => saveReplay(false);
+
+// Auto-clip: opt-in per game, so a big play lands on disk while both your thumbs
+// are still on the scoring pad.
+$('replay-auto').onchange = async (e) => {
+  const auto_clip = e.target.checked;
+  game = { ...game, auto_clip };
+  renderReplay();
+  const { error } = await db.from('games').update({ auto_clip }).eq('id', game.id);
+  if (error) { game = { ...game, auto_clip: !auto_clip }; renderReplay(); showToast(`⚠️ ${error.message}`, 3000); }
+  else showToast(auto_clip ? '🎞️ Auto-clip on for big plays' : 'Auto-clip off');
+};
 
 function renderReplay() {
   const b = $('fx-replay'); if (!b) return;
@@ -577,31 +597,35 @@ function renderReplay() {
   if (ack && replayPending && Number(ack.nonce) === replayPending) {
     replayPending = 0;
     clearTimeout(replayTimer);
-    const text = ack.ok ? '🎞️ Clip saved to your replay folder.' : (REPLAY_FAIL[ack.code] || '⚠️ Clip failed.');
-    replayNote = { ok: !!ack.ok, text };
-    showToast(ack.ok ? '🎞️ Clip saved' : text, ack.ok ? 1600 : 4000);
-    // Successes fade back to the idle status line; failures stay put, since
-    // they're the only place you'd read what to go fix in OBS.
-    if (ack.ok) setTimeout(() => { if (replayNote && replayNote.ok) { replayNote = null; renderReplay(); } }, 12000);
+    replayNote = ack.ok
+      ? { tone: 'ok', text: '🎞️ Clip saved to your replay folder.' }
+      : (REPLAY_FAIL[ack.code] || { tone: 'bad', text: '⚠️ Clip failed.' });
+    showToast(ack.ok ? '🎞️ Clip saved' : replayNote.text, ack.ok ? 1600 : 4000);
+    // Successes fade back to the live status line; anything else stays put,
+    // since it's the only place you'd read what to go fix in OBS.
+    if (ack.ok) setTimeout(() => { if (replayNote && replayNote.tone === 'ok') { replayNote = null; renderReplay(); } }, 12000);
   }
-  // A fresh capability report (the overlay reloaded) clears a stale verdict.
+  // A fresh status report (overlay reloaded, or the buffer started/stopped)
+  // clears a stale verdict so the line reflects OBS as it is right now.
   if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
 
   b.textContent = replayPending ? '🎞️ Saving…' : '🎞️ Clip';
   b.classList.toggle('busy', !!replayPending);
+  const auto = $('replay-auto');
+  if (auto) auto.checked = !!(game && game.auto_clip);
 
   const hint = $('replay-hint');
   if (!hint) return;
-  let note = replayNote;
-  if (!note && !replayPending) {
-    // Idle: reflect whatever the overlay last told us about itself — a load-time
-    // hello or the outcome of an earlier press, they answer the same question.
-    if (!ack) note = { ok: false, text: 'Open the overlay in OBS to enable clips.' };
-    else if (ack.ok) note = { ok: true, text: '🎞️ OBS link ready.' };
-    else note = { ok: false, text: REPLAY_FAIL[ack.code] || '⚠️ Clips unavailable.' };
-  }
-  hint.hidden = !note || !!replayPending;
-  if (note) { hint.textContent = note.text; hint.classList.toggle('bad', !note.ok); }
+  const note = replayPending ? null : (replayNote || replayStatus(ack));
+  hint.hidden = !note;
+  if (note) { hint.textContent = note.text; hint.dataset.tone = note.tone; }
+}
+// Idle line: what the overlay last told us about itself.
+function replayStatus(ack) {
+  if (!ack) return { tone: 'warn', text: 'Open the overlay in OBS to enable clips.' };
+  if (!ack.ok && ack.code === 'hello') return REPLAY_FAIL.noperm;
+  if (ack.buffering === false) return REPLAY_FAIL.nobuffer;
+  return { tone: 'ok', text: '🎞️ OBS link ready.' };
 }
 function resetReplayUi() {
   replayPending = 0; replayNote = null; lastHelloAt = null;

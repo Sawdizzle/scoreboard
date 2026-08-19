@@ -167,8 +167,13 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .shared-fx .fxbtn { flex: 1; margin-top: 0; } /* keep the row's baselines even */
 .fxbtn.replay { background: #33241f; border-color: #5d422f; }
 .fxbtn.replay.busy { background: var(--steel); border-color: var(--steel); color: #fff; }
-.replay-hint { margin-top: 8px; }
-.replay-hint.bad { color: var(--strike); }
+.replay-row { margin-top: 10px; }
+.replay-auto { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--chalk); }
+.replay-auto input { width: 20px; height: 20px; accent-color: var(--steel); }
+.replay-hint { margin-top: 6px; }
+.replay-hint[data-tone="ok"] { color: var(--ball); }
+.replay-hint[data-tone="warn"] { color: var(--out); }
+.replay-hint[data-tone="bad"] { color: var(--strike); }
 
 .cards-pad { margin-top: 16px; }
 .cards-pad input { width: 100%; margin-top: 8px; padding: 12px; font-size: 16px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }

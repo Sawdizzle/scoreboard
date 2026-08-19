@@ -460,18 +460,44 @@ function ackReplay(nonce, ok, code, level, buffering) {
   }).then(({ error }) => { if (error) console.warn('replay ack failed', error.message); });
 }
 
-// One capability report per load, so the pad knows the link is alive before the
-// first press. Stays silent outside OBS — a preview tab must not clobber the
-// real source's status.
+// Capability + buffer status, pushed to the pad whenever either changes: once at
+// load, then on OBS's own replay-buffer events. This is what puts "buffer isn't
+// running" in front of you BEFORE first pitch instead of after the play.
 let helloSent = false;
-async function replayHello() {
-  if (helloSent || !replayEnabled || !gameId) return;
-  helloSent = true;
-  const level = await obsControlLevel();
-  if (level < 0) return;
-  const st = await obsAsk('getStatus', null);
-  await ackReplay(0, canSaveReplay(level), 'hello', level, st ? !!st.replaybuffer : null);
+let obsLevel = null;      // cached control level (a source reloads if you change it)
+let bufferOn = null;      // null = unknown
+async function sendStatus() {
+  if (!replayEnabled || !gameId) return;
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < 0) return; // not in OBS: stay silent, a preview tab must not speak for the source
+  await ackReplay(0, canSaveReplay(obsLevel), 'hello', obsLevel, bufferOn);
 }
+async function replayHello() {
+  if (helloSent) return;
+  helloSent = true;
+  obsLevel = await obsControlLevel();
+  if (obsLevel < 0) return;
+  const st = await obsAsk('getStatus', null);
+  bufferOn = st ? !!st.replaybuffer : null;
+  await sendStatus();
+}
+// OBS pushes these into the page; they're also how we learn a clip really landed.
+addEventListener('obsReplaybufferStarted', () => { bufferOn = true; sendStatus(); });
+addEventListener('obsReplaybufferStopped', () => { bufferOn = false; sendStatus(); });
+
+// A press waiting on OBS to confirm. saveReplayBuffer() returns nothing and is a
+// no-op if OBS declines, so "saved" means the obsReplaybufferSaved event fired —
+// not merely that we asked.
+let pendingSave = null;
+const SAVE_CONFIRM_MS = 4000;
+function settleSave(ok, code) {
+  if (!pendingSave) return;
+  const { nonce, level, timer } = pendingSave;
+  pendingSave = null;
+  clearTimeout(timer);
+  ackReplay(nonce, ok, code, level, bufferOn);
+}
+addEventListener('obsReplaybufferSaved', () => settleSave(true, 'saved'));
 
 let lastReplayNonce = 0;
 let replayPrimed = false;
@@ -484,15 +510,20 @@ async function handleReplay(cmd) {
   if (!nonce || nonce <= lastReplayNonce) return;
   lastReplayNonce = nonce;
 
-  const level = await obsControlLevel();
-  if (level < 0) return; // plain browser tab: stay silent so it can't clobber the real source's ack
-  if (!canSaveReplay(level)) return ackReplay(nonce, false, 'noperm', level, null);
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < 0) return; // plain browser tab: silent, so it can't clobber the real source's ack
+  if (!canSaveReplay(obsLevel)) return ackReplay(nonce, false, 'noperm', obsLevel, null);
   const st = await obsAsk('getStatus', null);
-  const buffering = st ? !!st.replaybuffer : null;
-  if (buffering === false) return ackReplay(nonce, false, 'nobuffer', level, false);
+  if (st) bufferOn = !!st.replaybuffer;
+  if (bufferOn === false) return ackReplay(nonce, false, 'nobuffer', obsLevel, false);
+
+  settleSave(false, 'superseded'); // a press already waiting is answered by this one
+  pendingSave = {
+    nonce, level: obsLevel,
+    timer: setTimeout(() => settleSave(false, 'noconfirm'), SAVE_CONFIRM_MS),
+  };
   try { window.obsstudio.saveReplayBuffer(); }
-  catch (e) { return ackReplay(nonce, false, 'failed', level, buffering); }
-  return ackReplay(nonce, true, 'saved', level, buffering);
+  catch (e) { settleSave(false, 'failed'); }
 }
 
 async function fetchState() {

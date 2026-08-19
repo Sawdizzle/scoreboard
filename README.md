@@ -40,9 +40,11 @@ Selectable per game (default **Scorebox**):
 
 ## Instant replay (OBS replay buffer)
 
-A **🎞️ Clip** button on the control pad saves the OBS replay buffer, so a great play is on disk before anyone asks for it.
+A **🎞️ Clip** button on the control pad saves the OBS replay buffer, so a great play is on disk before anyone asks for it. **Auto-clip big plays** (opt-in per game) does it for you on a home run, walk-off, double play, big play, touchdown, or goal — the buffer is retroactive, so the clip covers the play you just watched while both thumbs were still on the scoring pad.
 
-The pad can't talk to OBS directly (it runs on your phone), so it stamps `replay_cmd` on the game row; the overlay — which *is* a browser source inside OBS — sees it over Realtime and calls `window.obsstudio.saveReplayBuffer()`, then acks back with what happened. The pad reports the real outcome: clip saved, buffer not running, permissions too low, or no answer from the overlay.
+The pad can't talk to OBS directly (it runs on your phone), so it stamps `replay_cmd` on the game row; the overlay — which *is* a browser source inside OBS — sees it over Realtime and calls `window.obsstudio.saveReplayBuffer()`, then acks back. ✓ *Clip saved* means OBS fired its own `obsReplaybufferSaved` event, not merely that we asked — anything else says what actually went wrong.
+
+The status line under the button is live: the overlay reports its permissions at load and pushes an update whenever OBS starts or stops the buffer, so **"replay buffer isn't running" shows up before first pitch**, not after the play you wanted.
 
 Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mode has an "Enable Replay Buffer" checkbox, Advanced mode a Replay Buffer tab) and **started**, plus the Scorebug source's **Page permissions** set to at least **"Basic access to OBS"** (they default to none). Settings → General → Output has "Automatically start replay buffer when streaming" so you never forget.
 
