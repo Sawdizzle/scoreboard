@@ -154,7 +154,7 @@ async function openGame(id) {
   await subscribe(id);
 }
 async function closeGame() {
-  stopDemo(); keepAwake(false);
+  stopDemo(); keepAwake(false); resetReplayUi();
   await teardownChannel(); game = null; show('lobby'); await loadGames();
 }
 $('back-btn').addEventListener('click', closeGame);
@@ -237,7 +237,7 @@ const nextNonce = () => (lastNonce = Math.max(Date.now(), lastNonce + 1));
 // Fire a transient overlay stinger (not an undoable action — a plain trigger write).
 async function fireAnim(type, meta = {}) {
   if (!game) return;
-  if (game.auto_clip && AUTOCLIP.has(type)) saveReplay(true); // fire-and-forget; the buffer is retroactive
+  if (game.auto_clip && type in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[type]);
   const current_animation = { type, nonce: nextNonce(), meta };
   game = { ...game, current_animation };
   const { error } = await db.from('games').update({ current_animation }).eq('id', game.id);
@@ -550,35 +550,67 @@ const REPLAY_FAIL = {
   nobuffer: { tone: 'bad', text: '⚠️ Replay buffer isn’t running in OBS.' },
   failed: { tone: 'bad', text: '⚠️ OBS refused the clip.' },
   noconfirm: { tone: 'warn', text: '🎞️ Sent, but OBS didn’t confirm — check your replay folder.' },
-  superseded: { tone: 'warn', text: '🎞️ Replaced by a newer clip.' },
 };
-// Moments worth a highlight clip. Deliberately not every stinger — runs,
-// strikeouts and walks would bury the good ones in noise.
-const AUTOCLIP = new Set(['homerun', 'walkoff', 'doubleplay', 'bigplay', 'touchdown', 'goal']);
+// The buffer is retroactive: saving captures the N seconds BEFORE the save, and
+// nothing after. So a home run clip taken at the swing ends while he's rounding
+// second. We wait out the trot and the celebration, then save — the buffer
+// reaches back and picks up the pitch. Needs an OBS buffer at least
+// delay + ~20s (90s covers everything here).
+const CLIP_DELAY_MS = {
+  homerun: 40000,     // trot plus the mob at the plate
+  walkoff: 60000,     // dogpiles run long
+  touchdown: 30000,
+  goal: 30000,
+  doubleplay: 10000,  // the play is already over
+  bigplay: 12000,
+};
 
-let replayPending = 0;   // nonce we're waiting on (0 = idle)
-let replayNote = null;   // {tone, text} verdict from the last press
-let replayTimer = null;
-let lastHelloAt = null;  // 'at' of the last status report we folded in
+let replayPending = new Map(); // nonce -> {deadline, timer} for clips in flight
+let replayNote = null;         // {tone, text} verdict from the last clip
+let replayTick = null;
+let lastHelloAt = null;        // 'at' of the last status report we folded in
 
-async function saveReplay(auto = false) {
-  if (!game || replayPending) return;
+const soonestDeadline = () => Math.min(...[...replayPending.values()].map((p) => p.deadline));
+
+async function saveReplay(auto = false, delayMs = 0) {
+  if (!game) return;
   if (!auto) haptic();
-  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), auto };
-  replayPending = replay_cmd.nonce;
-  game = { ...game, replay_cmd };
+  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), auto, delay_ms: delayMs };
+  // The overlay answers late by design, so allow delay + slack before giving up.
+  replayPending.set(replay_cmd.nonce, {
+    deadline: Date.now() + delayMs,
+    timer: setTimeout(() => {
+      if (!replayPending.delete(replay_cmd.nonce)) return;
+      replayNote = { tone: 'bad', text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
+      renderReplay();
+    }, delayMs + 10000),
+  });
   renderReplay();
   const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
-  if (error) { replayPending = 0; replayNote = { tone: 'bad', text: `⚠️ ${error.message}` }; return renderReplay(); }
-  clearTimeout(replayTimer);
-  replayTimer = setTimeout(() => {
-    if (replayPending !== replay_cmd.nonce) return;
-    replayPending = 0;
-    replayNote = { tone: 'bad', text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
-    renderReplay();
-  }, 8000);
+  if (error) {
+    dropPending(replay_cmd.nonce);
+    replayNote = { tone: 'bad', text: `⚠️ ${error.message}` };
+    return renderReplay();
+  }
+  if (delayMs) showToast(`🎞️ Clip in ${Math.round(delayMs / 1000)}s`, 2200);
 }
-$('fx-replay').onclick = () => saveReplay(false);
+function dropPending(nonce) {
+  const p = replayPending.get(nonce);
+  if (p) { clearTimeout(p.timer); replayPending.delete(nonce); }
+}
+// Tapping the button while a delayed clip is waiting means "don't wait, take it
+// now" — the overlay fires everything it has scheduled instead of queuing more.
+async function flushReplay() {
+  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), flush: true };
+  const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
+  if (error) showToast(`⚠️ ${error.message}`, 3000);
+}
+$('fx-replay').onclick = () => {
+  if (!game) return;
+  haptic();
+  if (replayPending.size && soonestDeadline() > Date.now()) return flushReplay();
+  saveReplay(false, 0);
+};
 
 // Auto-clip: opt-in per game, so a big play lands on disk while both your thumbs
 // are still on the scoring pad.
@@ -594,30 +626,39 @@ $('replay-auto').onchange = async (e) => {
 function renderReplay() {
   const b = $('fx-replay'); if (!b) return;
   const ack = game && game.replay_ack;
-  // Resolve the press we're waiting on (acks arrive as a plain row UPDATE).
-  if (ack && replayPending && Number(ack.nonce) === replayPending) {
-    replayPending = 0;
-    clearTimeout(replayTimer);
-    replayNote = ack.ok
-      ? { tone: 'ok', text: '🎞️ Clip saved to your replay folder.' }
-      : (REPLAY_FAIL[ack.code] || { tone: 'bad', text: '⚠️ Clip failed.' });
-    showToast(ack.ok ? '🎞️ Clip saved' : replayNote.text, ack.ok ? 1600 : 4000);
-    // Successes fade back to the live status line; anything else stays put,
-    // since it's the only place you'd read what to go fix in OBS.
-    if (ack.ok) setTimeout(() => { if (replayNote && replayNote.tone === 'ok') { replayNote = null; renderReplay(); } }, 12000);
+  const nonce = ack && Number(ack.nonce);
+  if (ack && replayPending.has(nonce)) {
+    if (ack.code === 'armed') {
+      // Not an outcome — the overlay is holding it. Keep waiting, keep counting.
+    } else {
+      dropPending(nonce);
+      replayNote = ack.ok
+        ? { tone: 'ok', text: '🎞️ Clip saved to your replay folder.' }
+        : (REPLAY_FAIL[ack.code] || { tone: 'bad', text: '⚠️ Clip failed.' });
+      showToast(ack.ok ? '🎞️ Clip saved' : replayNote.text, ack.ok ? 1600 : 4000);
+      // Successes fade back to the live status line; anything else stays put,
+      // since it's the only place you'd read what to go fix in OBS.
+      if (ack.ok) setTimeout(() => { if (replayNote && replayNote.tone === 'ok') { replayNote = null; renderReplay(); } }, 12000);
+    }
   }
   // A fresh status report (overlay reloaded, or the buffer started/stopped)
   // clears a stale verdict so the line reflects OBS as it is right now.
   if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
 
-  b.textContent = replayPending ? '🎞️ Saving…' : '🎞️ Clip';
-  b.classList.toggle('busy', !!replayPending);
+  const waiting = replayPending.size ? Math.round((soonestDeadline() - Date.now()) / 1000) : 0;
+  b.textContent = !replayPending.size ? '🎞️ Clip' : waiting > 0 ? `🎞️ Clip in ${waiting}s` : '🎞️ Saving…';
+  b.classList.toggle('busy', !!replayPending.size);
   const auto = $('replay-auto');
   if (auto) auto.checked = !!(game && game.auto_clip);
+  // A 1Hz tick only while something is in flight — the pad idles the rest of the game.
+  if (replayPending.size && !replayTick) replayTick = setInterval(renderReplay, 1000);
+  if (!replayPending.size && replayTick) { clearInterval(replayTick); replayTick = null; }
 
   const hint = $('replay-hint');
   if (!hint) return;
-  const note = replayPending ? null : (replayNote || replayStatus(ack));
+  const note = replayPending.size
+    ? (waiting > 0 ? { tone: 'ok', text: 'Waiting out the celebration — tap Clip to take it now.' } : null)
+    : (replayNote || replayStatus(ack));
   hint.hidden = !note;
   if (note) { hint.textContent = note.text; hint.dataset.tone = note.tone; }
 }
@@ -629,99 +670,10 @@ function replayStatus(ack) {
   return { tone: 'ok', text: '🎞️ OBS link ready.' };
 }
 function resetReplayUi() {
-  replayPending = 0; replayNote = null; lastHelloAt = null;
-  clearTimeout(replayTimer);
+  for (const nonce of [...replayPending.keys()]) dropPending(nonce);
+  replayNote = null; lastHelloAt = null;
+  if (replayTick) { clearInterval(replayTick); replayTick = null; }
 }
-
-// ---- Game setup sheet -----------------------------------------------------
-const suVal = (id) => $(id).value.trim();
-$('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
-$('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
-
-$('delete-game').onclick = async () => {
-  if (!game) return;
-  if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
-  const id = game.id;
-  $('setup-sheet').hidden = true;
-  stopDemo(); keepAwake(false);
-  await teardownChannel();
-  const { error } = await db.from('games').delete().eq('id', id);
-  if (error) return alert(error.message);
-  game = null; show('lobby'); await loadGames();
-};
-
-$('reset-game').onclick = async () => {
-  if (!game) return;
-  if (!confirm('Reset this game to 0? Score, situation, clock, cards and undo history are cleared. Teams and look are kept.')) return;
-  const sport = game.sport || 'baseball';
-  const patch = {
-    status: 'live', home_score: 0, away_score: 0,
-    home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0,
-    line_score: [], current_animation: null, card: null, rally_mode: false,
-    clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds || null,
-  };
-  if (sport === 'baseball') Object.assign(patch, {
-    inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
-    bases: { first: false, second: false, third: false }, pitch_count: 0,
-    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 } },
-  });
-  else if (sport === 'football') patch.state = F.fbState({});
-  else if (sport === 'soccer') patch.state = S.scState({});
-  else if (sport === 'volleyball') patch.state = V.vbState({});
-  else if (sport === 'basketball') patch.state = B.bkState({});
-  await db.from('events').delete().eq('game_id', game.id); // wipe undo history
-  $('setup-sheet').hidden = true;
-  await writeField(patch);
-  showToast('↺ Game reset');
-};
-function fillSetup() {
-  $('su-sport').value = game.sport || 'baseball';
-  $('su-style').value = game.style || 'bar';
-  $('su-away-name').value = game.away_name || '';
-  $('su-away-abbr').value = game.away_abbr || '';
-  $('su-away-logo').value = game.away_logo_url || '';
-  $('su-away-color').value = game.away_color || '#7a8794';
-  $('su-home-name').value = game.home_name || '';
-  $('su-home-abbr').value = game.home_abbr || '';
-  $('su-home-logo').value = game.home_logo_url || '';
-  $('su-home-color').value = game.home_color || '#1b2a41';
-  $('su-startsat').value = toLocalInput(game.starts_at);
-  $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
-  $('su-regulation').value = game.regulation_innings || '';
-  $('su-show-clock').checked = !!game.show_clock;
-  $('su-show-batter').checked = !!game.show_batter;
-  $('su-show-pitcher').checked = !!game.show_pitcher;
-  $('su-show-pitchcount').checked = !!game.show_pitchcount;
-  $('su-show-runrule').checked = !!game.show_runrule;
-  $('su-show-rhe').checked = !!game.show_rhe;
-}
-$('setup-save').onclick = async () => {
-  const mins = parseInt($('su-time').value, 10);
-  const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
-  const sport = $('su-sport').value;
-  const patch = {
-    sport, style: $('su-style').value,
-    away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
-    away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
-    home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
-    home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
-    time_limit_seconds,
-    starts_at: fromLocalInput($('su-startsat').value),
-    show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
-    show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
-    show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
-    regulation_innings: parseInt($('su-regulation').value, 10) || 0,
-  };
-  // Reset the clock's remaining time if the limit changed and it isn't running.
-  if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
-  // Initialize sport-specific situation the first time a game switches sport.
-  if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
-  if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
-  if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
-  if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
-  $('setup-sheet').hidden = true;
-  await writeField(patch);
-};
 
 // <input type="datetime-local"> speaks local wall time; the column is timestamptz.
 function toLocalInput(iso) {

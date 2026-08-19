@@ -528,19 +528,41 @@ async function replayHello() {
 addEventListener('obsReplaybufferStarted', () => { bufferOn = true; sendStatus(); });
 addEventListener('obsReplaybufferStopped', () => { bufferOn = false; sendStatus(); });
 
-// A press waiting on OBS to confirm. saveReplayBuffer() returns nothing and is a
-// no-op if OBS declines, so "saved" means the obsReplaybufferSaved event fired —
-// not merely that we asked.
-let pendingSave = null;
+// Saves waiting to happen. The buffer only reaches BACKWARD, so a home-run clip
+// taken at the swing would end while he's rounding second — the pad tells us how
+// long to wait so the save catches the trot and the celebration too, and the
+// buffer still reaches back past the pitch.
+const scheduled = new Map();   // nonce -> timeout id
+const awaiting = [];           // FIFO of saves called but not yet confirmed by OBS
 const SAVE_CONFIRM_MS = 4000;
-function settleSave(ok, code) {
-  if (!pendingSave) return;
-  const { nonce, level, timer } = pendingSave;
-  pendingSave = null;
-  clearTimeout(timer);
-  ackReplay(nonce, ok, code, level, bufferOn);
+const MAX_DELAY_MS = 180000;
+
+function settleEntry(entry, ok, code) {
+  const i = awaiting.indexOf(entry);
+  if (i < 0) return;
+  awaiting.splice(i, 1);
+  clearTimeout(entry.timer);
+  ackReplay(entry.nonce, ok, code, entry.level, bufferOn);
 }
-addEventListener('obsReplaybufferSaved', () => settleSave(true, 'saved'));
+// One global event, so it settles the oldest outstanding save. saveReplayBuffer()
+// returns nothing and no-ops if OBS declines — "saved" means OBS said so.
+addEventListener('obsReplaybufferSaved', () => { if (awaiting.length) settleEntry(awaiting[0], true, 'saved'); });
+
+async function doSave(nonce) {
+  scheduled.delete(nonce);
+  if (!canSaveReplay(obsLevel)) return ackReplay(nonce, false, 'noperm', obsLevel, null);
+  const st = await obsAsk('getStatus', null);
+  if (st) bufferOn = !!st.replaybuffer;
+  if (bufferOn === false) return ackReplay(nonce, false, 'nobuffer', obsLevel, false);
+  const entry = { nonce, level: obsLevel };
+  entry.timer = setTimeout(() => settleEntry(entry, false, 'noconfirm'), SAVE_CONFIRM_MS);
+  awaiting.push(entry);
+  try { window.obsstudio.saveReplayBuffer(); }
+  catch (e) { settleEntry(entry, false, 'failed'); }
+}
+function flushScheduled() {
+  for (const [nonce, timer] of [...scheduled]) { clearTimeout(timer); scheduled.delete(nonce); doSave(nonce); }
+}
 
 let lastReplayNonce = 0;
 let replayPrimed = false;
@@ -555,18 +577,15 @@ async function handleReplay(cmd) {
 
   if (obsLevel === null) obsLevel = await obsControlLevel();
   if (obsLevel < 0) return; // plain browser tab: silent, so it can't clobber the real source's ack
+  if (cmd.flush) return flushScheduled(); // "take it now" — no clip of its own, so no ack
   if (!canSaveReplay(obsLevel)) return ackReplay(nonce, false, 'noperm', obsLevel, null);
-  const st = await obsAsk('getStatus', null);
-  if (st) bufferOn = !!st.replaybuffer;
-  if (bufferOn === false) return ackReplay(nonce, false, 'nobuffer', obsLevel, false);
 
-  settleSave(false, 'superseded'); // a press already waiting is answered by this one
-  pendingSave = {
-    nonce, level: obsLevel,
-    timer: setTimeout(() => settleSave(false, 'noconfirm'), SAVE_CONFIRM_MS),
-  };
-  try { window.obsstudio.saveReplayBuffer(); }
-  catch (e) { settleSave(false, 'failed'); }
+  const delay = Math.min(Math.max(Number(cmd.delay_ms) || 0, 0), MAX_DELAY_MS);
+  if (!delay) return doSave(nonce);
+  // "armed" is a receipt, not an outcome: the pad keeps its countdown running
+  // and waits for the real verdict when the timer fires.
+  ackReplay(nonce, true, 'armed', obsLevel, bufferOn);
+  scheduled.set(nonce, setTimeout(() => doSave(nonce), delay));
 }
 
 async function fetchState() {

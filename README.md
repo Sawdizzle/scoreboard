@@ -44,6 +44,10 @@ A **🎞️ Clip** button on the control pad saves the OBS replay buffer, so a g
 
 The pad can't talk to OBS directly (it runs on your phone), so it stamps `replay_cmd` on the game row; the overlay — which *is* a browser source inside OBS — sees it over Realtime and calls `window.obsstudio.saveReplayBuffer()`, then acks back. ✓ *Clip saved* means OBS fired its own `obsReplaybufferSaved` event, not merely that we asked — anything else says what actually went wrong.
 
+**The clip waits for the celebration.** The buffer only reaches backward — a save at the swing ends while he's rounding second. So an auto-clip holds, then saves, and the buffer reaches back past the pitch: home run 40s, walk-off 60s, touchdown/goal 30s, big play 12s, double play 10s. The manual button is immediate; while a clip is counting down the button reads *Clip in 38s* and tapping it takes the clip right now. **Set your OBS replay buffer to 90 seconds** (Settings → Output) — it needs to cover the longest delay plus lead-in.
+
+The wait lives in the overlay, not the pad: iOS throttles timers in a backgrounded browser, and OBS's browser source never sleeps.
+
 The status line under the button is live: the overlay reports its permissions at load and pushes an update whenever OBS starts or stops the buffer, so **"replay buffer isn't running" shows up before first pitch**, not after the play you wanted.
 
 Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mode has an "Enable Replay Buffer" checkbox, Advanced mode a Replay Buffer tab) and **started**, plus the Scorebug source's **Page permissions** set to at least **"Basic access to OBS"** (they default to none). Settings → General → Output has "Automatically start replay buffer when streaming" so you never forget.
