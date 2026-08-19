@@ -127,3 +127,52 @@ body.takeover #bug-wrap { display: none; }
 .card.slab .linescore .rhe { font-weight: 800; }
 .card.slab .linescore td.rhe { color: var(--accent); }
 .card.slab .linescore th.rhe { color: var(--chalk); }
+
+/* ---- Ambient motion on takeovers -----------------------------------------
+   A takeover can sit on screen for minutes, and a frame with zero movement
+   reads as a frozen stream. Two composited layers on #card itself (pseudo-
+   elements, so a card rebuilding its innerHTML never interrupts them),
+   animating only transform and opacity — GPU work, no layout, no repaint of
+   the gradients underneath. */
+#card.takeover::before, #card.takeover::after { content: ''; position: absolute; pointer-events: none; }
+
+/* Slow flare drifting across, tinted with the theme accent. 38s each way. */
+#card.takeover::before {
+  left: -30%; top: -40%; width: 60%; height: 180%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 74%);
+  mix-blend-mode: screen; will-change: transform, opacity;
+  animation: flare-drift 38s ease-in-out infinite alternate;
+}
+@keyframes flare-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.5; }
+  50%  { transform: translate3d(90vw, 5%, 0) scale(1.22); opacity: 0.85; }
+  100% { transform: translate3d(180vw, -4%, 0) scale(1); opacity: 0.45; }
+}
+
+/* A faint sheen crossing every ~20s, then resting off-frame. */
+#card.takeover::after {
+  inset: -30%;
+  background: linear-gradient(104deg, transparent 43%, rgba(255, 255, 255, 0.05) 50%, transparent 57%);
+  will-change: transform;
+  animation: flare-sweep 20s linear infinite;
+}
+@keyframes flare-sweep {
+  0%        { transform: translate3d(-85%, 0, 0); }
+  55%, 100% { transform: translate3d(85%, 0, 0); }
+}
+
+/* Entrance: the card fades, its parts rise just behind it. Gated on .enter so a
+   live refresh (the mid-inning card tracking the score) never replays it. */
+.card.takeover-card.enter > * { animation: rise-in 0.7s cubic-bezier(.2, .8, .2, 1) both; }
+.card.takeover-card.enter > *:nth-child(2) { animation-delay: 0.1s; }
+.card.takeover-card.enter > *:nth-child(3) { animation-delay: 0.18s; }
+.card.takeover-card.enter > *:nth-child(4) { animation-delay: 0.26s; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+/* Last minute before first pitch: the countdown goes gold. */
+.card.starting .cd.soon { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  #card.takeover::before, #card.takeover::after { animation: none; }
+  .card.takeover-card.enter > * { animation: none; }
+}

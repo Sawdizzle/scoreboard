@@ -365,6 +365,13 @@ function renderCard(s) {
   if (remount || !cur) {
     layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
+    const fresh = layer.querySelector('.takeover-card');
+    if (fresh) {
+      fresh.classList.add('enter');
+      // Drop it once it's played, so a later live refresh of the card's children
+      // (mid-inning tracking the score) doesn't re-run the stagger.
+      setTimeout(() => fresh.classList.remove('enter'), 1200);
+    }
   } else {
     const tmp = document.createElement('div'); tmp.innerHTML = html;
     const next = tmp.firstElementChild;
@@ -394,6 +401,7 @@ function updateCardCountdown() {
   cdPainted = txt;
   el2.textContent = txt;
   el2.classList.toggle('now', ms <= 0);
+  el2.classList.toggle('soon', ms > 0 && ms <= 60000);
 }
 
 // Where the game stands during a break. Baseball reads its own half: raising the

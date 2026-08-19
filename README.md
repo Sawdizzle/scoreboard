@@ -60,6 +60,8 @@ Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + 
 
 **Takeover cards** own the whole 1920×1080 frame instead of floating over the video — opaque backdrop tinted with both team colors, scorebug hidden underneath. The camera keeps running behind them, so crowd noise carries through and you never touch an OBS scene.
 
+They breathe: a slow accent-tinted flare drifts across on a 38s cycle with a faint sheen crossing every 20s, so a slate that sits up for minutes never reads as a frozen stream. Both live on `#card`'s pseudo-elements and animate only transform and opacity — GPU work that survives a card rebuilding its contents, and it honors `prefers-reduced-motion`.
+
 - **🔁 Mid-Inning** — the full scoreboard while the teams change over: logos, big score, and the baseball line score. The header reads the game state, so raising it after the top of the 3rd says "Middle of the 3rd" and after the bottom says "End of the 3rd" (football/basketball get "End of Q2", soccer "Halftime"). It stays **live** while it's up — fix a score or roll the inning behind it and the card follows without re-animating.
 - **🏁 Final (full)** — the same slab with a Final header. The corner Final card is unchanged; this is the full-frame version for the end of the broadcast.
 - **🕐 Starting Soon** — both logos, VS, and a live countdown to first pitch. Set **First pitch** in Setup to get the countdown (leave it empty and the card just shows the matchup); at zero it flips to "STARTING NOW" and stays up until you clear it or raise another card. The subtitle field retitles it — "Varsity Baseball", "Game 2 of 3".
