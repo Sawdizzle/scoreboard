@@ -54,6 +54,10 @@ If the overlay runs as a browser source in more than one scene, add **`&replay=0
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
 
+**Takeover cards** own the whole 1920×1080 frame instead of floating over the video — opaque backdrop tinted with both team colors, scorebug hidden underneath. The camera keeps running behind them, so crowd noise carries through and you never touch an OBS scene.
+
+- **🕐 Starting Soon** — both logos, VS, and a live countdown to first pitch. Set **First pitch** in Setup to get the countdown (leave it empty and the card just shows the matchup); at zero it flips to "STARTING NOW" and stays up until you clear it or raise another card. The subtitle field retitles it — "Varsity Baseball", "Game 2 of 3".
+
 ## Game management
 
 - **Game / time-limit clock:** start / pause / reset from the control panel (countdown for baseball/football, count-up for soccer).

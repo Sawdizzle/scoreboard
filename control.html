@@ -329,6 +329,7 @@
     <details class="panel">
       <summary>🎬 Broadcast cards</summary>
       <div class="panel-body">
+        <button id="card-starting" class="fxbtn takeover">🕐 Starting Soon (full screen)</button>
         <div class="fx-grid">
           <button id="card-matchup" class="fxbtn">Matchup</button>
           <button id="card-final" class="fxbtn">Final</button>
@@ -704,6 +705,7 @@
         </div>
       </div>
 
+      <label class="fld">First pitch — for the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
       <label class="fld">Time limit — minutes (0 = none)<input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
       <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
 

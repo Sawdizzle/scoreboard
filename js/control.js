@@ -485,6 +485,7 @@ async function showCard(type) {
   if (error) return console.warn('card failed', error.message);
   showToast(`🎬 ${type[0].toUpperCase() + type.slice(1)} card up`);
 }
+$('card-starting').onclick = () => showCard('starting');
 $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');
@@ -684,6 +685,7 @@ function fillSetup() {
   $('su-home-abbr').value = game.home_abbr || '';
   $('su-home-logo').value = game.home_logo_url || '';
   $('su-home-color').value = game.home_color || '#1b2a41';
+  $('su-startsat').value = toLocalInput(game.starts_at);
   $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
   $('su-regulation').value = game.regulation_innings || '';
   $('su-show-clock').checked = !!game.show_clock;
@@ -704,6 +706,7 @@ $('setup-save').onclick = async () => {
     home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
     home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
     time_limit_seconds,
+    starts_at: fromLocalInput($('su-startsat').value),
     show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
     show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
     show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
@@ -719,6 +722,18 @@ $('setup-save').onclick = async () => {
   $('setup-sheet').hidden = true;
   await writeField(patch);
 };
+
+// <input type="datetime-local"> speaks local wall time; the column is timestamptz.
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fromLocalInput(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d.toISOString();
+}
 
 // ---- Time-limit clock -----------------------------------------------------
 function clockRemaining(g) {

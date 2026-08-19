@@ -123,6 +123,8 @@ function render(s) {
   document.body.dataset.theme = s.theme || 'nightgame';
   document.body.dataset.pos = s.scorebug_position || 'bottom-bar';
   document.body.style.setProperty('--scale', s.scorebug_scale || 1);
+  document.body.style.setProperty('--away-tc', s.away_color || '#5b6472');
+  document.body.style.setProperty('--home-tc', s.home_color || '#5b6472');
   applyLook(s);
 
   // Ambient rally state (persistent) + audio settings/pack.
@@ -256,7 +258,7 @@ function updateClock() {
   paintClock(false, fmtClock(rem), rem <= 60 && rem > 0, rem <= 0);
 }
 // Local 4Hz tick so the countdown is smooth without hammering the DB.
-setInterval(updateClock, 250);
+setInterval(() => { updateClock(); updateCardCountdown(); }, 250);
 
 function toDots(n, max = 3) { let out = ''; for (let i = 0; i < max; i++) out += i < (n | 0) ? '●' : '○'; return out; }
 function updateDetail(s) {
@@ -348,6 +350,11 @@ function renderCard(s) {
   if (key === lastCardKey && sig === lastCardSig) return;
   const remount = key !== lastCardKey;
   lastCardKey = key; lastCardSig = sig;
+  // Takeover cards own the whole frame: opaque backdrop, scorebug hidden.
+  const full = !!c && TAKEOVER.has(c.type);
+  layer.classList.toggle('takeover', full);
+  document.body.classList.toggle('takeover', full);
+  if (remount) cdPainted = null; // a rebuilt card starts with placeholder text
   if (!key) { layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('lower'); return; }
   const html = buildCard(c, s);
   const cur = layer.querySelector('.card');
@@ -362,6 +369,29 @@ function renderCard(s) {
   }
   layer.hidden = false;
 }
+// Cards that cover the whole 1920×1080 frame instead of floating over the video.
+const TAKEOVER = new Set(['starting']);
+
+// Countdown to first pitch, repainted on the shared tick. Only the number is
+// rewritten — the card around it stays put, so nothing re-animates.
+let cdPainted = null;
+function fmtCountdown(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), ss = sec % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+           : `${m}:${String(ss).padStart(2, '0')}`;
+}
+function updateCardCountdown() {
+  const el2 = document.getElementById('card-cd');
+  if (!el2 || !last || !last.starts_at) return;
+  const ms = new Date(last.starts_at).getTime() - Date.now();
+  const txt = ms <= 0 ? 'STARTING NOW' : fmtCountdown(ms / 1000);
+  if (txt === cdPainted) return;
+  cdPainted = txt;
+  el2.textContent = txt;
+  el2.classList.toggle('now', ms <= 0);
+}
+
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
 const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
 function buildCard(c, s) {
@@ -374,6 +404,19 @@ function buildCard(c, s) {
       <div class="vs">VS</div>
       <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
     </div>${meta.text ? `<div class="card-meta">${escapeHtml(meta.text)}</div>` : ''}</div>`;
+  }
+  if (c.type === 'starting') {
+    const t = s.starts_at ? new Date(s.starts_at) : null;
+    const when = t ? t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    return `<div class="card takeover-card starting">
+      <div class="card-sub">${escapeHtml(meta.text || 'Game Starting Soon')}</div>
+      <div class="card-vs">
+        <div class="side">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
+        <div class="vs">VS</div>
+        <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
+      </div>
+      ${t ? `<div class="cd" id="card-cd">--:--</div><div class="cd-when">First pitch ${escapeHtml(when)}</div>` : ''}
+    </div>`;
   }
   if (c.type === 'final') {
     let ls = '';

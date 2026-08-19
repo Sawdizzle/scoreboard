@@ -80,3 +80,34 @@
 
 /* Sponsor */
 .card.sponsor .card-title { font-size: 56px; color: var(--chalk); }
+
+/* ---- Takeover cards -------------------------------------------------------
+   These own the whole 1920×1080 frame (the scorebug hides underneath), so the
+   backdrop has to be genuinely opaque — the camera is still live behind it. */
+#card.takeover {
+  background:
+    radial-gradient(70% 110% at 0% 50%, color-mix(in srgb, var(--away-tc, #4a5260) 60%, transparent) 0%, transparent 62%),
+    radial-gradient(70% 110% at 100% 50%, color-mix(in srgb, var(--home-tc, #4a5260) 60%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, #0d121b 0%, #06090e 100%);
+}
+body.takeover #bug-wrap { display: none; }
+
+.card.takeover-card {
+  background: none; border: 0; box-shadow: none; padding: 0;
+  animation: takeover-in 0.6s ease both;
+}
+@keyframes takeover-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Starting Soon */
+.card.starting .card-sub { font-size: 30px; letter-spacing: 0.22em; margin-bottom: 34px; color: var(--chalk); opacity: 0.75; }
+.card.starting .card-vs { display: flex; align-items: center; gap: 90px; }
+.card.starting .side { display: flex; flex-direction: column; align-items: center; gap: 24px; min-width: 420px; }
+.card.starting .side img { width: 300px; height: 300px; object-fit: contain;
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.55)); }
+.card.starting .cname { font-size: 62px; font-weight: 900; letter-spacing: 0.02em; }
+.card.starting .vs { font-size: 54px; font-weight: 900; color: var(--accent); }
+.card.starting .cd { font-family: var(--num); font-size: 132px; font-weight: 800; line-height: 1;
+  margin-top: 46px; letter-spacing: 0.02em; }
+.card.starting .cd.now { font-family: var(--disp); font-size: 96px; color: var(--accent); letter-spacing: 0.08em; }
+.card.starting .cd-when { margin-top: 12px; font-size: 26px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--steel); }
