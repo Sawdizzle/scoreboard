@@ -52,6 +52,97 @@
       <h2>Your games</h2>
       <div id="games-list" class="games-list"></div>
     </div>
+
+    <div class="help">
+      <h2 class="help-h">Help &amp; setup</h2>
+
+      <details class="panel">
+        <summary>🚀 Quick start</summary>
+        <div class="panel-body help-body">
+          <ol>
+            <li><b>+ New Game</b> — pick the sport, then the scorebug style.</li>
+            <li>Open the game. <b>📋 Game setup</b> at the top walks you through teams, lineups, defense, and the overlay link.</li>
+            <li><b>🔗 Overlay link &amp; practice → Copy.</b> That URL is what goes into OBS.</li>
+            <li>Add it in OBS as a <b>Browser</b> source (settings below).</li>
+            <li>Score from this pad — the overlay updates instantly. Keep the pad open on your phone or iPad; it holds the screen awake while a game is open.</li>
+          </ol>
+          <p class="help-tip">Practice first: <b>▶ Demo Mode</b> in the same panel plays a fake game so you can check the look with nobody watching.</p>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🖥️ OBS browser source settings</summary>
+        <div class="panel-body help-body">
+          <p>Sources → <b>+</b> → <b>Browser</b>, name it “Scorebug”.</p>
+          <ul>
+            <li><b>URL</b> — the link you copied from the game.</li>
+            <li><b>Width 1920 · Height 1080</b>, FPS 30 or 60.</li>
+            <li>Leave <b>Custom CSS</b> alone — the page is already transparent.</li>
+            <li><b>Uncheck “Shutdown source when not visible”</b> — keeps the live connection alive between scenes.</li>
+            <li><b>Page permissions: “Basic access to OBS”</b> — required for the 🎞️ Clip button. Defaults to no access.</li>
+            <li>Check <b>“Control audio via OBS”</b> so overlay sounds reach the stream. In the Audio Mixer, set that source's monitoring to “Monitor and Output” to also hear it in your headphones.</li>
+          </ul>
+          <p class="help-tip">Size and place the bug from <b>🎨 Appearance</b> (3×3 position grid + scale) instead of resizing the source — the source should stay 1920×1080.</p>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🎞️ Instant replay clips</summary>
+        <div class="panel-body help-body">
+          <p>One-time OBS setup:</p>
+          <ul>
+            <li>Settings → <b>Output</b> → enable the <b>Replay Buffer</b> and set it to <b>90 seconds</b>.</li>
+            <li>Settings → <b>General</b> → Output → <b>“Automatically start replay buffer when streaming”</b>.</li>
+            <li>The buffer has to be <i>started</i>, not just enabled — the pad warns you if it isn't.</li>
+          </ul>
+          <p>Then, during the game:</p>
+          <ul>
+            <li><b>🎞️ Clip</b> saves the buffer right now. The line under the button reports what actually happened — clip saved, buffer not running, or permissions too low.</li>
+            <li><b>Auto-clip big plays</b> clips home runs, walk-offs, double plays, big plays, touchdowns, and goals on its own.</li>
+            <li>Auto-clips <b>wait out the celebration</b> before saving (40s on a home run), because the buffer only records backward — that's how the clip gets the swing <i>and</i> the mob at the plate. Tap Clip during the countdown to take it early.</li>
+            <li>Clips land in the same folder as your OBS recordings.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🎬 Cards &amp; full-screen takeovers</summary>
+        <div class="panel-body help-body">
+          <p>Everything under <b>🎬 Broadcast cards</b> stays up until you clear it with <b>✕ Clear card</b>.</p>
+          <ul>
+            <li><b>Corner cards</b> float over the video: Matchup, Final, Due Up, Sponsor, and live Batting order / Defense.</li>
+            <li><b>Full-screen takeovers</b> hide the scorebug and cover the camera: <b>🕐 Starting Soon</b> (countdown to first pitch — set <i>First pitch</i> in Setup), <b>🔁 Mid-Inning</b> (the scoreboard during the change, and it stays live), and <b>🏁 Final (full)</b>.</li>
+            <li>Your camera keeps running behind a takeover, so crowd noise carries through and you never have to switch scenes in OBS.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>⚾ Running the game</summary>
+        <div class="panel-body help-body">
+          <ul>
+            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits, bases, End ½ Inning. Runs, strikeouts, and walks fire their own stinger.</li>
+            <li><b>↶ Undo</b> reverses the last action.</li>
+            <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
+            <li><b>Moments</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
+            <li>Save teams with rosters under <b>👥 Teams &amp; lineups</b> and reuse them next game.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🔧 Troubleshooting</summary>
+        <div class="panel-body help-body">
+          <ul>
+            <li><b>Overlay looks stale after an update</b> — right-click the source → Refresh. OBS caches page files hard.</li>
+            <li><b>Only part of the bug shows</b> — the source has to be 1920×1080.</li>
+            <li><b>No overlay sound on the stream</b> — check “Control audio via OBS” on the source.</li>
+            <li><b>“Replay buffer isn't running”</b> — start it in the main OBS window, below Start Streaming.</li>
+            <li><b>Nothing is updating</b> — watch the dot in the game header: green is synced, red is reconnecting. It heals itself when the network comes back, and the overlay never blanks out in the meantime.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
   </section>
 
   <!-- GAME -->

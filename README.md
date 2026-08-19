@@ -98,6 +98,8 @@ python3 -m http.server 5173
 
 ## OBS setup
 
+The control panel carries its own copy of all of this — **Help &amp; setup** on the lobby screen, under the games list: quick start, browser source settings, replay-clip setup, cards, and troubleshooting. Keep it and this section in step.
+
 1. **Sources → + → Browser.** Name it "Scorebug".
 2. **URL:** `https://<your-app>.vercel.app/overlay?game=YOUR_GAME_ID`
    (Copy the exact URL from the control panel's Copy button after you open a game.)

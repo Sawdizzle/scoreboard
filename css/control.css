@@ -190,6 +190,18 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* Lobby help / setup instructions */
+.help { margin-top: 18px; }
+.help-h { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 8px 2px; }
+.help-body { color: var(--chalk); font-size: 14px; line-height: 1.55; }
+.help-body p { margin: 8px 0; }
+.help-body ol, .help-body ul { margin: 8px 0; padding-left: 22px; }
+.help-body li { margin: 7px 0; }
+.help-body b { color: var(--chalk); }
+.help-body li, .help-body p { color: #c3ccdc; }
+.help-tip { margin-top: 12px !important; padding: 10px 12px; border-left: 3px solid var(--steel);
+  background: var(--bg-2); border-radius: 0 8px 8px 0; font-size: 13px; }
+
 /* Connection status dot */
 .conn-dot { margin-left: auto; align-self: center; font-size: 13px; line-height: 1; }
 .conn-dot[data-state="live"] { color: var(--ball); }
