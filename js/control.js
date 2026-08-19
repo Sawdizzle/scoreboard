@@ -486,6 +486,8 @@ async function showCard(type) {
   showToast(`🎬 ${type[0].toUpperCase() + type.slice(1)} card up`);
 }
 $('card-starting').onclick = () => showCard('starting');
+$('card-midinning').onclick = () => showCard('midinning');
+$('card-finalfull').onclick = () => showCard('finalfull');
 $('card-matchup').onclick = () => showCard('matchup');
 $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');

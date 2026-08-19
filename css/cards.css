@@ -111,3 +111,19 @@ body.takeover #bug-wrap { display: none; }
 .card.starting .cd.now { font-family: var(--disp); font-size: 96px; color: var(--accent); letter-spacing: 0.08em; }
 .card.starting .cd-when { margin-top: 12px; font-size: 26px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--steel); }
+
+/* Mid-inning / full-page final: one big scoreboard slab */
+.card.slab .card-sub { font-size: 30px; letter-spacing: 0.2em; margin-bottom: 40px; color: var(--chalk); opacity: 0.75; }
+.card.slab .slab-line { display: flex; align-items: center; justify-content: center; gap: 40px; }
+.card.slab .side { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 400px; }
+.card.slab .side img { width: 200px; height: 200px; object-fit: contain;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.55)); }
+.card.slab .cname { font-size: 44px; font-weight: 900; }
+.card.slab .r { font-family: var(--num); font-size: 190px; font-weight: 800; line-height: 1; min-width: 2ch; text-align: center; }
+.card.slab .dash { font-size: 90px; color: var(--steel); opacity: 0.5; line-height: 1; }
+.card.slab .linescore { margin: 46px auto 0; border-collapse: collapse; font-family: var(--num); }
+.card.slab .linescore td, .card.slab .linescore th { padding: 9px 18px; border: 1px solid var(--line); font-size: 27px; }
+.card.slab .linescore th { color: var(--steel); font-weight: 700; }
+.card.slab .linescore .rhe { font-weight: 800; }
+.card.slab .linescore td.rhe { color: var(--accent); }
+.card.slab .linescore th.rhe { color: var(--chalk); }

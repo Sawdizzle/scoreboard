@@ -180,6 +180,8 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .fxbtn.cardclear { width: 100%; margin-top: 8px; background: #3a1f1f; }
 /* Full-screen cards read differently from the corner cards — they hide the bug. */
 .fxbtn.takeover { width: 100%; margin-bottom: 8px; background: #1f2b3a; border-color: #33506e; }
+.fx-grid.two { grid-template-columns: 1fr 1fr; }
+.takeover-row .fxbtn { margin-bottom: 8px; }
 
 /* Manual adjust panel */
 .adj-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }

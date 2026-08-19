@@ -340,6 +340,10 @@ function cardSig(c, s) {
     const side = fieldingSide(s);
     return `${side}:${JSON.stringify((s.lineups || {})[side] || {})}`;
   }
+  // A break card can be up while you fix a score or roll the inning — keep it live.
+  if (c.type === 'midinning') {
+    return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}`;
+  }
   return null; // other cards are pure snapshots
 }
 function renderCard(s) {
@@ -370,7 +374,7 @@ function renderCard(s) {
   layer.hidden = false;
 }
 // Cards that cover the whole 1920×1080 frame instead of floating over the video.
-const TAKEOVER = new Set(['starting']);
+const TAKEOVER = new Set(['starting', 'midinning', 'finalfull']);
 
 // Countdown to first pitch, repainted on the shared tick. Only the number is
 // rewritten — the card around it stays put, so nothing re-animates.
@@ -390,6 +394,36 @@ function updateCardCountdown() {
   cdPainted = txt;
   el2.textContent = txt;
   el2.classList.toggle('now', ms <= 0);
+}
+
+// Where the game stands during a break. Baseball reads its own half: raising the
+// card after ending the top of the 3rd leaves the game in the bottom of the 3rd,
+// which is exactly "middle of the 3rd" in broadcast terms.
+const ORD = ['0th', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
+const ordinal = (n) => ORD[n] || `${n}th`;
+function breakLabel(s) {
+  const st = s.state || {};
+  const sport = s.sport || 'baseball';
+  if (sport === 'baseball') {
+    const inn = s.inning | 0;
+    if (s.half === 'bottom') return `Middle of the ${ordinal(inn)}`;
+    return inn > 1 ? `End of the ${ordinal(inn - 1)}` : `Top of the ${ordinal(inn || 1)}`;
+  }
+  if (sport === 'football') return `End of Q${st.quarter || 1}`;
+  if (sport === 'basketball') return `End of Q${st.period || 1}`;
+  if (sport === 'soccer') return (st.half || 1) === 1 ? 'Halftime' : 'End of the 2nd half';
+  if (sport === 'volleyball') return `Set ${st.set || 1}`;
+  return 'Scoreboard';
+}
+function lineScoreHtml(s) {
+  if ((s.sport || 'baseball') !== 'baseball' || !Array.isArray(s.line_score) || !s.line_score.length) return '';
+  const aAbbr = escapeHtml(s.away_abbr || s.away_name || 'AWAY');
+  const hAbbr = escapeHtml(s.home_abbr || s.home_name || 'HOME');
+  const cells = (side) => s.line_score.map((x) => `<td>${x?.[side] ?? 0}</td>`).join('');
+  const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
+  return `<table class="linescore"><tr><th></th>${heads}<th class="rhe">R</th><th class="rhe">H</th><th class="rhe">E</th></tr>
+    <tr><th>${aAbbr}</th>${cells('top')}<td class="rhe">${s.away_score | 0}</td><td class="rhe">${s.away_hits | 0}</td><td class="rhe">${s.away_errors | 0}</td></tr>
+    <tr><th>${hAbbr}</th>${cells('bottom')}<td class="rhe">${s.home_score | 0}</td><td class="rhe">${s.home_hits | 0}</td><td class="rhe">${s.home_errors | 0}</td></tr></table>`;
 }
 
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
@@ -418,15 +452,21 @@ function buildCard(c, s) {
       ${t ? `<div class="cd" id="card-cd">--:--</div><div class="cd-when">First pitch ${escapeHtml(when)}</div>` : ''}
     </div>`;
   }
+  if (c.type === 'midinning' || c.type === 'finalfull') {
+    const fin = c.type === 'finalfull';
+    return `<div class="card takeover-card slab">
+      <div class="card-sub">${escapeHtml(meta.text || (fin ? 'Final' : breakLabel(s)))}</div>
+      <div class="slab-line">
+        <div class="side">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
+        <div class="r">${s.away_score | 0}</div>
+        <div class="dash">–</div>
+        <div class="r">${s.home_score | 0}</div>
+        <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
+      </div>
+      ${lineScoreHtml(s)}</div>`;
+  }
   if (c.type === 'final') {
-    let ls = '';
-    if ((s.sport || 'baseball') === 'baseball' && Array.isArray(s.line_score) && s.line_score.length) {
-      const cells = (side) => s.line_score.map((x) => `<td>${x?.[side] ?? 0}</td>`).join('');
-      const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
-      ls = `<table class="linescore"><tr><th></th>${heads}<th class="rhe">R</th><th class="rhe">H</th><th class="rhe">E</th></tr>
-        <tr><th>${aAbbr}</th>${cells('top')}<td class="rhe">${s.away_score | 0}</td><td class="rhe">${s.away_hits | 0}</td><td class="rhe">${s.away_errors | 0}</td></tr>
-        <tr><th>${hAbbr}</th>${cells('bottom')}<td class="rhe">${s.home_score | 0}</td><td class="rhe">${s.home_hits | 0}</td><td class="rhe">${s.home_errors | 0}</td></tr></table>`;
-    }
+    const ls = lineScoreHtml(s);
     return `<div class="card final"><div class="card-sub">Final</div>
       <div class="card-scoreline">
         <div class="side"><span class="n">${aAbbr}</span><span class="r">${s.away_score | 0}</span></div>
