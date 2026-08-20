@@ -156,6 +156,16 @@ The control panel carries its own copy of all of this — **Help &amp; setup** o
 7. **Audio:** check **"Control audio via OBS"** so the overlay's sounds go into your stream mix. Then in the Audio Mixer, set the source's Audio Monitoring to "Monitor and Output" if you also want to hear it in your headphones.
 8. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel — use whichever is easier per field.
 
+## Platforms
+
+The control panel is one responsive page tuned for three places it actually gets used:
+
+- **iPhone** — one column, big targets, safe-area insets on all four edges (landscape included), no pull-to-refresh, no double-tap zoom, no text inflation in landscape. Add to Home Screen runs it full-screen.
+- **iPad** — two columns from 700px: scoring pad left, panels right, in either orientation. Split View falls back to one column on its own.
+- **Desktop** — same two columns, wider from 1280px, with hover feedback gated behind `(hover: hover)` so a tap never leaves a stuck highlight on touch. Keyboard scoring: `B S F O` · `1 2 3 H` · `R` `E` `A` `C` `N` `U`.
+
+Sheets centre and round on tablet and desktop instead of sitting on the bottom edge, and their Save/Close row is sticky — a phone in landscape has ~390pt of height, so the actions can never be something you scroll to find.
+
 ## Deploy (Vercel)
 
 Push to `main` → Vercel auto-deploys. Framework preset **Other**, no build command, root output. `js/config.js` holds the Supabase URL + publishable key (safe in client code — RLS protects the data).
