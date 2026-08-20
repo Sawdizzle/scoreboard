@@ -54,6 +54,23 @@ Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mod
 
 If the overlay runs as a browser source in more than one scene, add **`&replay=0`** to the extra copies — otherwise one press saves one clip per source.
 
+## Recommended OBS settings
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Video: base + output | 1920×1080 | The overlay is authored at 1080p |
+| Video: FPS | **30** | Baseball is nearly still between pitches; 60 doubles encode + render work for little gain, and throttles fanless laptops |
+| Stream encoder | **Hardware** (Apple VT / NVENC) | x264 is pure CPU and heat |
+| Rate control | CBR, 6000 kbps, 2s keyframes | YouTube's 1080p30 range is 4500–9000 |
+| **Recording encoder** | **"Same as stream"** | Anything else encodes the whole game a second time, continuously |
+| Recording format | Hybrid MP4 or MKV | A crash won't corrupt the file |
+| Replay buffer | **90 seconds** | Auto-clips wait up to 60s before saving and must still reach back past the pitch. ~70 MB of RAM at 6000 kbps |
+| Browser source | 1920×1080, **FPS 30** | A browser source at 60 doubles the cost of every overlay animation |
+
+**What actually costs performance,** largest first: each additional camera (a capture device decodes continuously whether or not its scene is on air — bigger than everything else combined); a software encoder; a separate recording encoder; 60 FPS anywhere; full-screen takeover cards *while one is on screen* (they animate continuously, so the source repaints every frame — they're up during breaks, never during live play). Everything else here — clips, scene switches, stream control, status — is idle until pressed, with no polling anywhere.
+
+If a laptop struggles with two cameras, "Deactivate when not showing" on the capture devices means only the on-air camera decodes, at the cost of a visible beat on each cut. On a fanless machine, heat throttles before compute runs out: shade, airflow, wall power. Verify with OBS's Stats dock — watch frames missed due to **rendering** lag (the overlay) and **encoding** lag (the encoder).
+
 ## OBS access tiers
 
 One dropdown — the overlay source's **Page permissions** — decides how much of OBS the pad may drive, and the app degrades cleanly across all four settings:

@@ -71,6 +71,52 @@
       </details>
 
       <details class="panel">
+        <summary>⚙️ Recommended OBS settings</summary>
+        <div class="panel-body help-body">
+          <p>Settings → <b>Video</b></p>
+          <table class="help-table">
+            <tr><td><b>Base &amp; Output resolution</b></td><td>1920×1080 both</td></tr>
+            <tr><td><b>FPS</b></td><td><b>30.</b> Baseball is mostly still between pitches — 60 roughly doubles encoding and rendering work for very little visible gain, and on a fanless laptop that's the difference between coasting and throttling.</td></tr>
+          </table>
+          <p>Settings → <b>Output</b> (Advanced mode) → <b>Streaming</b></p>
+          <table class="help-table">
+            <tr><td><b>Encoder</b></td><td><b>Hardware.</b> “Apple VT H.264 Hardware Encoder” on a Mac, NVENC on an Nvidia PC. Never x264 — software encoding is pure CPU and heat.</td></tr>
+            <tr><td><b>Rate control / bitrate</b></td><td>CBR, <b>6000 kbps</b> for 1080p30 (YouTube's range is 4500–9000).</td></tr>
+            <tr><td><b>Keyframe interval</b></td><td>2 seconds</td></tr>
+            <tr><td><b>Audio</b></td><td>AAC, 128–160 kbps, 48 kHz</td></tr>
+          </table>
+          <p>Settings → <b>Output</b> → <b>Recording</b></p>
+          <table class="help-table">
+            <tr><td><b>Encoder</b></td><td><b>“Same as stream”. This is the important one.</b> Any other setting makes OBS encode the whole game a second time, continuously, for the entire broadcast. Same-as-stream reuses frames it's already producing and costs almost nothing.</td></tr>
+            <tr><td><b>Format</b></td><td>Hybrid MP4 (or MKV) — a crash or dead battery won't corrupt the file the way plain MP4 does.</td></tr>
+          </table>
+          <p>Settings → <b>Output</b> → <b>Replay Buffer</b></p>
+          <table class="help-table">
+            <tr><td><b>Maximum replay time</b></td><td><b>90 seconds.</b> Auto-clips wait up to 60s after a walk-off before saving, and the buffer has to still reach back past the pitch. It holds encoded video in RAM — about 70 MB at 6000 kbps.</td></tr>
+          </table>
+          <p>And on the <b>Scorebug browser source</b>: 1920×1080, <b>FPS 30</b> (match your video FPS — a browser source at 60 doubles the cost of every animation), “Shutdown source when not visible” unchecked.</p>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>⚡ What costs performance</summary>
+        <div class="panel-body help-body">
+          <p>Roughly in order, largest first:</p>
+          <ol>
+            <li><b>Every additional camera.</b> This is bigger than everything else on this list combined. A capture device decodes continuously whether or not its scene is on air — two cameras means two pipelines running for the whole game. Switching between them is free; <i>having</i> them isn't.</li>
+            <li><b>A software encoder (x264)</b> instead of your machine's hardware encoder.</li>
+            <li><b>A separate recording encoder</b> — encodes the game twice. See “Same as stream” above.</li>
+            <li><b>60 FPS</b> instead of 30, on either the video output or the browser source.</li>
+            <li><b>Full-screen takeover cards</b>, and only while one is on screen. They animate continuously, so the overlay repaints every frame instead of sitting still. They're up during breaks, never during live play.</li>
+            <li><b>Everything else this app does</b> — clips, scene switches, stream control, status updates — is idle until you press something. It's a WebSocket carrying a few bytes per event, with no polling anywhere.</li>
+          </ol>
+          <p class="help-tip"><b>If a laptop is struggling with two cameras:</b> tick “Deactivate when not showing” on the capture devices. Only the on-air camera then decodes — but the camera has to wake up on each switch, so cuts get a visible beat. Fast cuts or lower load; pick one.</p>
+          <p><b>Heat matters more than CPU on a fanless laptop.</b> Two hours of streaming plus recording outdoors will throttle a machine sitting in the sun or in a bag long before it runs out of processing power. Keep it shaded, raised for airflow, and plugged in.</p>
+          <p><b>Check it yourself rather than trusting any of this:</b> View → Docks → <b>Stats</b>, and watch three numbers during a game — OBS's CPU usage, <b>frames missed due to rendering lag</b> (this catches the overlay), and <b>frames dropped due to encoding lag</b> (this catches a double encode or too-high bitrate). Put a takeover card up for a minute with Stats open; rendering lag should stay at zero.</p>
+        </div>
+      </details>
+
+      <details class="panel">
         <summary>🔐 How much OBS access to give</summary>
         <div class="panel-body help-body">
           <p>One dropdown decides how much of OBS this app may touch: the overlay source's <b>Page permissions</b>. Every setting below is a fine way to run the app — pick the lowest one that covers what you actually want.</p>
