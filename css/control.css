@@ -190,6 +190,16 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* OBS stream / record / buffer */
+.obs-row { display: flex; gap: 8px; }
+.fxbtn.obsbtn { flex: 1; background: var(--bg-2); }
+.fxbtn.obsbtn.on { background: var(--ball); border-color: var(--ball); color: #fff; }
+.fxbtn.obsbtn.live { background: var(--strike); border-color: var(--strike); color: #fff; }
+.fxbtn.obsbtn.armed { background: var(--out); border-color: #fff; color: #fff; font-size: 12px; }
+.fxbtn.obsbtn:disabled { opacity: 0.45; }
+#obs-hint[data-tone="ok"] { color: var(--ball); }
+#obs-hint[data-tone="warn"] { color: var(--out); }
+
 /* Camera (OBS scene) switcher */
 .scene-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .fxbtn.scene { padding: 16px 10px; text-align: left; background: var(--bg-2); }

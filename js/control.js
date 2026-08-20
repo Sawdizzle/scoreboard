@@ -154,7 +154,7 @@ async function openGame(id) {
   await subscribe(id);
 }
 async function closeGame() {
-  stopDemo(); keepAwake(false); resetReplayUi();
+  stopDemo(); keepAwake(false); resetReplayUi(); disarmObs();
   await teardownChannel(); game = null; show('lobby'); await loadGames();
 }
 $('back-btn').addEventListener('click', closeGame);
@@ -539,6 +539,82 @@ function renderRally() {
   const b = $('fx-rally');
   b.textContent = `Rally: ${game.rally_mode ? 'ON' : 'OFF'}`;
   b.classList.toggle('on', !!game.rally_mode);
+}
+
+// ---- OBS stream / record / replay buffer ----------------------------------
+// Ending a stream from a phone in your pocket has to be hard to do by accident,
+// but a modal would freeze the pad mid-broadcast (the same reason commit() never
+// alerts). So stopping arms on the first tap and fires on the second, and the
+// arm expires on its own.
+const OBS_BTN = {
+  stream: { el: 'obs-stream', need: 5, on: 'streaming', start: 'stream_start', stop: 'stream_stop',
+            idle: '🔴 Go Live', live: '⏹ End Stream', arm: 'Tap again to end', danger: true },
+  record: { el: 'obs-record', need: 5, on: 'recording', start: 'record_start', stop: 'record_stop',
+            idle: '⏺ Record', live: '⏹ Stop Rec', arm: 'Tap again to stop', danger: true },
+  buffer: { el: 'obs-buffer', need: 4, on: 'buffer', start: 'buffer_start', stop: 'buffer_stop',
+            idle: '🎞️ Buffer On', live: '🎞️ Buffer Off', arm: null, danger: false },
+};
+let obsArmed = null;      // key of the button waiting for its second tap
+let obsArmTimer = null;
+let obsWaiting = null;    // {key, at} — command sent, watching for OBS to actually change
+let obsNote = null;
+
+function disarmObs() { obsArmed = null; clearTimeout(obsArmTimer); obsArmTimer = null; }
+
+async function sendObsCmd(action) {
+  if (!game) return;
+  const obs_cmd = { nonce: nextNonce(), action };
+  const { error } = await db.from('games').update({ obs_cmd }).eq('id', game.id);
+  if (error) { obsWaiting = null; obsNote = `⚠️ ${error.message}`; renderObs(); }
+}
+function tapObs(key) {
+  const cfg = OBS_BTN[key], st = (game && game.obs_status) || {};
+  if (!game || (st.level | 0) < cfg.need) return;
+  haptic();
+  const running = !!st[cfg.on];
+  if (running && cfg.arm && obsArmed !== key) { // first tap on a stop: arm only
+    disarmObs();
+    obsArmed = key;
+    obsArmTimer = setTimeout(() => { disarmObs(); renderObs(); }, 5000);
+    return renderObs();
+  }
+  disarmObs();
+  obsWaiting = { key, at: Date.now() };
+  obsNote = null;
+  renderObs();
+  setTimeout(() => { if (obsWaiting && obsWaiting.key === key) { obsWaiting = null; obsNote = '⚠️ OBS didn\'t respond.'; renderObs(); } }, 8000);
+  sendObsCmd(running ? cfg.stop : cfg.start);
+}
+for (const key of Object.keys(OBS_BTN)) $(OBS_BTN[key].el).onclick = () => tapObs(key);
+
+let lastObsStatusAt = null;
+function renderObs() {
+  if (!game) return;
+  const st = game.obs_status || {};
+  const level = st.level | 0;
+  // A fresh report from OBS is the answer to whatever we sent.
+  if (st.at && st.at !== lastObsStatusAt) { lastObsStatusAt = st.at; obsWaiting = null; obsNote = null; }
+  for (const [key, cfg] of Object.entries(OBS_BTN)) {
+    const b = $(cfg.el); if (!b) continue;
+    const running = !!st[cfg.on];
+    b.disabled = !game.obs_status || level < cfg.need;
+    b.textContent = obsArmed === key ? cfg.arm : obsWaiting && obsWaiting.key === key ? '…' : running ? cfg.live : cfg.idle;
+    b.classList.toggle('on', running && !cfg.danger);
+    b.classList.toggle('live', running && cfg.danger);
+    b.classList.toggle('armed', obsArmed === key);
+  }
+  const hint = $('obs-hint'); if (!hint) return;
+  hint.dataset.tone = 'warn';
+  if (obsNote) hint.textContent = obsNote;
+  else if (!game.obs_status) hint.textContent = 'Open the overlay in OBS to control the stream.';
+  else if (level < 4) hint.textContent = '⚠️ Set the overlay source\'s Page permissions to "Full access to OBS" to run the stream from here.';
+  else if (level < 5) hint.textContent = '⚠️ Buffer only — "Full access to OBS" is needed for stream and record.';
+  else {
+    const bits = [st.streaming ? 'live' : 'off air', st.recording ? (st.paused ? 'recording paused' : 'recording') : null,
+                  st.buffer ? 'buffer on' : 'buffer off'].filter(Boolean);
+    hint.textContent = `OBS: ${bits.join(' · ')}`;
+    hint.dataset.tone = st.streaming ? 'ok' : 'warn';
+  }
 }
 
 // ---- OBS scenes (camera switching) ----------------------------------------
@@ -1274,6 +1350,7 @@ function renderGame() {
   renderRally();
   renderReplay();
   renderScenes();
+  renderObs();
   renderAudio();
   renderLook();
   renderClock();

@@ -143,8 +143,9 @@ function render(s) {
 
   replayHello();
   handleReplay(s.replay_cmd);
-  if (!scenesSent) { scenesSent = true; reportScenes(); }
+  if (!scenesSent) { scenesSent = true; reportScenes(); reportStatus(); }
   handleScene(s.scene_cmd);
+  handleObsCmd(s.obs_cmd);
 }
 
 // Audio needs one gesture in a normal browser; OBS browser sources autoplay.
@@ -578,6 +579,7 @@ async function replayHello() {
 // OBS pushes these into the page; they're also how we learn a clip really landed.
 addEventListener('obsReplaybufferStarted', () => { bufferOn = true; sendStatus(); });
 addEventListener('obsReplaybufferStopped', () => { bufferOn = false; sendStatus(); });
+// (reportStatus() is wired to the same events below, for the pad's OBS panel.)
 
 // Saves waiting to happen. The buffer only reaches BACKWARD, so a home-run clip
 // taken at the swing would end while he's rounding second — the pad tells us how
@@ -638,6 +640,55 @@ async function reportScenes() {
 // and a switch made at the OBS machine shows up on the pad too.
 addEventListener('obsSceneChanged', reportScenes);
 addEventListener('obsSceneListChanged', reportScenes);
+
+// ---- OBS stream / record / buffer -----------------------------------------
+// Streaming and recording are ALL (5); the replay buffer's start/stop are
+// ADVANCED (4). We never guess at the result: OBS emits an event for every one
+// of these transitions, and that event is what the pad reads.
+const OBS_ACTIONS = {
+  stream_start: { fn: 'startStreaming', need: 5 },
+  stream_stop: { fn: 'stopStreaming', need: 5 },
+  record_start: { fn: 'startRecording', need: 5 },
+  record_stop: { fn: 'stopRecording', need: 5 },
+  buffer_start: { fn: 'startReplayBuffer', need: 4 },
+  buffer_stop: { fn: 'stopReplayBuffer', need: 4 },
+};
+async function reportStatus() {
+  if (!obsEnabled || !gameId) return;
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < 0) return; // not in OBS: stay silent
+  const st = await obsAsk('getStatus', null);
+  if (st) bufferOn = !!st.replaybuffer; // keep the clip path's view in step
+  const { error } = await db.rpc('set_obs_status', {
+    p_game: gameId, p_level: obsLevel,
+    p_streaming: st ? !!st.streaming : null,
+    p_recording: st ? !!st.recording : null,
+    p_paused: st ? !!st.recordingPaused : null,
+    p_buffer: st ? !!st.replaybuffer : null,
+  });
+  if (error) console.warn('status report failed', error.message);
+}
+for (const ev of ['obsStreamingStarted', 'obsStreamingStopped', 'obsRecordingStarted', 'obsRecordingStopped',
+                  'obsRecordingPaused', 'obsRecordingUnpaused', 'obsReplaybufferStarted', 'obsReplaybufferStopped']) {
+  addEventListener(ev, reportStatus);
+}
+
+let lastObsNonce = 0;
+let obsPrimed = false;
+async function handleObsCmd(cmd) {
+  if (!obsEnabled || !gameId) return;
+  const nonce = (cmd && Number(cmd.nonce)) || 0;
+  if (!obsPrimed) { obsPrimed = true; lastObsNonce = nonce; return; } // a reload must never re-fire "go live"
+  if (!nonce || nonce <= lastObsNonce) return;
+  lastObsNonce = nonce;
+  const act = OBS_ACTIONS[cmd.action];
+  if (!act) return;
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < act.need || typeof window.obsstudio?.[act.fn] !== 'function') return reportStatus();
+  try { window.obsstudio[act.fn](); }
+  catch (e) { console.warn('obs action failed', cmd.action, e); }
+  reportStatus(); // the matching OBS event also fires; this covers builds that don't send it
+}
 
 let lastSceneNonce = 0;
 let scenePrimed = false;

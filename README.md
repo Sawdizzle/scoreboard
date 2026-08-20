@@ -54,6 +54,14 @@ Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mod
 
 If the overlay runs as a browser source in more than one scene, add **`&replay=0`** to the extra copies — otherwise one press saves one clip per source.
 
+## Running the broadcast from the pad
+
+**📡 Stream &amp; record** starts and stops the stream, the local recording, and the replay buffer. Every button reflects what OBS is actually doing rather than what was last pressed — the overlay reports on OBS's own streaming/recording/replay-buffer events, so a recording started at the machine lights up on the pad.
+
+Stopping the stream or the recording **arms on the first tap and fires on the second** (auto-disarming after five seconds). No modal: a dialog would freeze the pad mid-broadcast, which is the same reason `commit()` toasts instead of alerting.
+
+Needs **Page permissions: "Full access to OBS"** — `startStreaming` / `startRecording` are ALL. The buffer's start/stop are only ADVANCED, so at Advanced you get the buffer button and a note about the rest. A stale command can never re-fire on a source refresh: the overlay adopts whatever nonce is on the row at first paint and only acts on a strictly newer one.
+
 ## Camera switching
 
 **🎥 Cameras** on the game screen lists your OBS scenes, highlights the one on air, and cuts to whichever you tap — through whatever transition OBS is set to. Switch at the OBS machine instead and the pad follows, because the overlay reports on OBS's own `obsSceneChanged` / `obsSceneListChanged` events rather than polling.
