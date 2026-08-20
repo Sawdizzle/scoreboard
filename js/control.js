@@ -30,21 +30,36 @@ async function refreshSession() {
   const { data } = await supabase.auth.getSession();
   user = data.session?.user ?? null;
   if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); await loadPresets(); await loadTeams(); }
-  else show('auth');
+  else { show('auth'); if ($('username').value) $('pin').focus(); } // returning user lands on the PIN
 }
 const setAuthMsg = (m) => { $('auth-msg').textContent = m; };
 
+// The username is the same every time on a personal device; the PIN never is.
+const LAST_USER = 'sb:lastUser';
+try { $('username').value = localStorage.getItem(LAST_USER) || ''; } catch {}
+
+// Disabling the button is the guard: a second tap while the first request is in
+// flight otherwise fires a second sign-in.
+function authBusy(on, msg) {
+  $('login-form').querySelector('button[type="submit"]').disabled = on;
+  $('signup-btn').disabled = on;
+  if (msg !== undefined) setAuthMsg(msg);
+}
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  setAuthMsg('Signing in…');
-  const { error } = await supabase.auth.signInWithPassword({ email: emailFor($('username').value), password: $('pin').value });
-  if (error) return setAuthMsg(/invalid/i.test(error.message) ? 'Wrong username or PIN.' : error.message);
+  const username = $('username').value.trim();
+  if (!username || !$('pin').value) return setAuthMsg('Username and PIN, please.');
+  authBusy(true, 'Signing in…');
+  const { error } = await supabase.auth.signInWithPassword({ email: emailFor(username), password: $('pin').value });
+  if (error) { authBusy(false); return setAuthMsg(/invalid/i.test(error.message) ? 'Wrong username or PIN.' : error.message); }
+  try { localStorage.setItem(LAST_USER, username); } catch {}
+  authBusy(false, '');
   await refreshSession();
 });
 
 $('signup-btn').addEventListener('click', async () => {
   const username = $('username').value, pin = $('pin').value;
-  setAuthMsg('Creating account…');
+  authBusy(true, 'Creating account…');
   let res, body;
   try {
     res = await fetch(`${SUPABASE_URL}/functions/v1/signup`, {
@@ -53,10 +68,12 @@ $('signup-btn').addEventListener('click', async () => {
       body: JSON.stringify({ username, pin }),
     });
     body = await res.json();
-  } catch { return setAuthMsg('Network error reaching signup.'); }
-  if (!res.ok) return setAuthMsg(body.error || 'Could not create account.');
+  } catch { authBusy(false); return setAuthMsg('Network error reaching signup.'); }
+  if (!res.ok) { authBusy(false); return setAuthMsg(body.error || 'Could not create account.'); }
   const { error } = await supabase.auth.signInWithPassword({ email: emailFor(username), password: pin });
-  if (error) return setAuthMsg('Account created — tap Log In.');
+  if (error) { authBusy(false); return setAuthMsg('Account created — tap Log In.'); }
+  try { localStorage.setItem(LAST_USER, username.trim()); } catch {}
+  authBusy(false, '');
   await refreshSession();
 });
 
@@ -77,11 +94,25 @@ function timeAgo(iso) {
   if (s < 7 * 86400) return Math.floor(s / 86400) + 'd ago';
   return new Date(iso).toLocaleDateString();
 }
+// "live" tells you nothing when you're picking between two games; where the game
+// actually stands does.
+function situationLabel(g) {  // ordinal() is defined further down; both run after load
+  const st = g.state || {};
+  switch (g.sport || 'baseball') {
+    case 'football': return `Q${st.quarter || 1}`;
+    case 'basketball': return `Q${st.period || 1}`;
+    case 'soccer': return (st.half || 1) === 1 ? '1st half' : '2nd half';
+    case 'volleyball': return `Set ${st.set || 1}`;
+    default: return `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
+  }
+}
+const rowState = (g) => (g.status === 'final' ? 'Final' : g.status === 'setup' ? 'Not started' : situationLabel(g));
+
 async function loadGames() {
   const list = $('games-list');
   list.innerHTML = '<p class="muted">Loading…</p>';
   const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at')
+    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at,inning,half,state')
     .eq('owner_id', user.id).order('updated_at', { ascending: false });
   list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
@@ -92,7 +123,7 @@ async function loadGames() {
     const open = document.createElement('button');
     open.className = 'game-open';
     open.innerHTML = `<strong>${SPORT_LABEL[g.sport] || '⚾'} ${esc(g.away_name)} @ ${esc(g.home_name)}</strong>` +
-      `<span>${g.away_score}–${g.home_score} · ${esc(g.status)}<span class="ago">${timeAgo(g.updated_at)}</span></span>`;
+      `<span>${g.away_score}–${g.home_score} · ${esc(rowState(g))}<span class="ago">${timeAgo(g.updated_at)}</span></span>`;
     open.onclick = () => openGame(g.id);
     const del = document.createElement('button');
     del.className = 'game-del';
@@ -821,8 +852,15 @@ function resetReplayUi() {
 
 // ---- Game setup sheet -----------------------------------------------------
 const suVal = (id) => $(id).value.trim();
-$('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
-$('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
+$('setup-btn').onclick = () => { fillSetup(); setupDirty = false; $('setup-sheet').hidden = false; };
+// Cancel after typing a full team card used to bin the lot without a word.
+let setupDirty = false;
+$('setup-sheet').addEventListener('input', () => { setupDirty = true; });
+$('setup-cancel').onclick = () => {
+  if (setupDirty && !confirm('Discard your changes to this game?')) return;
+  setupDirty = false;
+  $('setup-sheet').hidden = true;
+};
 
 $('delete-game').onclick = async () => {
   if (!game) return;
@@ -905,6 +943,7 @@ $('setup-save').onclick = async () => {
   if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
   if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
   if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
+  setupDirty = false;
   $('setup-sheet').hidden = true;
   await writeField(patch);
 };
@@ -1531,7 +1570,7 @@ document.addEventListener('toggle', (e) => {
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
-  if (go === 'teams') { fillSetup(); $('setup-sheet').hidden = false; }
+  if (go === 'teams') { fillSetup(); setupDirty = false; $('setup-sheet').hidden = false; }
   else if (go === 'lineups') jumpPanel('panel-lineups');
   else if (go === 'defense') jumpPanel('panel-defense');
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }

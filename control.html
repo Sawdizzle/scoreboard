@@ -910,11 +910,18 @@
         </div>
       </div>
 
-      <label class="fld">First pitch — for the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
-      <label class="fld">Time limit — minutes (0 = none)<input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
-      <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
+      <details class="panel su-panel">
+        <summary>⏱️ Times &amp; rules</summary>
+        <div class="panel-body">
+          <label class="fld">First pitch — for the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
+          <label class="fld">Time limit — minutes (0 = none)<input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
+          <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
+        </div>
+      </details>
 
-      <span class="col-h">Show on overlay</span>
+      <details class="panel su-panel">
+        <summary>👁️ Show on overlay</summary>
+        <div class="panel-body">
       <div class="toggles">
         <label><input type="checkbox" id="su-show-clock" /> Clock</label>
         <label><input type="checkbox" id="su-show-batter" /> Batter</label>
@@ -925,6 +932,8 @@
       </div>
 
       <p class="hint">Batter, pitcher &amp; pitch count are driven by <b>Teams &amp; lineups</b> now — set them there. The toggles above just show/hide those lines on the overlay.</p>
+        </div>
+      </details>
 
       <div class="danger-row">
         <button id="reset-game" class="fxbtn">↺ Reset game</button>
