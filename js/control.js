@@ -174,13 +174,37 @@ async function keepAwake(on) {
     } else if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
   } catch {} // denied (low battery etc.) — not critical
 }
+// Rosters hold children's names, so they live in an owner-only table rather than
+// the world-readable games row. The overlay reaches them with a token that only
+// ever travels in the OBS URL, and that you can rotate to kill old links.
+let overlayToken = null;
+async function loadRoster(id) {
+  const { data: token } = await db.rpc('overlay_token', { p_game: id }); // creates the row if new
+  overlayToken = token || null;
+  const { data } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
+  return (data && data.data) || {};
+}
+// roster_rev rides Realtime so the overlay knows to re-pull what it can't subscribe to.
+async function saveRoster(lineups) {
+  game = { ...game, lineups };
+  const { error } = await db.from('rosters')
+    .upsert({ game_id: game.id, owner_id: user.id, data: lineups, updated_at: new Date().toISOString() }, { onConflict: 'game_id' });
+  if (error) return showToast(`⚠️ ${error.message}`, 3000);
+  const roster_rev = (game.roster_rev | 0) + 1;
+  game = { ...game, roster_rev };
+  await db.from('games').update({ roster_rev }).eq('id', game.id);
+}
+const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
+
 async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   game = data; overlayCopied = false; guideCollapsed = setupAllDone();
   resetReplayUi();
+  game.lineups = await loadRoster(id);
   show('game'); renderGame();
-  $('overlay-url').value = `${location.origin}/overlay?game=${id}`;
+  $('overlay-url').value = overlayUrl();
+  $('recap-url').value = `${location.origin}/recap?game=${id}`;
   keepAwake(true);
   await subscribe(id);
 }
@@ -200,7 +224,7 @@ function setConn(state) {
 async function reloadGame(id) {
   if (pending.length) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
-  if (!error && data) { game = data; renderGame(); }
+  if (!error && data) { game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
 }
 async function subscribe(id) {
   await teardownChannel();
@@ -209,7 +233,8 @@ async function subscribe(id) {
     .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${id}` },
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
-      (payload) => { if (pending.length) return; game = payload.new; renderGame(); })
+      // The row no longer carries the roster (that table is private), so keep ours.
+      (payload) => { if (pending.length) return; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') { setConn('live'); drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -274,8 +299,9 @@ async function drain() {
       return;
     }
     pending.shift();
-    // The server row is only authoritative once it has seen everything we sent.
-    if (!pending.length && data) { game = data; renderGame(); }
+    // The server row is only authoritative once it has seen everything we sent,
+    // and it carries no roster — keep the one in hand.
+    if (!pending.length && data) { game = { ...data, lineups: game.lineups }; renderGame(); }
     renderPending();
   }
   draining = false;
@@ -513,7 +539,8 @@ async function saveTeam(side) {
 async function loadTeamInto(side, id) {
   const t = savedTeams.find((x) => x.id === id);
   if (!t) return;
-  const patch = { lineups: { ...(game.lineups || {}), [side]: t.roster || {} } };
+  await saveRoster({ ...(game.lineups || {}), [side]: t.roster || {} });
+  const patch = {};
   patch[side + '_name'] = t.name;
   if (t.abbr) patch[side + '_abbr'] = t.abbr;
   if (t.color) patch[side + '_color'] = t.color;
@@ -545,6 +572,48 @@ for (const side of ['away', 'home']) {
   $('team-save-' + side).onclick = () => saveTeam(side);
   $('team-del-' + side).onclick = () => deleteTeam(side);
 }
+
+// ---- Sponsors -------------------------------------------------------------
+// Youth ball runs on sponsors. One jsonb column holds the list and the timing so
+// a change is a single write: {list:[{name,logo}], rotate, every, secs}.
+const spCfg = () => {
+  const c = (game && game.sponsors) || {};
+  return { list: Array.isArray(c.list) ? c.list : [], rotate: !!c.rotate, every: c.every || 180, secs: c.secs || 8 };
+};
+async function saveSponsors(next) {
+  game = { ...game, sponsors: next };
+  renderSponsors();
+  const { error } = await db.from('games').update({ sponsors: next }).eq('id', game.id);
+  if (error) showToast(`⚠️ ${error.message}`, 3000);
+}
+function renderSponsors() {
+  const box = $('sponsor-list'); if (!box || !game) return;
+  const c = spCfg();
+  box.innerHTML = '';
+  c.list.forEach((sp, i) => {
+    const row = document.createElement('div');
+    row.className = 'sp-row';
+    row.innerHTML = `<input class="sp-name" placeholder="Sponsor name" value="${esc(sp.name || '')}" />` +
+      `<input class="sp-logo" placeholder="Logo URL (optional)" value="${esc(sp.logo || '')}" />` +
+      `<button class="fxbtn cardclear sp-del" aria-label="Remove sponsor">🗑</button>`;
+    const commitRow = () => {
+      const list = spCfg().list.slice();
+      list[i] = { name: row.querySelector('.sp-name').value.trim(), logo: row.querySelector('.sp-logo').value.trim() };
+      saveSponsors({ ...spCfg(), list });
+    };
+    row.querySelector('.sp-name').onchange = commitRow;
+    row.querySelector('.sp-logo').onchange = commitRow;
+    row.querySelector('.sp-del').onclick = () => saveSponsors({ ...spCfg(), list: spCfg().list.filter((_, j) => j !== i) });
+    box.appendChild(row);
+  });
+  $('sponsor-rotate').checked = c.rotate;
+  if (document.activeElement !== $('sponsor-every')) $('sponsor-every').value = c.every;
+  if (document.activeElement !== $('sponsor-secs')) $('sponsor-secs').value = c.secs;
+}
+$('sponsor-add').onclick = () => saveSponsors({ ...spCfg(), list: [...spCfg().list, { name: '', logo: '' }] });
+$('sponsor-rotate').onchange = (e) => saveSponsors({ ...spCfg(), rotate: e.target.checked });
+$('sponsor-every').onchange = (e) => saveSponsors({ ...spCfg(), every: Math.max(15, Math.min(1800, parseInt(e.target.value, 10) || 180)) });
+$('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3, Math.min(60, parseInt(e.target.value, 10) || 8)) });
 
 // Broadcast cards (persistent until cleared)
 async function showCard(type) {
@@ -1368,10 +1437,7 @@ function readLineup(side) {
   return { pitcher: { num: $('lp-num-' + side).value.trim(), name: $('lp-name-' + side).value.trim() }, batters };
 }
 async function saveLineup(side) {
-  const lineups = { ...(game.lineups || {}), [side]: readLineup(side) };
-  game = { ...game, lineups };
-  const { error } = await db.from('games').update({ lineups }).eq('id', game.id);
-  if (error) console.warn('lineup write failed', error.message);
+  await saveRoster({ ...(game.lineups || {}), [side]: readLineup(side) });
 }
 function setCurrentHitter(side, i) {
   const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
@@ -1443,8 +1509,7 @@ async function saveDefTeam(patch) {
   const lineups = { ...(game.lineups || {}), [side]: { ...((game.lineups || {})[side] || {}), ...patch } };
   game = { ...game, lineups };
   renderDefense();
-  const { error } = await db.from('games').update({ lineups }).eq('id', game.id);
-  if (error) console.warn('defense write failed', error.message);
+  await saveRoster(lineups);
 }
 $('def-away').onclick = () => { defSide = 'away'; renderDefense(); };
 $('def-home').onclick = () => { defSide = 'home'; renderDefense(); };
@@ -1559,6 +1624,7 @@ function renderGame() {
   else if (sport === 'basketball') renderBasketballControl();
   else renderBaseballControl();
   renderRally();
+  renderSponsors();
   renderReplay();
   renderScenes();
   renderObs();
@@ -1679,6 +1745,18 @@ function renderBasketballControl() {
   $('bk-period-val').textContent = 'Q' + st.period;
 }
 
+$('rotate-url-btn').onclick = async () => {
+  if (!confirm('Rotate the overlay link?\n\nEvery link you have shared stops working, including the one in OBS — you will need to paste the new one into your Browser Source.')) return;
+  const { data, error } = await db.rpc('rotate_overlay_token', { p_game: game.id });
+  if (error) return showToast(`⚠️ ${error.message}`, 3000);
+  overlayToken = data;
+  $('overlay-url').value = overlayUrl();
+  showToast('🔑 New link — update OBS');
+};
+$('copy-recap-btn').onclick = async () => {
+  try { await navigator.clipboard.writeText($('recap-url').value); showToast('📋 Recap link copied'); }
+  catch { $('recap-url').select(); showToast('Press ⌘/Ctrl+C to copy'); }
+};
 $('copy-url-btn').onclick = async () => {
   try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; showToast('🔗 Overlay URL copied'); setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
   overlayCopied = true; renderSetupGuide();

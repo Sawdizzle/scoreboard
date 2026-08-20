@@ -19,8 +19,9 @@ const fail = (msg) => problems.push(msg);
 const PAGES = [
   { html: 'control.html', js: ['js/control.js'] },
   { html: 'overlay.html', js: ['js/overlay.js', 'js/anim.js', 'js/logic.js'] },
+  { html: 'recap.html', js: ['js/recap.js'] },
 ];
-const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
+const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
   'js/config.js', 'js/supabase.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply

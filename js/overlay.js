@@ -6,6 +6,20 @@ import * as audio from './audio.js';
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
 if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
+// The roster lives in an owner-only table (it has kids' names in it), so the
+// overlay reads it through a token that travels only in this URL. No token, no
+// lineup or defense cards — everything else still runs.
+const rosterToken = params.get('t');
+let roster = {};
+let rosterRev = -1;
+async function pullRoster(rev) {
+  rosterRev = rev; // claim it first: a slow fetch must not re-trigger on every paint
+  const { data, error } = await db.rpc('get_roster', { p_game: gameId, p_token: rosterToken });
+  if (error) return console.warn('roster fetch failed', error.message);
+  roster = data || {};
+  if (last) render(last);
+}
+
 // OBS control (replay clips + camera switching) is on by default. Add &obs=0 to
 // any EXTRA copy of the overlay — a preview tab, or a second browser source —
 // so one press doesn't save two clips. &replay=0 is the older spelling.
@@ -85,6 +99,8 @@ function renderSoccer(s) {
 
 function render(s) {
   if (!s) return;
+  if (rosterToken && (s.roster_rev | 0) !== rosterRev) pullRoster(s.roster_rev | 0);
+  s = { ...s, lineups: roster }; // the roster arrives by RPC, not on the row
   last = s;
   const sport = s.sport || 'baseball';
   el.awayAbbr.textContent = s.away_abbr || s.away_name;
@@ -141,6 +157,7 @@ function render(s) {
   if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
   else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); audio.play(a.type); }
 
+  syncSponsors(s);
   replayHello();
   handleReplay(s.replay_cmd);
   if (!scenesSent) { scenesSent = true; reportScenes(); reportStatus(); }
@@ -615,6 +632,44 @@ async function doSave(nonce) {
 }
 function flushScheduled() {
   for (const [nonce, timer] of [...scheduled]) { clearTimeout(timer); scheduled.delete(nonce); doSave(nonce); }
+}
+
+// ---- Sponsor rotation -----------------------------------------------------
+// A corner bug that comes up every few minutes and leaves again. It yields to
+// takeover cards, which own the whole frame.
+let spTimer = null, spHideTimer = null, spIndex = 0, spKey = '';
+function sponsorCfg(s) {
+  const c = (s && s.sponsors) || {};
+  const list = (Array.isArray(c.list) ? c.list : []).filter((x) => x && (x.name || x.logo));
+  return { list, rotate: !!c.rotate, every: Math.max(15, c.every || 180), secs: Math.max(3, c.secs || 8) };
+}
+function showSponsor() {
+  const el = document.getElementById('sponsor-bug');
+  const c = sponsorCfg(last);
+  if (!el || !c.list.length || document.body.classList.contains('takeover')) return;
+  const sp = c.list[spIndex % c.list.length];
+  spIndex++;
+  el.innerHTML = '<span class="sp-kicker">Brought to you by</span>' +
+    (sp.logo ? `<img src="${escapeAttr(sp.logo)}" alt="">` : '') +
+    (sp.name ? `<span class="sp-name">${escapeHtml(sp.name)}</span>` : '');
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('on'));
+  clearTimeout(spHideTimer);
+  spHideTimer = setTimeout(() => {
+    el.classList.remove('on');
+    setTimeout(() => { el.hidden = true; }, 700); // after the fade
+  }, c.secs * 1000);
+}
+function syncSponsors(s) {
+  const c = sponsorCfg(s);
+  const key = `${c.rotate}|${c.every}|${c.secs}|${c.list.length}`;
+  if (key === spKey) return; // nothing timing-related changed
+  spKey = key;
+  clearInterval(spTimer); spTimer = null;
+  const el = document.getElementById('sponsor-bug');
+  if (!c.rotate || !c.list.length) { if (el) { el.classList.remove('on'); el.hidden = true; } return; }
+  spTimer = setInterval(showSponsor, c.every * 1000);
+  setTimeout(showSponsor, 4000); // one early, so you can see it's working
 }
 
 // ---- OBS scenes (camera switching) ----------------------------------------

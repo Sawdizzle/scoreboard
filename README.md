@@ -98,6 +98,22 @@ Needs **Page permissions: "Full access to OBS"** — `startStreaming` / `startRe
 
 obs-browser has no show/hide for an individual source, so a camera change is a scene change: one scene per camera, and the **same** scorebug source shared into each via "Add Existing" (a duplicate browser source means two overlays — doubled audio and two files per clip; add `&obs=0` to any extra copy). Needs **Page permissions: "Advanced access to OBS"** — `setCurrentScene` is ADVANCED, one tier above the BASIC that clips need. At Basic the pad still lists the scenes (reading them is READ_USER) and tells you which setting to raise.
 
+## Rosters are private
+
+`games` has a public SELECT policy because the anonymous OBS browser source needs one — Realtime evaluates RLS for the subscriber, so locking reads down kills the overlay. That made every roster world-readable to anyone who had ever seen an overlay URL, permanently and unrevocably. Rosters are children's names.
+
+So rosters moved to `scoreboard.rosters`, owner-only, with the roster's `token` stored **on that private row** — not on `games`, where anyone could read the key to the lock. The overlay reads through `get_roster(game, token)`, a `SECURITY DEFINER` function that returns `{}` for a wrong token; `rotate_overlay_token()` invalidates every link ever shared. `roster_rev` on `games` rides Realtime so the overlay knows when to re-pull what it can't subscribe to.
+
+Without `&t=` the overlay runs completely — scorebug, cards, clips, everything — minus the lineup and defense cards. Verified: correct token returns the roster, wrong token returns `{}`, the anon role cannot read `scoreboard.rosters` at all, and no roster names appear anywhere in the public `games` row.
+
+## Public recap page
+
+`/recap?game=<id>` — a read-only scoreboard for parents: status, logos, score, line score, date. It updates live over the same Realtime channel while the game is on. It reads only the public row, so there is nothing private on it to leak.
+
+## Sponsors
+
+`💵 Sponsors` on the game screen holds a list (name + optional logo) plus timing. With rotation on, the overlay shows a corner "brought to you by" bug every `every` seconds for `secs` seconds, cycling the list, and hides it whenever a takeover card is up.
+
 ## Broadcast cards
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.

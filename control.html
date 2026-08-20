@@ -117,6 +117,30 @@
       </details>
 
       <details class="panel">
+        <summary>🔒 Who can see what</summary>
+        <div class="panel-body help-body">
+          <ul>
+            <li><b>Your lineups are private.</b> Rosters live in a table only your account can read. The overlay gets at them through a key carried in its URL — that's the <code>&amp;t=…</code> on the end of the link you paste into OBS.</li>
+            <li><b>Treat the overlay link like a password.</b> Anyone holding it can see your lineups. If it ends up somewhere it shouldn't, hit <b>🔑 Rotate link</b> in “Overlay link &amp; practice” — every old link dies instantly, and you paste the new one into OBS.</li>
+            <li><b>The recap link is safe to share.</b> Score, inning and line score only. Lineups are never on that page, by design.</li>
+            <li><b>The score itself isn't secret.</b> Anyone with a game link can read the score and team names — that's what lets the overlay work without a login.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>💵 Sponsors</summary>
+        <div class="panel-body help-body">
+          <p>Add sponsors under <b>💵 Sponsors</b> on the game screen — a name, and a logo URL if you have one. Turn on rotation and a small “brought to you by” bug appears in the top-right of the overlay every few minutes, cycling the list.</p>
+          <ul>
+            <li><b>Every</b> is the gap between appearances; <b>On screen</b> is how long each one stays. 180 and 8 seconds is a sensible start.</li>
+            <li>It hides itself whenever a full-screen card is up, so it never fights a takeover.</li>
+            <li>Logos want a transparent PNG. Anything up to 240×120 shows at full size.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
         <summary>🔐 How much OBS access to give</summary>
         <div class="panel-body help-body">
           <p>One dropdown decides how much of OBS this app may touch: the overlay source's <b>Page permissions</b>. Every setting below is a fine way to run the app — pick the lowest one that covers what you actually want.</p>
@@ -529,6 +553,20 @@
     </details>
 
     <details class="panel">
+      <summary>💵 Sponsors</summary>
+      <div class="panel-body">
+        <div id="sponsor-list"></div>
+        <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
+        <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
+        <div class="sp-timing">
+          <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
+          <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
+        </div>
+        <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
+      </div>
+    </details>
+
+    <details class="panel">
       <summary>🎬 Broadcast cards</summary>
       <div class="panel-body">
         <button id="card-starting" class="fxbtn takeover">🕐 Starting Soon (full screen)</button>
@@ -813,7 +851,15 @@
           <button id="copy-url-btn" class="ghost small">Copy</button>
           <button id="open-url-btn" class="ghost small">Open ▸</button>
         </div>
-        <p class="hint">Add this URL to OBS as a Browser Source (1920×1080).</p>
+        <p class="hint">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+        <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
+
+        <span class="sublabel">Share the recap</span>
+        <div class="urlbar">
+          <input id="recap-url" readonly />
+          <button id="copy-recap-btn" class="ghost small">Copy</button>
+        </div>
+        <p class="hint">A public scoreboard page for parents — score and line score only, never lineups.</p>
         <div class="practice-row">
           <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
           <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>

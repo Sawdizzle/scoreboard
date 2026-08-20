@@ -261,6 +261,15 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .help-tip { margin-top: 12px !important; padding: 10px 12px; border-left: 3px solid var(--steel);
   background: var(--bg-2); border-radius: 0 8px 8px 0; font-size: 13px; }
 
+/* Sponsors */
+.sp-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.sp-row input { margin-top: 0; padding: 10px; font-size: 16px; }
+.fxbtn.sp-del { width: auto; margin: 0; padding: 10px 12px; }
+.sp-toggle { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 14px; color: var(--chalk); }
+.sp-toggle input { width: 20px; height: 20px; accent-color: var(--steel); }
+.sp-timing { display: flex; gap: 10px; }
+.sp-timing .fld { flex: 1; }
+
 /* Unsent scoring, queued while the signal is out */
 .pending { font-size: 12px; font-weight: 800; color: #fff; background: var(--out);
   border-radius: 999px; padding: 3px 9px; white-space: nowrap; }

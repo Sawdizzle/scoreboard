@@ -176,3 +176,18 @@ body.takeover #bug-wrap { display: none; }
   #card.takeover::before, #card.takeover::after { animation: none; }
   .card.takeover-card.enter > * { animation: none; }
 }
+
+/* ---- Sponsor bug ----------------------------------------------------------
+   Opposite corner from the usual scorebug, small, and gone again in seconds. */
+#sponsor-bug { position: fixed; top: 48px; right: 48px; z-index: 11;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 20px 26px; border-radius: calc(var(--radius) + 4px);
+  background: var(--panel); border: 1px solid var(--line); color: var(--chalk);
+  font-family: var(--disp); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  opacity: 0; transform: translateY(-12px); transition: opacity 0.6s ease, transform 0.6s ease; }
+#sponsor-bug.on { opacity: 1; transform: none; }
+#sponsor-bug[hidden] { display: none; }
+#sponsor-bug img { max-width: 240px; max-height: 120px; object-fit: contain; }
+#sponsor-bug .sp-kicker { font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--steel); }
+#sponsor-bug .sp-name { font-size: 34px; font-weight: 900; }
+body.takeover #sponsor-bug { display: none; }
