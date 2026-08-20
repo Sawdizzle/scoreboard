@@ -819,6 +819,96 @@ function resetReplayUi() {
   if (replayTick) { clearInterval(replayTick); replayTick = null; }
 }
 
+// ---- Game setup sheet -----------------------------------------------------
+const suVal = (id) => $(id).value.trim();
+$('setup-btn').onclick = () => { fillSetup(); $('setup-sheet').hidden = false; };
+$('setup-cancel').onclick = () => { $('setup-sheet').hidden = true; };
+
+$('delete-game').onclick = async () => {
+  if (!game) return;
+  if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
+  const id = game.id;
+  $('setup-sheet').hidden = true;
+  stopDemo(); keepAwake(false);
+  await teardownChannel();
+  const { error } = await db.from('games').delete().eq('id', id);
+  if (error) return alert(error.message);
+  game = null; show('lobby'); await loadGames();
+};
+
+$('reset-game').onclick = async () => {
+  if (!game) return;
+  if (!confirm('Reset this game to 0? Score, situation, clock, cards and undo history are cleared. Teams and look are kept.')) return;
+  const sport = game.sport || 'baseball';
+  const patch = {
+    status: 'live', home_score: 0, away_score: 0,
+    home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0,
+    line_score: [], current_animation: null, card: null, rally_mode: false,
+    clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds || null,
+  };
+  if (sport === 'baseball') Object.assign(patch, {
+    inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
+    bases: { first: false, second: false, third: false }, pitch_count: 0,
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 } },
+  });
+  else if (sport === 'football') patch.state = F.fbState({});
+  else if (sport === 'soccer') patch.state = S.scState({});
+  else if (sport === 'volleyball') patch.state = V.vbState({});
+  else if (sport === 'basketball') patch.state = B.bkState({});
+  await db.from('events').delete().eq('game_id', game.id); // wipe undo history
+  $('setup-sheet').hidden = true;
+  await writeField(patch);
+  showToast('↺ Game reset');
+};
+function fillSetup() {
+  $('su-sport').value = game.sport || 'baseball';
+  $('su-style').value = game.style || 'bar';
+  $('su-away-name').value = game.away_name || '';
+  $('su-away-abbr').value = game.away_abbr || '';
+  $('su-away-logo').value = game.away_logo_url || '';
+  $('su-away-color').value = game.away_color || '#7a8794';
+  $('su-home-name').value = game.home_name || '';
+  $('su-home-abbr').value = game.home_abbr || '';
+  $('su-home-logo').value = game.home_logo_url || '';
+  $('su-home-color').value = game.home_color || '#1b2a41';
+  $('su-startsat').value = toLocalInput(game.starts_at);
+  $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
+  $('su-regulation').value = game.regulation_innings || '';
+  $('su-show-clock').checked = !!game.show_clock;
+  $('su-show-batter').checked = !!game.show_batter;
+  $('su-show-pitcher').checked = !!game.show_pitcher;
+  $('su-show-pitchcount').checked = !!game.show_pitchcount;
+  $('su-show-runrule').checked = !!game.show_runrule;
+  $('su-show-rhe').checked = !!game.show_rhe;
+}
+$('setup-save').onclick = async () => {
+  const mins = parseInt($('su-time').value, 10);
+  const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
+  const sport = $('su-sport').value;
+  const patch = {
+    sport, style: $('su-style').value,
+    away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
+    away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
+    home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
+    home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
+    time_limit_seconds,
+    starts_at: fromLocalInput($('su-startsat').value),
+    show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
+    show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
+    show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
+    regulation_innings: parseInt($('su-regulation').value, 10) || 0,
+  };
+  // Reset the clock's remaining time if the limit changed and it isn't running.
+  if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
+  // Initialize sport-specific situation the first time a game switches sport.
+  if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
+  if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
+  if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
+  if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
+  $('setup-sheet').hidden = true;
+  await writeField(patch);
+};
+
 // <input type="datetime-local"> speaks local wall time; the column is timestamptz.
 function toLocalInput(iso) {
   if (!iso) return '';
