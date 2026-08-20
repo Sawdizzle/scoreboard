@@ -198,6 +198,7 @@ function setConn(state) {
 }
 // Re-pull the authoritative row (heals any updates missed while disconnected).
 async function reloadGame(id) {
+  if (pending.length) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
   if (!error && data) { game = data; renderGame(); }
 }
@@ -206,9 +207,11 @@ async function subscribe(id) {
   setConn('connecting');
   channel = supabase.channel(`ctrl:${id}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${id}` },
-      (payload) => { game = payload.new; renderGame(); })
+      // While writes are queued the server row is behind us; taking it would
+      // roll the pad back to a score we've already moved past.
+      (payload) => { if (pending.length) return; game = payload.new; renderGame(); })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') { setConn('live'); reloadGame(id); }
+      if (status === 'SUBSCRIBED') { setConn('live'); drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         setConn('down');
         if (!ctrlReconnect && game && game.id === id) {
@@ -229,22 +232,68 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Atomic apply via RPC (snapshots prev_state for undo). Optimistic UI.
+//
+// Field LTE drops. It used to roll the score back and toast — meaning a pitch you
+// scored simply vanished, and you'd have to notice and re-enter it mid-inning.
+// Now the optimistic state stands and the write joins a queue that drains in
+// order when the network returns. The overlay already survives disconnects by
+// holding its last state; this is the pad's half of that.
+const pending = [];      // FIFO of {type, patch, payload} not yet accepted
+let draining = false;
+let drainTimer = null;
+
 async function commit(res) {
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
   haptic();
   const prev = game;
   game = { ...game, ...res.patch };
   renderGame();
-  const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: res.type, p_new: res.patch, p_payload: res.payload || {} });
-  // Non-blocking: an alert() here would freeze the pad mid-broadcast.
-  if (error) { game = prev; renderGame(); return showToast(`⚠️ Didn't save — ${error.message}`, 3000); }
-  game = data; renderGame();
+  pending.push({ type: res.type, patch: res.patch, payload: res.payload || {} });
+  renderPending();
+  drain();
   // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
   if (maybeWalkoff(prev, game)) { /* walk-off fired */ }
   else if (res.anim) fireAnim(res.anim);
   else if (res.type === 'run' || res.payload?.runs) fireAnim('run');
   else if (res.type === 'strikeout') fireAnim('strikeout');
 }
+
+// Strictly in order: each patch holds absolute values, so replaying them out of
+// sequence would undo later work.
+async function drain() {
+  if (draining || !pending.length || !game) return;
+  draining = true;
+  while (pending.length) {
+    const w = pending[0];
+    const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: w.type, p_new: w.patch, p_payload: w.payload });
+    if (error) {
+      draining = false;
+      renderPending(error.message);
+      clearTimeout(drainTimer);
+      drainTimer = setTimeout(drain, 4000); // keep trying; the game doesn't stop
+      return;
+    }
+    pending.shift();
+    // The server row is only authoritative once it has seen everything we sent.
+    if (!pending.length && data) { game = data; renderGame(); }
+    renderPending();
+  }
+  draining = false;
+}
+
+function renderPending(err) {
+  const el = $('pending-badge'); if (!el) return;
+  el.hidden = !pending.length;
+  if (!pending.length) return;
+  el.textContent = `⏳ ${pending.length}`;
+  el.title = err ? `${pending.length} change(s) waiting to save — ${err}` : `${pending.length} change(s) saving…`;
+}
+// Anything that suggests the network is back is a reason to try again.
+addEventListener('online', drain);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) drain(); });
+// Closing the pad with unsaved scoring would lose it — the queue is memory-only
+// on purpose, since replaying stale patches over a reloaded state is worse.
+addEventListener('beforeunload', (e) => { if (pending.length) { e.preventDefault(); e.returnValue = ''; } });
 
 // Home takes the lead in the bottom of the final (regulation+) inning → walk-off.
 // Opt-in: only when regulation_innings is set (> 0). Returns true if it fired.

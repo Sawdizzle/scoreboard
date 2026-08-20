@@ -261,6 +261,11 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .help-tip { margin-top: 12px !important; padding: 10px 12px; border-left: 3px solid var(--steel);
   background: var(--bg-2); border-radius: 0 8px 8px 0; font-size: 13px; }
 
+/* Unsent scoring, queued while the signal is out */
+.pending { font-size: 12px; font-weight: 800; color: #fff; background: var(--out);
+  border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.pending[hidden] { display: none; }
+
 /* Connection status dot */
 .conn-dot { margin-left: auto; align-self: center; font-size: 13px; line-height: 1; }
 .conn-dot[data-state="live"] { color: var(--ball); }
