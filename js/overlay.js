@@ -6,9 +6,10 @@ import * as audio from './audio.js';
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
 if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
-// The OBS replay relay is on by default. Add &replay=0 to any EXTRA copy of the
-// overlay (a second scene, a preview tab) so one press doesn't save two clips.
-const replayEnabled = !/^(0|off|no|false)$/i.test(params.get('replay') || '');
+// OBS control (replay clips + camera switching) is on by default. Add &obs=0 to
+// any EXTRA copy of the overlay — a preview tab, or a second browser source —
+// so one press doesn't save two clips. &replay=0 is the older spelling.
+const obsEnabled = !/^(0|off|no|false)$/i.test(params.get('obs') || params.get('replay') || '');
 
 const el = {
   bug: document.getElementById('bug'),
@@ -142,6 +143,8 @@ function render(s) {
 
   replayHello();
   handleReplay(s.replay_cmd);
+  if (!scenesSent) { scenesSent = true; reportScenes(); }
+  handleScene(s.scene_cmd);
 }
 
 // Audio needs one gesture in a normal browser; OBS browser sources autoplay.
@@ -558,7 +561,7 @@ let helloSent = false;
 let obsLevel = null;      // cached control level (a source reloads if you change it)
 let bufferOn = null;      // null = unknown
 async function sendStatus() {
-  if (!replayEnabled || !gameId) return;
+  if (!obsEnabled || !gameId) return;
   if (obsLevel === null) obsLevel = await obsControlLevel();
   if (obsLevel < 0) return; // not in OBS: stay silent, a preview tab must not speak for the source
   await ackReplay(0, canSaveReplay(obsLevel), 'hello', obsLevel, bufferOn);
@@ -612,10 +615,51 @@ function flushScheduled() {
   for (const [nonce, timer] of [...scheduled]) { clearTimeout(timer); scheduled.delete(nonce); doSave(nonce); }
 }
 
+// ---- OBS scenes (camera switching) ----------------------------------------
+// obs-browser can't show or hide an individual source, so a camera change is a
+// scene change: one scene per camera with the scorebug shared into each.
+// setCurrentScene needs ADVANCED (4); reading the list needs only READ_USER (2),
+// so a Basic-permission source still reports what it sees and the pad can say
+// exactly which setting to raise.
+const sceneName = (v) => (typeof v === 'string' ? v : v && v.name) || '';
+let scenesSent = false;
+async function reportScenes() {
+  if (!obsEnabled || !gameId) return;
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < 0) return; // not in OBS: stay silent
+  const [list, cur] = await Promise.all([obsAsk('getScenes', null), obsAsk('getCurrentScene', null)]);
+  const names = Array.isArray(list) ? list.map(sceneName).filter(Boolean).slice(0, 60) : [];
+  const { error } = await db.rpc('set_obs_scenes', {
+    p_game: gameId, p_level: obsLevel, p_current: sceneName(cur), p_scenes: names,
+  });
+  if (error) console.warn('scene report failed', error.message);
+}
+// OBS tells us when either changes, so the pad's camera list needs no polling —
+// and a switch made at the OBS machine shows up on the pad too.
+addEventListener('obsSceneChanged', reportScenes);
+addEventListener('obsSceneListChanged', reportScenes);
+
+let lastSceneNonce = 0;
+let scenePrimed = false;
+async function handleScene(cmd) {
+  if (!obsEnabled || !gameId) return;
+  const nonce = (cmd && Number(cmd.nonce)) || 0;
+  if (!scenePrimed) { scenePrimed = true; lastSceneNonce = nonce; return; } // never re-switch on reload
+  if (!nonce || nonce <= lastSceneNonce) return;
+  lastSceneNonce = nonce;
+  if (obsLevel === null) obsLevel = await obsControlLevel();
+  if (obsLevel < 4 || typeof window.obsstudio?.setCurrentScene !== 'function') return reportScenes();
+  const name = String(cmd.name || '');
+  if (!name) return;
+  try { window.obsstudio.setCurrentScene(name); }
+  catch (e) { console.warn('scene switch failed', e); }
+  reportScenes(); // obsSceneChanged also fires; this covers OBS builds that don't send it
+}
+
 let lastReplayNonce = 0;
 let replayPrimed = false;
 async function handleReplay(cmd) {
-  if (!replayEnabled || !gameId) return;
+  if (!obsEnabled || !gameId) return;
   const nonce = (cmd && Number(cmd.nonce)) || 0;
   // Adopt whatever is on the row at first paint (usually nothing) so a reload
   // never re-clips, then fire on anything strictly newer.

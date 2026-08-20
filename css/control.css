@@ -190,6 +190,14 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* Camera (OBS scene) switcher */
+.scene-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fxbtn.scene { padding: 16px 10px; text-align: left; background: var(--bg-2); }
+.fxbtn.scene.on { background: var(--ball); border-color: var(--ball); color: #fff; }
+.fxbtn.scene:disabled { opacity: 0.5; }
+#scene-hint[data-tone="ok"] { color: var(--ball); }
+#scene-hint[data-tone="warn"] { color: var(--out); }
+
 /* Lobby help / setup instructions */
 .help { margin-top: 18px; }
 .help-h { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 8px 2px; }

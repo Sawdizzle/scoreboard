@@ -79,10 +79,24 @@
             <li><b>Width 1920 · Height 1080</b>, FPS 30 or 60.</li>
             <li>Leave <b>Custom CSS</b> alone — the page is already transparent.</li>
             <li><b>Uncheck “Shutdown source when not visible”</b> — keeps the live connection alive between scenes.</li>
-            <li><b>Page permissions: “Basic access to OBS”</b> — required for the 🎞️ Clip button. Defaults to no access.</li>
+            <li><b>Page permissions</b> — “Basic access to OBS” for the 🎞️ Clip button, or <b>“Advanced access to OBS”</b> if you also want to switch cameras from the pad. Defaults to no access.</li>
             <li>Check <b>“Control audio via OBS”</b> so overlay sounds reach the stream. In the Audio Mixer, set that source's monitoring to “Monitor and Output” to also hear it in your headphones.</li>
           </ul>
           <p class="help-tip">Size and place the bug from <b>🎨 Appearance</b> (3×3 position grid + scale) instead of resizing the source — the source should stay 1920×1080.</p>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🎥 Switching cameras</summary>
+        <div class="panel-body help-body">
+          <p>OBS can't show or hide one source from a web page, so a camera change is a <b>scene</b> change. Build it like this:</p>
+          <ol>
+            <li>One scene per camera — “Center Field”, “Backstop”, and so on, each with just that camera in it.</li>
+            <li>Add the scorebug to the second scene with <b>+ → Browser → “Add Existing” → Scorebug</b>. Do <i>not</i> create a second browser source.</li>
+            <li>On that source, set <b>Page permissions: “Advanced access to OBS”</b> — a step above what clips need.</li>
+          </ol>
+          <p>Then <b>🎥 Cameras</b> on the game screen lists your scenes, highlights the one on air, and cuts to whichever you tap using your configured transition. Switch at the OBS machine instead and the pad follows along.</p>
+          <p class="help-tip"><b>“Add Existing” matters.</b> A duplicate browser source is a second overlay: doubled audio, and one Clip press saving two files. If you ever do need a second copy, add <b>&amp;obs=0</b> to its URL so only one of them talks to OBS.</p>
         </div>
       </details>
 
@@ -416,6 +430,14 @@
 
     </div><!-- /.col-live -->
     <div class="col-panels">
+
+    <details class="panel">
+      <summary>🎥 Cameras</summary>
+      <div class="panel-body">
+        <div id="scene-list" class="scene-list"></div>
+        <p id="scene-hint" class="hint"></p>
+      </div>
+    </details>
 
     <details class="panel">
       <summary>🎬 Broadcast cards</summary>

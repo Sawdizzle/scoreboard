@@ -541,6 +541,39 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- OBS scenes (camera switching) ----------------------------------------
+// One scene per camera in OBS, the scorebug source shared into each; tapping a
+// name cuts to it through whatever transition OBS is set to. The list is
+// whatever the overlay reports seeing, so it can't drift from reality.
+async function switchScene(name) {
+  if (!game) return;
+  haptic();
+  const scene_cmd = { nonce: nextNonce(), name };
+  const { error } = await db.from('games').update({ scene_cmd }).eq('id', game.id);
+  if (error) showToast(`⚠️ ${error.message}`, 3000);
+}
+function renderScenes() {
+  const list = $('scene-list'), hint = $('scene-hint');
+  if (!list || !game) return;
+  const obs = game.obs_scenes;
+  const names = (obs && Array.isArray(obs.list) ? obs.list : []).filter((n) => typeof n === 'string');
+  const level = obs ? obs.level | 0 : -1;
+  list.innerHTML = '';
+  for (const name of names) {
+    const b = document.createElement('button');
+    b.className = 'fxbtn scene' + (name === obs.current ? ' on' : '');
+    b.textContent = name;
+    b.onclick = () => switchScene(name);
+    b.disabled = level < 4;
+    list.appendChild(b);
+  }
+  hint.dataset.tone = 'warn';
+  if (!obs) hint.textContent = 'Open the overlay in OBS to see your scenes here.';
+  else if (level < 4) hint.textContent = '⚠️ Set the overlay source’s Page permissions to “Advanced access to OBS” to switch cameras from here.';
+  else if (!names.length) hint.textContent = 'OBS reported no scenes.';
+  else { hint.textContent = `On air: ${obs.current || '—'}`; hint.dataset.tone = 'ok'; }
+}
+
 // ---- OBS replay buffer ----------------------------------------------------
 // This pad has no window.obsstudio, so we can't clip directly: we stamp a nonce
 // and the overlay browser source (which IS inside OBS) calls saveReplayBuffer()
@@ -1240,6 +1273,7 @@ function renderGame() {
   else renderBaseballControl();
   renderRally();
   renderReplay();
+  renderScenes();
   renderAudio();
   renderLook();
   renderClock();

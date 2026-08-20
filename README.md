@@ -54,6 +54,12 @@ Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mod
 
 If the overlay runs as a browser source in more than one scene, add **`&replay=0`** to the extra copies — otherwise one press saves one clip per source.
 
+## Camera switching
+
+**🎥 Cameras** on the game screen lists your OBS scenes, highlights the one on air, and cuts to whichever you tap — through whatever transition OBS is set to. Switch at the OBS machine instead and the pad follows, because the overlay reports on OBS's own `obsSceneChanged` / `obsSceneListChanged` events rather than polling.
+
+obs-browser has no show/hide for an individual source, so a camera change is a scene change: one scene per camera, and the **same** scorebug source shared into each via "Add Existing" (a duplicate browser source means two overlays — doubled audio and two files per clip; add `&obs=0` to any extra copy). Needs **Page permissions: "Advanced access to OBS"** — `setCurrentScene` is ADVANCED, one tier above the BASIC that clips need. At Basic the pad still lists the scenes (reading them is READ_USER) and tells you which setting to raise.
+
 ## Broadcast cards
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
