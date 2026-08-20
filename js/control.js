@@ -541,6 +541,34 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- OBS permission tiers -------------------------------------------------
+// The overlay's page permissions decide how much of OBS the pad may drive. Every
+// tier is a legitimate way to run the app: at "no access" the scorebug, cards,
+// takeovers, moments and sound all work exactly the same — that's the whole
+// product for most people. So a feature you haven't unlocked reads as muted
+// information, never as a warning; amber is kept for things that are actually
+// misconfigured, like a replay buffer that isn't running.
+const OBS_TIER = { 3: 'Basic', 4: 'Advanced', 5: 'Full' };
+// Any of the three reporters carries the level; take the freshest one we have.
+function obsLevel() {
+  if (!game) return null;
+  const src = [game.obs_status, game.obs_scenes, game.replay_ack]
+    .filter((o) => o && typeof o.level === 'number')
+    .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))[0];
+  return src ? src.level | 0 : null;
+}
+// The one sentence explaining why a locked feature is locked.
+function needNote(need) {
+  const lvl = obsLevel();
+  if (lvl === null) return { tone: 'off', text: 'Open the overlay in OBS to use this.' };
+  return { tone: 'off', text: `Needs Page permissions “${OBS_TIER[need]} access to OBS” on the overlay source — you're on “${OBS_TIER[lvl] || 'No access'}”. Everything else keeps working.` };
+}
+function setNeedBadge(id, need) {
+  const el = $(id); if (!el) return;
+  const lvl = obsLevel();
+  el.textContent = lvl !== null && lvl >= need ? '' : `needs ${OBS_TIER[need]}`;
+}
+
 // ---- OBS stream / record / replay buffer ----------------------------------
 // Ending a stream from a phone in your pocket has to be hard to do by accident,
 // but a modal would freeze the pad mid-broadcast (the same reason commit() never
@@ -603,18 +631,19 @@ function renderObs() {
     b.classList.toggle('live', running && cfg.danger);
     b.classList.toggle('armed', obsArmed === key);
   }
+  setNeedBadge('obs-need', 5);
   const hint = $('obs-hint'); if (!hint) return;
-  hint.dataset.tone = 'warn';
-  if (obsNote) hint.textContent = obsNote;
-  else if (!game.obs_status) hint.textContent = 'Open the overlay in OBS to control the stream.';
-  else if (level < 4) hint.textContent = '⚠️ Set the overlay source\'s Page permissions to "Full access to OBS" to run the stream from here.';
-  else if (level < 5) hint.textContent = '⚠️ Buffer only — "Full access to OBS" is needed for stream and record.';
-  else {
-    const bits = [st.streaming ? 'live' : 'off air', st.recording ? (st.paused ? 'recording paused' : 'recording') : null,
-                  st.buffer ? 'buffer on' : 'buffer off'].filter(Boolean);
-    hint.textContent = `OBS: ${bits.join(' · ')}`;
-    hint.dataset.tone = st.streaming ? 'ok' : 'warn';
+  if (obsNote) { hint.dataset.tone = 'warn'; hint.textContent = obsNote; return; }
+  if (level < 5) {
+    const note = needNote(5);
+    hint.dataset.tone = note.tone;
+    hint.textContent = level >= 4 ? `Replay buffer only. ${note.text}` : note.text;
+    return;
   }
+  const bits = [st.streaming ? 'live' : 'off air', st.recording ? (st.paused ? 'recording paused' : 'recording') : null,
+                st.buffer ? 'buffer on' : 'buffer off'].filter(Boolean);
+  hint.dataset.tone = st.streaming ? 'ok' : 'off';
+  hint.textContent = `OBS: ${bits.join(' · ')}`;
 }
 
 // ---- OBS scenes (camera switching) ----------------------------------------
@@ -643,11 +672,15 @@ function renderScenes() {
     b.disabled = level < 4;
     list.appendChild(b);
   }
-  hint.dataset.tone = 'warn';
-  if (!obs) hint.textContent = 'Open the overlay in OBS to see your scenes here.';
-  else if (level < 4) hint.textContent = '⚠️ Set the overlay source’s Page permissions to “Advanced access to OBS” to switch cameras from here.';
-  else if (!names.length) hint.textContent = 'OBS reported no scenes.';
-  else { hint.textContent = `On air: ${obs.current || '—'}`; hint.dataset.tone = 'ok'; }
+  setNeedBadge('scene-need', 4);
+  if (level < 4) {
+    const note = needNote(4);
+    hint.dataset.tone = note.tone; hint.textContent = note.text;
+  } else if (!names.length) {
+    hint.dataset.tone = 'off'; hint.textContent = 'OBS reported no scenes.';
+  } else {
+    hint.dataset.tone = 'ok'; hint.textContent = `On air: ${obs.current || '—'}`;
+  }
 }
 
 // ---- OBS replay buffer ----------------------------------------------------
@@ -657,7 +690,7 @@ function renderScenes() {
 // the buffer is even running, which is the thing you want to know before first
 // pitch rather than after the play.
 const REPLAY_FAIL = {
-  noperm: { tone: 'bad', text: '⚠️ OBS page permissions too low — set the overlay source to “Basic access to OBS”.' },
+  noperm: { tone: 'off', text: 'Clips need Page permissions “Basic access to OBS” on the overlay source.' },
   nobuffer: { tone: 'bad', text: '⚠️ Replay buffer isn’t running in OBS.' },
   failed: { tone: 'bad', text: '⚠️ OBS refused the clip.' },
   noconfirm: { tone: 'warn', text: '🎞️ Sent, but OBS didn’t confirm — check your replay folder.' },
@@ -775,7 +808,7 @@ function renderReplay() {
 }
 // Idle line: what the overlay last told us about itself.
 function replayStatus(ack) {
-  if (!ack) return { tone: 'warn', text: 'Open the overlay in OBS to enable clips.' };
+  if (!ack) return { tone: 'off', text: 'Open the overlay in OBS to enable clips.' };
   if (!ack.ok && ack.code === 'hello') return REPLAY_FAIL.noperm;
   if (ack.buffering === false) return REPLAY_FAIL.nobuffer;
   return { tone: 'ok', text: '🎞️ OBS link ready.' };

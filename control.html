@@ -71,6 +71,22 @@
       </details>
 
       <details class="panel">
+        <summary>🔐 How much OBS access to give</summary>
+        <div class="panel-body help-body">
+          <p>One dropdown decides how much of OBS this app may touch: the overlay source's <b>Page permissions</b>. Every setting below is a fine way to run the app — pick the lowest one that covers what you actually want.</p>
+          <table class="help-table">
+            <tr><th>Page permissions</th><th>What you get</th></tr>
+            <tr><td><b>No access</b><br><span class="t-sub">the default</span></td><td>Scorebug, all cards and takeovers, moments, sound, camera-independent everything. The whole overlay works.</td></tr>
+            <tr><td><b>Basic</b></td><td>…plus <b>🎞️ Clip</b> and auto-clip.</td></tr>
+            <tr><td><b>Advanced</b></td><td>…plus <b>🎥 Cameras</b> (scene switching) and starting/stopping the replay buffer.</td></tr>
+            <tr><td><b>Full</b></td><td>…plus <b>📡 Go live</b>, end stream, and record.</td></tr>
+          </table>
+          <p>The pad adapts on its own: anything above your level is greyed out with a <span class="t-need">needs advanced</span> tag on the panel, and the note under it tells you which setting to raise. Nothing breaks and nothing nags — a locked feature is a choice you haven't made, not an error.</p>
+          <p class="help-tip">Changing the dropdown reloads the source, which is also how the pad finds out. If the pad still shows the old level, right-click the source → Refresh.</p>
+        </div>
+      </details>
+
+      <details class="panel">
         <summary>🖥️ OBS browser source settings</summary>
         <div class="panel-body help-body">
           <p>Sources → <b>+</b> → <b>Browser</b>, name it “Scorebug”.</p>
@@ -79,7 +95,7 @@
             <li><b>Width 1920 · Height 1080</b>, FPS 30 or 60.</li>
             <li>Leave <b>Custom CSS</b> alone — the page is already transparent.</li>
             <li><b>Uncheck “Shutdown source when not visible”</b> — keeps the live connection alive between scenes.</li>
-            <li><b>Page permissions</b> — defaults to no access. <b>Basic</b> for the 🎞️ Clip button, <b>Advanced</b> to also switch cameras and start the replay buffer, <b>Full</b> to also go live and record from the pad.</li>
+            <li><b>Page permissions</b> — see “How much OBS access to give” above. Leave it at <b>No access</b> if you only want the scorebug and cards.</li>
             <li>Check <b>“Control audio via OBS”</b> so overlay sounds reach the stream. In the Audio Mixer, set that source's monitoring to “Monitor and Output” to also hear it in your headphones.</li>
           </ul>
           <p class="help-tip">Size and place the bug from <b>🎨 Appearance</b> (3×3 position grid + scale) instead of resizing the source — the source should stay 1920×1080.</p>
@@ -446,7 +462,7 @@
     <div class="col-panels">
 
     <details class="panel">
-      <summary>📡 Stream &amp; record</summary>
+      <summary><span>📡 Stream &amp; record</span><span class="panel-need" id="obs-need"></span></summary>
       <div class="panel-body">
         <div class="obs-row">
           <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
@@ -458,7 +474,7 @@
     </details>
 
     <details class="panel">
-      <summary>🎥 Cameras</summary>
+      <summary><span>🎥 Cameras</span><span class="panel-need" id="scene-need"></span></summary>
       <div class="panel-body">
         <div id="scene-list" class="scene-list"></div>
         <p id="scene-hint" class="hint"></p>

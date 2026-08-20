@@ -190,6 +190,13 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .adj-row > b { font-family: var(--num); font-size: 20px; min-width: 2.4ch; text-align: center; }
 .adj-row .base-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; }
 
+/* Permission tiers: a feature you haven't enabled is a choice, not a fault, so
+   it reads muted. Amber is reserved for "you enabled this and it's misbehaving". */
+.panel > summary { gap: 8px; }
+.panel-need { margin-left: auto; margin-right: 8px; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; }
+.hint[data-tone="off"] { color: var(--muted); }
+
 /* OBS stream / record / buffer */
 .obs-row { display: flex; gap: 8px; }
 .fxbtn.obsbtn { flex: 1; background: var(--bg-2); }
@@ -217,6 +224,11 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .help-body li { margin: 7px 0; }
 .help-body b { color: var(--chalk); }
 .help-body li, .help-body p { color: #c3ccdc; }
+.help-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+.help-table th, .help-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; color: #c3ccdc; }
+.help-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.help-table .t-sub { color: var(--muted); font-size: 11px; }
+.t-need { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
 .help-tip { margin-top: 12px !important; padding: 10px 12px; border-left: 3px solid var(--steel);
   background: var(--bg-2); border-radius: 0 8px 8px 0; font-size: 13px; }
 

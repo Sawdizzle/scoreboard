@@ -54,6 +54,19 @@ Requires, in OBS: the replay buffer **enabled** (Settings → Output; Simple mod
 
 If the overlay runs as a browser source in more than one scene, add **`&replay=0`** to the extra copies — otherwise one press saves one clip per source.
 
+## OBS access tiers
+
+One dropdown — the overlay source's **Page permissions** — decides how much of OBS the pad may drive, and the app degrades cleanly across all four settings:
+
+| Page permissions | Unlocks |
+| --- | --- |
+| **No access** (default) | Scorebug, cards, takeovers, moments, sound — the entire overlay |
+| **Basic** | …plus 🎞️ Clip and auto-clip |
+| **Advanced** | …plus 🎥 Cameras and starting/stopping the replay buffer |
+| **Full** | …plus 📡 go live, end stream, and record |
+
+The pad reads the level the overlay reports and adapts: a panel above your level gets a muted `needs advanced` tag, disabled buttons, and one line naming the setting to raise. **A locked feature reads as muted, never as a warning** — amber and red are reserved for things that are genuinely misconfigured, like a replay buffer that isn't running when you press Clip. Someone who only wants a scorebug should never see a complaint.
+
 ## Running the broadcast from the pad
 
 **📡 Stream &amp; record** starts and stops the stream, the local recording, and the replay buffer. Every button reflects what OBS is actually doing rather than what was last pressed — the overlay reports on OBS's own streaming/recording/replay-buffer events, so a recording started at the machine lights up on the pad.
