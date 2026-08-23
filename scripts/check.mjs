@@ -30,7 +30,7 @@ const REQUIRED_HANDLERS = [
   'setup-btn', 'setup-save', 'setup-cancel', 'delete-game', 'reset-game',
   'new-game-btn', 'back-btn', 'logout-btn', 'undo-btn', 'signup-btn',
   'btn-ball', 'btn-strike', 'btn-foul', 'btn-out', 'btn-run', 'btn-batter', 'btn-endhalf',
-  'card-clear', 'fx-replay', 'fx-rally', 'copy-url-btn',
+  'card-clear', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
 ];
 
 // ---- 1. Syntax ------------------------------------------------------------

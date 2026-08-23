@@ -141,6 +141,15 @@
       </details>
 
       <details class="panel">
+        <summary>🎛️ Not using OBS?</summary>
+        <div class="panel-body help-body">
+          <p>The <b>OBS controls</b> switch at the top of the panel column slides the OBS-only bits out of the way: <b>📡 Stream &amp; record</b>, <b>🎥 Cameras</b>, and the <b>🎞️ Clip</b> button with its auto-clip checkbox.</p>
+          <p>Everything else stays exactly as it is — scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap. The overlay itself is just a web page, so it works as a browser source in any streaming software, or on a laptop plugged into a screen at the field.</p>
+          <p class="help-tip">It's a per-device setting, not a per-game one — the same game might be run from an OBS laptop one night and a phone that has never seen OBS the next.</p>
+        </div>
+      </details>
+
+      <details class="panel">
         <summary>🔐 How much OBS access to give</summary>
         <div class="panel-body help-body">
           <p>One dropdown decides how much of OBS this app may touch: the overlay source's <b>Page permissions</b>. Every setting below is a fine way to run the app — pick the lowest one that covers what you actually want.</p>
@@ -532,7 +541,15 @@
     </div><!-- /.col-live -->
     <div class="col-panels">
 
-    <details class="panel">
+    <div class="pad-opt">
+      <span class="pad-opt-lab">🎛️ OBS controls</span>
+      <label class="switch" title="Hide the OBS panels if you don't use OBS">
+        <input type="checkbox" id="obs-ui" checked />
+        <span class="track"><span class="knob"></span></span>
+      </label>
+    </div>
+
+    <details class="panel" id="panel-obs">
       <summary><span>📡 Stream &amp; record</span><span class="panel-need" id="obs-need"></span></summary>
       <div class="panel-body">
         <div class="obs-row">
@@ -544,7 +561,7 @@
       </div>
     </details>
 
-    <details class="panel">
+    <details class="panel" id="panel-cameras">
       <summary><span>🎥 Cameras</span><span class="panel-need" id="scene-need"></span></summary>
       <div class="panel-body">
         <div id="scene-list" class="scene-list"></div>

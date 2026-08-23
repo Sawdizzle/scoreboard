@@ -690,6 +690,25 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
+// ---- Show/hide the OBS controls ------------------------------------------
+// Plenty of people want the scorebug and nothing else — a browser source in
+// other software, or a scoreboard on a TV. Clip, Cameras and Stream & record
+// are dead weight for them, so the whole group slides away. A device
+// preference, not a game one: the same game may be run from an OBS laptop and a
+// phone that has never seen OBS.
+const OBS_UI = 'sb:obsUi';
+function applyObsUi(on) {
+  document.body.classList.toggle('no-obs', !on);
+  const box = $('obs-ui');
+  if (box) box.checked = on;
+}
+$('obs-ui').onchange = (e) => {
+  applyObsUi(e.target.checked);
+  try { localStorage.setItem(OBS_UI, e.target.checked ? '1' : '0'); } catch {}
+  showToast(e.target.checked ? '🎛️ OBS controls shown' : '🎛️ OBS controls hidden');
+};
+try { applyObsUi(localStorage.getItem(OBS_UI) !== '0'); } catch { applyObsUi(true); }
+
 // ---- OBS permission tiers -------------------------------------------------
 // The overlay's page permissions decide how much of OBS the pad may drive. Every
 // tier is a legitimate way to run the app: at "no access" the scorebug, cards,
