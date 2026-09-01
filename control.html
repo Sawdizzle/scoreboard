@@ -281,14 +281,27 @@
 
   <!-- GAME -->
   <section id="game-view" class="view" hidden>
-    <header class="topbar">
-      <button id="back-btn" class="ghost small">‹ Games</button>
-      <button id="undo-btn" class="undo">↶ Undo</button>
-      <button id="dw-open" class="ghost small">⋯ More</button>
-      <span id="g-batting" class="tag">Batting: —</span>
+    <header class="gm-head">
+      <button id="back-btn" class="ghost small">‹</button>
+      <div class="gm-score">
+        <b id="g-away-runs">0</b><span id="g-away-name" class="gm-abbr">VIS</span>
+        <b id="g-home-runs">0</b><span id="g-home-name" class="gm-abbr">HOME</span>
+      </div>
       <span id="pending-badge" class="pending" hidden></span>
-      <span id="conn-dot" class="conn-dot" data-state="connecting" title="Connecting…">●</span>
+      <span id="conn-dot" class="conn-dot" data-state="connecting" title="Connecting…"></span>
     </header>
+
+    <!-- Where the at-bat sits. Live on every commit, and the way into the sheet. -->
+    <button id="sit-btn" class="gm-sit" type="button">
+      <span class="gm-mid" id="sc-mid"></span>
+      <span class="gm-chev">▸</span>
+    </button>
+
+    <div class="gm-batter" id="gm-batter">
+      <span id="gm-hitter" class="gm-hitter"></span>
+      <span id="gm-vs" class="gm-vs"></span>
+      <span id="g-batting" class="tag">Batting: —</span>
+    </div>
 
     <div id="setup-guide" class="setup-guide" hidden>
       <button id="sg-head" class="sg-head" type="button">
@@ -314,12 +327,6 @@
       <button id="clock-reset" class="ghost small">↺ Reset</button>
     </div>
 
-    <div class="scorecard">
-      <div class="sc-team"><span id="g-away-name">Visitor</span><b id="g-away-runs">0</b></div>
-      <div class="sc-mid" id="sc-mid"></div>
-      <div class="sc-team"><span id="g-home-name">Home</span><b id="g-home-runs">0</b></div>
-    </div>
-
     <!-- ============ BASEBALL ============ -->
     <div class="sport-only" data-sport="baseball">
       <div class="pad">
@@ -329,18 +336,15 @@
         <button id="btn-out"    class="key out">OUT</button>
         <button id="btn-run"    class="key run">RUN</button>
         <button id="btn-batter" class="key batter">NEXT BATTER</button>
+        <!-- One bar, four hit targets: the at-bat result, which auto-advances
+             runners and the order. HR confirms the run count first. -->
+        <div class="hitbar" aria-label="At-bat result">
+          <button id="hit-1b">1B</button><span class="hb-sep" aria-hidden="true">|</span>
+          <button id="hit-2b">2B</button><span class="hb-sep" aria-hidden="true">|</span>
+          <button id="hit-3b">3B</button><span class="hb-sep" aria-hidden="true">|</span>
+          <button id="fx-homerun">HR</button>
+        </div>
       </div>
-      <span class="bases-label">At-bat result (auto-advances runners + order)</span>
-      <div class="bases-row">
-        <button id="hit-1b" class="base-btn hit">1B</button>
-        <button id="hit-2b" class="base-btn hit">2B</button>
-        <button id="hit-3b" class="base-btn hit">3B</button>
-      </div>
-      <button id="sit-btn" class="sit-open" type="button">◆ Bases · count · inning ▸</button>
-      <div class="util-row">
-        <button id="btn-endhalf" class="key util">End ½ Inning</button>
-      </div>
-      <button id="fx-homerun" class="fxbtn hr">💥 HOME RUN</button>
     </div>
 
     <!-- ============ FOOTBALL ============ -->
@@ -894,6 +898,14 @@
       </div>
     </div>
     </div><!-- /.game-cols -->
+
+    <!-- Fixed. Undo is the one thing you reach for when something has already
+         gone wrong, so it never moves and never scrolls away. -->
+    <div class="gm-bottom">
+      <button id="undo-btn" class="undo">↶ Undo</button>
+      <button id="btn-endhalf" class="gm-b sport-only" data-sport="baseball">End ½</button>
+      <button id="dw-open" class="gm-b">⋯ More</button>
+    </div>
   </section>
 
   <div id="toast" class="toast" hidden></div>

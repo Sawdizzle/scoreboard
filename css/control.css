@@ -79,14 +79,89 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .topbar { max-width: 560px; margin: 0 auto 12px; padding: 4px 4px 0; display: flex; align-items: center; justify-content: space-between; }
 .tag { color: var(--muted); font-size: 13px; } .tag b { color: var(--chalk); }
 
-/* In-game top bar sticks so Undo + the connection dot are always reachable. */
-#game-view .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 15;
-  background: var(--bg); padding: 8px 4px; box-shadow: 0 8px 14px -10px rgba(0, 0, 0, 0.7); }
+/* ---- The live screen -----------------------------------------------------
+   Everything pressed during an at-bat is in the bottom two thirds and never
+   moves. Nothing between the header and the bottom row scrolls; the pad takes
+   whatever height is left, so a taller phone gets bigger keys, not dead space. */
+.gm-head { display: flex; align-items: center; gap: 12px; padding: 6px 16px 12px; }
+.gm-head .ghost.small { padding: 9px 12px; font-size: 14px; font-weight: 600; border-radius: 12px; color: #c8d4e8; }
+.gm-score { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+.gm-score b { font-family: var(--num); font-size: 40px; font-weight: 600; line-height: 1; }
+.gm-score b.pop { animation: sc-pop 0.7s cubic-bezier(.2, .8, .2, 1); }
+.gm-score #g-home-runs { margin-left: auto; }
+.gm-abbr { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted);
+  max-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The dot marks who is batting — the same convention the overlay uses. */
+.gm-abbr.bat { color: var(--chalk); }
+.gm-abbr.bat::after { content: ' ●'; }
+
+.gm-sit { display: flex; align-items: center; gap: 12px; margin: 0 16px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  color: var(--chalk); text-align: left; }
+.gm-sit:active { filter: brightness(1.15); }
+.gm-sit:disabled { pointer-events: none; }
+.gm-sit:disabled .gm-chev { visibility: hidden; }
+.gm-mid { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.gm-chev { flex: 0 0 auto; font-size: 12px; color: var(--muted); }
+.gm-inning { font-family: var(--num); font-size: 26px; font-weight: 700; color: var(--steel); letter-spacing: 0.03em; }
+.gm-div { width: 1px; height: 30px; background: var(--line); }
+.gm-count { display: flex; flex-direction: column; gap: 3px; }
+.cd-row { display: flex; align-items: center; gap: 5px; }
+.cd-row i { width: 8px; font-size: 10px; font-weight: 800; font-style: normal; color: var(--muted); }
+.cd { width: 10px; height: 10px; border-radius: 999px; background: #1d2740; }
+.cd.b { background: #34b56a; } .cd.s { background: #e0524a; } .cd.o { background: var(--out-ui); }
+
+/* Same shape as the sheet's diamond, so opening the sheet is never a surprise. */
+.gm-mini { position: relative; flex: 0 0 auto; width: 44px; height: 44px; margin-left: auto; }
+.mb { position: absolute; width: 14px; height: 14px; border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg); background: #1d2740; border: 1px solid var(--line-2); }
+.mb.on { background: var(--out-ui); border-color: var(--out-ui); }
+.mb.b1 { left: calc(50% + 15px); top: 50%; }
+.mb.b2 { left: 50%; top: calc(50% - 15px); }
+.mb.b3 { left: calc(50% - 15px); top: 50%; }
+.mb.mh { left: 50%; top: calc(50% + 15px); width: 11px; height: 11px; background: var(--line); border-color: var(--line); }
+
+.gm-batter { display: flex; align-items: baseline; gap: 10px; padding: 10px 18px 2px; min-width: 0; }
+.gm-batter[hidden] { display: none; }
+.gm-hitter { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gm-vs { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gm-batter .tag[hidden] { display: none; }
+
+.gm-bottom { display: flex; gap: 10px; padding: 0 16px env(safe-area-inset-bottom); }
+.gm-bottom .undo { flex: 0 0 auto; padding: 16px 20px; font-size: 16px; font-weight: 800; border-radius: 14px; }
+.gm-b { flex: 1; padding: 16px 8px; font-size: 15px; font-weight: 700; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line); color: var(--chalk); }
+.gm-b:active { filter: brightness(1.2); }
+.gm-b[hidden] { display: none; }
+
+@media (max-width: 699px) {
+  body.in-game { height: 100dvh; overflow: hidden; }
+  body.in-game #game-view { max-width: none; margin: 0; padding: 0; height: 100%;
+    display: flex; flex-direction: column; min-height: 0; }
+  body.in-game .setup-guide { margin: 0 16px 10px; }
+  body.in-game .game-cols { flex: 1; min-height: 0; display: flex; }
+  body.in-game .col-live { flex: 1; min-height: 0; display: flex; flex-direction: column;
+    overflow-y: auto; overscroll-behavior: contain; padding: 10px 16px 12px; }
+  /* Baseball: nothing scrolls at all. */
+  body.in-game.bb .col-live { overflow: hidden; }
+  body.in-game.bb .col-live > .sport-only[data-sport="baseball"] { flex: 1; min-height: 0; display: flex; }
+  body.in-game.bb .pad { flex: 1; min-height: 0; grid-template-rows: 1.35fr 1fr 1fr 0.8fr; }
+  body.in-game.bb .key.ball, body.in-game.bb .key.strike { font-size: 27px; letter-spacing: 0.05em; }
+  body.in-game.bb .key { padding: 0; font-size: 20px; }
+  body.in-game.bb .key.batter { font-size: 17px; }
+}
 
 /* Tablet / desktop: live controls left, panels right. Phones stay one column. */
 @media (min-width: 700px) {
   #game-view { max-width: 1128px; }
-  #game-view .topbar { max-width: none; }
+  /* Not a flex child here, so the bar needs to be told to fill the row. */
+  .gm-head, .gm-batter { padding-left: 0; padding-right: 0; }
+  .gm-sit { width: 100%; margin: 0; }
+  /* Undo stays reachable without scrolling here too. */
+  .gm-bottom { position: sticky; bottom: 0; z-index: 15; margin-top: 16px;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--bg);
+    box-shadow: 0 -10px 14px -8px rgba(0, 0, 0, 0.6); }
+  .gm-bottom .gm-b { flex: 0 1 220px; }
   .game-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
   /* Sheets centre and round on all sides — they're dialogs here, not phone sheets. */
   .sheet { align-items: center; padding: 20px; }
@@ -151,22 +226,25 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .muted { color: var(--muted); }
 
-/* Scorecard summary */
-.scorecard { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-.sc-team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.sc-team span { color: var(--muted); font-size: 13px; text-align: center; }
-.sc-team b { font-family: var(--num); font-size: 40px; }
-.sc-team b.pop { animation: sc-pop 0.7s cubic-bezier(.2, .8, .2, 1); }
 @keyframes sc-pop { 0% { transform: scale(1); } 30% { transform: scale(1.3); color: var(--steel); } 100% { transform: scale(1); } }
-.sc-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 6px; }
-.sc-inning { color: var(--steel); font-weight: 800; font-size: 18px; }
+/* The other sports still write their three spans into the same bar. */
+.sc-inning { font-family: var(--num); font-size: 26px; font-weight: 700; color: var(--steel); letter-spacing: 0.03em; }
 .sc-count { font-family: var(--num); font-size: 20px; }
-.sc-outs { color: var(--muted); font-size: 13px; }
+.sc-outs { color: var(--muted); font-size: 13px; margin-left: auto; }
 
 /* Button pad */
-.pad { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.key { padding: 26px 10px; font-size: 22px; letter-spacing: 0.04em; color: #fff; }
-.key:active { transform: translateY(2px); filter: brightness(1.1); }
+.pad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.key { padding: 26px 10px; font-size: 22px; letter-spacing: 0.04em; color: #fff; border-radius: 18px; }
+/* No transition on the way in — a key has to look pressed before the finger
+   lifts — and a short one on the way out. */
+.key:active, .hitbar button:active { transform: translateY(2px); filter: brightness(1.12); }
+.key, .hitbar button { transition: transform 90ms ease, filter 90ms ease; }
+
+.hitbar { grid-column: 1 / -1; display: flex; align-items: center;
+  background: var(--hit-bg); border: 1px solid var(--hit-line); border-radius: 18px; }
+.hitbar button { flex: 1; align-self: stretch; padding: 16px 6px; background: none; border: none;
+  color: var(--hit-text); font-size: 17px; font-weight: 800; border-radius: 18px; }
+.hb-sep { color: var(--hit-text); opacity: 0.35; }
 .key.ball { background: var(--ball); } .key.strike { background: var(--strike); }
 .key.out { background: var(--out); } .key.run { background: var(--run); }
 .key.util { background: var(--util); font-size: 16px; padding: 18px 10px; }
@@ -306,11 +384,6 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .sit-more-body { padding-top: 4px; }
 .sit-card .sheet-actions { margin-top: 14px; background: var(--panel); }
 .sit-card .primary { padding: 17px; font-size: 16px; font-weight: 800; border-radius: 14px; }
-
-/* The live pad's one way in. */
-.sit-open { width: 100%; margin-top: 12px; padding: 14px; font-size: 14px; font-weight: 700;
-  background: var(--card); border: 1px solid var(--line); color: var(--chalk); border-radius: 16px; text-align: left; }
-.sit-open:active { filter: brightness(1.2); }
 
 /* Steppers — 46px, the smallest control in the design */
 .adj-row { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
@@ -455,10 +528,10 @@ body.no-obs .obs-only { display: none; }
 .pending[hidden] { display: none; }
 
 /* Connection status dot */
-.conn-dot { margin-left: auto; align-self: center; font-size: 13px; line-height: 1; }
-.conn-dot[data-state="live"] { color: #34b56a; }
-.conn-dot[data-state="connecting"] { color: var(--out-ui); }
-.conn-dot[data-state="down"] { color: var(--strike); animation: conn-blink 1s steps(2, start) infinite; }
+.conn-dot { flex: 0 0 auto; align-self: center; width: 9px; height: 9px; border-radius: 999px; font-size: 0; }
+.conn-dot[data-state="live"] { background: #34b56a; box-shadow: 0 0 0 4px rgba(52, 181, 106, 0.16); }
+.conn-dot[data-state="connecting"] { background: var(--out-ui); }
+.conn-dot[data-state="down"] { background: var(--strike); animation: conn-blink 1s steps(2, start) infinite; }
 @keyframes conn-blink { 50% { opacity: 0.25; } }
 
 /* Guided setup checklist */

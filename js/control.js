@@ -8,7 +8,12 @@ import * as B from './basketball.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
-const show = (view) => { for (const k in views) views[k].hidden = (k !== view); };
+const show = (view) => {
+  for (const k in views) views[k].hidden = (k !== view);
+  // The live screen is a fixed shell, not a scrolling page — the layout keys off
+  // this rather than :has(), which is newer than some of the phones in the stands.
+  document.body.classList.toggle('in-game', view === 'game');
+};
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const emailFor = (u) => `${u.trim().toLowerCase()}@${USER_EMAIL_DOMAIN}`;
 
@@ -1656,13 +1661,19 @@ function ctrlScorePop(side, val, id) {
 }
 function showSport(sport) {
   document.querySelectorAll('.sport-only').forEach((el) => { el.hidden = el.dataset.sport !== sport; });
+  // The full-face pad is baseball's; the other sports keep their scrolling pads
+  // under the same shell until they get their own key sets.
+  document.body.classList.toggle('bb', sport === 'baseball');
+  $('sit-btn').disabled = sport !== 'baseball';
+  $('g-batting').hidden = sport === 'baseball';
+  if (sport !== 'baseball') { $('gm-batter').hidden = false; $('gm-hitter').textContent = ''; $('gm-vs').textContent = ''; }
 }
 function renderGame() {
   if (!game) return;
   const sport = game.sport || 'baseball';
   showSport(sport);
-  $('g-away-name').textContent = game.away_name;
-  $('g-home-name').textContent = game.home_name;
+  $('g-away-name').textContent = game.away_abbr || game.away_name || 'VIS';
+  $('g-home-name').textContent = game.home_abbr || game.home_name || 'HOME';
   $('g-away-runs').textContent = game.away_score;
   $('g-home-runs').textContent = game.home_score;
   ctrlScorePop('away', game.away_score, 'g-away-runs');
@@ -1700,7 +1711,9 @@ function setupSteps() {
 const setupAllDone = () => setupSteps().every(([, ok]) => ok);
 function renderSetupGuide() {
   const el = $('setup-guide'); if (!el || !game) return;
-  el.hidden = false;
+  // Once every step is done it is a finished list sitting on top of the pad, and
+  // the pad is what the height belongs to. Each Set → has its own home now.
+  el.hidden = setupAllDone();
   const sport = game.sport || 'baseball';
   el.querySelector('.sg-step[data-step="lineups"]').hidden = sport !== 'baseball';
   el.querySelector('.sg-step[data-step="defense"]').hidden = sport !== 'baseball';
@@ -1785,11 +1798,33 @@ $('setup-guide').addEventListener('click', (e) => {
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
 });
 
+// Count dots read at a glance in sunlight where "2 - 1" does not; the mini
+// diamond is the same shape as the sheet's, so the sheet is never a surprise.
+const countDots = (n, of, cls) => {
+  let h = '';
+  for (let i = 0; i < of; i++) h += `<span class="cd${i < n ? ' ' + cls : ''}"></span>`;
+  return h;
+};
 function renderBaseballControl() {
   const b = L.safeBases(game.bases);
-  $('sc-mid').innerHTML = `<span class="sc-inning">${game.half === 'top' ? '▲' : '▼'} ${game.inning}</span>` +
-    `<span class="sc-count">${game.balls} - ${game.strikes}</span><span class="sc-outs">${game.outs} out</span>`;
+  $('sc-mid').innerHTML =
+    `<span class="gm-inning">${game.half === 'top' ? '▲' : '▼'} ${ordinal(game.inning).toUpperCase()}</span>` +
+    '<span class="gm-div"></span>' +
+    '<span class="gm-count">' +
+      `<span class="cd-row"><i>B</i>${countDots(game.balls, 3, 'b')}</span>` +
+      `<span class="cd-row"><i>S</i>${countDots(game.strikes, 2, 's')}</span>` +
+      `<span class="cd-row"><i>O</i>${countDots(game.outs, 2, 'o')}</span>` +
+    '</span>' +
+    '<span class="gm-mini">' +
+      `<span class="mb b1${b.first ? ' on' : ''}"></span>` +
+      `<span class="mb b2${b.second ? ' on' : ''}"></span>` +
+      `<span class="mb b3${b.third ? ' on' : ''}"></span>` +
+      '<span class="mb mh"></span>' +
+    '</span>';
   $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
+  $('g-away-name').classList.toggle('bat', game.half === 'top');
+  $('g-home-name').classList.toggle('bat', game.half === 'bottom');
+  renderBatterLine();
   $('pc-val').textContent = L.pitchCount(game);
   renderAdjust();
   $('base-1').classList.toggle('on', b.first);
@@ -1798,11 +1833,25 @@ function renderBaseballControl() {
   const on = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
   $('bases-note').textContent = 'Tap a base to set or clear a runner. ' +
     (on.length ? `${on.join(' and ')} occupied.` : 'Nobody on.');
-  $('sit-btn').textContent = `◆ ${on.length ? on.join(' · ') : 'Bases empty'} · ${game.balls}-${game.strikes} · ${game.outs} out ▸`;
   renderLineups();
   renderDefense();
   renderAutoCardLabels();
 }
+// Who is up, and who they are facing. Empty when there is no lineup yet, and
+// the row goes with it rather than sitting there as a blank strip.
+function renderBatterLine() {
+  const batSide = game.half === 'bottom' ? 'home' : 'away';
+  const bat = teamOf(batSide), i = batIdxOf(batSide);
+  const b = bat.batters[i] || {};
+  const p = teamOf(batSide === 'home' ? 'away' : 'home').pitcher;
+  const hitter = [b.num, b.name].filter(Boolean).join(' ');
+  const pitcher = [p.num, p.name].filter(Boolean).join(' ');
+  $('gm-hitter').textContent = hitter;
+  $('gm-vs').textContent = [hitter && ordinal(i + 1), pitcher && `P ${pitcher}, ${L.pitchCount(game)}`]
+    .filter(Boolean).join(' · ');
+  $('gm-batter').hidden = !hitter && !pitcher;
+}
+
 function renderFootballControl() {
   const st = F.fbState(game);
   const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
