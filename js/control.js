@@ -118,32 +118,40 @@ async function loadGames() {
   if (error) { list.textContent = error.message; return; }
   if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
   for (const g of data) {
-    const row = document.createElement('div');
-    row.className = 'game-row';
+    // Delete lives in the game's own Setup, not here: an always-visible bin on a
+    // list you scroll one-handed is a mis-tap that cannot be undone.
     const open = document.createElement('button');
-    open.className = 'game-open';
-    open.innerHTML = `<strong>${SPORT_LABEL[g.sport] || '⚾'} ${esc(g.away_name)} @ ${esc(g.home_name)}</strong>` +
-      `<span>${g.away_score}–${g.home_score} · ${esc(rowState(g))}<span class="ago">${timeAgo(g.updated_at)}</span></span>`;
+    open.className = 'game-row';
+    open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
+      `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}` +
+      `${g.status === 'live' ? '<span class="g-live">LIVE</span>' : ''}</span>` +
+      `<span class="g-state">${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span>` +
+      `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
     open.onclick = () => openGame(g.id);
-    const del = document.createElement('button');
-    del.className = 'game-del';
-    del.textContent = '🗑';
-    del.title = 'Delete game';
-    del.setAttribute('aria-label', `Delete ${g.away_name} at ${g.home_name}`);
-    del.onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm(`Delete "${g.away_name} @ ${g.home_name}"? This permanently removes the game and cannot be undone.`)) return;
-      await deleteGame(g.id);
-    };
-    row.appendChild(open); row.appendChild(del);
-    list.appendChild(row);
+    list.appendChild(open);
   }
 }
-async function deleteGame(id) {
-  const { error } = await db.from('games').delete().eq('id', id);
-  if (error) return alert(error.message);
-  await loadGames();
+
+// Help: four shortcut tiles over the same accordion, with the other ten folded
+// away. Opening a tile reveals the list so "back" is just scrolling.
+function openHelp(id) {
+  $('help-list').hidden = false;
+  $('help-all').setAttribute('aria-expanded', 'true');
+  const d = $(id);
+  if (!d) return;
+  d.open = true;
+  d.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+$('help-all').onclick = () => {
+  const list = $('help-list');
+  list.hidden = !list.hidden;
+  $('help-all').setAttribute('aria-expanded', String(!list.hidden));
+  $('help-all').textContent = list.hidden ? 'All 14 help topics ▸' : 'Hide help topics ▾';
+};
+document.querySelector('.help-tiles').addEventListener('click', (e) => {
+  const t = e.target.closest('.help-tile');
+  if (t) openHelp(t.dataset.help);
+});
 
 // New game: pick sport + style first, then create with the right initial state.
 $('new-game-btn').addEventListener('click', () => { $('newgame-sheet').hidden = false; });

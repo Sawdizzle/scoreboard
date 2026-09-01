@@ -105,19 +105,31 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 /* Mouse and trackpad get hover feedback; touch devices must never keep a stuck
    hover state after a tap, so this is gated rather than applied globally. */
 @media (hover: hover) and (pointer: fine) {
-  .key:hover, .base-btn:hover, .fxbtn:hover, .step:hover, .game-open:hover,
+  .key:hover, .base-btn:hover, .fxbtn:hover, .step:hover, .game-row:hover, .help-tile:hover,
   .primary:hover, .ghost:hover, .panel > summary:hover { filter: brightness(1.18); }
-  .game-del:hover { background: #3a1f1f; color: var(--chalk); }
   .fxbtn:disabled:hover, .obsbtn:disabled:hover { filter: none; }
 }
 
-.games-list { display: flex; flex-direction: column; gap: 8px; }
-.game-row { display: flex; align-items: stretch; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.game-open { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; background: transparent; border: none; color: var(--chalk); padding: 14px; font-weight: 600; }
-.game-open span { color: var(--muted); font-weight: 500; font-size: 13px; text-align: right; }
-.game-open .ago { display: block; font-size: 11px; opacity: 0.75; margin-top: 2px; }
-.game-del { background: transparent; border: none; border-left: 1px solid var(--line); color: var(--muted); padding: 0 16px; font-size: 18px; cursor: pointer; }
-.game-del:active { background: #3a1f1f; }
+/* Lobby: pick a game, make one, or read up. */
+.lobby-head { display: flex; align-items: center; gap: 12px; padding: 8px 2px 14px; }
+.lobby-title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.lobby-who { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--muted); }
+.lobby-head .ghost.small { font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: 12px; }
+#lobby-view .primary.big { padding: 19px; font-size: 18px; font-weight: 800; border-radius: 16px; margin: 0 0 18px; }
+
+.games-list { display: flex; flex-direction: column; gap: 9px; }
+.game-row { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; color: var(--chalk); }
+.game-row:active { filter: brightness(1.2); }
+.g-sport { flex: 0 0 auto; font-size: 22px; line-height: 1; }
+.g-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.g-name { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-live { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+  padding: 2px 7px; border-radius: 5px; background: var(--strike); color: #fff; }
+.g-state { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-score { flex: 0 0 auto; font-family: var(--num); font-size: 30px; font-weight: 600; line-height: 1; }
+.g-chev { flex: 0 0 auto; font-size: 13px; color: var(--muted); }
 .danger-row { display: flex; gap: 12px; margin-top: 14px; }
 .danger-row .fxbtn { flex: 1; }
 
@@ -306,8 +318,15 @@ body.no-obs .replay-row { display: none; }
 #scene-hint[data-tone="warn"] { color: var(--out-ui); }
 
 /* Lobby help / setup instructions */
-.help { margin-top: 18px; }
-.help-h { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 8px 2px; }
+.help { margin-top: 22px; }
+.help-h { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 9px 2px; }
+.help-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.help-tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 15px;
+  font-size: 13px; font-weight: 700; color: var(--chalk); text-align: left; }
+.help-tile:active { filter: brightness(1.2); }
+.ht-emoji { display: block; font-size: 17px; line-height: 1; margin-bottom: 6px; }
+.help-all { padding: 14px; font-size: 13px; font-weight: 700; border-radius: 14px; margin-top: 9px; }
+.help-list[hidden] { display: none; }
 .help-body { color: var(--chalk); font-size: 14px; line-height: 1.55; }
 .help-body p { margin: 8px 0; }
 .help-body ol, .help-body ul { margin: 8px 0; padding-left: 22px; }

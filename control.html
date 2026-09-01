@@ -46,20 +46,27 @@
 
   <!-- LOBBY -->
   <section id="lobby-view" class="view" hidden>
-    <header class="topbar">
-      <span class="tag">Signed in: <b id="who">—</b></span>
+    <header class="lobby-head">
+      <h1 class="lobby-title">Games</h1>
+      <b id="who" class="lobby-who">—</b>
       <button id="logout-btn" class="ghost small">Log out</button>
     </header>
-    <div class="card">
-      <button id="new-game-btn" class="primary big">+ New Game</button>
-      <h2>Your games</h2>
-      <div id="games-list" class="games-list"></div>
-    </div>
+    <button id="new-game-btn" class="primary big">+ New Game</button>
+    <div id="games-list" class="games-list"></div>
 
     <div class="help">
       <h2 class="help-h">Help &amp; setup</h2>
+      <!-- The four topics people actually open. The other ten are a tap away. -->
+      <div class="help-tiles">
+        <button class="help-tile" data-help="help-quickstart"><span class="ht-emoji">🚀</span>Quick start</button>
+        <button class="help-tile" data-help="help-obs-source"><span class="ht-emoji">🖥️</span>OBS setup</button>
+        <button class="help-tile" data-help="help-replay"><span class="ht-emoji">🎞️</span>Replay clips</button>
+        <button class="help-tile" data-help="help-trouble"><span class="ht-emoji">🔧</span>Troubleshooting</button>
+      </div>
+      <button id="help-all" class="ghost help-all" aria-expanded="false" aria-controls="help-list">All 14 help topics ▸</button>
+      <div id="help-list" class="help-list" hidden>
 
-      <details class="panel">
+      <details class="panel" id="help-quickstart">
         <summary>🚀 Quick start</summary>
         <div class="panel-body help-body">
           <ol>
@@ -168,7 +175,7 @@
         </div>
       </details>
 
-      <details class="panel">
+      <details class="panel" id="help-obs-source">
         <summary>🖥️ OBS browser source settings</summary>
         <div class="panel-body help-body">
           <p>Sources → <b>+</b> → <b>Browser</b>, name it “Scorebug”.</p>
@@ -212,7 +219,7 @@
         </div>
       </details>
 
-      <details class="panel">
+      <details class="panel" id="help-replay">
         <summary>🎞️ Instant replay clips</summary>
         <div class="panel-body help-body">
           <p>One-time OBS setup:</p>
@@ -256,7 +263,7 @@
         </div>
       </details>
 
-      <details class="panel">
+      <details class="panel" id="help-trouble">
         <summary>🔧 Troubleshooting</summary>
         <div class="panel-body help-body">
           <ul>
@@ -268,6 +275,7 @@
           </ul>
         </div>
       </details>
+      </div><!-- /#help-list -->
     </div>
   </section>
 
