@@ -1406,6 +1406,13 @@ $('adj-panel').addEventListener('click', (e) => {
   commit(ADJ[btn.dataset.adj](+btn.dataset.d));
 });
 $('adj-half').onclick = () => commit(L.onToggleHalf(game));
+
+// The situation sheet. Non-modal by the README's rule — it never blocks a
+// commit, and the pad underneath stays mounted so closing it is instant.
+const closeSit = () => { $('sit-sheet').hidden = true; };
+$('sit-btn').onclick = () => { $('sit-sheet').hidden = false; };
+$('sit-done').onclick = closeSit;
+$('sit-sheet').addEventListener('click', (e) => { if (e.target === $('sit-sheet')) closeSit(); });
 function renderAdjust() {
   const set = (id, v) => { $(id).textContent = v | 0; };
   set('adj-score-away', game.away_score); set('adj-score-home', game.home_score);
@@ -1728,6 +1735,10 @@ function renderBaseballControl() {
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
+  const on = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
+  $('bases-note').textContent = 'Tap a base to set or clear a runner. ' +
+    (on.length ? `${on.join(' and ')} occupied.` : 'Nobody on.');
+  $('sit-btn').textContent = `◆ ${on.length ? on.join(' · ') : 'Bases empty'} · ${game.balls}-${game.strikes} · ${game.outs} out ▸`;
   renderLineups();
   renderDefense();
   renderAutoCardLabels();
@@ -1795,6 +1806,7 @@ document.addEventListener('keydown', (e) => {
   if (views.game.hidden || !game) return;
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape' && !$('sit-sheet').hidden) { e.preventDefault(); return closeSit(); }
   const k = e.key.toLowerCase();
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {

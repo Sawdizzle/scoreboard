@@ -335,26 +335,10 @@
         <button id="hit-1b" class="base-btn hit">1B</button>
         <button id="hit-2b" class="base-btn hit">2B</button>
         <button id="hit-3b" class="base-btn hit">3B</button>
-        <button id="hit-e" class="base-btn">Error</button>
       </div>
-      <div class="bases">
-        <span class="bases-label">Bases</span>
-        <div class="bases-row">
-          <button id="base-1" class="base-btn">1B</button>
-          <button id="base-2" class="base-btn">2B</button>
-          <button id="base-3" class="base-btn">3B</button>
-          <button id="btn-advance" class="base-btn wide">Advance ▸</button>
-          <button id="btn-clear" class="base-btn wide">Clear</button>
-        </div>
-      </div>
+      <button id="sit-btn" class="sit-open" type="button">◆ Bases · count · inning ▸</button>
       <div class="util-row">
         <button id="btn-endhalf" class="key util">End ½ Inning</button>
-      </div>
-      <div class="pc-row">
-        <span class="pc-label">Pitch count (current P)</span>
-        <button id="pc-dn" class="step">–</button>
-        <b id="pc-val">0</b>
-        <button id="pc-up" class="step">+</button>
       </div>
       <div class="fx-pad">
         <span class="bases-label">Moments</span>
@@ -618,23 +602,6 @@
     </details>
 
     <div class="sport-only" data-sport="baseball">
-      <details class="panel">
-        <summary>✏️ Manual adjust</summary>
-        <div class="panel-body" id="adj-panel">
-          <p class="hint">Direct edits for corrections — each is undoable. Runs/hits/errors change the total only.</p>
-          <div class="adj-row"><span class="adj-lab">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button><button id="adj-half" class="base-btn">Flip ½</button></div>
-          <div class="adj-row"><span class="adj-lab">Outs</span><button class="step" data-adj="outs" data-d="-1">–</button><b id="adj-outs">0</b><button class="step" data-adj="outs" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Balls</span><button class="step" data-adj="balls" data-d="-1">–</button><b id="adj-balls">0</b><button class="step" data-adj="balls" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Strikes</span><button class="step" data-adj="strikes" data-d="-1">–</button><b id="adj-strikes">0</b><button class="step" data-adj="strikes" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Home hits</span><button class="step" data-adj="hits-home" data-d="-1">–</button><b id="adj-hits-home">0</b><button class="step" data-adj="hits-home" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Away errors</span><button class="step" data-adj="errors-away" data-d="-1">–</button><b id="adj-errors-away">0</b><button class="step" data-adj="errors-away" data-d="1">+</button></div>
-          <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
-        </div>
-      </details>
-
       <details class="panel" id="panel-lineups">
         <summary>👥 Teams &amp; lineups</summary>
         <div class="panel-body">
@@ -902,6 +869,54 @@
   </section>
 
   <div id="toast" class="toast" hidden></div>
+
+  <!-- SITUATION SHEET -->
+  <!-- Bases, count, inning and the corrections that go with them. All of it used
+       to sit under the pad, so a strike moved every time the game state changed. -->
+  <div id="sit-sheet" class="sheet" hidden>
+    <div class="sheet-card sit-card scroll">
+      <span class="grab"></span>
+      <div class="sit-head"><h3>Situation</h3><span class="sit-sub">every change is undoable</span></div>
+
+      <div class="sit-bases">
+        <div class="diamond">
+          <button id="base-2" class="dbase b2" type="button"><i></i><span class="vh">2nd base</span></button>
+          <button id="base-3" class="dbase b3" type="button"><i></i><span class="vh">3rd base</span></button>
+          <button id="base-1" class="dbase b1" type="button"><i></i><span class="vh">1st base</span></button>
+          <span class="dhome"></span>
+        </div>
+        <div class="sit-side">
+          <p id="bases-note" class="sit-note">Tap a base to set or clear a runner.</p>
+          <button id="btn-advance" class="base-btn">Advance all ▸</button>
+          <button id="btn-clear" class="base-btn">Clear bases</button>
+        </div>
+      </div>
+      <button id="hit-e" class="base-btn sit-wide">Reached on error — batter to 1st</button>
+
+      <div id="adj-panel" class="sit-steps">
+        <div class="adj-row"><span class="adj-lab">Balls</span><button class="step" data-adj="balls" data-d="-1">–</button><b id="adj-balls">0</b><button class="step" data-adj="balls" data-d="1">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Strikes</span><button class="step" data-adj="strikes" data-d="-1">–</button><b id="adj-strikes">0</b><button class="step" data-adj="strikes" data-d="1">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Outs</span><button class="step" data-adj="outs" data-d="-1">–</button><b id="adj-outs">0</b><button class="step" data-adj="outs" data-d="1">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button><button id="adj-half" class="base-btn">Flip ½</button></div>
+        <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
+
+        <details class="sit-more">
+          <summary>Runs · hits · errors</summary>
+          <div class="sit-more-body">
+            <p class="hint">Direct edits for corrections — each is undoable. Runs, hits and errors change the total only.</p>
+            <div class="adj-row"><span class="adj-lab">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab">Home hits</span><button class="step" data-adj="hits-home" data-d="-1">–</button><b id="adj-hits-home">0</b><button class="step" data-adj="hits-home" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab">Away errors</span><button class="step" data-adj="errors-away" data-d="-1">–</button><b id="adj-errors-away">0</b><button class="step" data-adj="errors-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>
+    </div>
+  </div>
 
   <!-- WALK SHEET -->
   <div id="walk-sheet" class="sheet" hidden>
