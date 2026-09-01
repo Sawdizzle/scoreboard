@@ -739,6 +739,20 @@ function needNote(need) {
   if (lvl === null) return { tone: 'off', text: 'Open the overlay in OBS to use this.' };
   return { tone: 'off', text: `Needs Page permissions “${OBS_TIER[need]} access to OBS” on the overlay source — you're on “${OBS_TIER[lvl] || 'No access'}”. Everything else keeps working.` };
 }
+// The OBS tab leads with the tier it is actually running at, so a disabled
+// control reads as "not unlocked" rather than "broken".
+function renderObsTier() {
+  const lvl = obsLevel();
+  $('obs-tier').textContent = lvl === null ? 'Not connected' : (OBS_TIER[lvl] || 'No access');
+}
+$('obs-tier-help').onclick = () => {
+  const n = $('obs-tier-note');
+  n.textContent = obsLevel() === null
+    ? 'Add the overlay to OBS as a Browser Source and open it — the pad reads its permission level from there. Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording.'
+    : 'Set it on the Browser Source: Page permissions → Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording. Everything below your level keeps working.';
+  n.hidden = !n.hidden;
+};
+
 function setNeedBadge(id, need) {
   const el = $(id); if (!el) return;
   const lvl = obsLevel();
@@ -793,6 +807,7 @@ for (const key of Object.keys(OBS_BTN)) $(OBS_BTN[key].el).onclick = () => tapOb
 
 let lastObsStatusAt = null;
 function renderObs() {
+  renderObsTier();
   if (!game) return;
   const st = game.obs_status || {};
   const level = st.level | 0;
@@ -966,7 +981,7 @@ function renderReplay() {
   if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
 
   const waiting = replayPending.size ? Math.round((soonestDeadline() - Date.now()) / 1000) : 0;
-  b.textContent = !replayPending.size ? '🎞️ Clip' : waiting > 0 ? `🎞️ Clip in ${waiting}s` : '🎞️ Saving…';
+  b.textContent = !replayPending.size ? '🎞️ Clip the last 90s' : waiting > 0 ? `🎞️ Clip in ${waiting}s` : '🎞️ Saving…';
   b.classList.toggle('busy', !!replayPending.size);
   const auto = $('replay-auto');
   if (auto) auto.checked = !!(game && game.auto_clip);
@@ -1704,7 +1719,52 @@ function renderSetupGuide() {
 }
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
-function jumpPanel(id) { const p = $(id); if (!p) return; p.open = true; p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+// ---- The drawer -----------------------------------------------------------
+// Everything set once, out of the way of everything pressed every pitch. It is
+// presentation only: the panes hold the same panel bodies the column always
+// had, so from 700px the CSS drops the sheet chrome and nothing else changes.
+// The pad underneath is never unmounted — closing the drawer must be instant.
+const DW_TAB = 'sb:drawerTab';
+const PANEL_TAB = { 'panel-lineups': 'teams', 'panel-defense': 'teams', 'panel-appearance': 'look',
+  'panel-overlay': 'obs', 'panel-cameras': 'obs', 'panel-obs': 'obs' };
+function setDrawerTab(tab) {
+  document.querySelectorAll('.dw-tab').forEach((b) => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  document.querySelectorAll('.dw-pane').forEach((p) => { p.hidden = p.dataset.tab !== tab; });
+  // A tab that opens onto four closed summaries is a menu, not a panel. Open the
+  // pane's first panel unless the operator has already chosen one in here.
+  const pane = document.querySelector(`.dw-pane[data-tab="${tab}"]`);
+  const first = pane && [...pane.querySelectorAll(':scope > details.panel, :scope > .sport-only > details.panel')]
+    .find((d) => !d.hidden && !(d.closest('.sport-only') || {}).hidden);
+  if (pane && first && !pane.querySelector('details.panel[open]')) first.open = true;
+  try { localStorage.setItem(DW_TAB, tab); } catch {}
+}
+const drawerOpen = () => $('drawer').classList.contains('open');
+function openDrawer(tab) {
+  if (tab) setDrawerTab(tab);
+  $('drawer').classList.add('open');
+}
+const closeDrawer = () => $('drawer').classList.remove('open');
+$('dw-open').onclick = () => openDrawer();
+$('dw-scrim').onclick = closeDrawer;
+document.querySelector('.dw-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('.dw-tab');
+  if (b) { setDrawerTab(b.dataset.tab); document.querySelector('.dw-body').scrollTop = 0; }
+});
+try { setDrawerTab(localStorage.getItem(DW_TAB) || 'teams'); } catch { setDrawerTab('teams'); }
+
+// The setup checklist still says "go here" — it just opens the drawer on the
+// right tab instead of scrolling a page that no longer scrolls.
+function jumpPanel(id) {
+  const p = $(id); if (!p) return;
+  openDrawer(PANEL_TAB[id] || 'teams');
+  p.open = true;
+  requestAnimationFrame(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
 
 // Accordion: opening a top-level panel closes the others, so the page never
 // grows past one open panel. Nested sub-panels (lineups, custom theme) are
@@ -1807,6 +1867,7 @@ document.addEventListener('keydown', (e) => {
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === 'Escape' && !$('sit-sheet').hidden) { e.preventDefault(); return closeSit(); }
+  if (e.key === 'Escape' && drawerOpen()) { e.preventDefault(); return closeDrawer(); }
   const k = e.key.toLowerCase();
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
