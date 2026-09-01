@@ -7,6 +7,15 @@ A live, phone-controlled **multi-sport** scoreboard overlay suite for OBS. Two s
 
 **Install on your phone:** open `/control` in Safari → Share → **Add to Home Screen**. It launches full-screen like a native app (no browser chrome, no accidental pull-to-refresh). On an iPad it lays out as two columns: live controls left, panels right.
 
+## The control panel
+
+Two rules shape it. **Everything pressed during a live at-bat is in the bottom two thirds and never moves** — on a phone the live screen is a fixed shell (score header, situation bar, batter line, pad, bottom row) and nothing between the header and the bottom row scrolls, so STRIKE is in the same place on the tenth pitch as the first. The pad takes whatever height is left, so a taller phone gets bigger keys rather than dead space. **Everything set once gets out of the way** — the ten config panels live in a pull-up drawer on four tabs (Teams · Cards · Look · OBS) behind `⋯ More`.
+
+- **Situation bar** — inning, the count as dots (three balls, two strikes, two outs) and a mini diamond, live on every commit including rows from another device. Tapping it opens the **Situation sheet**: the bases as a diamond you tap, Advance all / Clear, steppers for balls, strikes, outs and inning, pitch count, and runs/hits/errors folded away. Every edit goes through the same `commit()` path, so all of it stays undoable.
+- **The pad** — BALL · STRIKE, FOUL · OUT, RUN · NEXT BATTER, then one bar reading `1B | 2B | 3B | HR`. HR and a fourth ball open confirm sheets; nothing else asks.
+- **Bottom row** — `↶ Undo`, `End ½`, `⋯ More`, fixed. Undo is what you reach for when something has already gone wrong, so it never scrolls away.
+- The other sports use the same shell and keep their own scrolling pads until they get key sets of their own.
+
 State syncs control → Postgres → Realtime → overlay in ~250 ms. The overlay auto-reconnects and keeps last-known state on flaky networks (it never blanks mid-broadcast).
 
 ## Sports
@@ -73,7 +82,7 @@ If a laptop struggles with two cameras, "Deactivate when not showing" on the cap
 
 ## Not using OBS
 
-An **OBS controls** switch at the top of the panel column hides `📡 Stream & record`, `🎥 Cameras`, and the `🎞️ Clip` button with its auto-clip row. Scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap are untouched — the overlay is a plain web page, so it works as a browser source in any streaming software or on a laptop wired to a screen.
+An **OBS controls** switch at the top of the drawer's **OBS** tab hides `📡 Stream & record`, `🎥 Cameras`, and the `🎞️ Clip` button with its auto-clip row. Scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap are untouched — the overlay is a plain web page, so it works as a browser source in any streaming software or on a laptop wired to a screen.
 
 Stored per device (`localStorage`), not per game: the same game may be run from an OBS laptop one night and a phone that has never seen OBS the next. Defaults to on, so nothing moves for anyone already set up.
 
@@ -137,12 +146,13 @@ They breathe: a slow accent-tinted flare drifts across on a 38s cycle with a fai
 - **Game / time-limit clock:** start / pause / reset from the control panel (countdown for baseball/football, count-up for soccer).
 - **Extras (toggle per game):** batter name/number, pitcher, pitch count, run-rule watch.
 - **New game:** choose sport, then scorebug style.
-- **Delete** a game (lobby trash button or Setup) and **Reset** a game to 0 (Setup — sport-aware; clears score/situation/clock/cards/undo, keeps teams + look).
+- **Delete** a game (Setup — not the lobby list; a bin next to a row you scroll one-handed is one mis-tap from a permanent delete) and **Reset** a game to 0 (Setup — sport-aware; clears score/situation/clock/cards/undo, keeps teams + look).
 - **Practice / Demo mode:** simulate a game and preview every animation + sound without going live.
 
 ## Stack
 
 - Vanilla HTML/CSS/JS (ES modules), `@supabase/supabase-js` via ESM CDN — nothing to compile.
+- One font dependency: **Barlow Condensed** 500/600/700 for scores, counts and jersey numbers, self-hosted under `/fonts` (latin subset, ~22KB a weight, [SIL OFL 1.1](fonts/OFL.txt)). Self-hosted rather than hot-linked because the pad cold-loads on field LTE and the page only preconnects to Supabase and esm.sh.
 - Supabase project `PickEm` (`yeykyutsbeqjcgdxlucn`), schema **`scoreboard`** (tables `games`, `events`, `presets`; RPCs `apply_event`, `undo`; edge function `signup`).
 - Per-user ownership via RLS; public read for overlays, owner-only writes. Presentation (theme/style/look/audio/card) syncs to the overlay via Realtime.
 - Deploys as static files on Vercel (`cleanUrls` gives `/control` and `/overlay`).
@@ -166,7 +176,7 @@ python3 -m http.server 5173
 
 ## OBS setup
 
-The control panel carries its own copy of all of this — **Help &amp; setup** on the lobby screen, under the games list: quick start, browser source settings, replay-clip setup, cards, and troubleshooting. Keep it and this section in step.
+The control panel carries its own copy of all of this — **Help &amp; setup** on the lobby screen, under the games list: four tiles for the topics people actually open (quick start, OBS setup, replay clips, troubleshooting) over the full fourteen. Keep it and this section in step.
 
 1. **Sources → + → Browser.** Name it "Scorebug".
 2. **URL:** `https://<your-app>.vercel.app/overlay?game=YOUR_GAME_ID`
@@ -176,17 +186,17 @@ The control panel carries its own copy of all of this — **Help &amp; setup** o
 5. **Uncheck "Shutdown source when not visible"** — keeps the realtime connection alive between scenes.
 6. **Page permissions: "Basic access to OBS"** — required for the 🎞️ Clip button to save the replay buffer. Leave it at the default if you don't want the overlay touching OBS.
 7. **Audio:** check **"Control audio via OBS"** so the overlay's sounds go into your stream mix. Then in the Audio Mixer, set the source's Audio Monitoring to "Monitor and Output" if you also want to hear it in your headphones.
-8. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel — use whichever is easier per field.
+8. Position/scale the source in your scene. The bug also has its own 3×3 position grid and scale slider in the control panel, with a live preview showing where it lands on the frame — use whichever is easier per field.
 
 ## Platforms
 
 The control panel is one responsive page tuned for three places it actually gets used:
 
-- **iPhone** — one column, big targets, safe-area insets on all four edges (landscape included), no pull-to-refresh, no double-tap zoom, no text inflation in landscape. Add to Home Screen runs it full-screen.
-- **iPad** — two columns from 700px: scoring pad left, panels right, in either orientation. Split View falls back to one column on its own.
+- **iPhone** — the fixed shell above, big targets, safe-area insets on all four edges, no pull-to-refresh, no double-tap zoom, no text inflation in landscape. Add to Home Screen runs it full-screen. Held sideways the pad goes three keys across and two down and the drawer arrives from the right, keeping the keys visible behind it.
+- **iPad** — two columns from 700px: scoring pad left, panels right, in either orientation. The drawer drops its sheet chrome here and is simply that panel column — same panel bodies, no fork. Split View falls back to one column on its own.
 - **Desktop** — same two columns, wider from 1280px, with hover feedback gated behind `(hover: hover)` so a tap never leaves a stuck highlight on touch. Keyboard scoring: `B S F O` · `1 2 3 H` · `R` `E` `A` `C` `N` `U`.
 
-Sheets centre and round on tablet and desktop instead of sitting on the bottom edge, and their Save/Close row is sticky — a phone in landscape has ~390pt of height, so the actions can never be something you scroll to find.
+Breakpoints are height-aware, not width-only: a phone on its side is 844 wide and 390 tall, so "phone" means short **or** narrow. Sheets centre and round on tablet and desktop instead of sitting on the bottom edge, and their Save/Close row is sticky — with ~390pt of height the actions can never be something you scroll to find. `prefers-reduced-motion` cross-fades the drawer and sheets instead of sliding them.
 
 ## Checks
 
