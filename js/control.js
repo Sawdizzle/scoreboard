@@ -1404,6 +1404,11 @@ let hrRuns = 1;
 function paintHr() { $('hr-runs').textContent = hrRuns; }
 function openHrSheet() {
   hrRuns = L.computeHomeRun(game.bases).runs;
+  // Describes the bases, not the number — it has to stay true after a nudge.
+  const on = hrRuns - 1;
+  $('hr-copy').textContent = on
+    ? `${on === 1 ? 'One runner' : on + ' runners'} on — the batter and ${on === 1 ? 'that runner' : 'all of them'} score, and the bases clear.`
+    : 'Nobody on — a solo shot. The batter scores.';
   paintHr(); $('hr-sheet').hidden = false;
 }
 $('hr-runs-up').onclick = () => { hrRuns = Math.min(hrRuns + 1, 4); paintHr(); };
@@ -1817,9 +1822,12 @@ $('setup-guide').addEventListener('click', (e) => {
 
 // Count dots read at a glance in sunlight where "2 - 1" does not; the mini
 // diamond is the same shape as the sheet's, so the sheet is never a surprise.
+// Three balls, two strikes, two outs is what a live at-bat holds — but the
+// Situation sheet's steppers clamp at 4/3/3, so a correction can sit one past
+// the row. Grow the row rather than drawing a count that isn't the count.
 const countDots = (n, of, cls) => {
   let h = '';
-  for (let i = 0; i < of; i++) h += `<span class="cd${i < n ? ' ' + cls : ''}"></span>`;
+  for (let i = 0; i < Math.max(of, n); i++) h += `<span class="cd${i < n ? ' ' + cls : ''}"></span>`;
   return h;
 };
 function renderBaseballControl() {

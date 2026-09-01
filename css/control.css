@@ -327,6 +327,9 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .fxbtn:active { filter: brightness(1.15); transform: translateY(1px); }
 .fxbtn.hr { width: 100%; margin-bottom: 8px; padding: 20px; font-size: 19px; letter-spacing: 0.05em; color: #fff; background: var(--hr-grad); border-color: var(--hr-line); }
 .fx-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+/* An authored display: beats the UA [hidden] rule, so .sport-only could not
+   hide this one — Batting order + Defense showed on football and soccer. */
+.fx-grid[hidden] { display: none; }
 .rally-toggle { background: #2a2033; }
 .rally-toggle.on { background: var(--out-ui); border-color: var(--out-ui); color: #06090f; }
 .fxbtn.charge { width: 100%; margin-top: 8px; background: #1f3a2e; border-color: #2f5d47; }

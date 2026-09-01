@@ -338,7 +338,7 @@
         <button id="btn-batter" class="key batter">NEXT BATTER</button>
         <!-- One bar, four hit targets: the at-bat result, which auto-advances
              runners and the order. HR confirms the run count first. -->
-        <div class="hitbar" aria-label="At-bat result">
+        <div class="hitbar" role="group" aria-label="At-bat result">
           <button id="hit-1b">1B</button><span class="hb-sep" aria-hidden="true">|</span>
           <button id="hit-2b">2B</button><span class="hb-sep" aria-hidden="true">|</span>
           <button id="hit-3b">3B</button><span class="hb-sep" aria-hidden="true">|</span>
@@ -526,14 +526,14 @@
       <div class="dw-sheet">
         <span class="grab"></span>
         <div class="dw-tabs" role="tablist">
-          <button class="dw-tab on" data-tab="teams" role="tab" aria-selected="true">Teams</button>
-          <button class="dw-tab" data-tab="cards" role="tab" aria-selected="false">Cards</button>
-          <button class="dw-tab" data-tab="look" role="tab" aria-selected="false">Look</button>
-          <button class="dw-tab" data-tab="obs" role="tab" aria-selected="false">OBS</button>
+          <button class="dw-tab on" id="dw-tab-teams" data-tab="teams" role="tab" aria-selected="true" aria-controls="dw-pane-teams">Teams</button>
+          <button class="dw-tab" id="dw-tab-cards" data-tab="cards" role="tab" aria-selected="false" aria-controls="dw-pane-cards">Cards</button>
+          <button class="dw-tab" id="dw-tab-look" data-tab="look" role="tab" aria-selected="false" aria-controls="dw-pane-look">Look</button>
+          <button class="dw-tab" id="dw-tab-obs" data-tab="obs" role="tab" aria-selected="false" aria-controls="dw-pane-obs">OBS</button>
         </div>
         <div class="dw-body">
 
-          <section class="dw-pane" data-tab="teams">
+          <section class="dw-pane" id="dw-pane-teams" data-tab="teams" role="tabpanel" aria-labelledby="dw-tab-teams">
             <button id="setup-btn" class="ghost dw-row">⚙ Game setup — teams, style, times &amp; rules</button>
             <div class="sport-only" data-sport="baseball">
               <details class="panel" id="panel-lineups">
@@ -594,7 +594,7 @@
             </div>
           </section>
 
-          <section class="dw-pane" data-tab="cards" hidden>
+          <section class="dw-pane" id="dw-pane-cards" data-tab="cards" role="tabpanel" aria-labelledby="dw-tab-cards" hidden>
             <details class="panel">
               <summary>🎬 Broadcast cards</summary>
               <div class="panel-body">
@@ -649,7 +649,7 @@
             </details>
           </section>
 
-          <section class="dw-pane" data-tab="look" hidden>
+          <section class="dw-pane" id="dw-pane-look" data-tab="look" role="tabpanel" aria-labelledby="dw-tab-look" hidden>
             <details class="panel" id="panel-appearance">
               <summary>🎨 Appearance</summary>
               <div class="panel-body">
@@ -836,7 +836,7 @@
             </details>
           </section>
 
-          <section class="dw-pane" data-tab="obs" hidden>
+          <section class="dw-pane" id="dw-pane-obs" data-tab="obs" role="tabpanel" aria-labelledby="dw-tab-obs" hidden>
             <div class="pad-opt">
               <span class="pad-opt-lab">🎛️ OBS controls</span>
               <label class="switch" title="Hide the OBS panels if you don't use OBS">
