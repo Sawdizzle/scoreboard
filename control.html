@@ -703,7 +703,8 @@
                     </select>
                   </label>
                 </div>
-                <span class="sublabel">Position</span>
+                <span class="sublabel">Position on the 1080p frame</span>
+                <div class="pos-row">
                 <div class="pos-grid" id="pos-grid">
                   <button data-pos="top-left" title="Top-left">↖</button>
                   <button data-pos="top-center" title="Top-center">↑</button>
@@ -714,6 +715,12 @@
                   <button data-pos="bottom-left" title="Bottom-left">↙</button>
                   <button data-pos="bottom-center" title="Bottom-center">↓</button>
                   <button data-pos="bottom-right" title="Bottom-right">↘</button>
+                </div>
+                <!-- Where the bug actually lands, without alt-tabbing to OBS. -->
+                <div class="pos-side">
+                  <p class="pos-note" id="pos-note"></p>
+                  <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
+                </div>
                 </div>
                 <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
 

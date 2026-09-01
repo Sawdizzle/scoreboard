@@ -1267,6 +1267,9 @@ document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () =>
 $('scale-sel').addEventListener('input', (e) => { $('scale-val').textContent = (+e.target.value).toFixed(2) + '×'; });
 $('scale-sel').addEventListener('change', (e) => writeField({ scorebug_scale: +e.target.value }));
 const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
+const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-right': 'Top-right',
+  'mid-left': 'Middle-left', 'mid-center': 'Centre', 'mid-right': 'Middle-right',
+  'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
 function renderLook() {
   $('theme-sel').value = game.theme || 'nightgame';
   const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
@@ -1274,6 +1277,14 @@ function renderLook() {
   const sc = game.scorebug_scale || 1;
   $('scale-sel').value = sc;
   $('scale-val').textContent = (+sc).toFixed(2) + '×';
+  // A 16:9 box showing where the bug lands, so choosing a corner does not mean
+  // alt-tabbing to OBS to find out what you chose.
+  const [vy, vx] = cur.split('-');
+  const bug = $('pos-bug');
+  bug.style.top = { top: '18%', mid: '50%', bottom: '82%' }[vy] || '82%';
+  bug.style.left = { left: '22%', center: '50%', right: '78%' }[vx] || '50%';
+  bug.style.transform = `translate(-50%, -50%) scale(${Math.min(Math.max(+sc || 1, 0.6), 1.5)})`;
+  $('pos-note').textContent = `${POS_LABEL[cur] || cur}, ${(+sc).toFixed(1)}× — where the bug sits over your camera.`;
   renderCustomize();
 }
 
