@@ -960,42 +960,38 @@
 
   <!-- WALK SHEET -->
   <div id="walk-sheet" class="sheet" hidden>
-    <div class="sheet-card">
-      <h3>Walk — confirm base movement</h3>
-      <p class="muted">Forced advance is pre-filled. Tap a base to override, adjust runs, then confirm.</p>
-      <div class="bases-row center">
+    <div class="sheet-card confirm-card">
+      <span class="grab"></span>
+      <h3>Walk</h3>
+      <p class="confirm-copy">Forced advance is pre-filled. Tap a base to override, then set the runs that scored.</p>
+      <div class="walk-bases">
         <button id="w1" class="base-btn">1B</button>
         <button id="w2" class="base-btn">2B</button>
         <button id="w3" class="base-btn">3B</button>
       </div>
       <div class="runs-stepper">
-        <span>Runs on play</span>
         <button id="w-runs-dn" class="step">–</button>
         <b id="w-runs">0</b>
         <button id="w-runs-up" class="step">+</button>
       </div>
-      <div class="sheet-actions">
-        <button id="walk-cancel" class="ghost">Cancel</button>
-        <button id="walk-confirm" class="primary">Confirm Walk</button>
-      </div>
+      <button id="walk-confirm" class="confirm-go walk">Confirm walk</button>
+      <button id="walk-cancel" class="ghost">Cancel</button>
     </div>
   </div>
 
   <!-- HOME RUN SHEET -->
   <div id="hr-sheet" class="sheet" hidden>
-    <div class="sheet-card">
-      <h3>Home Run — confirm runs</h3>
-      <p class="muted">Batter plus every runner scores and the bases clear. Adjust the total if needed, then confirm.</p>
-      <div class="runs-stepper">
-        <span>Runs on play</span>
+    <div class="sheet-card confirm-card">
+      <span class="grab"></span>
+      <h3>Home run</h3>
+      <p class="confirm-copy" id="hr-copy">Batter plus every runner scores and the bases clear. Adjust if the total is wrong.</p>
+      <div class="runs-stepper big">
         <button id="hr-runs-dn" class="step">–</button>
         <b id="hr-runs">1</b>
         <button id="hr-runs-up" class="step">+</button>
       </div>
-      <div class="sheet-actions">
-        <button id="hr-cancel" class="ghost">Cancel</button>
-        <button id="hr-confirm" class="primary">Confirm Home Run</button>
-      </div>
+      <button id="hr-confirm" class="confirm-go">💥 Confirm home run</button>
+      <button id="hr-cancel" class="ghost">Cancel</button>
     </div>
   </div>
 
