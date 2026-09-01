@@ -175,7 +175,8 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   .game-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
   /* Sheets centre and round on all sides — they're dialogs here, not phone sheets. */
   .sheet { align-items: center; padding: 20px; }
-  .sheet-card { border-radius: 20px; padding-bottom: 20px; }
+  .sheet-card { border-radius: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--line-2); }
+  .sheet-card .grab { display: none; }
   .sheet-card.scroll { max-height: 82dvh; }
 }
 
@@ -681,7 +682,7 @@ body.no-obs .obs-only { display: none; }
    has ~390pt of height — no dialog fits, so the actions must never be something
    you have to go looking for. */
 .sheet-card.scroll .sheet-actions { position: sticky; bottom: 0; z-index: 1;
-  margin-top: 14px; padding: 12px 0 2px; background: var(--card);
+  margin-top: 14px; padding: 12px 0 2px; background: var(--panel);
   box-shadow: 0 -10px 14px -8px rgba(0, 0, 0, 0.55); }
 .setup-cols { display: flex; gap: 12px; }
 .setup-col { flex: 1; display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }

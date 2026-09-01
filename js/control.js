@@ -1677,7 +1677,13 @@ function showSport(sport) {
   document.body.classList.toggle('bb', sport === 'baseball');
   $('sit-btn').disabled = sport !== 'baseball';
   $('g-batting').hidden = sport === 'baseball';
-  if (sport !== 'baseball') { $('gm-batter').hidden = false; $('gm-hitter').textContent = ''; $('gm-vs').textContent = ''; }
+  if (sport !== 'baseball') {
+    $('gm-batter').hidden = false;
+    $('gm-hitter').textContent = '';
+    $('gm-vs').textContent = '';
+    $('g-away-name').classList.remove('bat');
+    $('g-home-name').classList.remove('bat');
+  }
 }
 function renderGame() {
   if (!game) return;
