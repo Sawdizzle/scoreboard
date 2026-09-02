@@ -210,6 +210,7 @@ async function saveRoster(lineups) {
 const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
 
 async function openGame(id) {
+  guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   game = data; overlayCopied = false; guideCollapsed = setupAllDone();
@@ -1751,6 +1752,7 @@ function renderSetupGuide() {
   $('sg-progress').textContent = `${done}/${steps.length}`;
   el.classList.toggle('collapsed', guideCollapsed);
   el.classList.toggle('complete', done === steps.length);
+  document.body.classList.toggle('guide-open', !el.hidden && !guideCollapsed);
 }
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
@@ -1786,6 +1788,36 @@ function openDrawer(tab) {
 const closeDrawer = () => $('drawer').classList.remove('open');
 $('dw-open').onclick = () => openDrawer();
 $('dw-scrim').onclick = closeDrawer;
+$('dw-close').onclick = closeDrawer;
+
+// Flick the handle down to dismiss, which is what a grab handle promises. Only
+// in portrait — in landscape the sheet comes in from the side, and there the
+// scrim is half the screen and the ✕ is right there.
+const sideSheet = () => window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+let dwDrag = null;
+const dwSheet = () => document.querySelector('.dw-sheet');
+$('dw-grip').addEventListener('pointerdown', (e) => {
+  if (sideSheet()) return;
+  dwDrag = { from: e.clientY, moved: 0 };
+  try { $('dw-grip').setPointerCapture(e.pointerId); } catch {}
+  dwSheet().style.transition = 'none';
+});
+$('dw-grip').addEventListener('pointermove', (e) => {
+  if (!dwDrag) return;
+  dwDrag.moved = Math.max(0, e.clientY - dwDrag.from);
+  dwSheet().style.transform = `translateY(${dwDrag.moved}px)`;
+});
+function endDwDrag() {
+  if (!dwDrag) return;
+  const dismiss = dwDrag.moved > 90;
+  dwDrag = null;
+  const sh = dwSheet();
+  sh.style.transition = '';
+  sh.style.transform = '';
+  if (dismiss) closeDrawer();
+}
+$('dw-grip').addEventListener('pointerup', endDwDrag);
+$('dw-grip').addEventListener('pointercancel', endDwDrag);
 document.querySelector('.dw-tabs').addEventListener('click', (e) => {
   const b = e.target.closest('.dw-tab');
   if (b) { setDrawerTab(b.dataset.tab); document.querySelector('.dw-body').scrollTop = 0; }
