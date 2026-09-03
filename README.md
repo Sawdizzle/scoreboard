@@ -15,6 +15,7 @@ Two rules shape it. **Everything pressed during a live at-bat is in the bottom t
 - **The pad** — BALL · STRIKE, FOUL · OUT, RUN · NEXT BATTER, then one bar reading `1B | 2B | 3B | HR`. HR and a fourth ball open confirm sheets; nothing else asks.
 - **Bottom row** — `↶ Undo`, `End ½`, `⋯ More`, fixed. Undo is what you reach for when something has already gone wrong, so it never scrolls away.
 - The other sports use the same shell and keep their own scrolling pads until they get key sets of their own.
+- **Support** — a Buy Me a Coffee button sits at the foot of the lobby, under Help & setup. It is the only place it appears; nothing on the live screen or in the drawer asks for anything.
 
 State syncs control → Postgres → Realtime → overlay in ~250 ms. The overlay auto-reconnects and keeps last-known state on flaky networks (it never blanks mid-broadcast).
 

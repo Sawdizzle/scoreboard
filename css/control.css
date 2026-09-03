@@ -570,6 +570,13 @@ body.no-obs .obs-only { display: none; }
 .ht-emoji { display: block; font-size: 17px; line-height: 1; margin-bottom: 6px; }
 .help-all { padding: 14px; font-size: 13px; font-weight: 700; border-radius: 14px; margin-top: 9px; }
 .help-list[hidden] { display: none; }
+
+/* Support footer (lobby) */
+.support { margin: 26px 0 8px; text-align: center; }
+.support-cap { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.support-link { display: inline-block; line-height: 0; border-radius: 12px; }
+.support-link img { height: 50px; width: auto; border-radius: 12px; }
+.support-link:active { filter: brightness(1.1); }
 .help-body { color: var(--chalk); font-size: 14px; line-height: 1.55; }
 .help-body p { margin: 8px 0; }
 .help-body ol, .help-body ul { margin: 8px 0; padding-left: 22px; }
