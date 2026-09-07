@@ -1,67 +1,340 @@
-// Unit tests for the pure rules in js/logic.js. No dependencies: `node --test`.
+// Baseball rules — js/logic.js.
 //
-// logic.js is a .js ES module in a repo with no package.json, so Node would read
-// it as CommonJS — copy it to a .mjs and import that, the same trick check.mjs
-// uses for its syntax pass.
+// This is the code where a wrong answer shows up live on a stream, and it is
+// pure: a game row in, a patch out, no DOM and no network. check.mjs catches a
+// control that has stopped being wired to anything; nothing caught wrong
+// baseball until these.
+//
+// Run: node --test scripts/logic.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { loadModule } from './load-module.mjs';
 
-const root = new URL('..', import.meta.url).pathname;
-const tmp = mkdtempSync(join(tmpdir(), 'sbtest-'));
-const dest = join(tmp, 'logic.mjs');
-writeFileSync(dest, readFileSync(join(root, 'js/logic.js'), 'utf8'));
-const L = await import(dest);
+const L = await loadModule('js/logic.js');
+
+// A game row with just the fields the rules touch. `over` overrides.
+const bases = (f, s, t) => ({ first: !!f, second: !!s, third: !!t });
+const G = (over = {}) => ({
+  id: 'g1', sport: 'baseball', half: 'top', inning: 1,
+  balls: 0, strikes: 0, outs: 0, bases: bases(0, 0, 0),
+  away_score: 0, home_score: 0, away_hits: 0, home_hits: 0, away_errors: 0, home_errors: 0,
+  line_score: [], state: {}, lineups: {}, regulation_innings: 0, ...over,
+});
+// A batting order; `filled` marks which of the nine slots have a name.
+const order = (filled) => ({ batters: filled.map((on, i) => (on ? { num: String(i + 1), name: 'B' + i } : { num: '', name: '' })) });
 
 // ---------------------------------------------------------------------------
-// undoPending — the offline half of Undo (BUG-2).
-//
-// Undo used to call the server RPC unconditionally. With writes still queued
-// that reverses an OLDER play than the last one scored, and then the queue
-// replays its absolute patches straight back over the reversal. These cover the
-// arithmetic that replaces it.
+// Counting the pitch, and whose pitcher threw it
+// ---------------------------------------------------------------------------
+test('a ball counts the pitch against the fielding team', () => {
+  const r = L.onBall(G());                       // top half: home is in the field
+  assert.equal(r.type, 'ball');
+  assert.equal(r.patch.balls, 1);
+  assert.deepEqual(r.patch.state.pitches, { home: 1 });
+});
+
+test('in the bottom half the pitch counts against the away pitcher', () => {
+  const r = L.onBall(G({ half: 'bottom' }));
+  assert.deepEqual(r.patch.state.pitches, { away: 1 });
+});
+
+test('the fourth ball is a walk, and asks before it commits', () => {
+  const r = L.onBall(G({ balls: 3, bases: bases(1, 1, 1) }));
+  assert.equal(r.type, 'walk');
+  assert.equal(r.sheet, 'walk', 'the confirm sheet rebuilds the patch, so this one carries no pitch');
+  assert.equal(r.payload.runs, 1, 'bases loaded forces one in');
+  assert.equal(r.patch.balls, 0);
+  assert.equal(r.patch.away_score, 1);
+});
+
+test('a foul with two strikes is a pitch and nothing else', () => {
+  const r = L.onFoul(G({ strikes: 2 }));
+  assert.equal(r.patch.strikes, undefined, 'the count cannot go past two on a foul');
+  assert.deepEqual(r.patch.state.pitches, { home: 1 });
+});
+
+test('a foul under two strikes advances the count', () => {
+  assert.equal(L.onFoul(G({ strikes: 1 })).patch.strikes, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Outs, and the half-inning rolling over
+// ---------------------------------------------------------------------------
+test('a third strike is a strikeout, and clears the count', () => {
+  const r = L.onStrike(G({ strikes: 2 }));
+  assert.equal(r.type, 'strikeout');
+  assert.equal(r.patch.outs, 1);
+  assert.equal(r.patch.strikes, 0);
+  assert.deepEqual(r.patch.state.pitches, { home: 1 }, 'the third strike is still a pitch');
+});
+
+test('the third out rolls the half-inning', () => {
+  const r = L.onOut(G({ outs: 2, balls: 2, strikes: 1, bases: bases(1, 0, 1) }));
+  assert.equal(r.payload.rolled, true);
+  assert.equal(r.patch.half, 'bottom');
+  assert.equal(r.patch.inning, 1, 'top to bottom stays in the same inning');
+  assert.deepEqual(r.patch, { ...r.patch, outs: 0, balls: 0, strikes: 0, bases: bases(0, 0, 0) });
+});
+
+test('the third out in the bottom half starts the next inning', () => {
+  const r = L.onOut(G({ half: 'bottom', outs: 2, inning: 4 }));
+  assert.equal(r.patch.half, 'top');
+  assert.equal(r.patch.inning, 5);
+});
+
+test('rolling the half extends the line score to cover the new inning', () => {
+  const r = L.onEndHalf(G({ half: 'bottom', inning: 2, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }] }));
+  assert.equal(r.patch.line_score.length, 3);
+  assert.deepEqual(r.patch.line_score[2], { top: 0, bottom: 0 });
+});
+
+// ---------------------------------------------------------------------------
+// Runs, and the line score cell they land in
+// ---------------------------------------------------------------------------
+test('a run goes to the batting team and this half\'s cell', () => {
+  const r = L.onRun(G({ inning: 3, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }] }));
+  assert.equal(r.patch.away_score, 1);
+  assert.equal(r.patch.line_score[2].top, 1);
+  assert.equal(r.patch.line_score[0].top, 1, 'earlier innings are left alone');
+});
+
+test('in the bottom half the run lands in the bottom cell', () => {
+  const r = L.onRun(G({ half: 'bottom', inning: 2, home_score: 3 }));
+  assert.equal(r.patch.home_score, 4);
+  assert.equal(r.patch.line_score[1].bottom, 1);
+  assert.equal(r.patch.line_score.length, 2, 'the line score is padded out to the current inning');
+});
+
+test('advancing everyone scores the runner on third', () => {
+  const r = L.onAdvance(G({ bases: bases(1, 1, 1) }));
+  assert.deepEqual(r.patch.bases, bases(0, 1, 1));
+  assert.equal(r.payload.runs, 1);
+  assert.equal(r.patch.away_score, 1);
+});
+
+test('advancing with nobody on third scores nobody', () => {
+  const r = L.onAdvance(G({ bases: bases(1, 0, 0) }));
+  assert.deepEqual(r.patch.bases, bases(0, 1, 0));
+  assert.equal(r.payload.runs, 0);
+  assert.equal(r.patch.away_score, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Hits: every runner advances as far as the batter did
+// ---------------------------------------------------------------------------
+test('a single moves a runner from second to third', () => {
+  const r = L.onHit(G({ bases: bases(0, 1, 0) }), 1);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 1));
+  assert.equal(r.payload.runs, 0);
+  assert.equal(r.patch.away_hits, 1);
+});
+
+test('a single scores the runner from third', () => {
+  const r = L.onHit(G({ bases: bases(0, 0, 1) }), 1);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 0));
+  assert.equal(r.payload.runs, 1);
+  assert.equal(r.patch.away_score, 1);
+});
+
+test('a double puts the batter on second and the runner from first on third', () => {
+  const r = L.onHit(G({ bases: bases(1, 0, 0) }), 2);
+  assert.deepEqual(r.patch.bases, bases(0, 1, 1));
+  assert.equal(r.payload.runs, 0);
+});
+
+test('a triple with the bases loaded clears them and scores three', () => {
+  const r = L.onHit(G({ bases: bases(1, 1, 1) }), 3);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 1), 'only the batter is left, on third');
+  assert.equal(r.payload.runs, 3);
+  assert.equal(r.patch.away_score, 3);
+  assert.equal(r.anim, 'bigplay', 'a triple earns a stinger');
+});
+
+test('a hit is credited to the batting team, not the fielding one', () => {
+  assert.equal(L.onHit(G({ half: 'bottom' }), 1).patch.home_hits, 1);
+});
+
+test('an error is charged to the team in the field', () => {
+  assert.equal(L.onError(G()).patch.home_errors, 1, 'top half: home is fielding');
+  assert.equal(L.onError(G({ half: 'bottom' })).patch.away_errors, 1);
+});
+
+test('an error does not end the at-bat or count a pitch', () => {
+  const r = L.onError(G());
+  assert.equal(r.patch.state, undefined);
+  assert.equal(r.patch.balls, undefined);
+});
+
+test('a home run clears the bases and scores everyone', () => {
+  const r = L.homeRunPatch(G({ bases: bases(1, 0, 1) }), 3);
+  assert.deepEqual(r.bases, bases(0, 0, 0));
+  assert.equal(r.away_score, 3);
+  assert.equal(r.away_hits, 1);
+  assert.equal(r.balls, 0);
+  assert.equal(r.strikes, 0);
+});
+
+// ---------------------------------------------------------------------------
+// The batting order — one tap has to move everything
+// ---------------------------------------------------------------------------
+test('a terminal play advances the order and counts the pitch', () => {
+  const g = G({ lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 0 } } });
+  const r = L.onHit(g, 1);
+  assert.equal(r.patch.state.batIdx.away, 1);
+  assert.deepEqual(r.patch.state.pitches, { home: 1 });
+});
+
+test('the order wraps at the bottom of the lineup', () => {
+  const g = G({ lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 2 } } });
+  assert.equal(L.onOut(g).patch.state.batIdx.away, 0);
+});
+
+test('empty lineup slots are skipped, not batted', () => {
+  const g = G({ lineups: { away: order([1, 0, 0, 1]) }, state: { batIdx: { away: 0 } } });
+  assert.equal(L.onOut(g).patch.state.batIdx.away, 3);
+});
+
+test('only the batting team\'s order moves', () => {
+  const g = G({ half: 'bottom', lineups: { away: order([1, 1]), home: order([1, 1]) },
+                state: { batIdx: { away: 1, home: 0 } } });
+  const r = L.onOut(g);
+  assert.equal(r.patch.state.batIdx.home, 1);
+  assert.equal(r.patch.state.batIdx.away, 1, 'the away order is where it was left');
+});
+
+test('with no lineup entered, nothing pretends to track an order', () => {
+  const r = L.onOut(G());
+  assert.equal(r.patch.state.batIdx, undefined);
+});
+
+test('Next Batter advances the order without counting a pitch', () => {
+  const g = G({ balls: 2, strikes: 1, lineups: { away: order([1, 1]) }, state: { batIdx: { away: 0 } } });
+  const r = L.onNextBatter(g);
+  assert.equal(r.patch.state.batIdx.away, 1);
+  assert.equal(r.patch.state.pitches, undefined);
+  assert.equal(r.patch.balls, 0);
+});
+
+test('due up lists the next hitters, wrapping and skipping the empties', () => {
+  const g = G({ lineups: { away: order([1, 1, 0, 1]) }, state: { batIdx: { away: 2 } } });
+  assert.deepEqual(L.dueUp(g, 3).map((b) => b.name), ['B3', 'B0', 'B1']);
+});
+
+// ---------------------------------------------------------------------------
+// Manual adjusters — the corrections, and their clamps
+// ---------------------------------------------------------------------------
+test('adjusters clamp at the bounds the database enforces', () => {
+  assert.equal(L.adjustBalls(G({ balls: 4 }), 1).patch.balls, 4);
+  assert.equal(L.adjustBalls(G({ balls: 0 }), -1).patch.balls, 0);
+  assert.equal(L.adjustStrikes(G({ strikes: 3 }), 1).patch.strikes, 3);
+  assert.equal(L.adjustOuts(G({ outs: 3 }), 1).patch.outs, 3);
+  assert.equal(L.adjustOuts(G({ outs: 0 }), -1).patch.outs, 0);
+  assert.equal(L.adjustScore(G(), 'away', -1).patch.away_score, 0, 'a score never goes negative');
+});
+
+test('nudging the inning never goes below the first', () => {
+  assert.equal(L.onNudgeInning(G({ inning: 1 }), -1).patch.inning, 1);
+  assert.equal(L.onNudgeInning(G({ inning: 3 }), 1).patch.line_score.length, 4);
+});
+
+test('a base toggles on and off without touching the others', () => {
+  const r = L.toggleBase(G({ bases: bases(1, 0, 0) }), 'second');
+  assert.deepEqual(r.patch.bases, bases(1, 1, 0));
+  assert.deepEqual(L.toggleBase(G({ bases: bases(1, 1, 0) }), 'first').patch.bases, bases(0, 1, 0));
+});
+
+test('bases survive arriving as a JSON string', () => {
+  assert.deepEqual(L.safeBases('{"first":true,"second":false,"third":true}'), bases(1, 0, 1));
+  assert.deepEqual(L.safeBases('not json'), bases(0, 0, 0));
+  assert.deepEqual(L.safeBases(null), bases(0, 0, 0));
+});
+
+// ---------------------------------------------------------------------------
+// Walks and home runs
+// ---------------------------------------------------------------------------
+test('a walk forces runners only where it has to', () => {
+  assert.deepEqual(L.computeWalk(bases(0, 0, 0)), { bases: bases(1, 0, 0), runs: 0 });
+  assert.deepEqual(L.computeWalk(bases(1, 0, 1)), { bases: bases(1, 1, 1), runs: 0 }, 'first and third: nobody scores');
+  assert.deepEqual(L.computeWalk(bases(0, 1, 1)), { bases: bases(1, 1, 1), runs: 0 }, 'second and third are not forced');
+  assert.deepEqual(L.computeWalk(bases(1, 1, 1)), { bases: bases(1, 1, 1), runs: 1 }, 'bases loaded forces one in');
+});
+
+test('a home run scores the batter and everyone on', () => {
+  assert.equal(L.computeHomeRun(bases(0, 0, 0)).runs, 1);
+  assert.equal(L.computeHomeRun(bases(1, 0, 1)).runs, 3);
+  assert.equal(L.computeHomeRun(bases(1, 1, 1)).runs, 4);
+});
+
+// ---------------------------------------------------------------------------
+// Who is at bat, who is on the mound
+// ---------------------------------------------------------------------------
+test('the batting side follows the half, and the fielding side is the other one', () => {
+  assert.equal(L.battingSide(G()), 'away');
+  assert.equal(L.fieldingSide(G()), 'home');
+  assert.equal(L.battingSide(G({ half: 'bottom' })), 'home');
+});
+
+test('the pitch count shown is the fielding team\'s', () => {
+  const g = G({ state: { pitches: { away: 12, home: 40 } } });
+  assert.equal(L.pitchCount(g), 40, 'top half: the home pitcher is working');
+  assert.equal(L.pitchCount({ ...g, half: 'bottom' }), 12);
+});
+
+test('the pitch-count stepper never goes below zero', () => {
+  assert.equal(L.adjustPitch(G({ state: { pitches: { home: 0 } } }), -1).patch.state.pitches.home, 0);
+});
+
+test('a half-filled lineup card reads as no hitter rather than a blank one', () => {
+  assert.equal(L.currentBatter(G()), null);
+  const g = G({ lineups: { away: order([1]) }, state: { batIdx: { away: 0 } } });
+  assert.equal(L.currentBatter(g).name, 'B0');
+});
+
+test('the batting order card only fills in DH once a defense exists', () => {
+  const noDefense = G({ lineups: { away: order([1, 1]) } });
+  assert.deepEqual(L.battingOrderCard(noDefense, 'away').map((r) => r.pos), ['', '']);
+  const withDefense = G({ lineups: { away: { ...order([1, 1]), positions: { C: 0 } } } });
+  assert.deepEqual(L.battingOrderCard(withDefense, 'away').map((r) => r.pos), ['C', 'DH']);
+});
+
+// ---------------------------------------------------------------------------
+// Offline undo (BUG-2) — dropping the newest queued play and replaying the rest
 // ---------------------------------------------------------------------------
 const ev = (patch) => ({ kind: 'event', patch });
 const field = (patch) => ({ kind: 'field', patch });
 
 test('drops the newest queued play and rebuilds the state before it', () => {
-  const base = { id: 'g1', balls: 0, strikes: 0 };
+  const base = { id: 'g1', balls: 0 };
   const q = [ev({ balls: 1 }), ev({ balls: 2 }), ev({ balls: 3 })];
   const r = L.undoPending(base, q);
-  assert.equal(r.state.balls, 2, 'three balls, undone once, is two');
+  assert.equal(r.state.balls, 2);
   assert.equal(r.rest.length, 2);
-  assert.equal(r.dropped, q[2], 'drops the entry it says it dropped');
-  assert.deepEqual(q.length, 3, 'does not mutate the caller queue');
+  assert.equal(r.dropped, q[2]);
+  assert.equal(q.length, 3, 'does not mutate the caller\'s queue');
 });
 
 test('undoes repeatedly, one play at a time', () => {
   const base = { id: 'g1', balls: 0 };
-  let q = [ev({ balls: 1 }), ev({ balls: 2 }), ev({ balls: 3 })];
-  let r = L.undoPending(base, q);       assert.equal(r.state.balls, 2);
-  r = L.undoPending(base, r.rest);      assert.equal(r.state.balls, 1);
-  r = L.undoPending(base, r.rest);      assert.equal(r.state.balls, 0, 'back to the confirmed row');
-  assert.equal(L.undoPending(base, r.rest), null, 'and then there is nothing left to undo');
+  let r = L.undoPending(base, [ev({ balls: 1 }), ev({ balls: 2 }), ev({ balls: 3 })]);
+  assert.equal(r.state.balls, 2);
+  r = L.undoPending(base, r.rest); assert.equal(r.state.balls, 1);
+  r = L.undoPending(base, r.rest); assert.equal(r.state.balls, 0);
+  assert.equal(L.undoPending(base, r.rest), null);
 });
 
 test('keeps settings writes queued — they are not plays', () => {
   const base = { id: 'g1', balls: 0, theme: 'nightgame' };
-  const q = [ev({ balls: 1 }), field({ theme: 'chalkboard' }), ev({ balls: 2 })];
-  const r = L.undoPending(base, q);
-  assert.equal(r.state.balls, 1, 'the play is undone');
-  assert.equal(r.state.theme, 'chalkboard', 'the theme change survives it');
-  assert.equal(r.rest.length, 2);
-  assert.ok(r.rest.some((w) => w.kind === 'field'), 'and is still queued to save');
+  const r = L.undoPending(base, [ev({ balls: 1 }), field({ theme: 'chalkboard' }), ev({ balls: 2 })]);
+  assert.equal(r.state.balls, 1);
+  assert.equal(r.state.theme, 'chalkboard');
+  assert.ok(r.rest.some((w) => w.kind === 'field'));
 });
 
-test('a settings write after the last play does not become the undo target', () => {
-  const base = { id: 'g1', balls: 0, theme: 'nightgame' };
-  const q = [ev({ balls: 1 }), field({ theme: 'chalkboard' })];
-  const r = L.undoPending(base, q);
+test('a settings write after the last play is not the undo target', () => {
+  const r = L.undoPending({ id: 'g1', balls: 0, theme: 'a' }, [ev({ balls: 1 }), field({ theme: 'b' })]);
   assert.equal(r.dropped.kind, 'event');
   assert.equal(r.state.balls, 0);
-  assert.equal(r.state.theme, 'chalkboard');
+  assert.equal(r.state.theme, 'b');
 });
 
 test('returns null when only settings are queued, so Undo can say so', () => {
@@ -70,70 +343,46 @@ test('returns null when only settings are queued, so Undo can say so', () => {
 });
 
 test('replays onto the baseline as it advances mid-drain', () => {
-  // Two plays queued; the first is accepted, so the baseline moves to it and
-  // only the second is still queued. Undo must land on the accepted row, not
-  // on the row we were at when the network dropped.
-  const afterFirst = { id: 'g1', balls: 1 };
-  const r = L.undoPending(afterFirst, [ev({ balls: 2 })]);
+  const r = L.undoPending({ id: 'g1', balls: 1 }, [ev({ balls: 2 })]);
   assert.equal(r.state.balls, 1);
   assert.equal(r.rest.length, 0);
 });
 
 test('carries every field of a multi-field patch, not just the changed one', () => {
   const base = { id: 'g1', outs: 0, balls: 3, strikes: 2, half: 'top', inning: 1 };
-  // A third out rolls the half-inning: one patch, many absolute fields.
   const roll = ev({ outs: 0, balls: 0, strikes: 0, half: 'bottom', inning: 1 });
-  const r = L.undoPending(base, [roll]);
-  assert.deepEqual(r.state, base, 'undoing the roll restores every field it touched');
+  assert.deepEqual(L.undoPending(base, [roll]).state, base);
 });
 
 // ---------------------------------------------------------------------------
-// A few of the baseball rules the pad depends on, as a starting point.
+// Walk-off (PERF-1 turned this from a trigger into a predicate)
 // ---------------------------------------------------------------------------
-test('a walk forces runners only where it has to', () => {
-  assert.deepEqual(L.computeWalk({ first: false, second: false, third: false }),
-    { bases: { first: true, second: false, third: false }, runs: 0 });
-  assert.deepEqual(L.computeWalk({ first: true, second: false, third: true }),
-    { bases: { first: true, second: true, third: true }, runs: 0 }, 'first and third: nobody scores');
-  assert.deepEqual(L.computeWalk({ first: true, second: true, third: true }),
-    { bases: { first: true, second: true, third: true }, runs: 1 }, 'bases loaded forces one in');
-});
-
-test('a home run scores the batter and everyone on', () => {
-  assert.equal(L.computeHomeRun({ first: false, second: false, third: false }).runs, 1);
-  assert.equal(L.computeHomeRun({ first: true, second: true, third: true }).runs, 4);
-});
-
-// ---------------------------------------------------------------------------
-// isWalkoff — moved here from control.js when the stinger stopped being a
-// separate write (PERF-1) and became part of the play's own patch.
-// ---------------------------------------------------------------------------
-const g = (o) => ({ sport: 'baseball', regulation_innings: 6, half: 'bottom', inning: 6, home_score: 0, away_score: 0, ...o });
+const W = (o) => ({ sport: 'baseball', regulation_innings: 6, half: 'bottom', inning: 6, home_score: 0, away_score: 0, ...o });
 
 test('a walk-off is home taking the lead in the bottom of the final inning', () => {
-  assert.equal(L.isWalkoff(g({ home_score: 2, away_score: 3 }), g({ home_score: 4, away_score: 3 })), true);
+  assert.equal(L.isWalkoff(W({ home_score: 2, away_score: 3 }), W({ home_score: 4, away_score: 3 })), true);
 });
 
 test('extra innings still count as the final inning or later', () => {
-  assert.equal(L.isWalkoff(g({ inning: 9, home_score: 3, away_score: 3 }), g({ inning: 9, home_score: 4, away_score: 3 })), true);
+  assert.equal(L.isWalkoff(W({ inning: 9, home_score: 3, away_score: 3 }), W({ inning: 9, home_score: 4, away_score: 3 })), true);
 });
 
 test('not a walk-off when home was already ahead', () => {
-  assert.equal(L.isWalkoff(g({ home_score: 5, away_score: 3 }), g({ home_score: 6, away_score: 3 })), false);
+  assert.equal(L.isWalkoff(W({ home_score: 5, away_score: 3 }), W({ home_score: 6, away_score: 3 })), false);
 });
 
 test('not a walk-off in the top half, before the final inning, or when tied', () => {
-  assert.equal(L.isWalkoff(g({ half: 'top', home_score: 2, away_score: 3 }), g({ half: 'top', home_score: 4, away_score: 3 })), false, 'top half');
-  assert.equal(L.isWalkoff(g({ inning: 3, home_score: 2, away_score: 3 }), g({ inning: 3, home_score: 4, away_score: 3 })), false, 'third inning');
-  assert.equal(L.isWalkoff(g({ home_score: 2, away_score: 3 }), g({ home_score: 3, away_score: 3 })), false, 'only tied it');
+  assert.equal(L.isWalkoff(W({ half: 'top', home_score: 2, away_score: 3 }), W({ half: 'top', home_score: 4, away_score: 3 })), false);
+  assert.equal(L.isWalkoff(W({ inning: 3, home_score: 2, away_score: 3 }), W({ inning: 3, home_score: 4, away_score: 3 })), false);
+  assert.equal(L.isWalkoff(W({ home_score: 2, away_score: 3 }), W({ home_score: 3, away_score: 3 })), false);
 });
 
 test('opt-in: no regulation length set means no walk-off, ever', () => {
   const off = { regulation_innings: 0 };
-  assert.equal(L.isWalkoff(g({ ...off, home_score: 2, away_score: 3 }), g({ ...off, home_score: 4, away_score: 3 })), false);
+  assert.equal(L.isWalkoff(W({ ...off, home_score: 2, away_score: 3 }), W({ ...off, home_score: 4, away_score: 3 })), false);
 });
 
 test('walk-off is baseball only', () => {
   const fb = { sport: 'football' };
-  assert.equal(L.isWalkoff(g({ ...fb, home_score: 2, away_score: 3 }), g({ ...fb, home_score: 4, away_score: 3 })), false);
+  assert.equal(L.isWalkoff(W({ ...fb, home_score: 2, away_score: 3 }), W({ ...fb, home_score: 4, away_score: 3 })), false);
 });

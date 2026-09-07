@@ -202,7 +202,13 @@ Breakpoints are height-aware, not width-only: a phone on its side is 844 wide an
 
 ## Checks
 
-`node scripts/check.mjs` — syntax on every module, every `$('id')` against the markup it belongs to, a manifest of handlers that must stay wired, and calls to functions defined nowhere. It runs on push via `.github/workflows/check.yml`.
+`node scripts/check.mjs` — syntax on every module, every `$('id')` against the markup it belongs to, a manifest of handlers that must stay wired, and calls to functions defined nowhere.
+
+`node --test scripts/logic.test.mjs scripts/sports.test.mjs` — **87 tests** over the rules: runner advancement on every kind of hit, the batting order wrapping and skipping empty slots, which pitcher a pitch is charged to, the line-score cell a run lands in, the half-inning rolling, the walk force-advance table, walk-offs, the offline-undo replay, and all four other sports (drive flips and safeties, the soccer clock pausing and resuming, volleyball deuce and set targets, the basketball bonus reading the *opponent's* fouls). No dependencies — `node --test` is built in, like everything else here.
+
+One test is marked `todo`: football scoring with no possession set silently credits home. It documents an open bug rather than asserting the wrong thing is right.
+
+Both run on push via `.github/workflows/check.yml`.
 
 It exists because v3.23 shipped with the entire Game setup section deleted — a text-range replacement whose end marker sat past the intended block. Syntax was valid, the deploy was green, and Setup, Save, Delete game and Reset game were dead in production for four versions. Re-run against that commit and it names all five dead controls plus the orphaned `fillSetup()` call.
 
