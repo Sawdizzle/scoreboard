@@ -103,3 +103,37 @@ test('a home run scores the batter and everyone on', () => {
   assert.equal(L.computeHomeRun({ first: false, second: false, third: false }).runs, 1);
   assert.equal(L.computeHomeRun({ first: true, second: true, third: true }).runs, 4);
 });
+
+// ---------------------------------------------------------------------------
+// isWalkoff — moved here from control.js when the stinger stopped being a
+// separate write (PERF-1) and became part of the play's own patch.
+// ---------------------------------------------------------------------------
+const g = (o) => ({ sport: 'baseball', regulation_innings: 6, half: 'bottom', inning: 6, home_score: 0, away_score: 0, ...o });
+
+test('a walk-off is home taking the lead in the bottom of the final inning', () => {
+  assert.equal(L.isWalkoff(g({ home_score: 2, away_score: 3 }), g({ home_score: 4, away_score: 3 })), true);
+});
+
+test('extra innings still count as the final inning or later', () => {
+  assert.equal(L.isWalkoff(g({ inning: 9, home_score: 3, away_score: 3 }), g({ inning: 9, home_score: 4, away_score: 3 })), true);
+});
+
+test('not a walk-off when home was already ahead', () => {
+  assert.equal(L.isWalkoff(g({ home_score: 5, away_score: 3 }), g({ home_score: 6, away_score: 3 })), false);
+});
+
+test('not a walk-off in the top half, before the final inning, or when tied', () => {
+  assert.equal(L.isWalkoff(g({ half: 'top', home_score: 2, away_score: 3 }), g({ half: 'top', home_score: 4, away_score: 3 })), false, 'top half');
+  assert.equal(L.isWalkoff(g({ inning: 3, home_score: 2, away_score: 3 }), g({ inning: 3, home_score: 4, away_score: 3 })), false, 'third inning');
+  assert.equal(L.isWalkoff(g({ home_score: 2, away_score: 3 }), g({ home_score: 3, away_score: 3 })), false, 'only tied it');
+});
+
+test('opt-in: no regulation length set means no walk-off, ever', () => {
+  const off = { regulation_innings: 0 };
+  assert.equal(L.isWalkoff(g({ ...off, home_score: 2, away_score: 3 }), g({ ...off, home_score: 4, away_score: 3 })), false);
+});
+
+test('walk-off is baseball only', () => {
+  const fb = { sport: 'football' };
+  assert.equal(L.isWalkoff(g({ ...fb, home_score: 2, away_score: 3 }), g({ ...fb, home_score: 4, away_score: 3 })), false);
+});

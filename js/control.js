@@ -315,7 +315,13 @@ let serverRow = null;
 // have backed out to the lobby and opened something else — addressed to
 // whatever happens to be open then, these would overwrite the wrong game.
 const pendingFor = (id) => !!id && pending.some((w) => w.gameId === id);
-function enqueue(entry) { pending.push(entry); renderPending(); drain(); }
+function enqueue(entry) { pending.push({ ...entry, at: Date.now() }); renderPending(); drain(); }
+// A stinger belongs to the moment it fired. Riding the play's write makes it
+// free, but it also means a write that sat in the queue would fire HOME RUN over
+// whatever is happening by the time the network comes back. Past this age the
+// play still lands; the stinger is dropped. Local elapsed time only — no clock
+// comparison with anyone else.
+const STALE_ANIM_MS = 10000;
 
 async function commit(res) {
   if (!game) return;
@@ -323,14 +329,25 @@ async function commit(res) {
   haptic();
   const prev = game;
   const gameId = game.id;
-  game = { ...game, ...res.patch };
+  const next = { ...game, ...res.patch };
+  // The stinger this play earns, judged from the state it produces. A walk-off
+  // supersedes everything (even a home run).
+  const anim = L.isWalkoff(prev, next) ? 'walkoff'
+    : res.anim ? res.anim
+    : (res.type === 'run' || res.payload?.runs) ? 'run'
+    : res.type === 'strikeout' ? 'strikeout'
+    : null;
+  // It rides the SAME write as the play. current_animation is already one of the
+  // columns apply_event writes, so this costs nothing — where it used to be a
+  // second UPDATE, a second Realtime broadcast and a second full overlay render
+  // for every run and every strikeout, the busiest keys on the pad.
+  const patch = anim
+    ? { ...res.patch, current_animation: { type: anim, nonce: nextNonce(), meta: {} } }
+    : res.patch;
+  if (anim && game.auto_clip && anim in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[anim]);
+  game = { ...game, ...patch };
   renderGame();
-  enqueue({ kind: 'event', gameId, type: res.type, patch: res.patch, payload: res.payload || {} });
-  // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
-  if (maybeWalkoff(prev, game)) { /* walk-off fired */ }
-  else if (res.anim) fireAnim(res.anim);
-  else if (res.type === 'run' || res.payload?.runs) fireAnim('run');
-  else if (res.type === 'strikeout') fireAnim('strikeout');
+  enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
 }
 
 // Strictly in order: each patch holds absolute values, so replaying them out of
@@ -340,9 +357,14 @@ async function drain() {
   draining = true;
   while (pending.length) {
     const w = pending[0];
+    let patch = w.patch;
+    if (patch.current_animation && Date.now() - w.at > STALE_ANIM_MS) {
+      patch = { ...patch };
+      delete patch.current_animation;   // the play is still good; the stinger is not
+    }
     const { data, error } = w.kind === 'field'
-      ? await db.from('games').update(w.patch).eq('id', w.gameId).select().maybeSingle()
-      : await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: w.patch, p_payload: w.payload });
+      ? await db.from('games').update(patch).eq('id', w.gameId).select().maybeSingle()
+      : await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: patch, p_payload: w.payload });
     if (error) {
       draining = false;
       renderPending(error.message);
@@ -382,26 +404,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) drai
 // on purpose, since replaying stale patches over a reloaded state is worse.
 addEventListener('beforeunload', (e) => { if (pending.length) { e.preventDefault(); e.returnValue = ''; } });
 
-// Home takes the lead in the bottom of the final (regulation+) inning → walk-off.
-// Opt-in: only when regulation_innings is set (> 0). Returns true if it fired.
-function maybeWalkoff(before, after) {
-  const reg = after.regulation_innings | 0;
-  if ((after.sport || 'baseball') !== 'baseball' || !reg) return false;
-  if (after.half === 'bottom' && (after.inning | 0) >= reg &&
-      (after.home_score | 0) > (after.away_score | 0) &&
-      (before.home_score | 0) <= (before.away_score | 0)) {
-    fireAnim('walkoff');
-    return true;
-  }
-  return false;
-}
-
 // Strictly-increasing nonce so two triggers in the same millisecond don't collide
 // (the overlay only plays a stinger whose nonce is greater than the last one seen).
 let lastNonce = 0;
 const nextNonce = () => (lastNonce = Math.max(Date.now(), lastNonce + 1));
 
 // Fire a transient overlay stinger (not an undoable action — a plain trigger write).
+// Standalone trigger for the manual FX buttons — a stinger with no play behind
+// it, so it has no write to ride. Scoring goes through commit() instead.
 async function fireAnim(type, meta = {}) {
   if (!game) return;
   if (game.auto_clip && type in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[type]);

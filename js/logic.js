@@ -339,3 +339,15 @@ export function undoPending(base, entries) {
   for (const w of rest) state = { ...state, ...w.patch };
   return { state, rest, dropped: entries[i] };
 }
+
+// ---- Walk-off -------------------------------------------------------------
+// Home takes the lead in the bottom of the final (regulation+) inning. Opt-in:
+// only when regulation_innings is set (> 0). A predicate, not a trigger — the
+// pad decides what stinger a play earns and sends it with the play itself.
+export function isWalkoff(before, after) {
+  const reg = after.regulation_innings | 0;
+  if ((after.sport || 'baseball') !== 'baseball' || !reg) return false;
+  return after.half === 'bottom' && (after.inning | 0) >= reg &&
+    (after.home_score | 0) > (after.away_score | 0) &&
+    (before.home_score | 0) <= (before.away_score | 0);
+}
