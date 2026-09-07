@@ -154,7 +154,8 @@ They breathe: a slow accent-tinted flare drifts across on a 38s cycle with a fai
 
 - Vanilla HTML/CSS/JS (ES modules) — nothing to compile, and **no runtime CDN**. `@supabase/supabase-js` is vendored at a pinned version under `js/vendor/`: it used to be imported from esm.sh, which put six third-party requests on the critical path of a browser source OBS starts at first pitch, and let a floating `@2` change mid-season. Upgrading is dropping in a new file (see that file's header) — still no build step and no lockfile.
 - One font dependency: **Barlow Condensed** 500/600/700 for scores, counts and jersey numbers, self-hosted under `/fonts` (latin subset, ~22KB a weight, [SIL OFL 1.1](fonts/OFL.txt)). Self-hosted rather than hot-linked because the pad cold-loads on field LTE. Together with the vendored client, **every byte the app needs comes from its own origin** — the only network dependency at load is your Supabase project.
-- Supabase project `PickEm` (`yeykyutsbeqjcgdxlucn`), schema **`scoreboard`** (tables `games`, `events`, `presets`; RPCs `apply_event`, `undo`; edge function `signup`).
+- Supabase project `PickEm` (`yeykyutsbeqjcgdxlucn`), schema **`scoreboard`** (tables `games`, `events`, `presets`; RPCs `apply_event`, `undo`, `server_now`; edge function `signup`).
+- **One clock.** Nonces and both game clocks are instants one device writes and another reads, so they run on server time, not the writing device's: each page measures its offset from `server_now()` at load and corrects. Without it a phone 40s fast hands the overlay nonces from the future — a second pad's stingers and clips are then dropped in silence — and the same offset shows up on air as that much wrong game clock.
 - Per-user ownership via RLS; public read for overlays, owner-only writes. Presentation (theme/style/look/audio/card) syncs to the overlay via Realtime.
 - Deploys as static files on Vercel (`cleanUrls` gives `/control` and `/overlay`).
 

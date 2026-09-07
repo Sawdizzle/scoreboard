@@ -5,6 +5,7 @@ import * as F from './football.js';
 import * as S from './soccer.js';
 import * as V from './volleyball.js';
 import * as B from './basketball.js';
+import { serverNow, syncClock } from './clock.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -92,7 +93,7 @@ const SPORT_LABEL = { baseball: '⚾', football: '🏈', soccer: '⚽', volleyba
 // Compact "how stale is this game" stamp for the lobby list.
 function timeAgo(iso) {
   if (!iso) return '';
-  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  const s = (serverNow() - new Date(iso).getTime()) / 1000;  // updated_at is server time
   if (s < 90) return 'just now';
   if (s < 3600) return Math.floor(s / 60) + 'm ago';
   if (s < 86400) return Math.floor(s / 3600) + 'h ago';
@@ -215,7 +216,10 @@ async function openGame(id) {
   if (error) return alert(error.message);
   game = data; serverRow = data; overlayCopied = false; guideCollapsed = setupAllDone();
   resetReplayUi();
-  game.lineups = await loadRoster(id);
+  // Before the first nonce of this game, not after: a nonce minted on an
+  // uncorrected clock is one the other device can never beat.
+  const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
+  game.lineups = lineups;
   show('game'); renderGame();
   $('overlay-url').value = overlayUrl();
   $('recap-url').value = `${location.origin}/recap?game=${id}`;
@@ -280,10 +284,10 @@ async function teardownChannel() {
   if (channel) { const c = channel; channel = null; await supabase.removeChannel(c); }
 }
 // Heal state when the network or tab comes back (flaky-LTE guard, like the overlay).
-addEventListener('online', () => { if (game) reloadGame(game.id); });
+addEventListener('online', () => { syncClock(); if (game) reloadGame(game.id); });
 addEventListener('offline', () => setConn('down'));
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && game) { reloadGame(game.id); keepAwake(true); } // the OS drops wake locks on hide
+  if (!document.hidden && game) { syncClock(); reloadGame(game.id); keepAwake(true); } // the OS drops wake locks on hide
 });
 
 // Atomic apply via RPC (snapshots prev_state for undo). Optimistic UI.
@@ -406,8 +410,12 @@ addEventListener('beforeunload', (e) => { if (pending.length) { e.preventDefault
 
 // Strictly-increasing nonce so two triggers in the same millisecond don't collide
 // (the overlay only plays a stinger whose nonce is greater than the last one seen).
+// serverNow(), not Date.now(): the overlay compares these against nonces from
+// whatever OTHER device scored the last play, so they have to come off a clock
+// both devices share. The lastNonce + 1 floor also keeps them rising locally
+// across a sync that moves our offset backwards.
 let lastNonce = 0;
-const nextNonce = () => (lastNonce = Math.max(Date.now(), lastNonce + 1));
+const nextNonce = () => (lastNonce = Math.max(serverNow(), lastNonce + 1));
 
 // Fire a transient overlay stinger (not an undoable action — a plain trigger write).
 // Standalone trigger for the manual FX buttons — a stinger with no play behind
@@ -1203,17 +1211,18 @@ function fromLocalInput(v) {
 // ---- Time-limit clock -----------------------------------------------------
 function clockRemaining(g) {
   if (!g || !g.time_limit_seconds) return 0;
-  if (g.clock_running && g.clock_ends_at) return (new Date(g.clock_ends_at).getTime() - Date.now()) / 1000;
+  if (g.clock_running && g.clock_ends_at) return (new Date(g.clock_ends_at).getTime() - serverNow()) / 1000;
   return g.clock_remaining_seconds ?? g.time_limit_seconds;
 }
 $('clock-start').onclick = () => {
-  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockStart(game, new Date().toISOString()));
+  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockStart(game, new Date(serverNow()).toISOString()));
   if (!game.time_limit_seconds) return;
   const rem = game.clock_remaining_seconds ?? game.time_limit_seconds;
-  writeField({ clock_running: true, clock_ends_at: new Date(Date.now() + rem * 1000).toISOString(), clock_remaining_seconds: rem });
+  // Written here, read in the overlay: it has to be an instant on the shared clock.
+  writeField({ clock_running: true, clock_ends_at: new Date(serverNow() + rem * 1000).toISOString(), clock_remaining_seconds: rem });
 };
 $('clock-pause').onclick = () => {
-  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockPause(game, Date.now()));
+  if ((game.sport || 'baseball') === 'soccer') return commit(S.clockPause(game, serverNow()));
   writeField({ clock_running: false, clock_ends_at: null, clock_remaining_seconds: Math.max(0, Math.round(clockRemaining(game))) });
 };
 $('clock-reset').onclick = () => {
@@ -1227,7 +1236,7 @@ function renderClock() {
   const sport = game.sport || 'baseball';
   if (sport === 'soccer') {
     row.hidden = false;
-    const e = S.elapsedSeconds(game, Date.now());
+    const e = S.elapsedSeconds(game, serverNow());
     const st = S.scState(game);
     setClockText(Math.floor(e / 60) + ':' + String(Math.max(0, Math.round(e % 60))).padStart(2, '0') + (st.stoppage ? ` +${st.stoppage}` : ''));
     $('clock-display').classList.remove('low');

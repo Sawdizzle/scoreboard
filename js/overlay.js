@@ -2,6 +2,7 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
+import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
@@ -104,7 +105,7 @@ function renderBasketball(s) {
 function ordinalHalf(h) { return h === 2 ? '2nd' : h === 1 ? '1st' : String(h); }
 function soccerElapsed(s) {
   const c = (s.state && s.state.clock) || {};
-  return c.running && c.since ? (c.base || 0) + (Date.now() - new Date(c.since).getTime()) / 1000 : (c.base || 0);
+  return c.running && c.since ? (c.base || 0) + (serverNow() - new Date(c.since).getTime()) / 1000 : (c.base || 0);
 }
 function renderSoccer(s) {
   const st = s.state || {};
@@ -262,7 +263,7 @@ function fmtClock(sec) {
 }
 function remainingSeconds(s) {
   if (!s || !s.time_limit_seconds) return null;
-  if (s.clock_running && s.clock_ends_at) return (new Date(s.clock_ends_at).getTime() - Date.now()) / 1000;
+  if (s.clock_running && s.clock_ends_at) return (new Date(s.clock_ends_at).getTime() - serverNow()) / 1000;
   return s.clock_remaining_seconds ?? s.time_limit_seconds;
 }
 // The clock elements are static; cache them and skip DOM writes when nothing
@@ -431,7 +432,7 @@ function fmtCountdown(sec) {
 function updateCardCountdown() {
   const el2 = document.getElementById('card-cd');
   if (!el2 || !last || !last.starts_at) return;
-  const ms = new Date(last.starts_at).getTime() - Date.now();
+  const ms = new Date(last.starts_at).getTime() - serverNow();
   const txt = ms <= 0 ? 'STARTING NOW' : fmtCountdown(ms / 1000);
   if (txt === cdPainted) return;
   cdPainted = txt;
@@ -847,13 +848,18 @@ function scheduleReconnect() {
 }
 
 // Flaky-LTE guards: re-pull fresh state when the network or tab comes back.
-addEventListener('online', fetchState);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchState(); });
+addEventListener('online', () => { syncClock(); fetchState(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { syncClock(); fetchState(); } });
 
 if (!gameId) {
   el.bug.innerHTML = '<div class="err">Add ?game=&lt;id&gt; to the URL</div>';
   el.bug.dataset.ready = '1';
 } else {
+  // Not awaited: the clock repaints at 4Hz so it corrects itself the moment
+  // this lands, and the bug should paint without waiting on it.
+  syncClock().then(() => {
+    if (params.get('debug')) console.log('Scoreboard: clock offset from server', Math.round(clockSkewMs()), 'ms');
+  });
   fetchState();
   subscribe();
 }
