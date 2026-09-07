@@ -231,3 +231,5 @@ Push to `main` → Vercel auto-deploys. Framework preset **Other**, no build com
 ## Auth (username + PIN)
 
 Usernames map to an internal synthetic email; the PIN is the password. Signup goes through the `signup` Edge Function (creates a pre-confirmed account with the service role), so there's no email verification and no secret in the browser. Each user owns and only sees their own games and presets.
+
+**PINs are 6–8 digits.** Four was 10,000 combinations against a short, guessable username, for an app holding children's rosters. Accounts created with a four-digit PIN still log in — only creation is checked. The endpoint is `verify_jwt=false` with open CORS by necessity (a new user has no JWT), which also made it a free account-creation endpoint for anyone who found it, so it now counts attempts per address and refuses more than five an hour.

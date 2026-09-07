@@ -30,6 +30,11 @@ let roster = {};
 let rosterRev = -1;
 let rosterRetry = null;
 let rosterBackoff = 2000;
+// Bumped whenever `roster` is replaced. cardSig keys off this instead of
+// stringifying two full rosters on every pitch — and it has to be this rather
+// than roster_rev, because the row carries the new revision before the fetch
+// that satisfies it has landed.
+let rosterGen = 0;
 async function pullRoster(rev) {
   rosterRev = rev; // claim it first: a slow fetch must not re-trigger on every paint
   const { data, error } = await db.rpc('get_roster', { p_game: gameId, p_token: rosterToken });
@@ -48,6 +53,7 @@ async function pullRoster(rev) {
   }
   rosterBackoff = 2000;
   roster = data || {};
+  rosterGen++;
   if (last) render(last);
 }
 
@@ -262,14 +268,30 @@ function popOnScore(side, val) {
   prevScore[side] = val;
 }
 
-const failedLogos = new Set();
+// A logo that 404s is suppressed so the browser is not asked for it on every
+// render. "Failed once" must not mean "failed all night", though: upload the
+// missing file, or the host comes back, and the overlay would go on hiding it
+// with no way to retry short of reloading the source — which the OBS setup
+// notes tell you not to do.
+const failedLogos = new Map();   // url -> when it last failed
+const LOGO_RETRY_MS = 60000;
+function logoBlocked(url) {
+  const at = failedLogos.get(url);
+  if (at == null) return false;
+  if (Date.now() - at < LOGO_RETRY_MS) return true;
+  failedLogos.delete(url);       // long enough — give it another go
+  return false;
+}
 function setLogo(id, url) {
   const img = document.getElementById(id);
-  if (url && !failedLogos.has(url)) {
-    if (img.getAttribute('src') !== url) img.src = url;
-    img.onerror = () => { failedLogos.add(url); img.hidden = true; img.removeAttribute('src'); };
-    img.hidden = false;
-  } else { img.hidden = true; img.removeAttribute('src'); }
+  if (!img) return;
+  if (!url || logoBlocked(url)) { img.hidden = true; img.removeAttribute('src'); return; }
+  // src was cleared by the failure, so this re-assigns and genuinely retries.
+  if (img.getAttribute('src') !== url) {
+    img.onerror = () => { failedLogos.set(url, Date.now()); img.hidden = true; img.removeAttribute('src'); };
+    img.src = url;
+  }
+  img.hidden = false;
 }
 
 function fmtClock(sec) {
@@ -313,22 +335,30 @@ function updateClock() {
 setInterval(() => { updateClock(); updateCardCountdown(); }, 250);
 
 function toDots(n, max = 3) { let out = ''; for (let i = 0; i < max; i++) out += i < (n | 0) ? '●' : '○'; return out; }
+// The detail strip reads the same for most of an inning, but it was rebuilt
+// from innerHTML on every render — a parse and a layout each pitch, forever,
+// inside a browser source. Same guard the clock has had all along.
+let detailPainted = null;
+function paintDetail(html) {
+  if (html === detailPainted) return;
+  detailPainted = html;
+  const el = document.getElementById('detail');
+  el.innerHTML = html;
+  el.hidden = !html;
+}
 function updateDetail(s) {
-  const el2 = document.getElementById('detail');
   const parts = [];
   const sport = s.sport || 'baseball';
   if (sport === 'football') {
     const st = s.state || {};
     parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')} TO</span>${toDots(st.away_timeouts ?? 3)}</span>`);
     parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')} TO</span>${toDots(st.home_timeouts ?? 3)}</span>`);
-    el2.innerHTML = parts.join(''); el2.hidden = false;
-    return;
+    return paintDetail(parts.join(''));
   }
   if (sport === 'volleyball') {
     const st = s.state || {};
     if (st.target && st.target !== 25) parts.push(`<span><span class="k">SET TO</span>${st.target | 0}</span>`);
-    if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; } else el2.hidden = true;
-    return;
+    return paintDetail(parts.join(''));
   }
   if (sport === 'basketball') {
     const st = s.state || {};
@@ -341,8 +371,7 @@ function updateDetail(s) {
     const ab = bonus('away'), hb = bonus('home');
     if (ab) parts.push(`<span class="runrule">${escapeHtml(s.away_abbr || 'AWAY')} ${ab}</span>`);
     if (hb) parts.push(`<span class="runrule">${escapeHtml(s.home_abbr || 'HOME')} ${hb}</span>`);
-    el2.innerHTML = parts.join(''); el2.hidden = false;
-    return;
+    return paintDetail(parts.join(''));
   }
   if (sport === 'soccer') {
     const c = (s.state && s.state.cards) || { home: {}, away: {} };
@@ -350,8 +379,7 @@ function updateDetail(s) {
     const a = cardStr('away'), h = cardStr('home');
     if (a) parts.push(`<span><span class="k">${escapeHtml(s.away_abbr || 'AWAY')}</span>${a}</span>`);
     if (h) parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')}</span>${h}</span>`);
-    if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; } else el2.hidden = true;
-    return;
+    return paintDetail(parts.join(''));
   }
   // Batter/pitcher prefer the live lineup (at-bat hitter, fielding-team pitcher),
   // falling back to the hand-typed fields when a team has no lineup entered.
@@ -371,8 +399,7 @@ function updateDetail(s) {
   if (s.show_runrule && s.run_rule_diff && Math.abs((s.home_score | 0) - (s.away_score | 0)) >= s.run_rule_diff) {
     parts.push('<span class="runrule">RUN RULE</span>');
   }
-  if (parts.length) { el2.innerHTML = parts.join(''); el2.hidden = false; }
-  else el2.hidden = true;
+  paintDetail(parts.join(''));
 }
 const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -386,11 +413,11 @@ function cardSig(c, s) {
   if (c.type === 'lineup') {
     const side = (c.meta && c.meta.auto) ? battingSide(s) : ((c.meta && c.meta.side) || battingSide(s));
     const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
-    return `${side}:${idx}:${JSON.stringify((s.lineups || {})[side] || {})}`;
+    return `${side}:${idx}:${rosterGen}`;
   }
   if (c.type === 'defense') {
     const side = fieldingSide(s);
-    return `${side}:${JSON.stringify((s.lineups || {})[side] || {})}`;
+    return `${side}:${rosterGen}`;
   }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {

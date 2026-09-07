@@ -140,8 +140,25 @@ $('login-form').addEventListener('submit', async (e) => {
   await refreshSession();
 });
 
+// The one PIN field serves both Log In and Create Account, and it is marked
+// current-password for the common case. On the signup path that tells iOS to
+// offer the saved PIN rather than to store the one being created, so a new
+// account's credential never reaches the keychain. Flip it while the intent is
+// clearly signup, and back as soon as anyone types again.
+const setPinAutocomplete = (v) => $('pin').setAttribute('autocomplete', v);
+for (const ev of ['focus', 'pointerdown']) {
+  $('signup-btn').addEventListener(ev, () => setPinAutocomplete('new-password'));
+}
+for (const id of ['username', 'pin']) {
+  $(id).addEventListener('input', () => setPinAutocomplete('current-password'));
+}
+
 $('signup-btn').addEventListener('click', async () => {
   const username = $('username').value, pin = $('pin').value;
+  // Say it here rather than after a round trip. The endpoint checks the same
+  // thing — this is the courtesy, not the guard.
+  if (!/^[a-z0-9_]{3,20}$/i.test(username.trim())) return setAuthMsg('Username: 3–20 letters, numbers or underscore.');
+  if (!/^\d{6,8}$/.test(pin)) return setAuthMsg('PIN must be 6–8 digits. (Existing shorter PINs still log in.)');
   authBusy(true, 'Creating account…');
   let res, body;
   try {
@@ -311,6 +328,7 @@ async function openGame(id) {
   $('overlay-url').value = overlayUrl();
   $('recap-url').value = `${location.origin}/recap?game=${id}`;
   keepAwake(true);
+  startClockTick();
   await subscribe(id);
 }
 // Backing out is the one exit `beforeunload` can't cover. The queue is
@@ -324,7 +342,7 @@ async function closeGame() {
     if (!confirm(`${n} change${n > 1 ? 's have' : ' has'} not saved yet — still waiting on the network.\n\nLeave this game and lose ${n > 1 ? 'them' : 'it'}?`)) return;
     dropPendingFor(id);
   }
-  stopDemo(); keepAwake(false); resetReplayUi(); disarmObs();
+  stopDemo(); keepAwake(false); stopClockTick(); resetReplayUi(); disarmObs();
   await teardownChannel(); game = null; show('lobby'); await loadGames();
 }
 // Forget every queued write for a game — it is going away, or you chose to.
@@ -1286,7 +1304,7 @@ $('delete-game').onclick = async () => {
   if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
   const id = game.id;
   setupDirty = false; closeSheet('setup-sheet');
-  stopDemo(); keepAwake(false);
+  stopDemo(); keepAwake(false); stopClockTick();
   dropPendingFor(id); // otherwise drain() retries forever against a row that is gone
   await teardownChannel();
   const { error } = await db.from('games').delete().eq('id', id);
@@ -1435,7 +1453,12 @@ function renderClock() {
   setClockText(Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0'));
   $('clock-display').classList.toggle('low', rem <= 60);
 }
-setInterval(() => { if (game) renderClock(); }, 250);
+// Only while a game is open. It used to be registered at module load and never
+// stopped, waking the phone's main thread four times a second on the login and
+// lobby screens, which have no clock on them.
+let clockTimer = null;
+function startClockTick() { if (!clockTimer) clockTimer = setInterval(() => { if (game) renderClock(); }, 250); }
+function stopClockTick() { if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } }
 
 // ---- Practice / demo mode -------------------------------------------------
 let demoTimer = null;

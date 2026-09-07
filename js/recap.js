@@ -7,6 +7,13 @@ import { supabase, db } from './supabase.js';
 const gameId = new URLSearchParams(location.search).get('game');
 const el = document.getElementById('recap');
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// These go inside a style attribute, where esc() is the wrong tool: it stops you
+// breaking out of the attribute but not out of the declaration, so a value with
+// a semicolon in it could set whatever else it liked on that element. They come
+// from <input type="color"> today; that is one hand-written API write away from
+// not being true, on a page handed to parents.
+const HEX = /^#[0-9a-fA-F]{3,8}$/;
+const color = (v, fallback) => (HEX.test(String(v ?? '')) ? String(v) : fallback);
 
 const ORD = { 1: '1st', 2: '2nd', 3: '3rd' };
 const ordinal = (n) => ORD[n] || `${n}th`;
@@ -44,7 +51,7 @@ function render(g) {
   const when = g.starts_at ? new Date(g.starts_at) : new Date(g.created_at);
   el.innerHTML = `
     <div class="status ${done ? 'final' : live ? 'live' : ''}">${live ? '<span class="dot"></span>' : ''}${esc(stateLine(g))}</div>
-    <div class="score" style="--away:${esc(g.away_color || '#7a8794')};--home:${esc(g.home_color || '#1b2a41')}">
+    <div class="score" style="--away:${color(g.away_color, '#7a8794')};--home:${color(g.home_color, '#1b2a41')}">
       <div class="side ${winner === 'away' ? 'win' : ''}">
         ${logo(g.away_logo_url)}
         <div class="name">${esc(g.away_name || 'Visitor')}</div>
