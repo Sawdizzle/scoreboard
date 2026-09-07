@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Vendored, not fetched at runtime — see the header of that file for why.
+import { createClient } from './vendor/supabase-js-2.115.0.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, DB_SCHEMA } from './config.js';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
