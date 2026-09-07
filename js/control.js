@@ -215,6 +215,7 @@ async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   game = data; serverRow = data; overlayCopied = false; guideCollapsed = setupAllDone();
+  panelPainted = {};   // nothing on screen belongs to this game yet
   resetReplayUi();
   // Before the first nonce of this game, not after: a nonce minted on an
   // uncorrected clock is one the other device can never beat.
@@ -697,6 +698,9 @@ const spCfg = () => {
 async function saveSponsors(next) { await writeField({ sponsors: next }); }
 function renderSponsors() {
   const box = $('sponsor-list'); if (!box || !game) return;
+  // Never rebuild these rows out from under someone typing in one — the gate
+  // stops a commit from getting here, but another device's write still can.
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#sponsor-list')) return;
   const c = spCfg();
   box.innerHTML = '';
   c.list.forEach((sp, i) => {
@@ -1767,30 +1771,55 @@ function showSport(sport) {
     $('g-home-name').classList.remove('bat');
   }
 }
+// A drawer panel repaints only when the data it actually reads has changed.
+//
+// renderGame() used to run eleven renders unconditionally on every commit AND
+// every inbound realtime row — rebuilding the sponsor list, the defensive
+// diamond and the scene buttons from innerHTML each time. The overlay is a
+// chatty writer (it reports obs_status on eight OBS events and obs_scenes on
+// every scene change), so switching cameras during a game rebuilt the whole
+// control panel on each cut, including panels nobody was looking at. It is also
+// what destroyed a sponsor name while it was being typed.
+//
+// Each panel names its dependencies below; a render is skipped when their
+// signature is unchanged. Direct calls (a tap, a timer, an ack) bypass the gate
+// on purpose — those are deliberate repaints.
+let panelPainted = {};
+function paintIf(key, deps, fn) {
+  const s = JSON.stringify([game.id, deps]);   // game.id: two games can share a roster_rev
+  if (panelPainted[key] === s) return;
+  panelPainted[key] = s;
+  fn();
+}
+const batIdxOfGame = () => (game.state && game.state.batIdx) || {};
+
 function renderGame() {
   if (!game) return;
-  const sport = game.sport || 'baseball';
+  const g = game;
+  const sport = g.sport || 'baseball';
+  // ---- the fixed shell: always, this is what a commit is for ----
   showSport(sport);
-  $('g-away-name').textContent = game.away_abbr || game.away_name || 'VIS';
-  $('g-home-name').textContent = game.home_abbr || game.home_name || 'HOME';
-  $('g-away-runs').textContent = game.away_score;
-  $('g-home-runs').textContent = game.home_score;
-  ctrlScorePop('away', game.away_score, 'g-away-runs');
-  ctrlScorePop('home', game.home_score, 'g-home-runs');
+  $('g-away-name').textContent = g.away_abbr || g.away_name || 'VIS';
+  $('g-home-name').textContent = g.home_abbr || g.home_name || 'HOME';
+  $('g-away-runs').textContent = g.away_score;
+  $('g-home-runs').textContent = g.home_score;
+  ctrlScorePop('away', g.away_score, 'g-away-runs');
+  ctrlScorePop('home', g.home_score, 'g-home-runs');
   if (sport === 'football') renderFootballControl();
   else if (sport === 'soccer') renderSoccerControl();
   else if (sport === 'volleyball') renderVolleyballControl();
   else if (sport === 'basketball') renderBasketballControl();
   else renderBaseballControl();
-  renderRally();
-  renderSponsors();
-  renderReplay();
-  renderScenes();
-  renderObs();
-  renderAudio();
-  renderLook();
-  renderClock();
-  renderSetupGuide();
+  renderClock();   // already guards its own DOM writes, and ticks at 4Hz anyway
+  // ---- the drawer: only what changed ----
+  paintIf('rally', [g.rally_mode], renderRally);
+  paintIf('sponsors', [g.sponsors], renderSponsors);
+  paintIf('replay', [g.replay_ack, g.auto_clip], renderReplay);
+  paintIf('scenes', [g.obs_scenes], renderScenes);
+  paintIf('obs', [g.obs_status], renderObs);
+  paintIf('audio', [g.audio, g.sound_pack], renderAudio);
+  paintIf('look', [g.theme, g.style, g.scorebug_position, g.scorebug_scale, g.look], renderLook);
+  paintIf('guide', [g.away_name, g.home_name, g.roster_rev, sport], renderSetupGuide);
 }
 
 // ---- Guided game-setup checklist ------------------------------------------
@@ -1966,9 +1995,12 @@ function renderBaseballControl() {
   const on = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
   $('bases-note').textContent = 'Tap a base to set or clear a runner. ' +
     (on.length ? `${on.join(' and ')} occupied.` : 'Nobody on.');
-  renderLineups();
-  renderDefense();
-  renderAutoCardLabels();
+  // roster_rev rather than the lineups blob itself: it is bumped on every roster
+  // write, which is exactly what that column is for, and it saves stringifying
+  // two full rosters on every pitch.
+  paintIf('lineups', [game.roster_rev, batIdxOfGame(), game.away_name, game.home_name], renderLineups);
+  paintIf('defense', [game.roster_rev, defSide, game.sport], renderDefense);
+  paintIf('cards', [game.half, game.card, game.away_abbr, game.home_abbr, game.sport], renderAutoCardLabels);
 }
 // Who is up, and who they are facing. Empty when there is no lineup yet, and
 // the row goes with it rather than sitting there as a blank strip.
