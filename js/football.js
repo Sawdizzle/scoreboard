@@ -36,6 +36,13 @@ export function nextQuarter(g) {
 }
 
 export function offenseTeam(g) { return fbState(g).possession || 'home'; }
+// Points have to belong to somebody. Before anyone has tapped a possession
+// button there is no answer, and offenseTeam()'s 'home' fallback is a guess —
+// one that quietly put six on the wrong team. The scoring actions return null
+// instead and let the pad say what to do, the same way an ace refuses when no
+// server is set. Kickoff and turnover are exempt: they set possession rather
+// than assume it, which is how you tell the pad who has the ball to begin with.
+const hasBall = (g) => fbState(g).possession != null;
 export function defenseTeam(g) { return offenseTeam(g) === 'home' ? 'away' : 'home'; }
 const otherTeam = (t) => (t === 'home' ? 'away' : 'home');
 const scoreOf = (g, team, pts) => ({ [team === 'home' ? 'home_score' : 'away_score']: (g[team === 'home' ? 'home_score' : 'away_score'] | 0) + pts });
@@ -48,12 +55,12 @@ function flipDrive(g) {
 }
 
 // Touchdown holds possession for the PAT (the XP / 2-PT flips the drive after).
-export function touchdown(g) { return { type: 'td', patch: scoreOf(g, offenseTeam(g), 6), anim: 'touchdown' }; }
+export function touchdown(g) { return hasBall(g) ? { type: 'td', patch: scoreOf(g, offenseTeam(g), 6), anim: 'touchdown' } : null; }
 // FG / XP / 2-PT / safety all end the possession → score, then kickoff to the other team.
-export function fieldGoal(g) { return { type: 'fg', patch: { ...scoreOf(g, offenseTeam(g), 3), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' }; }
-export function extraPoint(g) { return { type: 'xp', patch: { ...scoreOf(g, offenseTeam(g), 1), ...withState(g, flipDrive(g)) } }; }
-export function twoPoint(g) { return { type: '2pt', patch: { ...scoreOf(g, offenseTeam(g), 2), ...withState(g, flipDrive(g)) } }; }
-export function safety(g) { return { type: 'safety', patch: { ...scoreOf(g, defenseTeam(g), 2), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' }; }
+export function fieldGoal(g) { return hasBall(g) ? { type: 'fg', patch: { ...scoreOf(g, offenseTeam(g), 3), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' } : null; }
+export function extraPoint(g) { return hasBall(g) ? { type: 'xp', patch: { ...scoreOf(g, offenseTeam(g), 1), ...withState(g, flipDrive(g)) } } : null; }
+export function twoPoint(g) { return hasBall(g) ? { type: '2pt', patch: { ...scoreOf(g, offenseTeam(g), 2), ...withState(g, flipDrive(g)) } } : null; }
+export function safety(g) { return hasBall(g) ? { type: 'safety', patch: { ...scoreOf(g, defenseTeam(g), 2), ...withState(g, flipDrive(g)) }, anim: 'fieldgoal' } : null; }
 
 // Turnover (INT/fumble): the other team takes over, 1st & 10, with a stinger.
 export function turnover(g) { return { type: 'turnover', patch: withState(g, flipDrive(g)), anim: 'turnover' }; }

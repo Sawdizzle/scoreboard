@@ -505,6 +505,11 @@ $('base-2').onclick      = () => commit(L.toggleBase(game, 'second'));
 $('base-3').onclick      = () => commit(L.toggleBase(game, 'third'));
 $('undo-btn').onclick    = doUndo;
 
+// An action that cannot know who to credit returns null rather than guessing.
+// A tap that quietly does nothing is its own bug, so say what is missing.
+const commitOrAsk = (r, msg) => (r ? commit(r) : showToast(msg, 2600));
+const NEED_BALL = 'Set possession first — tap Away ball or Home ball';
+
 // Football buttons
 $('fb-poss-away').onclick = () => commit(F.setPossession(game, 'away'));
 $('fb-poss-home').onclick = () => commit(F.setPossession(game, 'home'));
@@ -516,11 +521,11 @@ $('fb-dist-dn').onclick = () => commit(F.distanceDelta(game, -1));
 $('fb-dist-up').onclick = () => commit(F.distanceDelta(game, 1));
 $('fb-goal').onclick = () => commit(F.setGoal(game));
 $('fb-firstdown').onclick = () => commit(F.firstDown(game));
-$('fb-td').onclick = () => commit(F.touchdown(game));
-$('fb-fg').onclick = () => commit(F.fieldGoal(game));
-$('fb-xp').onclick = () => commit(F.extraPoint(game));
-$('fb-2pt').onclick = () => commit(F.twoPoint(game));
-$('fb-safety').onclick = () => commit(F.safety(game));
+$('fb-td').onclick = () => commitOrAsk(F.touchdown(game), NEED_BALL);
+$('fb-fg').onclick = () => commitOrAsk(F.fieldGoal(game), NEED_BALL);
+$('fb-xp').onclick = () => commitOrAsk(F.extraPoint(game), NEED_BALL);
+$('fb-2pt').onclick = () => commitOrAsk(F.twoPoint(game), NEED_BALL);
+$('fb-safety').onclick = () => commitOrAsk(F.safety(game), NEED_BALL);
 $('fb-nextq').onclick = () => commit(F.nextQuarter(game));
 $('fb-away-dn').onclick = () => commit(F.manualScore(game, 'away', -1));
 $('fb-away-up').onclick = () => commit(F.manualScore(game, 'away', 1));
@@ -555,7 +560,7 @@ $('vb-point-home').onclick = () => commit(V.point(game, 'home'));
 $('vb-serve-away').onclick = () => commit(V.setServe(game, 'away'));
 $('vb-serve-home').onclick = () => commit(V.setServe(game, 'home'));
 $('vb-target').onclick = () => commit(V.cycleTarget(game));
-$('vb-endset').onclick = () => { const r = V.endSet(game); r ? commit(r) : showToast('Tied — score the deciding point first'); };
+$('vb-endset').onclick = () => commitOrAsk(V.endSet(game), 'Tied — score the deciding point first');
 $('vb-set-dn').onclick = () => commit(V.adjustSet(game, -1));
 $('vb-set-up').onclick = () => commit(V.adjustSet(game, 1));
 $('vb-sets-away-dn').onclick = () => commit(V.adjustSets(game, 'away', -1));
@@ -564,7 +569,7 @@ $('vb-sets-home-dn').onclick = () => commit(V.adjustSets(game, 'home', -1));
 $('vb-sets-home-up').onclick = () => commit(V.adjustSets(game, 'home', 1));
 $('vb-away-dn').onclick = () => commit(V.manualScore(game, 'away', -1));
 $('vb-home-dn').onclick = () => commit(V.manualScore(game, 'home', -1));
-$('fx-ace').onclick = () => { const r = V.ace(game); r ? commit(r) : showToast('Set the serving team first'); };
+$('fx-ace').onclick = () => commitOrAsk(V.ace(game), 'Set the serving team first');
 
 // Basketball buttons
 $('bk-away-1').onclick = () => commit(B.score(game, 'away', 1));
@@ -1376,6 +1381,8 @@ function demoStep() {
 }
 
 function demoStepFootball() {
+  // Nothing scores until somebody has the ball, so give it to one of them first.
+  if (!F.fbState(game).possession) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
   const r = Math.random();
   if (r < 0.14) return fireAnim(['touchdown', 'fieldgoal', 'turnover', 'bigplay'][Math.floor(Math.random() * 4)]);
   if (r < 0.28) return commit(F.touchdown(game));

@@ -92,8 +92,27 @@ test('manual score corrections floor at zero', () => {
   assert.equal(F.manualScore(G({ home_score: 7 }), 'home', 1).patch.home_score, 8);
 });
 
-test('BUG-8: scoring with no possession set silently credits home', { todo: 'open finding — should refuse and toast, the way an ace does with no server set' }, () => {
-  assert.equal(F.touchdown(G()).patch.home_score, undefined);
+test('nothing scores until somebody has the ball', () => {
+  // Was BUG-8: offenseTeam() falls back to 'home', so every one of these put
+  // points on a team nobody had chosen, with nothing on screen to say so.
+  for (const fn of [F.touchdown, F.fieldGoal, F.extraPoint, F.twoPoint, F.safety]) {
+    assert.equal(fn(G()), null, fn.name + ' refuses rather than guessing');
+  }
+});
+
+test('and they all score normally once possession is set', () => {
+  const g = G({ state: { possession: 'away' } });
+  assert.equal(F.touchdown(g).patch.away_score, 6);
+  assert.equal(F.fieldGoal(g).patch.away_score, 3);
+  assert.equal(F.extraPoint(g).patch.away_score, 1);
+  assert.equal(F.twoPoint(g).patch.away_score, 2);
+  assert.equal(F.safety(g).patch.home_score, 2, 'the safety still goes to the defense');
+});
+
+test('kickoff and turnover still work with nobody set — they are how you say who has it', () => {
+  assert.equal(F.kickoff(G()).patch.state.possession, 'home');
+  assert.equal(F.turnover(G()).patch.state.possession, 'home');
+  assert.equal(F.kickoff(G({ state: { possession: 'home' } })).patch.state.possession, 'away');
 });
 
 // ===========================================================================
