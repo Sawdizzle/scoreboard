@@ -294,7 +294,7 @@
   <section id="game-view" class="view" hidden>
     <header class="gm-head">
       <button id="back-btn" class="ghost small">‹</button>
-      <div class="gm-score">
+      <div class="gm-score" id="gm-score">
         <b id="g-away-runs">0</b><span id="g-away-name" class="gm-abbr">VIS</span>
         <b id="g-home-runs">0</b><span id="g-home-name" class="gm-abbr">HOME</span>
       </div>
@@ -304,8 +304,9 @@
 
     <!-- Where the at-bat sits. Live on every commit, and the way into the sheet. -->
     <button id="sit-btn" class="gm-sit" type="button">
-      <span class="gm-mid" id="sc-mid"></span>
-      <span class="gm-chev">▸</span>
+      <!-- Dots and a diamond: shape, not text. The button carries the words. -->
+      <span class="gm-mid" id="sc-mid" aria-hidden="true"></span>
+      <span class="gm-chev" aria-hidden="true">▸</span>
     </button>
 
     <div class="gm-batter" id="gm-batter">
@@ -932,7 +933,12 @@
     </div>
   </section>
 
-  <div id="toast" class="toast" hidden></div>
+  <!-- The toast is the app's only channel for "Undone", "Clip saved" and every
+       error — it deliberately never alerts. It spends most of its life `hidden`,
+       and a live region that is display:none is not in the accessibility tree at
+       all, so announcements go through the always-present mirror below it. -->
+  <div id="toast" class="toast" aria-hidden="true" hidden></div>
+  <p id="a11y-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 
   <!-- SITUATION SHEET -->
   <!-- Bases, count, inning and the corrections that go with them. All of it used

@@ -386,3 +386,35 @@ test('walk-off is baseball only', () => {
   const fb = { sport: 'football' };
   assert.equal(L.isWalkoff(W({ ...fb, home_score: 2, away_score: 3 }), W({ ...fb, home_score: 4, away_score: 3 })), false);
 });
+
+// ---------------------------------------------------------------------------
+// The situation in words (UI-4) — what the situation button says out loud,
+// since the bar itself is dots and a diamond.
+// ---------------------------------------------------------------------------
+test('the situation reads as a sentence, and counts agree with themselves', () => {
+  assert.equal(L.situationSentence(G()),
+    'Top of the 1st, 0 balls, 0 strikes, 0 outs, bases empty');
+  assert.equal(L.situationSentence(G({ half: 'bottom', inning: 3, balls: 1, strikes: 1, outs: 1 })),
+    'Bottom of the 3rd, 1 ball, 1 strike, 1 out, bases empty', 'singular at one, not "1 balls"');
+  assert.equal(L.situationSentence(G({ inning: 2, balls: 3, strikes: 2, outs: 2 })),
+    'Top of the 2nd, 3 balls, 2 strikes, 2 outs, bases empty');
+});
+
+test('innings past the third take the plain ordinal', () => {
+  assert.ok(L.situationSentence(G({ inning: 4 })).startsWith('Top of the 4th'));
+  assert.ok(L.situationSentence(G({ inning: 11 })).startsWith('Top of the 11th'));
+});
+
+test('the bases are described the way a broadcaster would', () => {
+  assert.equal(L.basesPhrase(bases(0, 0, 0)), 'bases empty');
+  assert.equal(L.basesPhrase(bases(1, 0, 0)), 'runner on first');
+  assert.equal(L.basesPhrase(bases(0, 0, 1)), 'runner on third');
+  assert.equal(L.basesPhrase(bases(1, 0, 1)), 'runners on first and third');
+  assert.equal(L.basesPhrase(bases(0, 1, 1)), 'runners on second and third');
+  assert.equal(L.basesPhrase(bases(1, 1, 1)), 'bases loaded', 'not "first and second and third"');
+});
+
+test('the sentence reads the bases even when they arrive as a JSON string', () => {
+  assert.ok(L.situationSentence(G({ bases: '{"first":true,"second":false,"third":true}' }))
+    .endsWith('runners on first and third'));
+});

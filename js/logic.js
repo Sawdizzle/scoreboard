@@ -351,3 +351,26 @@ export function isWalkoff(before, after) {
     (after.home_score | 0) > (after.away_score | 0) &&
     (before.home_score | 0) <= (before.away_score | 0);
 }
+
+// ---- The situation, in words ----------------------------------------------
+// The situation bar is dots and a diamond — shape, not text — so the button
+// around it carries this instead. Pure, because the fiddly parts (one out vs
+// two outs, bases loaded, first AND third) are exactly what goes wrong.
+const ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd' };
+const ordinalOf = (n) => ORDINALS[n] || `${n}th`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+export function basesPhrase(b) {
+  const on = [b.first && 'first', b.second && 'second', b.third && 'third'].filter(Boolean);
+  if (!on.length) return 'bases empty';
+  if (on.length === 3) return 'bases loaded';
+  return `${on.length === 1 ? 'runner on' : 'runners on'} ${on.join(' and ')}`;
+}
+export function situationSentence(g) {
+  return [
+    `${g.half === 'top' ? 'Top' : 'Bottom'} of the ${ordinalOf(g.inning | 0)}`,
+    plural(g.balls | 0, 'ball', 'balls'),
+    plural(g.strikes | 0, 'strike', 'strikes'),
+    plural(g.outs | 0, 'out', 'outs'),
+    basesPhrase(safeBases(g.bases)),
+  ].join(', ');
+}

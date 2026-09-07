@@ -18,8 +18,21 @@ const show = (view) => {
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const emailFor = (u) => `${u.trim().toLowerCase()}@${USER_EMAIL_DOMAIN}`;
 
+// The one place anything gets spoken. The visible toast spends most of its life
+// `hidden`, and a display:none live region is not in the accessibility tree, so
+// nothing it said would ever be announced — this mirror is always present.
+function announce(text) {
+  const el = $('a11y-live');
+  if (!el || !text) return;
+  // Setting the identical string is not a content change, so a repeated message
+  // would pass in silence. A zero-width space makes it a change and reads as
+  // nothing.
+  el.textContent = el.textContent === text ? text + '\u200b' : text;
+}
+
 let toastTimer;
 function showToast(msg, ms = 1600) {
+  announce(msg);
   const t = $('toast'); if (!t) return;
   t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer);
@@ -216,6 +229,7 @@ async function openGame(id) {
   if (error) return alert(error.message);
   game = data; serverRow = data; overlayCopied = false; guideCollapsed = setupAllDone();
   panelPainted = {};   // nothing on screen belongs to this game yet
+  lastSaidScore = null;
   resetReplayUi();
   // Before the first nonce of this game, not after: a nonce minted on an
   // uncorrected clock is one the other device can never beat.
@@ -1817,6 +1831,21 @@ $('walk-confirm').onclick = () => {
 
 // Render --------------------------------------------------------------------
 const ordinal = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || n + 'th');
+// The header reads runs-then-abbreviation twice over, which out loud is "0 VIS 0
+// HOME". Give it the sentence instead, and say it when it changes — that is the
+// confirmation a tap landed, for an operator who cannot see the number move.
+let lastSaidScore = null;
+function renderScoreLabel(g) {
+  const said = `${g.away_abbr || g.away_name || 'Visitor'} ${g.away_score | 0}, ` +
+               `${g.home_abbr || g.home_name || 'Home'} ${g.home_score | 0}`;
+  const el = $('gm-score');
+  if (el) el.setAttribute('aria-label', said);
+  if (said === lastSaidScore) return;
+  const first = lastSaidScore === null;
+  lastSaidScore = said;
+  if (!first) announce(said);   // opening a game is not a scoring event
+}
+
 // Pop the control's score when it goes up (operator feedback), like the overlay.
 const ctrlPrevScore = { away: null, home: null };
 function ctrlScorePop(side, val, id) {
@@ -1875,6 +1904,7 @@ function renderGame() {
   $('g-home-runs').textContent = g.home_score;
   ctrlScorePop('away', g.away_score, 'g-away-runs');
   ctrlScorePop('home', g.home_score, 'g-home-runs');
+  renderScoreLabel(g);
   if (sport === 'football') renderFootballControl();
   else if (sport === 'soccer') renderSoccerControl();
   else if (sport === 'volleyball') renderVolleyballControl();
@@ -2027,6 +2057,14 @@ $('setup-guide').addEventListener('click', (e) => {
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
 });
 
+// The bar itself is dots and a diamond — shape, not text, and marked
+// aria-hidden. These put the same state into the button's label, so it reads as
+// a sentence and can be checked on demand instead of guessed at.
+function setSitLabel(text) {
+  const b = $('sit-btn');
+  if (b) b.setAttribute('aria-label', text);
+}
+
 // Count dots read at a glance in sunlight where "2 - 1" does not; the mini
 // diamond is the same shape as the sheet's, so the sheet is never a surprise.
 // Three balls, two strikes, two outs is what a live at-bat holds — but the
@@ -2053,6 +2091,7 @@ function renderBaseballControl() {
       `<span class="mb b3${b.third ? ' on' : ''}"></span>` +
       '<span class="mb mh"></span>' +
     '</span>';
+  setSitLabel(L.situationSentence(game) + '. Edit the situation.');
   $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
   $('g-away-name').classList.toggle('bat', game.half === 'top');
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
@@ -2092,6 +2131,8 @@ function renderFootballControl() {
   const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
   const poss = st.possession === 'away' ? '🏈 ◄' : st.possession === 'home' ? '► 🏈' : '—';
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
+  setSitLabel(`Quarter ${st.quarter}, ${dd}` +
+    (st.possession ? `, ${st.possession === 'home' ? game.home_name : game.away_name} ball` : ', possession not set'));
   $('g-batting').textContent = st.possession ? `Ball: ${st.possession === 'home' ? game.home_name : game.away_name}` : 'Possession: —';
   $('fb-dist-val').textContent = st.distance === 'goal' ? 'Gl' : st.distance;
   $('fb-poss-away').classList.toggle('on', st.possession === 'away');
@@ -2102,6 +2143,7 @@ function renderSoccerControl() {
   const st = S.scState(game);
   $('sc-mid').innerHTML = `<span class="sc-inning">${st.half === 2 ? '2nd' : '1st'} Half</span>` +
     `<span class="sc-count">⚽</span><span class="sc-outs">${st.stoppage ? '+' + st.stoppage : ''}</span>`;
+  setSitLabel(`${st.half === 2 ? 'Second' : 'First'} half` + (st.stoppage ? `, plus ${st.stoppage} minutes stoppage` : ''));
   $('g-batting').textContent = 'Soccer';
   $('sc-stop-val').textContent = '+' + st.stoppage;
   $('sc-half-1').classList.toggle('on', st.half === 1);
@@ -2112,6 +2154,8 @@ function renderVolleyballControl() {
   const serve = st.serve === 'away' ? '◄ serve' : st.serve === 'home' ? 'serve ►' : 'serve: —';
   $('sc-mid').innerHTML = `<span class="sc-inning">SET ${st.set}</span>` +
     `<span class="sc-count">${st.sets.away}–${st.sets.home}</span><span class="sc-outs">${serve}</span>`;
+  setSitLabel(`Set ${st.set}, sets ${st.sets.away} to ${st.sets.home}` +
+    (st.serve ? `, ${st.serve === 'home' ? game.home_name : game.away_name} serving` : ', server not set'));
   $('g-batting').textContent = st.serve ? `Serving: ${st.serve === 'home' ? game.home_name : game.away_name}` : 'Serving: —';
   $('vb-set-val').textContent = st.set;
   $('vb-target').textContent = 'To ' + st.target;
@@ -2123,6 +2167,7 @@ function renderBasketballControl() {
   const bonus = [B.bonusOf(st, 'away') && 'AWAY ' + B.bonusOf(st, 'away'), B.bonusOf(st, 'home') && 'HOME ' + B.bonusOf(st, 'home')].filter(Boolean).join(' · ');
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.period}</span>` +
     `<span class="sc-count">F ${st.fouls.away}·${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
+  setSitLabel(`Quarter ${st.period}, fouls ${st.fouls.away} to ${st.fouls.home}` + (bonus ? `, ${bonus}` : ''));
   $('g-batting').textContent = `Q${st.period}` + (bonus ? ` · ${bonus}` : '');
   $('bk-period-val').textContent = 'Q' + st.period;
 }
