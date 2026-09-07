@@ -1,15 +1,48 @@
 # Migrations
 
-The Supabase project (`yeykyutsbeqjcgdxlucn`) has always tracked migrations
-remotely; this directory is where the `scoreboard` schema's own migrations are
-kept from now on, so the data layer is reproducible from the repo rather than
-only from the hosted project.
+The database side of the app, in the repo rather than only in the hosted
+project. Before this existed, the schema, the RLS policies and the nine RPCs
+lived exclusively in Supabase — the one part of a deliberately no-build app that
+could not be recovered from the files you can see.
 
-Earlier scoreboard migrations (`20260812225438_live_scoreboard` through
-`20260820040959_move_overlay_token_off_public_row`) exist only in the remote
-history. To backfill them:
+- **`00000000000000_scoreboard_baseline.sql`** — the whole schema as one runnable
+  file: tables, constraints, indexes, comments, functions, the trigger, RLS and
+  its policies, grants, and the Realtime publication. Stand up a new project, a
+  staging branch or a local stack from this and the app works.
+- Everything after it is a single change, in order.
+
+The baseline is **squashed from the live project**, not replayed from the fifteen
+migrations that built it (`20260812225438_live_scoreboard` onward). Those exist
+only in the remote history. To bring them down instead:
 
 ```bash
 supabase link --project-ref yeykyutsbeqjcgdxlucn
-supabase db pull --schema scoreboard
+supabase db pull --schema scoreboard    # needs the database password
+```
+
+## The remote already has this schema
+
+So the CLI has to be told the baseline is accounted for, or a `db push` will try
+to run it against a database that already has everything:
+
+```bash
+supabase migration repair --status applied 00000000000000
+```
+
+The three migrations dated 2026-09-07 are already in the remote history under
+these exact names and need no repair.
+
+## How the baseline was checked
+
+It was written from catalog introspection, then compared field by field against
+the live schema: all 92 columns (type, default, not-null), 19 constraints, 9
+indexes, 20 policies, 5 RLS flags and 11 functions, with no extras. Function
+bodies are verbatim `pg_get_functiondef` output, so the part that would be
+hardest to reconstruct by hand cannot drift.
+
+It has **not** been executed end to end against an empty database. Before
+trusting it for a real restore, run it once somewhere disposable:
+
+```bash
+supabase start && supabase db reset     # applies every migration in order
 ```
