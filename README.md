@@ -120,7 +120,7 @@ obs-browser has no show/hide for an individual source, so a camera change is a s
 
 So rosters moved to `scoreboard.rosters`, owner-only, with the roster's `token` stored **on that private row** — not on `games`, where anyone could read the key to the lock. The overlay reads through `get_roster(game, token)`, a `SECURITY DEFINER` function that returns `{}` for a wrong token; `rotate_overlay_token()` invalidates every link ever shared. `roster_rev` on `games` rides Realtime so the overlay knows when to re-pull what it can't subscribe to.
 
-Without `&t=` the overlay runs completely — scorebug, cards, clips, everything — minus the lineup and defense cards. Verified: correct token returns the roster, wrong token returns `{}`, the anon role cannot read `scoreboard.rosters` at all, and no roster names appear anywhere in the public `games` row.
+The token also gates the overlay's three write-backs — OBS status, the camera list, and the clip ack — because those are keyed on the game id, which is public: without the gate, anyone holding a recap link could spoof the pad's OBS panel mid-broadcast. Without `&t=` the overlay still runs the scorebug, cards, takeovers, moments and sound; what it loses is the lineup and defense cards plus everything under **OBS access tiers** below. Re-copy the overlay link from the control panel if an old URL is still in your Browser Source. `rotate_overlay_token()` revokes both at once. Verified: correct token returns the roster, wrong token returns `{}`, the anon role cannot read `scoreboard.rosters` at all, and no roster names appear anywhere in the public `games` row.
 
 ## Public recap page
 

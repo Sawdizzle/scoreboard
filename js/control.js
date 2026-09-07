@@ -222,9 +222,24 @@ async function openGame(id) {
   keepAwake(true);
   await subscribe(id);
 }
+// Backing out is the one exit `beforeunload` can't cover. The queue is
+// memory-only on purpose — replaying stale absolute patches over a row you
+// have since reloaded is worse than losing them — so leaving means dropping
+// this game's writes, and that has to be a choice you make on purpose.
 async function closeGame() {
+  const id = game && game.id;
+  if (pendingFor(id)) {
+    const n = pending.filter((w) => w.gameId === id).length;
+    if (!confirm(`${n} change${n > 1 ? 's have' : ' has'} not saved yet — still waiting on the network.\n\nLeave this game and lose ${n > 1 ? 'them' : 'it'}?`)) return;
+    dropPendingFor(id);
+  }
   stopDemo(); keepAwake(false); resetReplayUi(); disarmObs();
   await teardownChannel(); game = null; show('lobby'); await loadGames();
+}
+// Forget every queued write for a game — it is going away, or you chose to.
+function dropPendingFor(id) {
+  for (let i = pending.length - 1; i >= 0; i--) if (pending[i].gameId === id) pending.splice(i, 1);
+  renderPending();
 }
 $('back-btn').addEventListener('click', closeGame);
 
@@ -236,7 +251,7 @@ function setConn(state) {
 }
 // Re-pull the authoritative row (heals any updates missed while disconnected).
 async function reloadGame(id) {
-  if (pending.length) return; // our queue is ahead of the server; don't rewind
+  if (pendingFor(id)) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
   if (!error && data) { game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
 }
@@ -248,7 +263,7 @@ async function subscribe(id) {
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
       // The row no longer carries the roster (that table is private), so keep ours.
-      (payload) => { if (pending.length) return; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
+      (payload) => { if (pendingFor(id)) return; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') { setConn('live'); drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -277,17 +292,24 @@ document.addEventListener('visibilitychange', () => {
 // Now the optimistic state stands and the write joins a queue that drains in
 // order when the network returns. The overlay already survives disconnects by
 // holding its last state; this is the pad's half of that.
-const pending = [];      // FIFO of {type, patch, payload} not yet accepted
+const pending = [];      // FIFO of {gameId, type, patch, payload} not yet accepted
 let draining = false;
 let drainTimer = null;
+// Every patch holds ABSOLUTE values, so the game it belongs to is part of the
+// write, not something to infer at send time. drain() can run long after you
+// have backed out to the lobby and opened something else — addressed to
+// whatever happens to be open then, these would overwrite the wrong game.
+const pendingFor = (id) => !!id && pending.some((w) => w.gameId === id);
 
 async function commit(res) {
+  if (!game) return;
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
   haptic();
   const prev = game;
+  const gameId = game.id;
   game = { ...game, ...res.patch };
   renderGame();
-  pending.push({ type: res.type, patch: res.patch, payload: res.payload || {} });
+  pending.push({ gameId, type: res.type, patch: res.patch, payload: res.payload || {} });
   renderPending();
   drain();
   // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
@@ -300,11 +322,11 @@ async function commit(res) {
 // Strictly in order: each patch holds absolute values, so replaying them out of
 // sequence would undo later work.
 async function drain() {
-  if (draining || !pending.length || !game) return;
+  if (draining || !pending.length) return;   // no open game needed: the queue knows its own
   draining = true;
   while (pending.length) {
     const w = pending[0];
-    const { data, error } = await db.rpc('apply_event', { p_game: game.id, p_type: w.type, p_new: w.patch, p_payload: w.payload });
+    const { data, error } = await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: w.patch, p_payload: w.payload });
     if (error) {
       draining = false;
       renderPending(error.message);
@@ -313,9 +335,12 @@ async function drain() {
       return;
     }
     pending.shift();
-    // The server row is only authoritative once it has seen everything we sent,
-    // and it carries no roster — keep the one in hand.
-    if (!pending.length && data) { game = { ...data, lineups: game.lineups }; renderGame(); }
+    // The server row is only authoritative once it has seen everything we sent
+    // FOR THIS GAME, and it carries no roster — keep the one in hand.
+    if (data && game && game.id === w.gameId && !pendingFor(game.id)) {
+      game = { ...data, lineups: game.lineups };
+      renderGame();
+    }
     renderPending();
   }
   draining = false;
@@ -1034,6 +1059,7 @@ $('delete-game').onclick = async () => {
   const id = game.id;
   $('setup-sheet').hidden = true;
   stopDemo(); keepAwake(false);
+  dropPendingFor(id); // otherwise drain() retries forever against a row that is gone
   await teardownChannel();
   const { error } = await db.from('games').delete().eq('id', id);
   if (error) return alert(error.message);

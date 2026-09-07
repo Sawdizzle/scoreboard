@@ -10,6 +10,21 @@ if (params.get('debug')) { document.body.classList.add('debug'); window.__audio 
 // overlay reads it through a token that travels only in this URL. No token, no
 // lineup or defense cards — everything else still runs.
 const rosterToken = params.get('t');
+// Writing back to the game row -- the OBS status, scene and clip-ack relay --
+// is gated on that same token, so a link someone found can't drive the pad's
+// OBS panel. A URL without &t= still runs the whole overlay; it just can't
+// report. Say so once rather than failing silently on every OBS event.
+let relayWarned = false;
+function relayReady() {
+  if (rosterToken) return true;
+  if (!relayWarned) {
+    relayWarned = true;
+    console.warn('Scoreboard: this overlay URL has no &t= token, so OBS status, ' +
+      'camera list and replay clips stay off. Re-copy the overlay link from the ' +
+      'control panel and paste it into the Browser Source to enable them.');
+  }
+  return false;
+}
 let roster = {};
 let rosterRev = -1;
 async function pullRoster(rev) {
@@ -566,8 +581,9 @@ async function obsControlLevel() {
 const canSaveReplay = (level) => level >= 3 && typeof window.obsstudio?.saveReplayBuffer === 'function';
 
 function ackReplay(nonce, ok, code, level, buffering) {
+  if (!relayReady()) return Promise.resolve();
   return db.rpc('ack_replay', {
-    p_game: gameId, p_nonce: nonce, p_ok: ok, p_code: code,
+    p_game: gameId, p_token: rosterToken, p_nonce: nonce, p_ok: ok, p_code: code,
     p_level: level ?? null, p_buffering: buffering ?? null,
   }).then(({ error }) => { if (error) console.warn('replay ack failed', error.message); });
 }
@@ -582,6 +598,7 @@ async function sendStatus() {
   if (!obsEnabled || !gameId) return;
   if (obsLevel === null) obsLevel = await obsControlLevel();
   if (obsLevel < 0) return; // not in OBS: stay silent, a preview tab must not speak for the source
+  if (!relayReady()) return;
   await ackReplay(0, canSaveReplay(obsLevel), 'hello', obsLevel, bufferOn);
 }
 async function replayHello() {
@@ -684,10 +701,11 @@ async function reportScenes() {
   if (!obsEnabled || !gameId) return;
   if (obsLevel === null) obsLevel = await obsControlLevel();
   if (obsLevel < 0) return; // not in OBS: stay silent
+  if (!relayReady()) return;
   const [list, cur] = await Promise.all([obsAsk('getScenes', null), obsAsk('getCurrentScene', null)]);
   const names = Array.isArray(list) ? list.map(sceneName).filter(Boolean).slice(0, 60) : [];
   const { error } = await db.rpc('set_obs_scenes', {
-    p_game: gameId, p_level: obsLevel, p_current: sceneName(cur), p_scenes: names,
+    p_game: gameId, p_token: rosterToken, p_level: obsLevel, p_current: sceneName(cur), p_scenes: names,
   });
   if (error) console.warn('scene report failed', error.message);
 }
@@ -712,10 +730,11 @@ async function reportStatus() {
   if (!obsEnabled || !gameId) return;
   if (obsLevel === null) obsLevel = await obsControlLevel();
   if (obsLevel < 0) return; // not in OBS: stay silent
+  if (!relayReady()) return;
   const st = await obsAsk('getStatus', null);
   if (st) bufferOn = !!st.replaybuffer; // keep the clip path's view in step
   const { error } = await db.rpc('set_obs_status', {
-    p_game: gameId, p_level: obsLevel,
+    p_game: gameId, p_token: rosterToken, p_level: obsLevel,
     p_streaming: st ? !!st.streaming : null,
     p_recording: st ? !!st.recording : null,
     p_paused: st ? !!st.recordingPaused : null,
