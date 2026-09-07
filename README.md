@@ -220,7 +220,9 @@ It exists because v3.23 shipped with the entire Game setup section deleted — a
 
 The pad's writes go through a queue. A failed write no longer rolls the score back with a toast — the optimistic state stands, the write joins a FIFO, and the queue drains in order when the network returns (on `online`, on tab focus, on realtime resubscribe, and on a 4s retry). A badge in the game header shows how many changes are waiting.
 
-While anything is queued the pad ignores incoming realtime rows and skips the heal-on-reconnect refetch: the server is behind the pad at that moment, and adopting its row would rewind a score you've already moved past. The authoritative row is taken only once the queue empties. Closing the tab with unsaved scoring warns first — the queue is deliberately memory-only, since replaying stale absolute patches over a reloaded state is worse than losing them.
+While anything is queued the pad ignores incoming realtime rows and skips the heal-on-reconnect refetch: the server is behind the pad at that moment, and adopting its row would rewind a score you've already moved past. The authoritative row is taken only once the queue empties. Closing the tab with unsaved scoring warns first — the queue is deliberately memory-only, since replaying stale absolute patches over a reloaded state is worse than losing them. Backing out to the lobby and logging out ask the same question.
+
+**If the login expires**, every write becomes a 401 and no amount of retrying will help. The pad used to keep trying every four seconds forever, with a `⏳` badge counting up as the only sign anything was wrong. Now the queue stops, a banner says so and does not go away, and logging back in returns you to the same game and sends what was waiting — the optimistic state and the queue are both kept, so nothing scored is lost.
 
 ## Deploy (Vercel)
 

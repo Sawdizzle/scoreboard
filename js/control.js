@@ -48,10 +48,74 @@ let channel = null;
 async function refreshSession() {
   const { data } = await supabase.auth.getSession();
   user = data.session?.user ?? null;
-  if (user) { $('who').textContent = user.user_metadata?.username || 'signed in'; show('lobby'); await loadGames(); await loadPresets(); await loadTeams(); }
+  if (user) {
+    $('who').textContent = user.user_metadata?.username || 'signed in';
+    hideSessionLost();
+    // Signed back in after a session died mid-game: go straight back to it. The
+    // in-memory state is still the truth — the queue holds what the server has
+    // not seen — so re-subscribe and send, rather than re-fetching over the top.
+    if (resumeGameId && game && game.id === resumeGameId) {
+      resumeGameId = null;
+      show('game'); renderGame();
+      await subscribe(game.id);
+      drain();
+      await loadPresets(); await loadTeams();
+      return;
+    }
+    resumeGameId = null;
+    // Paint the lobby before waiting on the lists, as it always has.
+    show('lobby'); await loadGames(); await loadPresets(); await loadTeams();
+  }
   else { show('auth'); if ($('username').value) $('pin').focus(); } // returning user lands on the PIN
 }
 const setAuthMsg = (m) => { $('auth-msg').textContent = m; };
+
+// ---- Losing the session mid-game -----------------------------------------
+// The refresh token dies, or the account is signed out somewhere else, and from
+// then on every write is a 401. The queue kept retrying every four seconds
+// forever and the only thing on screen was a ⏳ badge counting up — no way to
+// know that scoring had stopped saving, and no way to fix it.
+//
+// The optimistic state and the queue are both kept: nothing scored is lost,
+// it just cannot be sent until there is a session again. So stop retrying, say
+// so in a way that does not disappear, and come back to the same game after.
+let sessionLost = false;
+let deliberateSignOut = false;   // Log out is not a failure
+let resumeGameId = null;         // the game to return to once signed back in
+
+function showSessionLost() {
+  if (sessionLost) return;
+  sessionLost = true;
+  clearTimeout(drainTimer);
+  resumeGameId = game ? game.id : null;
+  const n = pending.length;
+  $('sl-note').textContent = n
+    ? `Your login expired. ${n} change${n > 1 ? 's are' : ' is'} still waiting — log back in and ${n > 1 ? 'they' : 'it'} will save.`
+    : 'Your login expired. Log back in to keep scoring.';
+  $('session-lost').hidden = false;
+  announce('Signed out. ' + $('sl-note').textContent);
+}
+function hideSessionLost() {
+  sessionLost = false;
+  $('session-lost').hidden = true;
+}
+$('sl-login').onclick = () => {
+  $('session-lost').hidden = true;   // the auth screen explains itself
+  const n = pending.length;
+  show('auth');
+  setAuthMsg(n ? `Signed out — sign in to save ${n} change${n > 1 ? 's' : ''}.` : 'Signed out — sign in to carry on.');
+  $('pin').focus();
+};
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    // Back in. Anything still queued goes out now.
+    if (sessionLost) { hideSessionLost(); drain(); }
+    return;
+  }
+  if (deliberateSignOut) { deliberateSignOut = false; return; }
+  if (user) showSessionLost();   // only a surprise if we thought we were signed in
+});
 
 // The username is the same every time on a personal device; the PIN never is.
 const LAST_USER = 'sb:lastUser';
@@ -97,6 +161,12 @@ $('signup-btn').addEventListener('click', async () => {
 });
 
 $('logout-btn').addEventListener('click', async () => {
+  // Same bargain as backing out of a game: the queue is memory-only, so leaving
+  // with writes in it loses them, and that has to be a choice.
+  if (pending.length && !confirm(`${pending.length} change(s) have not saved yet.\n\nLog out and lose them?`)) return;
+  pending.length = 0; renderPending();
+  deliberateSignOut = true;
+  hideSessionLost(); resumeGameId = null;
   await teardownChannel(); await supabase.auth.signOut();
   user = null; game = null; await refreshSession();
 });
@@ -373,6 +443,7 @@ async function commit(res) {
 // sequence would undo later work.
 async function drain() {
   if (draining || !pending.length) return;   // no open game needed: the queue knows its own
+  if (sessionLost) return;                   // nothing will be accepted until there is a session
   draining = true;
   while (pending.length) {
     const w = pending[0];
@@ -389,6 +460,11 @@ async function drain() {
       renderPending(error.message);
       // Say it once. Silence here is what made a dropped Setup save invisible.
       if (!drainFailing) { drainFailing = true; showToast(`⚠️ Not saved yet — ${error.message}`, 4000); }
+      // A rejection that smells of expired credentials: ask the auth client
+      // whether there is still a session, in case it has not noticed yet.
+      if (/jwt|token|401|not authenticated|unauthorized/i.test(error.message || '')) {
+        supabase.auth.getSession().then(({ data }) => { if (!data.session) showSessionLost(); });
+      }
       clearTimeout(drainTimer);
       drainTimer = setTimeout(drain, 4000); // keep trying; the game doesn't stop
       return;

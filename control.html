@@ -933,6 +933,15 @@
     </div>
   </section>
 
+  <!-- Signed out mid-game: the one failure the pad cannot recover from on its
+       own, and the one a toast is wrong for — it would vanish while the queue
+       kept growing behind it. This stays until it is dealt with. -->
+  <div id="session-lost" class="session-lost" role="alert" hidden>
+    <b>Signed out</b>
+    <span id="sl-note" class="sl-note"></span>
+    <button id="sl-login" type="button">Log in again</button>
+  </div>
+
   <!-- The toast is the app's only channel for "Undone", "Clip saved" and every
        error — it deliberately never alerts. It spends most of its life `hidden`,
        and a live region that is display:none is not in the accessibility tree at

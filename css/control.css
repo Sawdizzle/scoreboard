@@ -39,6 +39,24 @@
   --num: "Barlow Condensed", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
+/* Signed out mid-game. Amber and red are reserved for things genuinely
+   misconfigured, and this is one: nothing will save until it is fixed. Sits
+   above everything, including an open sheet, and does not go away by itself. */
+.session-lost {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
+  padding: calc(env(safe-area-inset-top) + 10px) 14px 12px;
+  background: var(--strike); color: #fff; font-size: 14px; line-height: 1.35;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+.session-lost[hidden] { display: none; }
+.session-lost b { font-size: 15px; flex: 0 0 auto; }
+.sl-note { flex: 1 1 220px; }
+#sl-login {
+  flex: 0 0 auto; margin: 0; padding: 9px 15px; border: 0; border-radius: 10px;
+  background: #fff; color: #14181f; font-weight: 800; font-size: 14px;
+}
+
 /* Read by a screen reader, invisible to everyone else. Not display:none and not
    hidden — either would drop it out of the accessibility tree, which is exactly
    what stops a live region from ever announcing anything. */
