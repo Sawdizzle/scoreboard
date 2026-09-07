@@ -281,15 +281,17 @@ async function loadRoster(id) {
   const { data } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   return (data && data.data) || {};
 }
-// roster_rev rides Realtime so the overlay knows to re-pull what it can't subscribe to.
+// roster_rev rides Realtime so the overlay knows to re-pull what it can't
+// subscribe to. Both writes go through one RPC, in one transaction, with the
+// increment computed in the database: this used to be an upsert followed by a
+// separate bump read off the local row, so two devices editing lineups between
+// innings produced the same number and one edit left the overlay pointing at a
+// revision it thought it already had. The returned value is authoritative.
 async function saveRoster(lineups) {
   game = { ...game, lineups };
-  const { error } = await db.from('rosters')
-    .upsert({ game_id: game.id, owner_id: user.id, data: lineups, updated_at: new Date().toISOString() }, { onConflict: 'game_id' });
+  const { data, error } = await db.rpc('save_roster', { p_game: game.id, p_data: lineups });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  const roster_rev = (game.roster_rev | 0) + 1;
-  game = { ...game, roster_rev };
-  await db.from('games').update({ roster_rev }).eq('id', game.id);
+  game = { ...game, roster_rev: data | 0 };
 }
 const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
 

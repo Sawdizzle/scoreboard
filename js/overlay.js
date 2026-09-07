@@ -28,10 +28,25 @@ function relayReady() {
 }
 let roster = {};
 let rosterRev = -1;
+let rosterRetry = null;
+let rosterBackoff = 2000;
 async function pullRoster(rev) {
   rosterRev = rev; // claim it first: a slow fetch must not re-trigger on every paint
   const { data, error } = await db.rpc('get_roster', { p_game: gameId, p_token: rosterToken });
-  if (error) return console.warn('roster fetch failed', error.message);
+  if (error) {
+    // Claiming the revision and then failing left the overlay believing it
+    // already had this roster, so it never asked again and the lineup and
+    // defense cards stayed empty for the whole game. One bad request as OBS
+    // starts the source — on the same venue network everything else here is
+    // hardened against — was enough. Give the revision back and try again,
+    // backing off like the realtime reconnect does.
+    console.warn('roster fetch failed, retrying', error.message);
+    clearTimeout(rosterRetry);
+    rosterRetry = setTimeout(() => { rosterRev = -1; if (last) render(last); }, rosterBackoff);
+    rosterBackoff = Math.min(rosterBackoff * 2, 30000);
+    return;
+  }
+  rosterBackoff = 2000;
   roster = data || {};
   if (last) render(last);
 }
