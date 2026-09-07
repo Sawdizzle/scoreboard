@@ -160,8 +160,8 @@ document.querySelector('.help-tiles').addEventListener('click', (e) => {
 });
 
 // New game: pick sport + style first, then create with the right initial state.
-$('new-game-btn').addEventListener('click', () => { $('newgame-sheet').hidden = false; });
-$('ng-cancel').onclick = () => { $('newgame-sheet').hidden = true; };
+$('new-game-btn').addEventListener('click', () => openSheet('newgame-sheet'));
+$('ng-cancel').onclick = () => closeSheet('newgame-sheet');
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value, style = $('ng-style').value;
   const row = { status: 'live', sport, style };
@@ -171,7 +171,7 @@ $('ng-create').onclick = async () => {
   else if (sport === 'basketball') row.state = B.bkState({});
   const { data, error } = await db.from('games').insert(row).select().single();
   if (error) return alert(error.message);
-  $('newgame-sheet').hidden = true;
+  closeSheet('newgame-sheet');
   await openGame(data.id);
   openSetupGuide(); // fresh game → expand the checklist
 };
@@ -1101,23 +1101,94 @@ function resetReplayUi() {
   if (replayTick) { clearInterval(replayTick); replayTick = null; }
 }
 
+// ---- Sheets ---------------------------------------------------------------
+// The five sheets are divs, not <dialog>. showModal() is iOS 15.4+ — the same
+// floor this app already declines to build on for :has() — and an unsupported
+// showModal doesn't degrade, it leaves the sheet unopenable. So the dialog
+// behaviour lives here instead, and works the same everywhere: focus moves in
+// on open and back to whatever opened it on close, Tab cannot leave, Escape
+// closes, and so does a tap on the scrim.
+//
+// This is not only an accessibility fix. The HR and Walk sheets come up during
+// a live at-bat with the pad behind them, so a Tab that escaped, or a keyboard
+// shortcut that fired through the scrim, scored a real play you could not see.
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const sheetStack = [];              // ids, innermost last
+const sheetReturn = new Map();      // id -> the element to hand focus back to
+const sheetGuard = new Map();       // id -> () => false to refuse the close
+const topSheet = () => sheetStack[sheetStack.length - 1] || null;
+const sheetOpen = () => sheetStack.length > 0;
+// getClientRects() rather than offsetParent: it is the honest "is this on
+// screen" test inside a fixed-position sheet.
+const focusablesIn = (el) => [...el.querySelectorAll(FOCUSABLE)].filter((n) => n.getClientRects().length);
+
+function openSheet(id) {
+  const el = $(id);
+  if (!el || !el.hidden) return;
+  sheetReturn.set(id, document.activeElement);
+  el.hidden = false;
+  sheetStack.push(id);
+  // The first control, not the sheet itself: land on something you can act on.
+  (focusablesIn(el)[0] || el).focus({ preventScroll: true });
+}
+function closeSheet(id) {
+  const el = $(id);
+  if (!el || el.hidden) return;
+  el.hidden = true;
+  const i = sheetStack.indexOf(id);
+  if (i >= 0) sheetStack.splice(i, 1);
+  const back = sheetReturn.get(id);
+  sheetReturn.delete(id);
+  if (back && back !== document.body && document.contains(back)) back.focus({ preventScroll: true });
+  const next = topSheet();   // a sheet opened over another hands focus back to it
+  if (next) (focusablesIn($(next))[0] || $(next)).focus({ preventScroll: true });
+}
+// Escape and the scrim go through the same door as Cancel, so a sheet that asks
+// before discarding still asks.
+function requestCloseSheet(id) {
+  const guard = sheetGuard.get(id);
+  if (guard && guard() === false) return;
+  closeSheet(id);
+}
+for (const id of ['sit-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+  $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
+}
+// Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
+document.addEventListener('keydown', (e) => {
+  const id = topSheet();
+  if (!id) return;
+  if (e.key === 'Escape') { e.preventDefault(); return requestCloseSheet(id); }
+  if (e.key !== 'Tab') return;
+  const el = $(id);
+  const f = focusablesIn(el);
+  if (!f.length) { e.preventDefault(); return el.focus({ preventScroll: true }); }
+  const first = f[0], last = f[f.length - 1];
+  if (!el.contains(document.activeElement)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
 // ---- Game setup sheet -----------------------------------------------------
 const suVal = (id) => $(id).value.trim();
-$('setup-btn').onclick = () => { fillSetup(); setupDirty = false; $('setup-sheet').hidden = false; };
+$('setup-btn').onclick = () => { fillSetup(); setupDirty = false; openSheet('setup-sheet'); };
 // Cancel after typing a full team card used to bin the lot without a word.
 let setupDirty = false;
 $('setup-sheet').addEventListener('input', () => { setupDirty = true; });
-$('setup-cancel').onclick = () => {
-  if (setupDirty && !confirm('Discard your changes to this game?')) return;
+// Registered as the sheet's guard too, so Escape and the scrim ask the same
+// question Cancel does rather than binning a typed-out team card silently.
+const setupCloseGuard = () => {
+  if (setupDirty && !confirm('Discard your changes to this game?')) return false;
   setupDirty = false;
-  $('setup-sheet').hidden = true;
+  return true;
 };
+sheetGuard.set('setup-sheet', setupCloseGuard);
+$('setup-cancel').onclick = () => requestCloseSheet('setup-sheet');
 
 $('delete-game').onclick = async () => {
   if (!game) return;
   if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
   const id = game.id;
-  $('setup-sheet').hidden = true;
+  setupDirty = false; closeSheet('setup-sheet');
   stopDemo(); keepAwake(false);
   dropPendingFor(id); // otherwise drain() retries forever against a row that is gone
   await teardownChannel();
@@ -1146,7 +1217,7 @@ $('reset-game').onclick = async () => {
   else if (sport === 'volleyball') patch.state = V.vbState({});
   else if (sport === 'basketball') patch.state = B.bkState({});
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
-  $('setup-sheet').hidden = true;
+  setupDirty = false; closeSheet('setup-sheet');
   await writeField(patch);
   showToast('↺ Game reset');
 };
@@ -1196,7 +1267,7 @@ $('setup-save').onclick = async () => {
   if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
   if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
   setupDirty = false;
-  $('setup-sheet').hidden = true;
+  closeSheet('setup-sheet');
   await writeField(patch);
 };
 
@@ -1490,13 +1561,13 @@ function openHrSheet() {
   $('hr-copy').textContent = on
     ? `${on === 1 ? 'One runner' : on + ' runners'} on — the batter and ${on === 1 ? 'that runner' : 'all of them'} score, and the bases clear.`
     : 'Nobody on — a solo shot. The batter scores.';
-  paintHr(); $('hr-sheet').hidden = false;
+  paintHr(); openSheet('hr-sheet');
 }
 $('hr-runs-up').onclick = () => { hrRuns = Math.min(hrRuns + 1, 4); paintHr(); };
 $('hr-runs-dn').onclick = () => { hrRuns = Math.max(hrRuns - 1, 1); paintHr(); };
-$('hr-cancel').onclick = () => { $('hr-sheet').hidden = true; };
+$('hr-cancel').onclick = () => closeSheet('hr-sheet');
 $('hr-confirm').onclick = () => {
-  $('hr-sheet').hidden = true;
+  closeSheet('hr-sheet');
   commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns), payload: { runs: hrRuns }, anim: 'homerun' });
 };
 
@@ -1526,10 +1597,9 @@ $('adj-half').onclick = () => commit(L.onToggleHalf(game));
 
 // The situation sheet. Non-modal by the README's rule — it never blocks a
 // commit, and the pad underneath stays mounted so closing it is instant.
-const closeSit = () => { $('sit-sheet').hidden = true; };
-$('sit-btn').onclick = () => { $('sit-sheet').hidden = false; };
+const closeSit = () => closeSheet('sit-sheet');
+$('sit-btn').onclick = () => openSheet('sit-sheet');
 $('sit-done').onclick = closeSit;
-$('sit-sheet').addEventListener('click', (e) => { if (e.target === $('sit-sheet')) closeSit(); });
 function renderAdjust() {
   const set = (id, v) => { $(id).textContent = v | 0; };
   set('adj-score-away', game.away_score); set('adj-score-home', game.home_score);
@@ -1730,16 +1800,16 @@ function paintWalk() {
 function openWalkSheet(r) {
   const b = r.patch.bases;
   wState = { first: b.first, second: b.second, third: b.third, runs: r.payload.runs | 0 };
-  paintWalk(); $('walk-sheet').hidden = false;
+  paintWalk(); openSheet('walk-sheet');
 }
 $('w1').onclick = () => { wState.first = !wState.first; paintWalk(); };
 $('w2').onclick = () => { wState.second = !wState.second; paintWalk(); };
 $('w3').onclick = () => { wState.third = !wState.third; paintWalk(); };
 $('w-runs-up').onclick = () => { wState.runs = Math.min(wState.runs + 1, 4); paintWalk(); };
 $('w-runs-dn').onclick = () => { wState.runs = Math.max(wState.runs - 1, 0); paintWalk(); };
-$('walk-cancel').onclick = () => { $('walk-sheet').hidden = true; };
+$('walk-cancel').onclick = () => closeSheet('walk-sheet');
 $('walk-confirm').onclick = () => {
-  $('walk-sheet').hidden = true;
+  closeSheet('walk-sheet');
   const bases = { first: wState.first, second: wState.second, third: wState.third };
   // anim: the WALK reveal fires automatically, like run/strikeout do.
   commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs }, anim: 'webgem' });
@@ -1951,7 +2021,7 @@ document.addEventListener('toggle', (e) => {
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
-  if (go === 'teams') { fillSetup(); setupDirty = false; $('setup-sheet').hidden = false; }
+  if (go === 'teams') { fillSetup(); setupDirty = false; openSheet('setup-sheet'); }
   else if (go === 'lineups') jumpPanel('panel-lineups');
   else if (go === 'defense') jumpPanel('panel-defense');
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
@@ -2078,9 +2148,13 @@ $('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) win
 // Keyboard shortcuts (desktop control): ignore while typing in a field.
 document.addEventListener('keydown', (e) => {
   if (views.game.hidden || !game) return;
+  // A sheet owns the screen and its own Escape. Scoring keys used to fire
+  // straight through the scrim, which put real plays on the board behind a
+  // dialog you were looking at. defaultPrevented covers the same key being
+  // spent by the sheet handler above — one Escape should close one thing.
+  if (sheetOpen() || e.defaultPrevented) return;
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === 'Escape' && !$('sit-sheet').hidden) { e.preventDefault(); return closeSit(); }
   if (e.key === 'Escape' && drawerOpen()) { e.preventDefault(); return closeDrawer(); }
   const k = e.key.toLowerCase();
   if (k === 'u') { e.preventDefault(); return doUndo(); }

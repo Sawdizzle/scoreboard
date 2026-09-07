@@ -196,9 +196,11 @@ The control panel is one responsive page tuned for three places it actually gets
 
 - **iPhone** — the fixed shell above, big targets, safe-area insets on all four edges, no pull-to-refresh, no double-tap zoom, no text inflation in landscape. Add to Home Screen runs it full-screen. Held sideways the pad goes three keys across and two down and the drawer arrives from the right, keeping the keys visible behind it.
 - **iPad** — two columns from 700px: scoring pad left, panels right, in either orientation. The drawer drops its sheet chrome here and is simply that panel column — same panel bodies, no fork. Split View falls back to one column on its own.
-- **Desktop** — same two columns, wider from 1280px, with hover feedback gated behind `(hover: hover)` so a tap never leaves a stuck highlight on touch. Keyboard scoring: `B S F O` · `1 2 3 H` · `R` `E` `A` `C` `N` `U`.
+- **Desktop** — same two columns, wider from 1280px, with hover feedback gated behind `(hover: hover)` so a tap never leaves a stuck highlight on touch. Keyboard scoring: `B S F O` · `1 2 3 H` · `R` `E` `A` `C` `N` `U` — paused while a sheet is open, so a key never scores something the scrim is hiding.
 
 Breakpoints are height-aware, not width-only: a phone on its side is 844 wide and 390 tall, so "phone" means short **or** narrow. Sheets centre and round on tablet and desktop instead of sitting on the bottom edge, and their Save/Close row is sticky — with ~390pt of height the actions can never be something you scroll to find. `prefers-reduced-motion` cross-fades the drawer and sheets instead of sliding them.
+
+**Sheets behave like dialogs.** Focus moves into one when it opens and back to whatever opened it when it closes, Tab cycles inside and cannot leave, Escape and a tap on the scrim close it, and the scoring shortcuts pause while one is up — the HR and Walk sheets appear during a live at-bat, and a key that fired through the scrim scored a play you could not see. Escape on a sheet that has unsaved edits asks the same question Cancel does. They are `role="dialog"` divs rather than `<dialog>`: `showModal()` is iOS 15.4+, the same floor the layout declines to build on for `:has()`, and an unsupported `showModal` leaves a sheet unopenable rather than merely unpolished.
 
 ## Checks
 

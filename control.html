@@ -937,10 +937,10 @@
   <!-- SITUATION SHEET -->
   <!-- Bases, count, inning and the corrections that go with them. All of it used
        to sit under the pad, so a strike moved every time the game state changed. -->
-  <div id="sit-sheet" class="sheet" hidden>
+  <div id="sit-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sit-title" tabindex="-1" hidden>
     <div class="sheet-card sit-card scroll">
       <span class="grab"></span>
-      <div class="sit-head"><h3>Situation</h3><span class="sit-sub">every change is undoable</span></div>
+      <div class="sit-head"><h3 id="sit-title">Situation</h3><span class="sit-sub">every change is undoable</span></div>
 
       <div class="sit-bases">
         <div class="diamond">
@@ -983,10 +983,10 @@
   </div>
 
   <!-- WALK SHEET -->
-  <div id="walk-sheet" class="sheet" hidden>
+  <div id="walk-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="walk-title" tabindex="-1" hidden>
     <div class="sheet-card confirm-card">
       <span class="grab"></span>
-      <h3>Walk</h3>
+      <h3 id="walk-title">Walk</h3>
       <p class="confirm-copy">Forced advance is pre-filled. Tap a base to override, then set the runs that scored.</p>
       <div class="walk-bases">
         <button id="w1" class="base-btn">1B</button>
@@ -1004,10 +1004,10 @@
   </div>
 
   <!-- HOME RUN SHEET -->
-  <div id="hr-sheet" class="sheet" hidden>
+  <div id="hr-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="hr-title" tabindex="-1" hidden>
     <div class="sheet-card confirm-card">
       <span class="grab"></span>
-      <h3>Home run</h3>
+      <h3 id="hr-title">Home run</h3>
       <p class="confirm-copy" id="hr-copy">Batter plus every runner scores and the bases clear. Adjust if the total is wrong.</p>
       <div class="runs-stepper big">
         <button id="hr-runs-dn" class="step">–</button>
@@ -1020,9 +1020,9 @@
   </div>
 
   <!-- SETUP SHEET -->
-  <div id="setup-sheet" class="sheet" hidden>
+  <div id="setup-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1" hidden>
     <div class="sheet-card scroll">
-      <h3>Game Setup</h3>
+      <h3 id="setup-title">Game Setup</h3>
       <div class="audio-row">
         <label class="sel">Sport
           <select id="su-sport">
@@ -1097,9 +1097,9 @@
   </div>
 
   <!-- NEW GAME SHEET -->
-  <div id="newgame-sheet" class="sheet" hidden>
+  <div id="newgame-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="newgame-title" tabindex="-1" hidden>
     <div class="sheet-card">
-      <h3>New Game</h3>
+      <h3 id="newgame-title">New Game</h3>
       <label class="sel">Sport
         <select id="ng-sport">
           <option value="baseball">Baseball</option>
