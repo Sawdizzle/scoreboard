@@ -16,3 +16,6 @@ jobs:
         with:
           node-version: '20'
       - run: node scripts/check.mjs
+      # The rules engine is pure and dependency-free; check.mjs catches dead
+      # wiring, these catch wrong baseball.
+      - run: node --test scripts/logic.test.mjs

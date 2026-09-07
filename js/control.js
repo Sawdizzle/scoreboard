@@ -213,7 +213,7 @@ async function openGame(id) {
   guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
-  game = data; overlayCopied = false; guideCollapsed = setupAllDone();
+  game = data; serverRow = data; overlayCopied = false; guideCollapsed = setupAllDone();
   resetReplayUi();
   game.lineups = await loadRoster(id);
   show('game'); renderGame();
@@ -239,6 +239,7 @@ async function closeGame() {
 // Forget every queued write for a game — it is going away, or you chose to.
 function dropPendingFor(id) {
   for (let i = pending.length - 1; i >= 0; i--) if (pending[i].gameId === id) pending.splice(i, 1);
+  if (!pending.length) drainFailing = false;
   renderPending();
 }
 $('back-btn').addEventListener('click', closeGame);
@@ -253,7 +254,7 @@ function setConn(state) {
 async function reloadGame(id) {
   if (pendingFor(id)) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
-  if (!error && data) { game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
+  if (!error && data) { serverRow = data; game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
 }
 async function subscribe(id) {
   await teardownChannel();
@@ -263,7 +264,7 @@ async function subscribe(id) {
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
       // The row no longer carries the roster (that table is private), so keep ours.
-      (payload) => { if (pendingFor(id)) return; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
+      (payload) => { if (pendingFor(id)) return; serverRow = payload.new; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') { setConn('live'); drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -292,14 +293,29 @@ document.addEventListener('visibilitychange', () => {
 // Now the optimistic state stands and the write joins a queue that drains in
 // order when the network returns. The overlay already survives disconnects by
 // holding its last state; this is the pad's half of that.
-const pending = [];      // FIFO of {gameId, type, patch, payload} not yet accepted
+// ONE queue for every durable write, not just scoring:
+//   kind 'event' — a play, through apply_event (snapshots prev_state, undoable)
+//   kind 'field' — a direct games UPDATE: setup, look, audio, sponsors, cards
+// Presentation writes used to go straight out and only console.warn on failure,
+// so a Setup save that never landed looked exactly like one that did. Now they
+// retry, they hold the ⏳ badge, and a failure says so out loud.
+//
+// Transient triggers stay OUT of this queue on purpose: replaying a stinger, a
+// clip request, a scene cut or "go live" minutes late would fire it over the
+// wrong moment of the game. Those are fire-and-forget by design.
+const pending = [];      // FIFO of {kind, gameId, ...} not yet accepted
 let draining = false;
 let drainTimer = null;
+let drainFailing = false;   // so a lost network toasts once, not every retry
+// The last row the server confirmed, and the base a local undo replays from.
+// It advances with each accepted write, NOT only when the queue empties.
+let serverRow = null;
 // Every patch holds ABSOLUTE values, so the game it belongs to is part of the
 // write, not something to infer at send time. drain() can run long after you
 // have backed out to the lobby and opened something else — addressed to
 // whatever happens to be open then, these would overwrite the wrong game.
 const pendingFor = (id) => !!id && pending.some((w) => w.gameId === id);
+function enqueue(entry) { pending.push(entry); renderPending(); drain(); }
 
 async function commit(res) {
   if (!game) return;
@@ -309,9 +325,7 @@ async function commit(res) {
   const gameId = game.id;
   game = { ...game, ...res.patch };
   renderGame();
-  pending.push({ gameId, type: res.type, patch: res.patch, payload: res.payload || {} });
-  renderPending();
-  drain();
+  enqueue({ kind: 'event', gameId, type: res.type, patch: res.patch, payload: res.payload || {} });
   // Auto-fire the matching stinger. A walk-off supersedes everything (even a HR).
   if (maybeWalkoff(prev, game)) { /* walk-off fired */ }
   else if (res.anim) fireAnim(res.anim);
@@ -326,17 +340,24 @@ async function drain() {
   draining = true;
   while (pending.length) {
     const w = pending[0];
-    const { data, error } = await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: w.patch, p_payload: w.payload });
+    const { data, error } = w.kind === 'field'
+      ? await db.from('games').update(w.patch).eq('id', w.gameId).select().maybeSingle()
+      : await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: w.patch, p_payload: w.payload });
     if (error) {
       draining = false;
       renderPending(error.message);
+      // Say it once. Silence here is what made a dropped Setup save invisible.
+      if (!drainFailing) { drainFailing = true; showToast(`⚠️ Not saved yet — ${error.message}`, 4000); }
       clearTimeout(drainTimer);
       drainTimer = setTimeout(drain, 4000); // keep trying; the game doesn't stop
       return;
     }
     pending.shift();
-    // The server row is only authoritative once it has seen everything we sent
-    // FOR THIS GAME, and it carries no roster — keep the one in hand.
+    // Each accepted write moves the baseline, even mid-queue: a local undo
+    // replays what is STILL queued on top of this, so it has to be current.
+    if (data) serverRow = data;
+    // The row is only authoritative for the screen once it has seen everything
+    // we sent FOR THIS GAME, and it carries no roster — keep the one in hand.
     if (data && game && game.id === w.gameId && !pendingFor(game.id)) {
       game = { ...data, lineups: game.lineups };
       renderGame();
@@ -344,6 +365,7 @@ async function drain() {
     renderPending();
   }
   draining = false;
+  if (drainFailing) { drainFailing = false; showToast('✓ All changes saved'); }
 }
 
 function renderPending(err) {
@@ -385,15 +407,50 @@ async function fireAnim(type, meta = {}) {
   if (game.auto_clip && type in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[type]);
   const current_animation = { type, nonce: nextNonce(), meta };
   game = { ...game, current_animation };
+  // Deliberately NOT queued, and deliberately quiet. A stinger belongs to the
+  // moment it fired; replaying it when the network returns would put HOME RUN on
+  // air over a different at-bat. If it didn't reach the overlay it is simply
+  // gone — and the ⏳ badge from the play itself already says you are offline.
   const { error } = await db.from('games').update({ current_animation }).eq('id', game.id);
-  if (error) console.warn('anim failed', error.message);
+  if (error) console.warn('anim failed (not retried — a stinger is not replayable)', error.message);
 }
 
+// Undo is what you reach for when something has already gone wrong, so it must
+// mean the same thing on a dead connection as on a live one.
+//
+// The server's undo reverses the newest event IT has seen. With writes still
+// queued that is an OLDER play than the last one you scored — and drain() would
+// then replay our absolute patches straight back over the reversal. So when the
+// server is behind us, undo what is actually in hand instead.
 async function doUndo() {
+  if (!game) return;
+  if (pendingFor(game.id)) return undoQueued();
   const { data, error } = await db.rpc('undo', { p_game: game.id });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  if (data) { game = data; renderGame(); showToast('↶ Undone'); }
+  if (data) { game = data; serverRow = data; renderGame(); showToast('↶ Undone'); }
   else showToast('Nothing to undo');
+}
+
+// Drop the newest play we haven't sent yet and rebuild from the last row the
+// server confirmed. Patches are absolute, and the optimistic state was built by
+// merging them onto that row in order — so replaying what remains reproduces
+// exactly the state before the dropped play. Field writes (look, setup) are not
+// plays: they stay queued and are replayed with the rest.
+function undoQueued() {
+  if (!serverRow || serverRow.id !== game.id) {
+    // No confirmed baseline to rebuild from (nothing for this game has been
+    // accepted yet). Reversing blind would be a guess, so don't.
+    return showToast('⚠️ Can’t undo until one change saves', 3500);
+  }
+  const mine = pending.filter((w) => w.gameId === game.id);
+  const res = L.undoPending(serverRow, mine);   // pure, unit-tested
+  if (!res) return showToast('Nothing to undo — only settings are still saving');
+  // Splice that same entry out of the real queue (which may hold other games').
+  pending.splice(pending.indexOf(res.dropped), 1);
+  game = { ...res.state, lineups: game.lineups };
+  renderPending();
+  renderGame();
+  showToast(pendingFor(game.id) ? '↶ Undone — still saving the rest' : '↶ Undone');
 }
 
 // Buttons
@@ -619,12 +676,7 @@ const spCfg = () => {
   const c = (game && game.sponsors) || {};
   return { list: Array.isArray(c.list) ? c.list : [], rotate: !!c.rotate, every: c.every || 180, secs: c.secs || 8 };
 };
-async function saveSponsors(next) {
-  game = { ...game, sponsors: next };
-  renderSponsors();
-  const { error } = await db.from('games').update({ sponsors: next }).eq('id', game.id);
-  if (error) showToast(`⚠️ ${error.message}`, 3000);
-}
+async function saveSponsors(next) { await writeField({ sponsors: next }); }
 function renderSponsors() {
   const box = $('sponsor-list'); if (!box || !game) return;
   const c = spCfg();
@@ -667,10 +719,7 @@ async function showCard(type) {
   // Defense card always tracks the fielding team live (resolved in the overlay);
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;
-  const card = { type, meta, nonce: nextNonce() };
-  game = { ...game, card };
-  const { error } = await db.from('games').update({ card }).eq('id', game.id);
-  if (error) return console.warn('card failed', error.message);
+  await writeField({ card: { type, meta, nonce: nextNonce() } });
   showToast(`🎬 ${type[0].toUpperCase() + type.slice(1)} card up`);
 }
 $('card-starting').onclick = () => showCard('starting');
@@ -681,9 +730,7 @@ $('card-final').onclick = () => showCard('final');
 $('card-dueup').onclick = () => showCard('dueup');
 $('card-sponsor').onclick = () => showCard('sponsor');
 async function clearCard() {
-  game = { ...game, card: null };
-  const { error } = await db.from('games').update({ card: null }).eq('id', game.id);
-  if (error) return console.warn('card clear failed', error.message);
+  await writeField({ card: null });
   showToast('Card cleared');
 }
 $('card-clear').onclick = clearCard;
@@ -716,13 +763,7 @@ $('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
 $('fx-dp').onclick      = () => fireAnim('doubleplay');
 $('fx-sb').onclick      = () => fireAnim('stolenbase');
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
-$('fx-rally').onclick   = async () => {
-  const rally_mode = !game.rally_mode;
-  game = { ...game, rally_mode };
-  renderRally();
-  const { error } = await db.from('games').update({ rally_mode }).eq('id', game.id);
-  if (error) console.warn('rally failed', error.message);
-};
+$('fx-rally').onclick   = () => writeField({ rally_mode: !game.rally_mode });
 function renderRally() {
   const b = $('fx-rally');
   b.textContent = `Rally: ${game.rally_mode ? 'ON' : 'OFF'}`;
@@ -982,11 +1023,8 @@ $('fx-replay').onclick = () => {
 // are still on the scoring pad.
 $('replay-auto').onchange = async (e) => {
   const auto_clip = e.target.checked;
-  game = { ...game, auto_clip };
-  renderReplay();
-  const { error } = await db.from('games').update({ auto_clip }).eq('id', game.id);
-  if (error) { game = { ...game, auto_clip: !auto_clip }; renderReplay(); showToast(`⚠️ ${error.message}`, 3000); }
-  else showToast(auto_clip ? '🎞️ Auto-clip on for big plays' : 'Auto-clip off');
+  await writeField({ auto_clip });   // queued: no need to roll back on a blip
+  showToast(auto_clip ? '🎞️ Auto-clip on for big plays' : 'Auto-clip off');
 };
 
 function renderReplay() {
@@ -1282,12 +1320,18 @@ $('preview-fx-btn').onclick = async () => {
   for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
 };
 
-// ---- Look settings (theme / position / scale)
+// ---- Direct game-row writes (setup, look, audio, sponsors, cards) ---------
+// Everything durable that is not a play. Queued like scoring is, so it retries
+// on a flaky field connection and tells you when it hasn't landed — this used
+// to be a fire-and-forget UPDATE whose only failure signal was a console warn.
+// renderGame() rather than renderLook(): a Setup save changes the score header
+// too, and offline there is no realtime echo coming to repaint it.
 async function writeField(patch) {
+  if (!game) return;
+  const gameId = game.id;
   game = { ...game, ...patch };
-  renderLook();
-  const { error } = await db.from('games').update(patch).eq('id', game.id);
-  if (error) console.warn('look write failed', error.message);
+  renderGame();
+  enqueue({ kind: 'field', gameId, patch });
 }
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
 document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
@@ -1320,10 +1364,7 @@ const lookOf = () => game.look || {};
 async function writeLook(patch) {
   const look = { ...lookOf(), ...patch };
   for (const k of Object.keys(look)) if (look[k] === '' || look[k] === false || look[k] == null) delete look[k];
-  game = { ...game, look };
-  renderCustomize();
-  const { error } = await db.from('games').update({ look }).eq('id', game.id);
-  if (error) console.warn('look write failed', error.message);
+  await writeField({ look });
 }
 $('cust-accent').addEventListener('change', (e) => writeLook({ accent: e.target.value }));
 $('cust-font').addEventListener('change', (e) => writeLook({ font: e.target.value }));
@@ -1355,9 +1396,7 @@ $('cust-steel').addEventListener('change', (e) => writeLook({ steel: e.target.va
 $('cust-line').addEventListener('change', (e) => writeLook({ line: e.target.value }));
 $('cust-teamfill').addEventListener('change', (e) => writeLook({ teamFill: e.target.checked }));
 $('cust-reset').onclick = async () => {
-  game = { ...game, look: {} };
-  renderCustomize();
-  await db.from('games').update({ look: {} }).eq('id', game.id);
+  await writeField({ look: {} });
   showToast('Customize reset');
 };
 function renderCustomize() {
@@ -1398,21 +1437,13 @@ $('fx-charge').onclick = () => fireAnim('charge');
 const audioOf = () => game.audio || { muted: false, master: 0.8, cats: { moments: 1, organ: 1 } };
 async function writeAudio(patch) {
   const cur = audioOf();
-  const audio = { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } };
-  game = { ...game, audio };
-  renderAudio();
-  const { error } = await db.from('games').update({ audio }).eq('id', game.id);
-  if (error) console.warn('audio write failed', error.message);
+  await writeField({ audio: { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } } });
 }
 $('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
 $('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
 $('vol-moments').addEventListener('change', (e) => writeAudio({ cats: { moments: +e.target.value } }));
 $('vol-organ').addEventListener('change', (e) => writeAudio({ cats: { organ: +e.target.value } }));
-$('sound-pack').addEventListener('change', async (e) => {
-  game = { ...game, sound_pack: e.target.value };
-  const { error } = await db.from('games').update({ sound_pack: e.target.value }).eq('id', game.id);
-  if (error) console.warn('pack write failed', error.message);
-});
+$('sound-pack').addEventListener('change', (e) => writeField({ sound_pack: e.target.value }));
 
 function renderAudio() {
   const a = audioOf();

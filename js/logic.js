@@ -316,3 +316,26 @@ export function adjustErrors(g, side, d) { const k = sideKey(side, 'errors'); re
 export function adjustOuts(g, d)    { return { type: 'adj-outs',    patch: { outs: clampAdj((g.outs | 0) + d, 0, 3) } }; }
 export function adjustBalls(g, d)   { return { type: 'adj-balls',   patch: { balls: clampAdj((g.balls | 0) + d, 0, 4) } }; }
 export function adjustStrikes(g, d) { return { type: 'adj-strikes', patch: { strikes: clampAdj((g.strikes | 0) + d, 0, 3) } }; }
+
+// ---- Offline undo ---------------------------------------------------------
+// The pad queues writes when the network drops. Undo has to mean the same thing
+// then as it does online, so when the server is behind us we undo what is in
+// hand instead of asking it to reverse an older play.
+//
+// `base` is the last row the server confirmed; `entries` are the writes still
+// queued for that game, in order, each {kind, patch}. Patches hold ABSOLUTE
+// values and the optimistic state was built by merging them onto `base` in
+// order — so dropping the newest 'event' and replaying the rest reproduces
+// exactly the state before that play. 'field' entries (setup, look, audio) are
+// not plays: they are kept and replayed with the rest.
+//
+// Returns { state, rest, dropped }, or null when there is no queued play to drop.
+export function undoPending(base, entries) {
+  let i = -1;
+  for (let j = entries.length - 1; j >= 0; j--) if (entries[j].kind === 'event') { i = j; break; }
+  if (i < 0) return null;
+  const rest = entries.slice(0, i).concat(entries.slice(i + 1));
+  let state = { ...base };
+  for (const w of rest) state = { ...state, ...w.patch };
+  return { state, rest, dropped: entries[i] };
+}
