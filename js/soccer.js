@@ -3,6 +3,18 @@
 // (base = accumulated seconds; since = ISO timestamp of the current run segment)
 // rather than the shared countdown fields.
 
+// How long a half runs. Comes from the game's period length — the same field
+// football and basketball already use for a quarter — with 45 minutes only as
+// the fallback. It used to be hardcoded at 45, which is the one length youth
+// soccer never plays: halves run 25, 30 or 35 by age group, so the second-half
+// clock started at the wrong number on air for essentially every game this app
+// exists to cover.
+export const DEFAULT_HALF_SECONDS = 45 * 60;
+export function halfSeconds(g) {
+  const n = (g && g.time_limit_seconds) | 0;
+  return n > 0 ? n : DEFAULT_HALF_SECONDS;
+}
+
 export function scState(g) {
   const s = (g && g.state) || {};
   const c = s.clock || {};
@@ -31,7 +43,7 @@ export function manualScore(g, team, d) {
   return { type: 'score', patch: { [key]: Math.max(0, (g[key] | 0) + d) } };
 }
 export function setHalf(g, n) {
-  const base = n === 2 ? 45 * 60 : 0;
+  const base = n === 2 ? halfSeconds(g) : 0;
   return { type: 'sc-half', patch: withState(g, { half: n, stoppage: 0, clock: { running: false, base, since: null } }) };
 }
 export function card(g, team, color) {
@@ -54,5 +66,5 @@ export function clockPause(g, nowMs) {
 }
 export function clockReset(g) {
   const st = scState(g);
-  return { type: 'sc-clk', patch: withState(g, { clock: { running: false, base: st.half === 2 ? 45 * 60 : 0, since: null } }) };
+  return { type: 'sc-clk', patch: withState(g, { clock: { running: false, base: st.half === 2 ? halfSeconds(g) : 0, since: null } }) };
 }

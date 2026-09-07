@@ -148,17 +148,31 @@ test('the match clock counts up from where it was paused', () => {
   assert.equal(Math.round(S.elapsedSeconds(g, t0 + 530_000)), 120, 'and resumes from where it stopped');
 });
 
-test('the second half starts at 45:00 and clears stoppage', () => {
-  // UI-5 (open): 45 minutes is hardcoded, which is wrong for every youth age group.
-  const r = S.setHalf(G({ state: { stoppage: 4 } }), 2);
-  assert.equal(r.patch.state.clock.base, 45 * 60);
-  assert.equal(r.patch.state.stoppage, 0);
+test('the second half starts at the half length the game is set to', () => {
+  // Was UI-5: 45 minutes was hardcoded, which is the one length youth soccer
+  // never plays — halves run 25, 30 or 35 by age group.
+  const r = S.setHalf(G({ time_limit_seconds: 30 * 60, state: { stoppage: 4 } }), 2);
+  assert.equal(r.patch.state.clock.base, 30 * 60);
+  assert.equal(r.patch.state.stoppage, 0, 'stoppage does not carry across the break');
   assert.equal(r.patch.state.clock.running, false);
 });
 
+test('the first half always starts at zero, whatever the length', () => {
+  assert.equal(S.setHalf(G({ time_limit_seconds: 25 * 60 }), 1).patch.state.clock.base, 0);
+});
+
+test('45 minutes is only the fallback, for a game with no length set', () => {
+  assert.equal(S.halfSeconds({}), 45 * 60);
+  assert.equal(S.halfSeconds({ time_limit_seconds: 0 }), 45 * 60, 'zero means unset, not a zero-length half');
+  assert.equal(S.halfSeconds({ time_limit_seconds: null }), 45 * 60);
+  assert.equal(S.halfSeconds({ time_limit_seconds: 35 * 60 }), 35 * 60);
+  assert.equal(S.setHalf({ state: {} }, 2).patch.state.clock.base, 45 * 60);
+});
+
 test('resetting the clock returns to the start of the current half', () => {
-  assert.equal(S.clockReset(G({ state: { half: 1 } })).patch.state.clock.base, 0);
-  assert.equal(S.clockReset(G({ state: { half: 2 } })).patch.state.clock.base, 45 * 60);
+  const g = (half) => G({ time_limit_seconds: 30 * 60, state: { half } });
+  assert.equal(S.clockReset(g(1)).patch.state.clock.base, 0);
+  assert.equal(S.clockReset(g(2)).patch.state.clock.base, 30 * 60);
 });
 
 // ===========================================================================
@@ -183,6 +197,9 @@ test('reaching the target with two clear points wins the set', () => {
   assert.equal(r.patch.state.serve, 'home', 'the set winner serves first');
   assert.deepEqual(r.patch.state.history, [{ away: 15, home: 25 }]);
   assert.equal(r.anim, 'setwin');
+  // Was UI-6: the same commit resets both scores for the next set, so the point
+  // that won it never reached the screen. It rides the stinger instead.
+  assert.deepEqual(r.animMeta, { away: 15, home: 25 });
 });
 
 test('25-24 is not a set — it plays on to two', () => {
@@ -211,6 +228,12 @@ test('ending a set by hand awards it to whoever is ahead, and refuses a tie', ()
   const r = V.endSet(G({ away_score: 21, home_score: 18 }));
   assert.equal(r.patch.state.sets.away, 1);
   assert.deepEqual(r.patch.state.history, [{ away: 21, home: 18 }]);
+  assert.deepEqual(r.animMeta, { away: 21, home: 18 }, 'a hand-ended set announces its score too');
+});
+
+test('an ace that wins the set carries the score with it', () => {
+  const r = V.ace(G({ state: { serve: 'home', target: 25 }, home_score: 24, away_score: 10 }));
+  assert.deepEqual(r.animMeta, { away: 10, home: 25 });
 });
 
 test('the set target cycles through the formats a league actually uses', () => {

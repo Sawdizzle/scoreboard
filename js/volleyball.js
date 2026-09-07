@@ -27,6 +27,11 @@ function bankSet(g, team, finalAway, finalHome) {
     patch: { away_score: 0, home_score: 0, ...withState(g, { set: st.set + 1, sets, serve: team, history }) },
     payload: { set: st.set, winner: team, away: finalAway, home: finalHome },
     anim: 'setwin',
+    // The winning point never reached the screen: the same commit that scored it
+    // put both scores back to 0 for the next set, so viewers saw the sets
+    // counter tick over and the score vanish. Send it with the stinger, which is
+    // where a broadcast calls out a set score anyway.
+    animMeta: { away: finalAway, home: finalHome },
   };
 }
 

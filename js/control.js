@@ -433,7 +433,7 @@ async function commit(res) {
   // second UPDATE, a second Realtime broadcast and a second full overlay render
   // for every run and every strikeout, the busiest keys on the pad.
   const patch = anim
-    ? { ...res.patch, current_animation: { type: anim, nonce: nextNonce(), meta: {} } }
+    ? { ...res.patch, current_animation: { type: anim, nonce: nextNonce(), meta: res.animMeta || {} } }
     : res.patch;
   if (anim && game.auto_clip && anim in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[anim]);
   game = { ...game, ...patch };
@@ -1318,8 +1318,23 @@ $('reset-game').onclick = async () => {
   await writeField(patch);
   showToast('↺ Game reset');
 };
+// The same column is a game time limit, a quarter, or a half depending on the
+// sport. Say which, so nobody has to guess what soccer does with it.
+const SU_TIME_LABEL = {
+  baseball: 'Time limit — minutes (0 = none)',
+  football: 'Quarter length — minutes (0 = none)',
+  basketball: 'Period length — minutes (0 = none)',
+  soccer: 'Half length — minutes (blank = 45)',
+  volleyball: 'Time limit — minutes (0 = none)',
+};
+function renderSetupTimeLabel() {
+  $('su-time-label').textContent = SU_TIME_LABEL[$('su-sport').value] || SU_TIME_LABEL.baseball;
+}
+$('su-sport').addEventListener('change', renderSetupTimeLabel);
+
 function fillSetup() {
   $('su-sport').value = game.sport || 'baseball';
+  renderSetupTimeLabel();
   $('su-style').value = game.style || 'bar';
   $('su-away-name').value = game.away_name || '';
   $('su-away-abbr').value = game.away_abbr || '';

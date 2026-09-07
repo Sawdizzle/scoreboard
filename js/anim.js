@@ -35,6 +35,7 @@ export function setRally(on) {
 }
 
 export function playAnimation(anim) {
+  const meta = (anim && anim.meta) || {};
   switch (anim && anim.type) {
     case 'run':             return runFlash();
     case 'homerun':         return homerun();          // stays centered
@@ -51,7 +52,11 @@ export function playAnimation(anim) {
     case 'turnover':   return reveal('TURNOVER');
     case 'bigplay':    return reveal('BIG PLAY');
     case 'ace':        return reveal('ACE!');
-    case 'setwin':     return reveal('SET WON');
+    // The score that won it, since the scorebug has already reset to 0-0 for
+    // the next set by the time this plays.
+    case 'setwin':     return reveal(meta.away != null && meta.home != null
+                                       ? `SET WON ${meta.away}\u2013${meta.home}`
+                                       : 'SET WON');
     case 'three':      return reveal('THREE!');
   }
 }
