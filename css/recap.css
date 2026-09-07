@@ -4,11 +4,12 @@
   --chalk: #eef2f8; --muted: #8a97b2; --steel: #5b8fd0;
   --ball: #2f9e57; --out: #b7791f;
   --disp: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --num: "Barlow Condensed", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--chalk); font-family: var(--disp);
+  font-variant-numeric: tabular-nums;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 
 .wrap { max-width: 560px; margin: 0 auto; padding: 28px 18px 40px; }

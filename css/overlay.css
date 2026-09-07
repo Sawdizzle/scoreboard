@@ -1,5 +1,9 @@
-/* Overlay = transparent OBS Browser Source. No external fonts (no ballpark
-   network dependency, no layout shift). Themed fonts arrive in Stage 6. */
+/* Overlay = transparent OBS Browser Source. Fonts are self-hosted, same-origin
+   (no ballpark network dependency): css/fonts.css carries Barlow Condensed, the
+   same face the pad uses. Before v3.40 the @font-face rules lived in control.css
+   only and --disp named "Roboto Condensed", which is not shipped and never
+   loaded — so the bug on air rendered in Arial Narrow, and every score came out
+   in the OBS machine's monospace. */
 :root {
   --panel: rgba(16, 22, 33, 0.92);
   --panel-2: rgba(0, 0, 0, 0.28);
@@ -7,10 +11,18 @@
   --chalk: #f4f7fb;
   --steel: #8fb6de;
   --accent: #e8b23a;
-  --num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --disp: "Roboto Condensed", "Arial Narrow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --num: "Barlow Condensed", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --disp: "Barlow Condensed", "Arial Narrow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius: 10px;
   --scale: 1;
+  /* One tabular digit, as a fraction of the font size (Barlow Condensed's
+     tabular advance is 0.497em). Reserving space for N digits is
+     calc(N * var(--digit)) -- NOT Nch, because `ch` measures the PROPORTIONAL
+     zero, which is narrower than the tabular advance the numerals actually
+     render at. With the old monospace stack the two were identical, so `ch`
+     worked; with a condensed face it leaves a 1-digit and a 2-digit score
+     different widths. */
+  --digit: 0.5em;
 }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
 /* ?debug=1 paints a backdrop so you can see the bug locally before OBS. */
@@ -30,6 +42,11 @@ body.debug {
   opacity: 0; transition: opacity 0.25s ease;
 }
 .bug[data-ready="1"] { opacity: 1; }
+/* Barlow Condensed's default figures are proportional, so a 1 is narrower than
+   an 8. On a scorebug that reads as the number jittering every time it changes
+   — and the clock would twitch every tick. Tabular figures, inherited by the
+   detail line and the cards too. */
+.bug, .detail, #card, #reveal { font-variant-numeric: tabular-nums; }
 
 /* Polish: a subtle slide-in on load, and a pop when a team scores. Both are
    motion-safe — disabled for viewers who prefer reduced motion. */
@@ -76,7 +93,7 @@ body[data-pos="top-bar"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; righ
 .team.away { background: linear-gradient(180deg, rgba(143, 182, 222, 0.10), transparent); }
 .team.home { background: linear-gradient(180deg, rgba(232, 178, 58, 0.10), transparent); border-left: 1px solid var(--line); }
 .team .abbr { font-weight: 800; letter-spacing: 0.04em; font-size: 23px; }
-.team .runs { font-family: var(--num); font-size: 27px; font-weight: 700; min-width: 1.5ch; text-align: center; }
+.team .runs { font-family: var(--num); font-size: 27px; font-weight: 700; min-width: calc(1.5 * var(--digit)); text-align: center; }
 /* Optional live H/E block next to runs (R is the .runs number). Off unless body.rhe. */
 .team .rhe { display: none; }
 body.rhe .team .rhe { display: inline-flex; gap: 9px; margin-left: 2px; }

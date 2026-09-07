@@ -1,15 +1,7 @@
 /* Phone-first, dark, big tap targets, one-handed. */
 
-/* Barlow Condensed is the broadcast-numeral voice: it lets a 68px run count fit
-   a 390pt sheet. Self-hosted (latin subset, ~22KB each) rather than hot-linked —
-   the pad cold-loads on field LTE and we only preconnect to Supabase + esm.sh.
-   SIL Open Font License 1.1 — see /fonts/OFL.txt. */
-@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 500; font-display: swap;
-  src: url('/fonts/barlow-condensed-500.woff2') format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap;
-  src: url('/fonts/barlow-condensed-600.woff2') format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap;
-  src: url('/fonts/barlow-condensed-700.woff2') format('woff2'); }
+/* The Barlow Condensed @font-face rules live in css/fonts.css, which every
+   page loads — the overlay needs them too. */
 
 /* Body-text contrast was the reason for the repaint: the old --muted (#8a97b2 on
    #1b2439) is ~4.2:1 and unreadable in sunlight. The scale now runs #9aa8c2 for

@@ -1,0 +1,15 @@
+/* Barlow Condensed is the broadcast-numeral voice: it lets a 68px run count fit
+   a phone header and a 190px slab score fit a takeover card, and it keeps a
+   jersey number reading as a jersey number. Self-hosted (latin subset, ~22KB a
+   weight) rather than hot-linked, because the pad cold-loads on field LTE and
+   the OBS machine may be on a venue network that blocks a font CDN.
+   SIL Open Font License 1.1 — see /fonts/OFL.txt.
+
+   Shared by every page. It used to live in control.css alone, which meant the
+   overlay — the thing actually on air — silently fell back to Arial Narrow. */
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/barlow-condensed-500.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/barlow-condensed-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/barlow-condensed-700.woff2') format('woff2'); }

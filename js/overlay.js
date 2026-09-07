@@ -188,7 +188,7 @@ window.setTimeout(refreshSoundHint, 600);
 document.getElementById('sound-hint')?.addEventListener('click', () => { Promise.resolve(audio.resume()).then(() => setTimeout(refreshSoundHint, 60)); });
 
 const LOOK_FONTS = {
-  condensed: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
+  condensed: '"Barlow Condensed", "Arial Narrow", system-ui, sans-serif',
   clean: '"Helvetica Neue", Arial, system-ui, sans-serif',
   mono: 'ui-monospace, Menlo, Consolas, monospace',
   serif: '"Times New Roman", Georgia, serif',

@@ -119,7 +119,8 @@ body.takeover #bug-wrap { display: none; }
 .card.slab .side img { width: 200px; height: 200px; object-fit: contain;
   filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.55)); }
 .card.slab .cname { font-size: 44px; font-weight: 900; }
-.card.slab .r { font-family: var(--num); font-size: 190px; font-weight: 800; line-height: 1; min-width: 2ch; text-align: center; }
+/* Two digits wide whatever the score, so 9 -> 10 doesn't shove the dash sideways. */
+.card.slab .r { font-family: var(--num); font-size: 190px; font-weight: 800; line-height: 1; min-width: calc(2 * var(--digit)); text-align: center; }
 .card.slab .dash { font-size: 90px; color: var(--steel); opacity: 0.5; line-height: 1; }
 .card.slab .linescore { margin: 46px auto 0; border-collapse: collapse; font-family: var(--num); }
 .card.slab .linescore td, .card.slab .linescore th { padding: 9px 18px; border: 1px solid var(--line); font-size: 27px; }
