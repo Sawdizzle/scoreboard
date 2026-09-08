@@ -1208,6 +1208,10 @@ function openSheet(id) {
   const el = $(id);
   if (!el || !el.hidden) return;
   sheetReturn.set(id, document.activeElement);
+  // Game Setup is opened from a button inside the drawer, so the two would
+  // otherwise be on screen together — two stacked sheets, the lower one only
+  // reachable by dismissing the upper. One thing over the pad at a time.
+  closeDrawer();
   el.hidden = false;
   sheetStack.push(id);
   // The first control, not the sheet itself: land on something you can act on.
@@ -1221,7 +1225,13 @@ function closeSheet(id) {
   if (i >= 0) sheetStack.splice(i, 1);
   const back = sheetReturn.get(id);
   sheetReturn.delete(id);
-  if (back && back !== document.body && document.contains(back)) back.focus({ preventScroll: true });
+  // Focus cannot go back to the control that opened the sheet if it went with
+  // the drawer. "⋯ More" is the door back to it, and it is only in the layout
+  // where the drawer is a sheet at all — above 700px it is display:none and the
+  // panes never left the screen, so the ordinary restore still applies there.
+  const gone = back && back.closest('#drawer') && !drawerOpen() && $('dw-open').getClientRects().length;
+  const land = gone ? $('dw-open') : back;
+  if (land && land !== document.body && document.contains(land)) land.focus({ preventScroll: true });
   const next = topSheet();   // a sheet opened over another hands focus back to it
   if (next) (focusablesIn($(next))[0] || $(next)).focus({ preventScroll: true });
 }
