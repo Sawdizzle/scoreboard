@@ -318,7 +318,8 @@ async function openGame(id) {
   guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
-  game = data; queue.setBaseline(data); overlayCopied = false; guideCollapsed = setupAllDone();
+  lastRowAt = 0;   // a different game's timestamps say nothing about this one
+  game = adopted(data); queue.setBaseline(data); overlayCopied = false; guideCollapsed = setupAllDone();
   panelPainted = {};   // nothing on screen belongs to this game yet
   lastSaidScore = null;
   resetReplayUi();
@@ -359,7 +360,7 @@ function setConn(state) {
 async function reloadGame(id) {
   if (queue.pendingFor(id)) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
-  if (!error && data) { queue.setBaseline(data); game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
+  if (!error && data) { queue.setBaseline(data); game = { ...adopted(data), lineups: (game && game.lineups) || {} }; renderGame(); }
 }
 async function subscribe(id) {
   await teardownChannel();
@@ -369,7 +370,15 @@ async function subscribe(id) {
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
       // The row no longer carries the roster (that table is private), so keep ours.
-      (payload) => { if (queue.pendingFor(id)) return; queue.setBaseline(payload.new); game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
+      (payload) => {
+        if (queue.pendingFor(id)) return;
+        // ...and not one we have already moved past: a backlog's worth of
+        // updates arrives after the queue empties, oldest first.
+        if (L.rowIsStale(payload.new, lastRowAt)) return;
+        queue.setBaseline(payload.new);
+        game = { ...adopted(payload.new), lineups: (game && game.lineups) || {} };
+        renderGame();
+      })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') { setConn('live'); queue.drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -406,6 +415,13 @@ document.addEventListener('visibilitychange', () => {
 // operator is told, and what a landed write does to the screen.
 let drainTimer = null;
 const stopRetryDrain = () => clearTimeout(drainTimer);
+// The newest server row this game has adopted. Realtime hands us a burst of
+// UPDATEs when a backlog drains, and they land after the queue reports itself
+// empty — without this the pad repaints each in turn and walks the score
+// forward through its own history. Reset per game in openGame(); the decision
+// itself is L.rowIsStale, which is unit-tested.
+let lastRowAt = 0;
+const adopted = (row) => { lastRowAt = Math.max(lastRowAt, L.rowStamp(row)); return row; };
 const queue = createQueue({
   applyEvent: (gameId, type, patch, payload) =>
     db.rpc('apply_event', { p_game: gameId, p_type: type, p_new: patch, p_payload: payload }),
@@ -416,7 +432,7 @@ const queue = createQueue({
   // everything we sent FOR THIS GAME, and it carries no roster — keep ours.
   onAccepted: (row, gameId, settled) => {
     if (!settled || !game || game.id !== gameId) return;
-    game = { ...row, lineups: game.lineups };
+    game = { ...adopted(row), lineups: game.lineups };
     renderGame();
   },
   onToast: showToast,
@@ -507,7 +523,7 @@ async function doUndo() {
   if (queue.pendingFor(game.id)) return undoQueued();
   const { data, error } = await db.rpc('undo', { p_game: game.id });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  if (data) { game = data; queue.setBaseline(data); renderGame(); showToast('↶ Undone'); }
+  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); }
   else showToast('Nothing to undo');
 }
 

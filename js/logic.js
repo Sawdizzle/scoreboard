@@ -374,3 +374,24 @@ export function situationSentence(g) {
     basesPhrase(safeBases(g.bases)),
   ].join(', ');
 }
+
+// Is an inbound server row one the pad has already moved past?
+//
+// Realtime delivers a burst of UPDATEs when a queued backlog drains, and those
+// arrive AFTER the queue reports itself empty. The control pad's handler only
+// checks that nothing is still queued, so it repaints each one in turn — walking
+// the score forward through its own history. Seen live: after a reconnect the
+// pad had settled on 2-0 and then announced "0, 0", "1, 0", "2, 0" again, one
+// per delayed row. It ended correct only because delivery happened to be in
+// order; a row arriving late enough would put a stale score back on the pad.
+//
+// Both zero cases degrade to "not stale", which is the old behaviour: a row with
+// no usable updated_at, or nothing adopted yet, is adopted.
+export function rowStamp(row) {
+  const t = row && row.updated_at ? Date.parse(row.updated_at) : NaN;
+  return Number.isFinite(t) ? t : 0;
+}
+export function rowIsStale(row, lastAt) {
+  const t = rowStamp(row);
+  return !!t && !!lastAt && t < lastAt;
+}

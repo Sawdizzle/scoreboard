@@ -418,3 +418,58 @@ test('the sentence reads the bases even when they arrive as a JSON string', () =
   assert.ok(L.situationSentence(G({ bases: '{"first":true,"second":false,"third":true}' }))
     .endsWith('runners on first and third'));
 });
+
+// ===========================================================================
+// Stale inbound rows
+// ===========================================================================
+// Realtime delivers a backlog's worth of UPDATEs after the queue reports itself
+// empty. Observed live: the pad had settled on 2-0 and then announced 0-0, 1-0
+// and 2-0 again, one per delayed row. It ended correct only because delivery
+// happened to be in order.
+const at = (s) => ({ updated_at: s });
+
+test('a row older than the last one adopted is stale', () => {
+  assert.equal(L.rowIsStale(at('2026-09-08T13:27:03.4Z'), Date.parse('2026-09-08T13:27:03.6Z')), true);
+});
+
+test('a newer row is not stale', () => {
+  assert.equal(L.rowIsStale(at('2026-09-08T13:27:04.0Z'), Date.parse('2026-09-08T13:27:03.6Z')), false);
+});
+
+test('the same row again is not stale — adopting it twice is harmless', () => {
+  const t = '2026-09-08T13:27:03.6Z';
+  assert.equal(L.rowIsStale(at(t), Date.parse(t)), false);
+});
+
+test('with nothing adopted yet, every row is taken', () => {
+  assert.equal(L.rowIsStale(at('2026-09-08T13:27:03.4Z'), 0), false);
+});
+
+test('a row with no usable timestamp is taken, exactly as before the guard', () => {
+  // Degrading to the old behaviour matters more than the guard: a row the pad
+  // cannot date is still the only state it has.
+  const last = Date.parse('2026-09-08T13:27:03.6Z');
+  for (const row of [{}, { updated_at: null }, { updated_at: 'not a date' }, null, undefined]) {
+    assert.equal(L.rowIsStale(row, last), false, `${JSON.stringify(row)} should not be stale`);
+  }
+});
+
+test('rowStamp reads the column and returns 0 for anything unusable', () => {
+  assert.equal(L.rowStamp(at('2026-09-08T13:27:03.600Z')), Date.parse('2026-09-08T13:27:03.600Z'));
+  assert.equal(L.rowStamp({ updated_at: 'nope' }), 0);
+  assert.equal(L.rowStamp({}), 0);
+  assert.equal(L.rowStamp(null), 0);
+});
+
+test('replaying a drained backlog in order adopts only the last row', () => {
+  // The exact live sequence: three updates broadcast while the queue drained,
+  // delivered after it emptied. The pad is already on the newest.
+  let lastAt = Date.parse('2026-09-08T13:27:03.666Z');   // the row the queue settled on
+  const burst = ['13:27:03.429', '13:27:03.602', '13:27:03.666'].map((t) => at(`2026-09-08T${t}Z`));
+  const taken = burst.filter((row) => {
+    if (L.rowIsStale(row, lastAt)) return false;
+    lastAt = Math.max(lastAt, L.rowStamp(row));
+    return true;
+  });
+  assert.deepEqual(taken.map((r) => r.updated_at), ['2026-09-08T13:27:03.666Z']);
+});
