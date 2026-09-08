@@ -17,5 +17,7 @@ jobs:
           node-version: '20'
       - run: node scripts/check.mjs
       # check.mjs catches a control that has stopped being wired to anything.
-      # These catch wrong rules — the part that shows up live on a stream.
-      - run: node --test scripts/logic.test.mjs scripts/sports.test.mjs
+      # These catch wrong rules — the part that shows up live on a stream — and
+      # the write queue underneath them. A glob, not a list: naming the files is
+      # how the queue suite would have been written and then never run here.
+      - run: node --test scripts/*.test.mjs

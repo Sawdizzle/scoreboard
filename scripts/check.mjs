@@ -22,7 +22,7 @@ const PAGES = [
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.

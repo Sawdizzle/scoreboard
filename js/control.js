@@ -6,6 +6,7 @@ import * as S from './soccer.js';
 import * as V from './volleyball.js';
 import * as B from './basketball.js';
 import { serverNow, syncClock } from './clock.js';
+import { createQueue } from './sync.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -58,7 +59,7 @@ async function refreshSession() {
       resumeGameId = null;
       show('game'); renderGame();
       await subscribe(game.id);
-      drain();
+      queue.drain();
       await loadPresets(); await loadTeams();
       return;
     }
@@ -86,9 +87,9 @@ let resumeGameId = null;         // the game to return to once signed back in
 function showSessionLost() {
   if (sessionLost) return;
   sessionLost = true;
-  clearTimeout(drainTimer);
+  stopRetryDrain();
   resumeGameId = game ? game.id : null;
-  const n = pending.length;
+  const n = queue.size();
   $('sl-note').textContent = n
     ? `Your login expired. ${n} change${n > 1 ? 's are' : ' is'} still waiting — log back in and ${n > 1 ? 'they' : 'it'} will save.`
     : 'Your login expired. Log back in to keep scoring.';
@@ -101,7 +102,7 @@ function hideSessionLost() {
 }
 $('sl-login').onclick = () => {
   $('session-lost').hidden = true;   // the auth screen explains itself
-  const n = pending.length;
+  const n = queue.size();
   show('auth');
   setAuthMsg(n ? `Signed out — sign in to save ${n} change${n > 1 ? 's' : ''}.` : 'Signed out — sign in to carry on.');
   $('pin').focus();
@@ -110,7 +111,7 @@ $('sl-login').onclick = () => {
 supabase.auth.onAuthStateChange((event, session) => {
   if (session) {
     // Back in. Anything still queued goes out now.
-    if (sessionLost) { hideSessionLost(); drain(); }
+    if (sessionLost) { hideSessionLost(); queue.drain(); }
     return;
   }
   if (deliberateSignOut) { deliberateSignOut = false; return; }
@@ -180,8 +181,9 @@ $('signup-btn').addEventListener('click', async () => {
 $('logout-btn').addEventListener('click', async () => {
   // Same bargain as backing out of a game: the queue is memory-only, so leaving
   // with writes in it loses them, and that has to be a choice.
-  if (pending.length && !confirm(`${pending.length} change(s) have not saved yet.\n\nLog out and lose them?`)) return;
-  pending.length = 0; renderPending();
+  const n = queue.size();
+  if (n && !confirm(`${n} change(s) have not saved yet.\n\nLog out and lose them?`)) return;
+  queue.clear();
   deliberateSignOut = true;
   hideSessionLost(); resumeGameId = null;
   await teardownChannel(); await supabase.auth.signOut();
@@ -316,7 +318,7 @@ async function openGame(id) {
   guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
-  game = data; serverRow = data; overlayCopied = false; guideCollapsed = setupAllDone();
+  game = data; queue.setBaseline(data); overlayCopied = false; guideCollapsed = setupAllDone();
   panelPainted = {};   // nothing on screen belongs to this game yet
   lastSaidScore = null;
   resetReplayUi();
@@ -337,19 +339,13 @@ async function openGame(id) {
 // this game's writes, and that has to be a choice you make on purpose.
 async function closeGame() {
   const id = game && game.id;
-  if (pendingFor(id)) {
-    const n = pending.filter((w) => w.gameId === id).length;
+  if (queue.pendingFor(id)) {
+    const n = queue.entriesFor(id).length;
     if (!confirm(`${n} change${n > 1 ? 's have' : ' has'} not saved yet — still waiting on the network.\n\nLeave this game and lose ${n > 1 ? 'them' : 'it'}?`)) return;
-    dropPendingFor(id);
+    queue.dropFor(id);
   }
   stopDemo(); keepAwake(false); stopClockTick(); resetReplayUi(); disarmObs();
   await teardownChannel(); game = null; show('lobby'); await loadGames();
-}
-// Forget every queued write for a game — it is going away, or you chose to.
-function dropPendingFor(id) {
-  for (let i = pending.length - 1; i >= 0; i--) if (pending[i].gameId === id) pending.splice(i, 1);
-  if (!pending.length) drainFailing = false;
-  renderPending();
 }
 $('back-btn').addEventListener('click', closeGame);
 
@@ -361,9 +357,9 @@ function setConn(state) {
 }
 // Re-pull the authoritative row (heals any updates missed while disconnected).
 async function reloadGame(id) {
-  if (pendingFor(id)) return; // our queue is ahead of the server; don't rewind
+  if (queue.pendingFor(id)) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
-  if (!error && data) { serverRow = data; game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
+  if (!error && data) { queue.setBaseline(data); game = { ...data, lineups: (game && game.lineups) || {} }; renderGame(); }
 }
 async function subscribe(id) {
   await teardownChannel();
@@ -373,9 +369,9 @@ async function subscribe(id) {
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
       // The row no longer carries the roster (that table is private), so keep ours.
-      (payload) => { if (pendingFor(id)) return; serverRow = payload.new; game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
+      (payload) => { if (queue.pendingFor(id)) return; queue.setBaseline(payload.new); game = { ...payload.new, lineups: (game && game.lineups) || {} }; renderGame(); })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') { setConn('live'); drain(); reloadGame(id); }
+      if (status === 'SUBSCRIBED') { setConn('live'); queue.drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         setConn('down');
         if (!ctrlReconnect && game && game.id === id) {
@@ -402,35 +398,50 @@ document.addEventListener('visibilitychange', () => {
 // Now the optimistic state stands and the write joins a queue that drains in
 // order when the network returns. The overlay already survives disconnects by
 // holding its last state; this is the pad's half of that.
-// ONE queue for every durable write, not just scoring:
-//   kind 'event' — a play, through apply_event (snapshots prev_state, undoable)
-//   kind 'field' — a direct games UPDATE: setup, look, audio, sponsors, cards
-// Presentation writes used to go straight out and only console.warn on failure,
-// so a Setup save that never landed looked exactly like one that did. Now they
-// retry, they hold the ⏳ badge, and a failure says so out loud.
 //
-// Transient triggers stay OUT of this queue on purpose: replaying a stinger, a
-// clip request, a scene cut or "go live" minutes late would fire it over the
-// wrong moment of the game. Those are fire-and-forget by design.
-const pending = [];      // FIFO of {kind, gameId, ...} not yet accepted
-let draining = false;
+// The queue itself lives in sync.js, with no DOM and no Supabase in it, so it
+// can be driven under `node --test` — a dead network and two interleaved games
+// are unreachable from a browser without a signed-in session. Everything below
+// is this file's half of that boundary: what the badge looks like, what the
+// operator is told, and what a landed write does to the screen.
 let drainTimer = null;
-let drainFailing = false;   // so a lost network toasts once, not every retry
-// The last row the server confirmed, and the base a local undo replays from.
-// It advances with each accepted write, NOT only when the queue empties.
-let serverRow = null;
-// Every patch holds ABSOLUTE values, so the game it belongs to is part of the
-// write, not something to infer at send time. drain() can run long after you
-// have backed out to the lobby and opened something else — addressed to
-// whatever happens to be open then, these would overwrite the wrong game.
-const pendingFor = (id) => !!id && pending.some((w) => w.gameId === id);
-function enqueue(entry) { pending.push({ ...entry, at: Date.now() }); renderPending(); drain(); }
-// A stinger belongs to the moment it fired. Riding the play's write makes it
-// free, but it also means a write that sat in the queue would fire HOME RUN over
-// whatever is happening by the time the network comes back. Past this age the
-// play still lands; the stinger is dropped. Local elapsed time only — no clock
-// comparison with anyone else.
-const STALE_ANIM_MS = 10000;
+const stopRetryDrain = () => clearTimeout(drainTimer);
+const queue = createQueue({
+  applyEvent: (gameId, type, patch, payload) =>
+    db.rpc('apply_event', { p_game: gameId, p_type: type, p_new: patch, p_payload: payload }),
+  updateFields: (gameId, patch) =>
+    db.from('games').update(patch).eq('id', gameId).select().maybeSingle(),
+  onPending: renderPending,
+  // The row is only authoritative for the screen once the server has seen
+  // everything we sent FOR THIS GAME, and it carries no roster — keep ours.
+  onAccepted: (row, gameId, settled) => {
+    if (!settled || !game || game.id !== gameId) return;
+    game = { ...row, lineups: game.lineups };
+    renderGame();
+  },
+  onToast: showToast,
+  // A rejection that smells of expired credentials: ask the auth client whether
+  // there is still a session, in case it has not noticed yet.
+  onAuthError: () => {
+    supabase.auth.getSession().then(({ data }) => { if (!data.session) showSessionLost(); });
+  },
+  isPaused: () => sessionLost,   // nothing will be accepted until there is a session
+  retry: (fn, ms) => { stopRetryDrain(); drainTimer = setTimeout(fn, ms); },
+});
+
+function renderPending(n, err) {
+  const el = $('pending-badge'); if (!el) return;
+  el.hidden = !n;
+  if (!n) return;
+  el.textContent = `⏳ ${n}`;
+  el.title = err ? `${n} change(s) waiting to save — ${err}` : `${n} change(s) saving…`;
+}
+// Anything that suggests the network is back is a reason to try again.
+addEventListener('online', () => queue.drain());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) queue.drain(); });
+// Closing the pad with unsaved scoring would lose it — the queue is memory-only
+// on purpose, since replaying stale patches over a reloaded state is worse.
+addEventListener('beforeunload', (e) => { if (queue.size()) { e.preventDefault(); e.returnValue = ''; } });
 
 async function commit(res) {
   if (!game) return;
@@ -456,68 +467,8 @@ async function commit(res) {
   if (anim && game.auto_clip && anim in CLIP_DELAY_MS) saveReplay(true, CLIP_DELAY_MS[anim]);
   game = { ...game, ...patch };
   renderGame();
-  enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
+  queue.enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
 }
-
-// Strictly in order: each patch holds absolute values, so replaying them out of
-// sequence would undo later work.
-async function drain() {
-  if (draining || !pending.length) return;   // no open game needed: the queue knows its own
-  if (sessionLost) return;                   // nothing will be accepted until there is a session
-  draining = true;
-  while (pending.length) {
-    const w = pending[0];
-    let patch = w.patch;
-    if (patch.current_animation && Date.now() - w.at > STALE_ANIM_MS) {
-      patch = { ...patch };
-      delete patch.current_animation;   // the play is still good; the stinger is not
-    }
-    const { data, error } = w.kind === 'field'
-      ? await db.from('games').update(patch).eq('id', w.gameId).select().maybeSingle()
-      : await db.rpc('apply_event', { p_game: w.gameId, p_type: w.type, p_new: patch, p_payload: w.payload });
-    if (error) {
-      draining = false;
-      renderPending(error.message);
-      // Say it once. Silence here is what made a dropped Setup save invisible.
-      if (!drainFailing) { drainFailing = true; showToast(`⚠️ Not saved yet — ${error.message}`, 4000); }
-      // A rejection that smells of expired credentials: ask the auth client
-      // whether there is still a session, in case it has not noticed yet.
-      if (/jwt|token|401|not authenticated|unauthorized/i.test(error.message || '')) {
-        supabase.auth.getSession().then(({ data }) => { if (!data.session) showSessionLost(); });
-      }
-      clearTimeout(drainTimer);
-      drainTimer = setTimeout(drain, 4000); // keep trying; the game doesn't stop
-      return;
-    }
-    pending.shift();
-    // Each accepted write moves the baseline, even mid-queue: a local undo
-    // replays what is STILL queued on top of this, so it has to be current.
-    if (data) serverRow = data;
-    // The row is only authoritative for the screen once it has seen everything
-    // we sent FOR THIS GAME, and it carries no roster — keep the one in hand.
-    if (data && game && game.id === w.gameId && !pendingFor(game.id)) {
-      game = { ...data, lineups: game.lineups };
-      renderGame();
-    }
-    renderPending();
-  }
-  draining = false;
-  if (drainFailing) { drainFailing = false; showToast('✓ All changes saved'); }
-}
-
-function renderPending(err) {
-  const el = $('pending-badge'); if (!el) return;
-  el.hidden = !pending.length;
-  if (!pending.length) return;
-  el.textContent = `⏳ ${pending.length}`;
-  el.title = err ? `${pending.length} change(s) waiting to save — ${err}` : `${pending.length} change(s) saving…`;
-}
-// Anything that suggests the network is back is a reason to try again.
-addEventListener('online', drain);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) drain(); });
-// Closing the pad with unsaved scoring would lose it — the queue is memory-only
-// on purpose, since replaying stale patches over a reloaded state is worse.
-addEventListener('beforeunload', (e) => { if (pending.length) { e.preventDefault(); e.returnValue = ''; } });
 
 // Strictly-increasing nonce so two triggers in the same millisecond don't collide
 // (the overlay only plays a stinger whose nonce is greater than the last one seen).
@@ -553,10 +504,10 @@ async function fireAnim(type, meta = {}) {
 // server is behind us, undo what is actually in hand instead.
 async function doUndo() {
   if (!game) return;
-  if (pendingFor(game.id)) return undoQueued();
+  if (queue.pendingFor(game.id)) return undoQueued();
   const { data, error } = await db.rpc('undo', { p_game: game.id });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  if (data) { game = data; serverRow = data; renderGame(); showToast('↶ Undone'); }
+  if (data) { game = data; queue.setBaseline(data); renderGame(); showToast('↶ Undone'); }
   else showToast('Nothing to undo');
 }
 
@@ -566,20 +517,20 @@ async function doUndo() {
 // exactly the state before the dropped play. Field writes (look, setup) are not
 // plays: they stay queued and are replayed with the rest.
 function undoQueued() {
-  if (!serverRow || serverRow.id !== game.id) {
+  const base = queue.baseline();
+  if (!base || base.id !== game.id) {
     // No confirmed baseline to rebuild from (nothing for this game has been
     // accepted yet). Reversing blind would be a guess, so don't.
     return showToast('⚠️ Can’t undo until one change saves', 3500);
   }
-  const mine = pending.filter((w) => w.gameId === game.id);
-  const res = L.undoPending(serverRow, mine);   // pure, unit-tested
+  const res = L.undoPending(base, queue.entriesFor(game.id));   // pure, unit-tested
   if (!res) return showToast('Nothing to undo — only settings are still saving');
-  // Splice that same entry out of the real queue (which may hold other games').
-  pending.splice(pending.indexOf(res.dropped), 1);
+  // Drop that same entry from the real queue, which may hold other games' too —
+  // entriesFor() is a filtered view, so it cannot be addressed by index.
+  queue.drop(res.dropped);
   game = { ...res.state, lineups: game.lineups };
-  renderPending();
   renderGame();
-  showToast(pendingFor(game.id) ? '↶ Undone — still saving the rest' : '↶ Undone');
+  showToast(queue.pendingFor(game.id) ? '↶ Undone — still saving the rest' : '↶ Undone');
 }
 
 // Buttons
@@ -1305,7 +1256,7 @@ $('delete-game').onclick = async () => {
   const id = game.id;
   setupDirty = false; closeSheet('setup-sheet');
   stopDemo(); keepAwake(false); stopClockTick();
-  dropPendingFor(id); // otherwise drain() retries forever against a row that is gone
+  queue.dropFor(id); // otherwise the queue retries forever against a row that is gone
   await teardownChannel();
   const { error } = await db.from('games').delete().eq('id', id);
   if (error) return alert(error.message);
@@ -1562,7 +1513,7 @@ async function writeField(patch) {
   const gameId = game.id;
   game = { ...game, ...patch };
   renderGame();
-  enqueue({ kind: 'field', gameId, patch });
+  queue.enqueue({ kind: 'field', gameId, patch });
 }
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
 document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
