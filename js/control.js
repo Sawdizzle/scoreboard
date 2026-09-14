@@ -1771,8 +1771,11 @@ function readLineup(side) {
   });
   return { pitcher: { num: $('lp-num-' + side).value.trim(), name: $('lp-name-' + side).value.trim() }, batters };
 }
+// Merge over the stored blob: readLineup() only knows names and numbers, and
+// replacing the whole side dropped `positions` — every name edit cleared the defense.
 async function saveLineup(side) {
-  await saveRoster({ ...(game.lineups || {}), [side]: readLineup(side) });
+  const lineups = game.lineups || {};
+  await saveRoster({ ...lineups, [side]: { ...(lineups[side] || {}), ...readLineup(side) } });
 }
 function setCurrentHitter(side, i) {
   const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
@@ -1788,7 +1791,74 @@ function setCurrentHitter(side, i) {
   });
   $('lp-num-' + side).addEventListener('change', () => saveLineup(side));
   $('lp-name-' + side).addEventListener('change', () => saveLineup(side));
+  list.addEventListener('pointerdown', (e) => { if (e.target.closest('.ord')) lineupDragStart(side, e); });
 });
+
+// Batting order — drag a row by its number onto another slot to swap them.
+// Same pointer-based pattern as the defense diamond, so it works on touch.
+let lbd = null;
+function lineupRowAt(e) {
+  lbd.ghost.style.display = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  lbd.ghost.style.display = '';
+  const row = el && el.closest('.lineup-row[data-i]');
+  return row && row.parentElement === $('lineup-' + lbd.side) ? row : null;
+}
+// The panel column scrolls, and touch-action:none on the grip means the finger
+// can't scroll it mid-drag — so nudge the nearest scroller when near an edge.
+function scrollerOf(el) {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+  }
+  return document.scrollingElement;
+}
+function lineupDragMove(e) {
+  if (!lbd) return;
+  e.preventDefault();
+  lbd.ghost.style.left = e.clientX + 'px'; lbd.ghost.style.top = e.clientY + 'px';
+  const r = lbd.scroller === document.scrollingElement ? { top: 0, bottom: innerHeight } : lbd.scroller.getBoundingClientRect();
+  if (e.clientY < r.top + 48) lbd.scroller.scrollTop -= 14;
+  else if (e.clientY > r.bottom - 48) lbd.scroller.scrollTop += 14;
+  const row = lineupRowAt(e);
+  document.querySelectorAll('.lineup-row.hot').forEach((x) => { if (x !== row) x.classList.remove('hot'); });
+  if (row && +row.dataset.i !== lbd.from) row.classList.add('hot');
+}
+function lineupDragEnd(e) {
+  if (!lbd) return;
+  const row = lineupRowAt(e);
+  const { side, from, ghost, src } = lbd;
+  lbd = null;
+  ghost.remove(); src.classList.remove('dragging');
+  document.querySelectorAll('.lineup-row.hot').forEach((x) => x.classList.remove('hot'));
+  window.removeEventListener('pointermove', lineupDragMove);
+  window.removeEventListener('pointerup', lineupDragEnd);
+  window.removeEventListener('pointercancel', lineupDragEnd);
+  if (!row || +row.dataset.i === from) return;
+  // Start from what's on screen, so a name typed but not yet blurred isn't lost.
+  const lineups = game.lineups || {};
+  const cur = { ...(lineups[side] || {}), ...readLineup(side) };
+  saveRoster({ ...lineups, [side]: L.swapBatters(cur, from, +row.dataset.i) });
+  fillLineup(side);
+  renderDefense();
+}
+function lineupDragStart(side, e) {
+  const src = e.target.closest('.lineup-row[data-i]');
+  if (!src || lbd) return;
+  e.preventDefault();
+  if (document.activeElement && src.closest('.lineup-team').contains(document.activeElement)) document.activeElement.blur();
+  const num = src.querySelector('.b-num').value.trim(), name = src.querySelector('.b-name').value.trim();
+  const ghost = document.createElement('div');
+  ghost.className = 'lb-ghost';
+  ghost.textContent = (num ? '#' + num + ' ' : '') + (name || `Slot ${+src.dataset.i + 1}`);
+  ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+  document.body.appendChild(ghost);
+  src.classList.add('dragging');
+  lbd = { side, from: +src.dataset.i, ghost, src, scroller: scrollerOf(src) };
+  window.addEventListener('pointermove', lineupDragMove, { passive: false });
+  window.addEventListener('pointerup', lineupDragEnd);
+  window.addEventListener('pointercancel', lineupDragEnd);
+}
 function renderLineups() {
   if (lineupBuiltFor !== game.id) { buildLineup('away'); buildLineup('home'); lineupBuiltFor = game.id; }
   $('lineup-away-team').textContent = game.away_name || 'Visitor';

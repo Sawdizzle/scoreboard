@@ -710,6 +710,13 @@ body.no-obs .obs-only { display: none; }
 .lineup-row.at-bat .cur-dot { background: var(--out-ui); border-color: var(--out-ui); color: #06090f; }
 .lineup-row.at-bat .b-name { border-color: var(--out-ui); }
 .lineup-row.at-bat .ord { color: var(--chalk); }
+/* Batting-order drag: the order number is the grip */
+.lineup-list .ord { flex-basis: 3.4ch; padding: 10px 0; border-radius: 8px; cursor: grab; touch-action: none; user-select: none; }
+.lineup-list .ord::before { content: '⋮⋮'; margin-right: 2px; letter-spacing: -2px; opacity: .6; }
+.lineup-row.dragging { opacity: .35; }
+.lineup-row.hot { border-radius: 10px; box-shadow: 0 0 0 2px var(--accent); background: rgba(232,178,58,.14); }
+.lb-ghost { position: fixed; z-index: 9999; transform: translate(-50%, -50%); pointer-events: none; opacity: .92;
+  background: var(--steel); color: #06090f; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
 
 /* Clock row */
 .clock-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }

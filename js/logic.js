@@ -185,6 +185,25 @@ export function fielderAt(g, side, pos) {
   return filled(b) ? b : null;
 }
 
+// Swap two batting-order slots in a team's roster blob (lineups[side]). Field
+// positions point at batting-order indices, so they are re-pointed to follow the
+// player — a fielder moved from 7th to 2nd keeps their spot on the diamond. The
+// pitcher is matched by num+name, not index, so it needs nothing. Returns a new
+// blob; the at-bat pointer (state.batIdx) is a slot, not a player, and is untouched.
+export function swapBatters(team, a, b) {
+  const t = team || {};
+  const batters = Array.isArray(t.batters) ? t.batters.slice() : [];
+  if (a === b || a < 0 || b < 0) return { ...t, batters };
+  while (batters.length <= Math.max(a, b)) batters.push({ num: '', name: '' });
+  [batters[a], batters[b]] = [batters[b], batters[a]];
+  const out = { ...t, batters };
+  if (t.positions) {
+    out.positions = {};
+    for (const [pos, idx] of Object.entries(t.positions)) out.positions[pos] = idx === a ? b : idx === b ? a : idx;
+  }
+  return out;
+}
+
 // Ordered batting lineup for a side, each row tagged with its fielding position
 // (P for the pitcher, the assigned spot, or '' for DH/unset) and whether it's the
 // hitter at bat — for the lineup broadcast card.

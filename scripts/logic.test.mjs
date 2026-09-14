@@ -473,3 +473,33 @@ test('replaying a drained backlog in order adopts only the last row', () => {
   });
   assert.deepEqual(taken.map((r) => r.updated_at), ['2026-09-08T13:27:03.666Z']);
 });
+
+// ---------------------------------------------------------------------------
+// Reordering the batting order (drag a row onto another slot)
+// ---------------------------------------------------------------------------
+test('swapping two slots trades the players', () => {
+  const t = L.swapBatters(order([1, 1, 1]), 0, 2);
+  assert.deepEqual(t.batters.map((b) => b.name), ['B2', 'B1', 'B0']);
+});
+
+test('a fielder keeps their position when they move in the order', () => {
+  const team = { ...order([1, 1, 1, 1]), positions: { SS: 0, CF: 3, C: 1 } };
+  const t = L.swapBatters(team, 0, 3);
+  assert.deepEqual(t.positions, { SS: 3, CF: 0, C: 1 });
+  assert.equal(t.batters[t.positions.SS].name, 'B0');
+});
+
+test('dropping onto an empty bench slot past the list pads it', () => {
+  const t = L.swapBatters(order([1, 1]), 1, 10);
+  assert.equal(t.batters.length, 11);
+  assert.equal(t.batters[10].name, 'B1');
+  assert.equal(t.batters[1].name, '');
+});
+
+test('the pitcher and the original roster are left alone', () => {
+  const team = { ...order([1, 1]), pitcher: { num: '9', name: 'Ace' }, positions: { C: 0 } };
+  const t = L.swapBatters(team, 0, 1);
+  assert.deepEqual(t.pitcher, { num: '9', name: 'Ace' });
+  assert.equal(team.batters[0].name, 'B0');
+  assert.deepEqual(team.positions, { C: 0 });
+});
