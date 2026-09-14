@@ -1741,7 +1741,7 @@ function buildLineup(side) {
     html += `<div class="lineup-row" data-i="${i}">` +
       `<button class="cur-dot" data-i="${i}" title="Set at-bat">◎</button>` +
       `<span class="ord">${i + 1}</span>` +
-      `<input class="b-num" inputmode="numeric" maxlength="3" placeholder="#" />` +
+      `<input class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" />` +
       `<input class="b-name" placeholder="Batter ${i + 1}" /></div>`;
   }
   $('lineup-' + side).innerHTML = html;

@@ -701,8 +701,10 @@ body.no-obs .obs-only { display: none; }
 .lineup-list { margin-top: 4px; }
 .lineup-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .lineup-row input { width: auto; margin-top: 0; padding: 10px; font-size: 16px; border-radius: 10px; }
-.lineup-row .b-num { flex: 0 0 3.2ch; text-align: center; font-family: var(--num); padding-left: 4px; padding-right: 4px; }
-.lineup-row .b-name { flex: 1 1 auto; min-width: 0; }
+/* Explicit width + min-width:0 on both: a flex item's min-width:auto lets iOS
+   Safari grow an input to its default ~20-char size, which made # wider than name. */
+.lineup-row .b-num { flex: 0 0 calc(3ch + 20px); width: calc(3ch + 20px); min-width: 0; text-align: center; font-family: var(--num); padding-left: 4px; padding-right: 4px; }
+.lineup-row .b-name { flex: 1 1 0; width: 0; min-width: 0; }
 .lineup-row .ord { flex: 0 0 1.6ch; text-align: center; font-family: var(--num); font-size: 13px; color: var(--muted); }
 .lineup-row .ord.p { color: var(--steel); font-weight: 800; }
 .lineup-row.pitcher { margin-top: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
