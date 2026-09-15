@@ -103,7 +103,10 @@ export function onBall(g) {
 export function onStrike(g) {
   const strikes = (g.strikes | 0) + 1;
   // 3rd strike ends the at-bat (pitch + advance batter); earlier strikes just count the pitch.
-  if (strikes >= 3) { const res = outResult(g, 'strikeout'); return { ...res, patch: endPA(g, res.patch) }; }
+  if (strikes >= 3) {
+    const res = outResult(g, 'strikeout');
+    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, 'K', { outs: 1 }) } };
+  }
   return { type: 'strike', patch: withPitch(g, { strikes }) };
 }
 
@@ -115,7 +118,10 @@ export function onFoul(g) {
 
 // A ball-in-play out (the OUT button) ends the at-bat: pitch + advance batter.
 // Strikeouts go through onStrike, so this path is only in-play outs.
-export function onOut(g) { const res = outResult(g, 'out'); return { ...res, patch: endPA(g, res.patch) }; }
+export function onOut(g) {
+  const res = outResult(g, 'out');
+  return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, 'OUT', { outs: 1 }) } };
+}
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
 
@@ -339,7 +345,16 @@ export const PLAY_LABEL = {
   GB: 'Groundout', FB: 'Flyout', LD: 'Lineout', PU: 'Pop-up', E: 'Reached on error',
   FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
+  // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
+  K: 'Strikeout', BB: 'Walk', HR: 'Home run', OUT: 'Out',
 };
+
+// The name-free note an at-bat leaves in the event payload, which apply_event
+// copies into the public play-by-play. The inning and half are the ones the
+// play happened in — a third out has rolled them by the time the row saves.
+export function playNote(g, kind, { pos = null, code = '', outs = 0, runs = 0 } = {}) {
+  return { kind, pos, code, outs, runs, inning: g.inning | 0, half: g.half };
+}
 
 // A fielder tapped with no type picked: infielders make groundouts, outfielders flyouts.
 export const autoKind = (pos) => ((POS_NUM[pos] || 0) >= 7 ? 'FB' : 'GB');
@@ -447,7 +462,7 @@ export function onPlay(g, { kind, pos = null, dest }) {
   return {
     type: 'play',
     patch: endPA(g, patch),
-    payload: { runs, play: { kind, pos, code, outs: r.outs, runs, inning: g.inning | 0, half: g.half } },
+    payload: { runs, play: playNote(g, kind, { pos, code, outs: r.outs, runs }) },
     anim: kind === 'DP' ? 'doubleplay' : kind === 'H3' ? 'bigplay' : 'play',
     animMeta: { text, side, idx: currentBatterIdx(g, side), runs },
     text,

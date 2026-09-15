@@ -1369,6 +1369,7 @@ $('reset-game').onclick = async () => {
   else if (sport === 'volleyball') patch.state = V.vbState({});
   else if (sport === 'basketball') patch.state = B.bkState({});
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
+  await db.from('plays').delete().eq('game_id', game.id);  // and the recap's play-by-play
   setupDirty = false; closeSheet('setup-sheet');
   await writeField(patch);
   showToast('↺ Game reset');
@@ -1916,7 +1917,8 @@ $('hr-runs-dn').onclick = () => { hrRuns = Math.max(hrRuns - 1, 1); paintHr(); }
 $('hr-cancel').onclick = () => closeSheet('hr-sheet');
 $('hr-confirm').onclick = () => {
   closeSheet('hr-sheet');
-  commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns), payload: { runs: hrRuns }, anim: 'homerun' });
+  commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns),
+    payload: { runs: hrRuns, play: L.playNote(game, 'HR', { runs: hrRuns }) }, anim: 'homerun' });
 };
 
 // Pitch-count stepper (baseball) --------------------------------------------
@@ -2230,7 +2232,8 @@ $('walk-confirm').onclick = () => {
   closeSheet('walk-sheet');
   const bases = { first: wState.first, second: wState.second, third: wState.third };
   // anim: the WALK reveal fires automatically, like run/strikeout do.
-  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }), payload: { runs: wState.runs }, anim: 'webgem' });
+  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }),
+    payload: { runs: wState.runs, play: L.playNote(game, 'BB', { runs: wState.runs }) }, anim: 'webgem' });
 };
 
 // Render --------------------------------------------------------------------

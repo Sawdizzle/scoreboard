@@ -129,6 +129,8 @@ What that public policy still costs, accepted deliberately: anyone can list ever
 
 `/recap?game=<id>` — a read-only scoreboard for parents: status, logos, score, line score, date. It updates live over the same Realtime channel while the game is on. It reads only the public row, so there is nothing private on it to leak.
 
+Baseball games also get a **play-by-play**, one card per half-inning with the newest on top: *Groundout 6-3*, *Sac fly SF8 +1 run*, *Strikeout*, *Walk*. Every at-bat the pad records leaves a name-free note in its event payload, and `apply_event` copies it into `scoreboard.plays` in the same transaction; `undo` deletes it again, and Reset game clears them. The page reads them through `get_plays(game)` — a `SECURITY DEFINER` function in the `get_roster` mould, since the table has no public policy. The event log itself can't serve this: it is owner-only (every row holds a full games-row snapshot) and keeps only the newest 200 events, one per pitch. A play row holds the position and scorebook code and never who batted, so the public page shows what happened without naming a child.
+
 ## Sponsors
 
 `💵 Sponsors` in the drawer's Look tab holds a list (name + optional logo) plus timing. With rotation on, the overlay shows a corner "brought to you by" bug every `every` seconds for `secs` seconds, cycling the list, and hides it whenever a takeover card is up.

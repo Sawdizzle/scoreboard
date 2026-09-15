@@ -668,3 +668,27 @@ test('the stinger carries the batter’s slot, never a name — the row is publi
   assert.deepEqual(r.animMeta, { text: 'Groundout 6-3', side: 'away', idx: 2, runs: 0 });
   assert.ok(!JSON.stringify(r.payload).includes('B2'), 'and no roster name in the event log either');
 });
+
+// ---------------------------------------------------------------------------
+// The play-by-play note every at-bat leaves (copied to the public recap)
+// ---------------------------------------------------------------------------
+test('a strikeout and a plain out each leave a note for the play-by-play', () => {
+  const k = L.onStrike(G({ strikes: 2, inning: 3 }));
+  assert.deepEqual(k.payload.play, { kind: 'K', pos: null, code: '', outs: 1, runs: 0, inning: 3, half: 'top' });
+  const o = L.onOut(G());
+  assert.equal(o.payload.play.kind, 'OUT');
+});
+
+test('the note keeps the half the play happened in, not the one the third out rolled to', () => {
+  const r = L.onOut(G({ outs: 2, inning: 5, half: 'bottom' }));
+  assert.equal(r.patch.half, 'top');
+  assert.equal(r.patch.inning, 6);
+  assert.deepEqual([r.payload.play.inning, r.payload.play.half], [5, 'bottom']);
+  assert.equal(r.payload.rolled, true, 'and the roll is still reported');
+});
+
+test('a ball in play leaves its code and fielder, and nothing about who batted', () => {
+  const g = G({ lineups: { away: order([1, 1]) }, bases: bases(0, 0, 1) });
+  const r = L.onPlay(g, { kind: 'SF', pos: 'CF', dest: L.playDefaults(g, 'SF') });
+  assert.deepEqual(r.payload.play, { kind: 'SF', pos: 'CF', code: 'SF8', outs: 1, runs: 1, inning: 1, half: 'top' });
+});

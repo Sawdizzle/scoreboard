@@ -44,6 +44,21 @@ body { margin: 0; background: var(--bg); color: var(--chalk); font-family: var(-
 .ls .rhe { font-weight: 800; color: var(--chalk); }
 .ls td.rhe { color: var(--out); }
 
+/* Play-by-play: one card per half-inning, newest on top. */
+.pbp { margin-top: 28px; }
+.pbp h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.pbp-half { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 6px; }
+.pbp-half + .pbp-half { margin-top: 10px; }
+.pbp-half h3 { margin: 0 0 4px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+.pbp-half h3 span { color: var(--muted); font-weight: 600; font-size: 12px; }
+.pbp ol { list-style: none; margin: 0; padding: 0; }
+.pbp li { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.pbp li:first-child { border-top: 0; }
+.pbp-what { flex: 1; min-width: 0; }
+.pbp-code { font-family: var(--num); font-size: 17px; font-weight: 700; color: var(--steel); }
+.pbp-runs { font-family: var(--num); font-size: 15px; font-weight: 800; color: var(--out); white-space: nowrap; }
+
 .when { text-align: center; color: var(--muted); font-size: 14px; margin-top: 22px; }
 .foot { text-align: center; color: var(--muted); font-size: 12px; opacity: 0.7; margin-top: 26px;
   letter-spacing: 0.1em; text-transform: uppercase; }

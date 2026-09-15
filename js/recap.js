@@ -1,4 +1,5 @@
 import { supabase, db } from './supabase.js';
+import { PLAY_LABEL } from './logic.js';
 
 // A public scoreboard page for parents: the link the operator shares. It reads
 // the same row the overlay does, minus anything private — the roster is not on
@@ -44,7 +45,51 @@ function lineScore(g) {
 
 const logo = (url) => (url ? `<img class="logo" src="${esc(url)}" alt="" />` : '<div class="logo ph"></div>');
 
+// ---- Play-by-play ---------------------------------------------------------
+// Read through get_plays(), which returns only name-free columns: the play,
+// the scorebook code and the runs — never who batted. Newest half-inning on
+// top, so a parent opening the link mid-game sees what just happened first.
+let plays = [];
+let lastGame = null;
+let playsTimer = null;
+
+async function loadPlays() {
+  const { data, error } = await db.rpc('get_plays', { p_game: gameId });
+  if (error || !Array.isArray(data)) return;   // keep what's shown; the score is the point
+  plays = data;
+  if (lastGame) render(lastGame);
+}
+// Every pitch updates the game row; one fetch after a burst settles is plenty.
+function schedulePlays() {
+  clearTimeout(playsTimer);
+  playsTimer = setTimeout(loadPlays, 800);
+}
+
+function playByPlay(g) {
+  if ((g.sport || 'baseball') !== 'baseball' || !plays.length) return '';
+  const halves = [];
+  for (const p of plays) {
+    const key = `${p.inning}-${p.half}`;
+    let h = halves[halves.length - 1];
+    if (!h || h.key !== key) halves.push(h = { key, inning: p.inning, half: p.half, rows: [] });
+    h.rows.push(p);
+  }
+  halves.reverse();
+  const batting = (half) => (half === 'bottom' ? (g.home_abbr || g.home_name) : (g.away_abbr || g.away_name));
+  const row = (p) => {
+    const code = p.code && p.kind !== 'K3' ? p.code : '';
+    const runs = p.runs | 0;
+    return `<li><span class="pbp-what">${esc(PLAY_LABEL[p.kind] || p.kind)}</span>` +
+      (code ? `<span class="pbp-code">${esc(code)}</span>` : '') +
+      (runs ? `<span class="pbp-runs">+${runs} run${runs === 1 ? '' : 's'}</span>` : '') + '</li>';
+  };
+  return `<section class="pbp" aria-label="Play-by-play"><h2>Play-by-play</h2>${halves.map((h) =>
+    `<div class="pbp-half"><h3>${h.half === 'bottom' ? 'Bottom' : 'Top'} ${ordinal(h.inning)}<span>${esc(batting(h.half) || '')} batting</span></h3>` +
+    `<ol>${h.rows.map(row).join('')}</ol></div>`).join('')}</section>`;
+}
+
 function render(g) {
+  lastGame = g;
   const live = g.status === 'live';
   const done = g.status === 'final';
   const winner = done && g.away_score !== g.home_score ? (g.away_score > g.home_score ? 'away' : 'home') : null;
@@ -65,6 +110,7 @@ function render(g) {
       </div>
     </div>
     ${lineScore(g)}
+    ${playByPlay(g)}
     <p class="when">${when.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
     <p class="foot">Scoreboard${live ? ' · updating live' : ''}</p>`;
   document.title = `${g.away_abbr || g.away_name} ${g.away_score}–${g.home_score} ${g.home_abbr || g.home_name}`;
@@ -74,6 +120,7 @@ async function load() {
   const { data, error } = await db.from('games').select('*').eq('id', gameId).maybeSingle();
   if (error || !data) { el.innerHTML = '<p class="loading">That game isn\'t available.</p>'; return; }
   render(data);
+  loadPlays();
 }
 
 if (!gameId) {
@@ -83,7 +130,7 @@ if (!gameId) {
   // Same realtime path as the overlay, so a link shared at first pitch keeps up.
   supabase.channel(`recap:${gameId}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${gameId}` },
-      (payload) => render(payload.new))
+      (payload) => { render(payload.new); schedulePlays(); })
     .subscribe();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 }
