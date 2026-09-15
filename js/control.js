@@ -810,7 +810,14 @@ $('sponsor-rotate').onchange = (e) => saveSponsors({ ...spCfg(), rotate: e.targe
 $('sponsor-every').onchange = (e) => saveSponsors({ ...spCfg(), every: Math.max(15, Math.min(1800, parseInt(e.target.value, 10) || 180)) });
 $('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3, Math.min(60, parseInt(e.target.value, 10) || 8)) });
 
-// Broadcast cards (persistent until cleared)
+// Broadcast cards (persistent until cleared). One door for all of them: the
+// 🎬 On Air sheet. Tap a card to raise it, tap the card that's up to take it
+// down, or ✕ on the header chip, which is on screen whatever else is open.
+const CARD_LABEL = {
+  dueup: 'Due Up', lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
+  final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)',
+};
+const cardLabel = (type) => CARD_LABEL[type] || type;
 async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
@@ -824,40 +831,67 @@ async function showCard(type) {
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;
   await writeField({ card: { type, meta, nonce: nextNonce() } });
-  showToast(`🎬 ${type[0].toUpperCase() + type.slice(1)} card up`);
+  showToast(`🎬 ${cardLabel(type)} on air`);
 }
-$('card-starting').onclick = () => showCard('starting');
-$('card-midinning').onclick = () => showCard('midinning');
-$('card-finalfull').onclick = () => showCard('finalfull');
-$('card-matchup').onclick = () => showCard('matchup');
-$('card-final').onclick = () => showCard('final');
-$('card-dueup').onclick = () => showCard('dueup');
-$('card-sponsor').onclick = () => showCard('sponsor');
 async function clearCard() {
+  const was = game.card && game.card.type;
   await writeField({ card: null });
-  showToast('Card cleared');
+  showToast(was ? `${cardLabel(was)} off air` : 'Card cleared');
 }
-$('card-clear').onclick = clearCard;
+function toggleCard(type) {
+  haptic();
+  return game.card && game.card.type === type ? clearCard() : showCard(type);
+}
+$('onair-open').onclick = () => { renderOnAir(); openSheet('onair-sheet'); };
+$('onair-done').onclick = () => closeSheet('onair-sheet');
+$('air-clear').onclick = () => { haptic(); clearCard(); };
+// Raising a card or firing a moment is the whole errand, so the sheet gets out
+// of the pad's way as soon as one goes. Rally is a mode you flip, so it stays.
+// Moment buttons run their own onclick first; this only closes behind them.
+$('onair-sheet').addEventListener('click', (e) => {
+  const card = e.target.closest('[data-card]');
+  if (card) toggleCard(card.dataset.card);
+  if (card || e.target.closest('.moment')) closeSheet('onair-sheet');
+});
 
-// Current-inning auto cards (Broadcast panel): batting order = batting side,
-// defense = fielding side, flipping with the half.
-async function toggleAutoCard(type) {
-  const c = game.card;
-  const up = c && c.type === type && (type === 'lineup' ? (c.meta || {}).auto : true);
-  if (up) await clearCard();
-  else await showCard(type); // auto: overlay tracks batting/fielding side live
-  renderAutoCardLabels();
+// What you'd most likely raise at this point in the game. Baseball only — it is
+// the sport where the pad knows enough about the moment to guess. A clean slate
+// (no outs, no count, bases empty) is the top of a half: the change just happened.
+function airSuggestions(g) {
+  const b = L.safeBases(g.bases);
+  const clean = !(g.outs | 0) && !(g.balls | 0) && !(g.strikes | 0) && !b.first && !b.second && !b.third;
+  if (clean && (g.inning | 0) <= 1 && g.half !== 'bottom') return { why: 'before first pitch', ids: ['starting', 'matchup', 'lineup'] };
+  if (clean) return { why: 'start of the half', ids: ['midinning', 'dueup', 'defense'] };
+  if (!(g.balls | 0) && !(g.strikes | 0)) return { why: 'new batter', ids: ['dueup', 'lineup', 'sponsor'] };
+  return { why: 'mid at-bat', ids: ['dueup', 'defense', 'lineup'] };
 }
-$('card-bat-auto').onclick = () => toggleAutoCard('lineup');
-$('card-def-auto').onclick = () => toggleAutoCard('defense');
-function renderAutoCardLabels() {
-  if (!game || (game.sport || 'baseball') !== 'baseball') return;
-  const abbr = (s) => (s === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
-  const bat = L.battingSide(game), def = L.fieldingSide(game), c = game.card;
-  const batUp = c && c.type === 'lineup' && (c.meta || {}).auto;
-  const defUp = c && c.type === 'defense';
-  $('card-bat-auto').textContent = batUp ? '📋 Hide batting' : `📋 Batting: ${abbr(bat)}`;
-  $('card-def-auto').textContent = defUp ? '🧤 Hide defense' : `🧤 Defense: ${abbr(def)}`;
+// The header chip, the lit card, and the baseball labels that follow the half
+// (batting order = batting side, defense = fielding side; the overlay tracks
+// both live, so the card itself never needs re-raising when the half flips).
+function renderOnAir() {
+  if (!game) return;
+  const up = game.card && game.card.type;
+  $('air-chip').hidden = !up;
+  if (up) $('air-lab').textContent = cardLabel(up);
+  if ((game.sport || 'baseball') === 'baseball') {
+    const abbr = (s) => (s === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
+    const label = (t) => (t === 'lineup' ? `Batting: ${abbr(L.battingSide(game))}`
+      : t === 'defense' ? `Defense: ${abbr(L.fieldingSide(game))}` : cardLabel(t));
+    $('card-bat-auto').textContent = label('lineup');
+    $('card-def-auto').textContent = label('defense');
+    const s = airSuggestions(game);
+    $('air-why').textContent = s.why;
+    $('air-sugg').replaceChildren(...s.ids.map((t) => {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'fxbtn sugg'; btn.dataset.card = t; btn.textContent = label(t);
+      return btn;
+    }));
+  }
+  document.querySelectorAll('#onair-sheet [data-card]').forEach((btn) => {
+    const on = btn.dataset.card === up;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', String(on));
+  });
 }
 
 // Moments / FX
@@ -1154,7 +1188,8 @@ function renderReplay() {
   if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
 
   const waiting = replayPending.size ? Math.round((soonestDeadline() - Date.now()) / 1000) : 0;
-  b.textContent = !replayPending.size ? '🎞️ Clip the last 90s' : waiting > 0 ? `🎞️ Clip in ${waiting}s` : '🎞️ Saving…';
+  // Short enough for a quarter of the bottom bar on a 375pt phone.
+  b.textContent = !replayPending.size ? '🎞️ Replay' : waiting > 0 ? `🎞️ ${waiting}s` : '🎞️ Saving…';
   b.classList.toggle('busy', !!replayPending.size);
   const auto = $('replay-auto');
   if (auto) auto.checked = !!(game && game.auto_clip);
@@ -1242,7 +1277,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2081,6 +2116,8 @@ function renderGame() {
   else if (sport === 'basketball') renderBasketballControl();
   else renderBaseballControl();
   renderClock();   // already guards its own DOM writes, and ticks at 4Hz anyway
+  // The on-air chip is part of the shell for every sport; the suggestions read the at-bat.
+  paintIf('onair', [g.card, g.half, g.inning, g.outs, g.balls, g.strikes, g.bases, g.away_abbr, g.home_abbr, sport], renderOnAir);
   // ---- the drawer: only what changed ----
   paintIf('rally', [g.rally_mode], renderRally);
   paintIf('sponsors', [g.sponsors], renderSponsors);
@@ -2141,6 +2178,9 @@ const DW_TAB = 'sb:drawerTab';
 const PANEL_TAB = { 'panel-lineups': 'teams', 'panel-defense': 'teams', 'panel-appearance': 'look',
   'panel-overlay': 'obs', 'panel-cameras': 'obs', 'panel-obs': 'obs' };
 function setDrawerTab(tab) {
+  // A remembered tab can outlive the tab itself (Cards left the drawer in v3.59);
+  // with no pane to show, every pane would stay hidden and the drawer open empty.
+  if (!document.querySelector(`.dw-pane[data-tab="${tab}"]`)) tab = 'teams';
   document.querySelectorAll('.dw-tab').forEach((b) => {
     const on = b.dataset.tab === tab;
     b.classList.toggle('on', on);
@@ -2279,7 +2319,6 @@ function renderBaseballControl() {
   // two full rosters on every pitch.
   paintIf('lineups', [game.roster_rev, batIdxOfGame(), game.away_name, game.home_name], renderLineups);
   paintIf('defense', [game.roster_rev, defSide, game.sport], renderDefense);
-  paintIf('cards', [game.half, game.card, game.away_abbr, game.home_abbr, game.sport], renderAutoCardLabels);
 }
 // Who is up, and who they are facing. Empty when there is no lineup yet, and
 // the row goes with it rather than sitting there as a blank strip.

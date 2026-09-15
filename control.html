@@ -230,9 +230,9 @@
           </ul>
           <p>Then, during the game:</p>
           <ul>
-            <li><b>🎞️ Clip</b> saves the buffer right now. The line under the button reports what actually happened — clip saved, buffer not running, or permissions too low.</li>
+            <li><b>🎞️ Replay</b> on the bottom bar saves the buffer right now. A message says what actually happened — clip saved, buffer not running, or permissions too low — and the drawer's OBS tab keeps the status line.</li>
             <li><b>Auto-clip big plays</b> clips home runs, walk-offs, double plays, big plays, touchdowns, and goals on its own.</li>
-            <li>Auto-clips <b>wait out the celebration</b> before saving (40s on a home run), because the buffer only records backward — that's how the clip gets the swing <i>and</i> the mob at the plate. Tap Clip during the countdown to take it early.</li>
+            <li>Auto-clips <b>wait out the celebration</b> before saving (40s on a home run), because the buffer only records backward — that's how the clip gets the swing <i>and</i> the mob at the plate. Tap Replay during the countdown to take it early.</li>
             <li>Clips land in the same folder as your OBS recordings.</li>
           </ul>
         </div>
@@ -241,7 +241,7 @@
       <details class="panel">
         <summary>🎬 Cards &amp; full-screen takeovers</summary>
         <div class="panel-body help-body">
-          <p>Everything under <b>🎬 Broadcast cards</b> stays up until you clear it with <b>✕ Clear card</b>.</p>
+          <p>Everything under <b>🎬 On Air</b> on the bottom bar stays up until you tap it again, or tap <b>✕</b> on the red chip in the header.</p>
           <ul>
             <li><b>Corner cards</b> float over the video: Matchup, Final, Due Up, Sponsor, and live Batting order / Defense.</li>
             <li><b>Full-screen takeovers</b> hide the scorebug and cover the camera: <b>🕐 Starting Soon</b> (countdown to first pitch — set <i>First pitch</i> in Setup), <b>🔁 Mid-Inning</b> (the scoreboard during the change, and it stays live), and <b>🏁 Final (full)</b>.</li>
@@ -254,10 +254,10 @@
         <summary>⚾ Running the game</summary>
         <div class="panel-body help-body">
           <ul>
-            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits, bases, End ½ Inning. Runs, strikeouts, and walks fire their own stinger.</li>
+            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End this half-inning now</b> is in the Situation sheet for the rare one that ends another way.</li>
             <li><b>↶ Undo</b> reverses the last action.</li>
             <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
-            <li><b>Moments</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
+            <li><b>Moments</b> in <b>🎬 On Air</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
             <li>Save teams with rosters under <b>👥 Teams &amp; lineups</b> and reuse them next game.</li>
           </ul>
         </div>
@@ -299,6 +299,12 @@
         <b id="g-home-runs">0</b><span id="g-home-name" class="gm-abbr">HOME</span>
       </div>
       <span id="pending-badge" class="pending" hidden></span>
+      <!-- What the stream is showing right now, and the one-tap way to take it
+           down — on screen whatever else is open. -->
+      <span id="air-chip" class="air-chip" hidden>
+        <span class="air-dot" aria-hidden="true"></span><span id="air-lab" class="air-lab"></span>
+        <button id="air-clear" class="air-x" type="button" aria-label="Take the card off air">✕</button>
+      </span>
       <span id="conn-dot" class="conn-dot" data-state="connecting" title="Connecting…"></span>
     </header>
 
@@ -545,7 +551,6 @@
         </div>
         <div class="dw-tabs" role="tablist">
           <button class="dw-tab on" id="dw-tab-teams" data-tab="teams" role="tab" aria-selected="true" aria-controls="dw-pane-teams">Teams</button>
-          <button class="dw-tab" id="dw-tab-cards" data-tab="cards" role="tab" aria-selected="false" aria-controls="dw-pane-cards">Cards</button>
           <button class="dw-tab" id="dw-tab-look" data-tab="look" role="tab" aria-selected="false" aria-controls="dw-pane-look">Look</button>
           <button class="dw-tab" id="dw-tab-obs" data-tab="obs" role="tab" aria-selected="false" aria-controls="dw-pane-obs">OBS</button>
         </div>
@@ -610,61 +615,6 @@
                 </div>
               </details>
             </div>
-          </section>
-
-          <section class="dw-pane" id="dw-pane-cards" data-tab="cards" role="tabpanel" aria-labelledby="dw-tab-cards" hidden>
-            <details class="panel">
-              <summary>🎬 Broadcast cards</summary>
-              <div class="panel-body">
-                <button id="card-starting" class="fxbtn takeover">🕐 Starting Soon (full screen)</button>
-                <div class="fx-grid two takeover-row">
-                  <button id="card-midinning" class="fxbtn takeover">🔁 Mid-Inning</button>
-                  <button id="card-finalfull" class="fxbtn takeover">🏁 Final (full)</button>
-                </div>
-                <div class="fx-grid">
-                  <button id="card-matchup" class="fxbtn">Matchup</button>
-                  <button id="card-final" class="fxbtn">Final</button>
-                  <button id="card-dueup" class="fxbtn">Due Up</button>
-                  <button id="card-sponsor" class="fxbtn">Sponsor</button>
-                </div>
-                <div class="fx-grid sport-only" data-sport="baseball">
-                  <button id="card-bat-auto" class="fxbtn">Batting order</button>
-                  <button id="card-def-auto" class="fxbtn">Defense</button>
-                </div>
-                <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
-                <button id="card-clear" class="fxbtn cardclear">✕ Clear card</button>
-              </div>
-            </details>
-            <div class="dw-sec sport-only" data-sport="baseball">
-            <span class="sublabel">Moments</span>
-            <div class="fx-grid">
-              <button id="fx-k" class="fxbtn">K</button>
-              <button id="fx-klook" class="fxbtn">ꓘ Looking</button>
-              <button id="fx-dp" class="fxbtn">Double Play</button>
-              <button id="fx-sb" class="fxbtn">Stolen Base</button>
-              <button id="fx-walkoff" class="fxbtn">Walk-Off</button>
-            </div>
-          </div>
-            <div class="dw-sec">
-              <span class="sublabel">Momentum &amp; organ</span>
-              <div class="shared-fx">
-                <button id="fx-rally" class="fxbtn rally-toggle">Rally: OFF</button>
-                <button id="fx-charge" class="fxbtn charge">🎺 Charge!</button>
-              </div>
-            </div>
-            <details class="panel">
-              <summary>💵 Sponsors</summary>
-              <div class="panel-body">
-                <div id="sponsor-list"></div>
-                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
-                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
-                <div class="sp-timing">
-                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
-                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
-                </div>
-                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
-              </div>
-            </details>
           </section>
 
           <section class="dw-pane" id="dw-pane-look" data-tab="look" role="tabpanel" aria-labelledby="dw-tab-look" hidden>
@@ -852,6 +802,21 @@
                 <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
               </div>
             </details>
+            <!-- Set once before the game, so it lives with the rest of the look;
+                 raising a sponsor card is On Air's job. -->
+            <details class="panel">
+              <summary>💵 Sponsors</summary>
+              <div class="panel-body">
+                <div id="sponsor-list"></div>
+                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
+                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
+                <div class="sp-timing">
+                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
+                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
+                </div>
+                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
+              </div>
+            </details>
           </section>
 
           <section class="dw-pane" id="dw-pane-obs" data-tab="obs" role="tabpanel" aria-labelledby="dw-tab-obs" hidden>
@@ -869,7 +834,7 @@
               </div>
               <p id="obs-tier-note" class="hint" hidden></p>
               <span class="sublabel">Instant replay</span>
-              <button id="fx-replay" class="fxbtn replay big">🎞️ Clip the last 90s</button>
+              <p class="hint">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
               <div class="replay-row">
                 <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
                 <p id="replay-hint" class="hint replay-hint" hidden></p>
@@ -928,8 +893,9 @@
          gone wrong, so it never moves and never scrolls away. -->
     <div class="gm-bottom">
       <button id="undo-btn" class="undo">↶ Undo</button>
-      <button id="btn-endhalf" class="gm-b sport-only" data-sport="baseball">End ½</button>
-      <button id="dw-open" class="gm-b">⋯ More</button>
+      <button id="fx-replay" class="gm-b replay obs-only">🎞️ Replay</button>
+      <button id="onair-open" class="gm-b onair">🎬 On Air</button>
+      <button id="dw-open" class="gm-b more" aria-label="More settings">⋯</button>
     </div>
   </section>
 
@@ -977,6 +943,9 @@
         <div class="adj-row"><span class="adj-lab">Strikes</span><button class="step" data-adj="strikes" data-d="-1">–</button><b id="adj-strikes">0</b><button class="step" data-adj="strikes" data-d="1">+</button></div>
         <div class="adj-row"><span class="adj-lab">Outs</span><button class="step" data-adj="outs" data-d="-1">–</button><b id="adj-outs">0</b><button class="step" data-adj="outs" data-d="1">+</button></div>
         <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button><button id="adj-half" class="base-btn">Flip ½</button></div>
+        <!-- The third out ends the half on its own; this is for the half that ends
+             some other way (a run limit, a called inning). -->
+        <button id="btn-endhalf" class="base-btn sit-wide">End this half-inning now</button>
         <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
 
         <details class="sit-more">
@@ -994,6 +963,58 @@
       </div>
 
       <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>
+    </div>
+  </div>
+
+  <!-- ON AIR SHEET -->
+  <!-- Every card, takeover and moment, one tap from the pad. Raising a card or
+       firing a moment closes it again; the header chip takes a card down. -->
+  <div id="onair-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="onair-title" tabindex="-1" hidden>
+    <div class="sheet-card scroll onair-card">
+      <span class="grab"></span>
+      <div class="sit-head"><h3 id="onair-title">On Air</h3><span class="sit-sub">tap to show · tap again to take down</span></div>
+
+      <div class="sport-only" data-sport="baseball">
+        <span class="sublabel">Right now <em id="air-why"></em></span>
+        <div class="fx-grid" id="air-sugg"></div>
+      </div>
+
+      <span class="sublabel">Cards</span>
+      <div class="fx-grid">
+        <button class="fxbtn" type="button" data-card="dueup">Due Up</button>
+        <button id="card-bat-auto" class="fxbtn sport-only" data-sport="baseball" type="button" data-card="lineup">Batting order</button>
+        <button id="card-def-auto" class="fxbtn sport-only" data-sport="baseball" type="button" data-card="defense">Defense</button>
+        <button class="fxbtn" type="button" data-card="matchup">Matchup</button>
+        <button class="fxbtn" type="button" data-card="sponsor">Sponsor</button>
+        <button class="fxbtn" type="button" data-card="final">Final</button>
+      </div>
+
+      <span class="sublabel">Full screen <em>hides the scorebug</em></span>
+      <div class="fx-grid">
+        <button class="fxbtn takeover" type="button" data-card="starting">Starting Soon</button>
+        <button class="fxbtn takeover" type="button" data-card="midinning">Mid-Inning</button>
+        <button class="fxbtn takeover" type="button" data-card="finalfull">Final</button>
+      </div>
+
+      <details class="sit-more air-text">
+        <summary>Card text — type it before you tap the card</summary>
+        <div class="sit-more-body">
+          <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
+        </div>
+      </details>
+
+      <span class="sublabel">Moments <em>play once</em></span>
+      <div class="fx-grid">
+        <button id="fx-k" class="fxbtn moment sport-only" data-sport="baseball" type="button">K</button>
+        <button id="fx-klook" class="fxbtn moment sport-only" data-sport="baseball" type="button">ꓘ Looking</button>
+        <button id="fx-dp" class="fxbtn moment sport-only" data-sport="baseball" type="button">Double Play</button>
+        <button id="fx-sb" class="fxbtn moment sport-only" data-sport="baseball" type="button">Stolen Base</button>
+        <button id="fx-walkoff" class="fxbtn moment sport-only" data-sport="baseball" type="button">Walk-Off</button>
+        <button id="fx-charge" class="fxbtn moment charge" type="button">🎺 Charge!</button>
+        <button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button>
+      </div>
+
+      <div class="sheet-actions"><button id="onair-done" class="primary">Done</button></div>
     </div>
   </div>
 

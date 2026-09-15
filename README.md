@@ -9,11 +9,11 @@ A live, phone-controlled **multi-sport** scoreboard overlay suite for OBS. Two s
 
 ## The control panel
 
-Two rules shape it. **Everything pressed during a live at-bat is in the bottom two thirds and never moves** — on a phone the live screen is a fixed shell (score header, situation bar, batter line, pad, bottom row) and nothing between the header and the bottom row scrolls, so STRIKE is in the same place on the tenth pitch as the first. The pad takes whatever height is left, so a taller phone gets bigger keys rather than dead space. **Everything set once gets out of the way** — the ten config panels live in a pull-up drawer on four tabs (Teams · Cards · Look · OBS) behind `⋯ More`.
+Two rules shape it. **Everything pressed during a live at-bat is in the bottom two thirds and never moves** — on a phone the live screen is a fixed shell (score header, situation bar, batter line, pad, bottom row) and nothing between the header and the bottom row scrolls, so STRIKE is in the same place on the tenth pitch as the first. The pad takes whatever height is left, so a taller phone gets bigger keys rather than dead space. **Everything set once gets out of the way** — the config panels live in a pull-up drawer on three tabs (Teams · Look · OBS) behind `⋯`. What goes on air mid-play is not config, so it is not in the drawer: every card, takeover and moment is in the **🎬 On Air** sheet, one tap from the pad.
 
 - **Situation bar** — inning, the count as dots (three balls, two strikes, two outs) and a mini diamond, live on every commit including rows from another device. Tapping it opens the **Situation sheet**: the bases as a diamond you tap, Advance all / Clear, steppers for balls, strikes, outs and inning, pitch count, and runs/hits/errors folded away. Every edit goes through the same `commit()` path, so all of it stays undoable.
 - **The pad** — BALL · STRIKE, FOUL · OUT, RUN · NEXT BATTER, then one bar reading `1B | 2B | 3B | HR`. HR and a fourth ball open confirm sheets; nothing else asks.
-- **Bottom row** — `↶ Undo`, `End ½`, `⋯ More`, fixed. Undo is what you reach for when something has already gone wrong, so it never scrolls away.
+- **Bottom row** — `↶ Undo`, `🎞️ Replay`, `🎬 On Air`, `⋯`, fixed. Undo is what you reach for when something has already gone wrong, so it never scrolls away. Replay and On Air were each three or four taps deep in the drawer, which is too slow for a play that has just happened. A card that is up shows as a red chip in the header, and its ✕ takes it down. `End ½` moved into the Situation sheet — the third out already ends the half.
 - The other sports use the same shell and keep their own scrolling pads until they get key sets of their own.
 - **Support** — a Buy Me a Coffee button sits at the foot of the lobby, under Help & setup. It is the only place it appears; nothing on the live screen or in the drawer asks for anything.
 
@@ -83,7 +83,7 @@ If a laptop struggles with two cameras, "Deactivate when not showing" on the cap
 
 ## Not using OBS
 
-An **OBS controls** switch at the top of the drawer's **OBS** tab hides `📡 Stream & record`, `🎥 Cameras`, and the `🎞️ Clip` button with its auto-clip row. Scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap are untouched — the overlay is a plain web page, so it works as a browser source in any streaming software or on a laptop wired to a screen.
+An **OBS controls** switch at the top of the drawer's **OBS** tab hides `📡 Stream & record`, `🎥 Cameras`, the `🎞️ Replay` button on the bottom bar, and the auto-clip row. Scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap are untouched — the overlay is a plain web page, so it works as a browser source in any streaming software or on a laptop wired to a screen.
 
 Stored per device (`localStorage`), not per game: the same game may be run from an OBS laptop one night and a phone that has never seen OBS the next. Defaults to on, so nothing moves for anyone already set up.
 
@@ -130,9 +130,11 @@ What that public policy still costs, accepted deliberately: anyone can list ever
 
 ## Sponsors
 
-`💵 Sponsors` on the game screen holds a list (name + optional logo) plus timing. With rotation on, the overlay shows a corner "brought to you by" bug every `every` seconds for `secs` seconds, cycling the list, and hides it whenever a takeover card is up.
+`💵 Sponsors` in the drawer's Look tab holds a list (name + optional logo) plus timing. With rotation on, the overlay shows a corner "brought to you by" bug every `every` seconds for `secs` seconds, cycling the list, and hides it whenever a takeover card is up.
 
 ## Broadcast cards
+
+All of them live in **🎬 On Air** on the bottom bar: tap a card to raise it (the sheet closes behind it), tap it again or the header chip's ✕ to take it down. When the game is baseball the sheet leads with a **Right now** row guessing the likely card — Mid-Inning and Due Up at the top of a half, Starting Soon before first pitch.
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
 

@@ -144,11 +144,28 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .gm-batter .tag[hidden] { display: none; }
 
 .gm-bottom { display: flex; gap: 10px; padding: 0 16px env(safe-area-inset-bottom); }
-.gm-bottom .undo { flex: 0 0 auto; padding: 16px 20px; font-size: 16px; font-weight: 800; border-radius: 14px; }
+.gm-bottom .undo { flex: 0 0 auto; padding: 16px 14px; font-size: 16px; font-weight: 800; border-radius: 14px; }
 .gm-b { flex: 1; padding: 16px 8px; font-size: 15px; font-weight: 700; border-radius: 14px;
   background: var(--card); border: 1px solid var(--line); color: var(--chalk); }
 .gm-b:active { filter: brightness(1.2); }
 .gm-b[hidden] { display: none; }
+/* The two things reached for mid-play, one tap each. Replay keeps the clip
+   colours it had in the drawer, so it is the same button in a new place. */
+.gm-b.replay { background: var(--clip-bg); border-color: var(--clip-line); color: var(--clip-text); white-space: nowrap; }
+.gm-b.replay.busy { background: var(--steel); border-color: var(--steel); color: #06090f; }
+.gm-b.onair { background: var(--take-bg); border-color: var(--take-line); white-space: nowrap; }
+.gm-bottom .gm-b.more { flex: 0 0 auto; padding: 16px; font-size: 18px; }
+
+/* What is on air, and the ✕ that takes it down. Red because it is live. */
+.air-chip { flex: 0 1 auto; min-width: 0; max-width: 42%; display: flex; align-items: center; gap: 6px;
+  padding: 3px 3px 3px 10px; border-radius: 999px; background: var(--danger-bg);
+  border: 1px solid var(--danger-line); color: var(--danger-text); font-size: 12px; font-weight: 700; }
+.air-chip[hidden] { display: none; }
+.air-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 999px; background: #ff5a4f; }
+.air-lab { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.air-x { flex: 0 0 auto; width: 34px; height: 34px; padding: 0; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1); color: var(--danger-text); font-size: 13px; }
+.air-x:active { filter: brightness(1.4); }
 
 /* "Phone" is short OR narrow — a landscape phone is 844 wide and 390 tall. */
 @media (max-width: 699px), (max-height: 500px) {
@@ -392,8 +409,6 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .fb-score { margin-top: 8px; }
 .shared-fx { display: flex; gap: 12px; margin-top: 16px; }
 .shared-fx .fxbtn { flex: 1; margin-top: 0; } /* keep the row's baselines even */
-.fxbtn.replay { background: var(--clip-bg); border-color: var(--clip-line); color: var(--clip-text); }
-.fxbtn.replay.busy { background: var(--steel); border-color: var(--steel); color: #fff; }
 .replay-row { margin-top: 10px; }
 .replay-auto { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--chalk); }
 .replay-auto .switch .track { width: 46px; height: 28px; }
@@ -409,7 +424,20 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 /* Full-screen cards read differently from the corner cards — they hide the bug. */
 .fxbtn.takeover { width: 100%; margin-bottom: 8px; background: var(--take-bg); border-color: var(--take-line); }
 .fx-grid.two { grid-template-columns: 1fr 1fr; }
-.takeover-row .fxbtn { margin-bottom: 8px; }
+
+/* On Air sheet — every tile the same height, so a two-word label and a
+   one-letter K sit on one baseline. The lit tile is what is on air now. */
+.onair-card .sublabel { margin: 16px 0 8px; }
+.onair-card .sit-head + .sport-only .sublabel { margin-top: 0; }
+.onair-card .sublabel em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--steel); margin-left: 6px; }
+.onair-card .fxbtn { min-height: 54px; }
+.onair-card .fxbtn.takeover, .onair-card .fxbtn.charge { width: auto; margin: 0; }
+.onair-card .fxbtn.sugg { border-color: var(--steel); }
+.onair-card [data-card].on { background: var(--steel); border-color: var(--steel); color: #06090f; }
+.onair-card .rally-toggle { grid-column: 1 / -1; }
+.onair-card .air-text { margin-top: 10px; }
+.onair-card .air-text > summary { padding: 11px; font-size: 13px; }
+.onair-card #card-text { margin-top: 0; }
 
 /* Situation sheet — bases, count, inning, and the corrections for all three.
    It replaces the Bases row, the pitch-count stepper and the whole Manual
@@ -518,7 +546,6 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .ot-lab { flex: 1; font-size: 13px; color: var(--body); }
 .ot-lab b { color: var(--chalk); }
 .obs-tier .ghost.small { margin: 0; font-size: 12px; }
-.fxbtn.replay.big { width: 100%; margin-top: 8px; padding: 20px; font-size: 17px; font-weight: 800; border-radius: 15px; }
 
 /* Tablet and desktop have no reach problem, so the sheet chrome falls away and
    the panes stack as the column they were before. */
