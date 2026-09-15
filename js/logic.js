@@ -210,6 +210,69 @@ export function swapBatters(team, a, b) {
   return out;
 }
 
+// ---- Positions from the lineup sheet ---------------------------------------
+// Every row in the lineup sheet has a position dropdown. The pitcher is stored
+// as {num, name} — the convention the overlay's cards and the pad's "vs P" line
+// already read — and the other eight point at batting-order indices. These keep
+// the two in step, so picking P from a row makes that player the pitcher.
+export function pitcherIdx(team) {
+  const t = team || {};
+  const p = t.pitcher || {};
+  if (!(p.num || p.name)) return -1;
+  const bs = Array.isArray(t.batters) ? t.batters : [];
+  return bs.findIndex((b) => b && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || ''));
+}
+// What a batting-order slot plays: 'P', a field spot, or '' (not in the field).
+export function positionOf(team, idx) {
+  if (pitcherIdx(team) === idx) return 'P';
+  const hit = Object.entries((team && team.positions) || {}).find(([, i]) => i === idx);
+  return hit ? hit[0] : '';
+}
+// Put slot `idx` at `pos` ('' = not in the field). Whoever held that spot goes
+// to the bench rather than trading places: the dropdown says where THIS player
+// plays, and quietly moving someone else to a new spot would be a surprise.
+// Returns the new roster blob and the benched slot, or -1.
+export function setPosition(team, idx, pos) {
+  const t = team || {};
+  const batters = Array.isArray(t.batters) ? t.batters : [];
+  const positions = { ...(t.positions || {}) };
+  let pitcher = t.pitcher || { num: '', name: '' };
+  let benched = -1;
+  const pi = pitcherIdx(t);
+  for (const k of Object.keys(positions)) if (positions[k] === idx) delete positions[k];
+  if (pi === idx) pitcher = { num: '', name: '' };
+  if (pos === 'P') {
+    if (pi >= 0 && pi !== idx) benched = pi;
+    const b = batters[idx] || {};
+    pitcher = { num: b.num || '', name: b.name || '' };
+  } else if (FIELD_POSITIONS.includes(pos)) {
+    if (positions[pos] != null && positions[pos] !== idx) benched = positions[pos];
+    positions[pos] = idx;
+  }
+  return { team: { ...t, positions, pitcher }, benched };
+}
+// The spots nobody fills yet, in field order — the sheet's field check.
+export function missingPositions(team) {
+  const t = team || {};
+  const batters = Array.isArray(t.batters) ? t.batters : [];
+  const p = t.pitcher || {};
+  return FIELD_POSITIONS.filter((pos) => {
+    if (pos === 'P') return !(p.num || p.name);
+    const i = (t.positions || {})[pos];
+    return i == null || !filled(batters[i]);
+  });
+}
+// Names and numbers typed into the sheet, merged over the stored roster. The
+// pitcher is a copy of a row's name and number, so an edit to that row carries
+// the pitcher with it instead of orphaning the mound.
+export function mergeLineupEdits(stored, batters) {
+  const t = stored || {};
+  const pi = pitcherIdx(t);
+  const out = { ...t, batters };
+  if (pi >= 0) { const b = batters[pi] || {}; out.pitcher = { num: b.num || '', name: b.name || '' }; }
+  return out;
+}
+
 // Ordered batting lineup for a side, each row tagged with its fielding position
 // (P for the pitcher, the assigned spot, or '' for DH/unset) and whether it's the
 // hitter at bat — for the lineup broadcast card.

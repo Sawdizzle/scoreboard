@@ -261,7 +261,7 @@
             <li><b>↶ Undo</b> reverses the last action.</li>
             <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
             <li><b>Moments</b> in <b>🎬 On Air</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
-            <li>Save teams with rosters under <b>👥 Teams &amp; lineups</b> and reuse them next game.</li>
+            <li>Tap the batter line under the count for the <b>Lineup</b> sheet: number, name and position on every row, and saved teams to reuse next game.</li>
           </ul>
         </div>
       </details>
@@ -318,11 +318,13 @@
       <span class="gm-chev" aria-hidden="true">▸</span>
     </button>
 
-    <div class="gm-batter" id="gm-batter">
+    <!-- Who's up, and the way into the lineup sheet. -->
+    <button class="gm-batter" id="gm-batter" type="button">
       <span id="gm-hitter" class="gm-hitter"></span>
       <span id="gm-vs" class="gm-vs"></span>
       <span id="g-batting" class="tag">Batting: —</span>
-    </div>
+      <span class="gm-edit sport-only" data-sport="baseball" aria-hidden="true">LINEUP ›</span>
+    </button>
 
     <div id="setup-guide" class="setup-guide" hidden>
       <button id="sg-head" class="sg-head" type="button">
@@ -331,8 +333,8 @@
       <div class="sg-body">
         <p class="sg-sub">Get the overlay broadcast-ready before first pitch.</p>
         <div class="sg-step" data-step="teams"><span class="sg-dot">1</span><span class="sg-lab">Teams &amp; style</span><button class="sg-go" data-go="teams">Set →</button></div>
-        <div class="sg-step" data-step="lineups"><span class="sg-dot">2</span><span class="sg-lab">Lineups (P + batting order)</span><button class="sg-go" data-go="lineups">Set →</button></div>
-        <div class="sg-step" data-step="defense"><span class="sg-dot">3</span><span class="sg-lab">Defense positions</span><button class="sg-go" data-go="defense">Set →</button></div>
+        <div class="sg-step" data-step="lineups"><span class="sg-dot">2</span><span class="sg-lab">Lineups (batting order)</span><button class="sg-go" data-go="lineups">Set →</button></div>
+        <div class="sg-step" data-step="defense"><span class="sg-dot">3</span><span class="sg-lab">Positions (incl. pitcher)</span><button class="sg-go" data-go="defense">Set →</button></div>
         <div class="sg-step" data-step="overlay"><span class="sg-dot">4</span><span class="sg-lab">Overlay link for OBS</span><button class="sg-go" data-go="overlay">Copy →</button></div>
       </div>
     </div>
@@ -561,63 +563,8 @@
 
           <section class="dw-pane" id="dw-pane-teams" data-tab="teams" role="tabpanel" aria-labelledby="dw-tab-teams">
             <button id="setup-btn" class="ghost dw-row">⚙ Game setup — teams, style, times &amp; rules</button>
-            <div class="sport-only" data-sport="baseball">
-              <details class="panel" id="panel-lineups">
-                <summary>👥 Teams &amp; lineups</summary>
-                <div class="panel-body">
-                  <p class="hint">The <b>◎</b> marks who's at bat — tap to set it; <b>Next Batter</b> advances it automatically. Drag a player by their <b>⋮⋮ number</b> onto another slot to swap them — their defensive position goes with them. At-bat hitter + the fielding team's pitcher feed the overlay.</p>
-
-                  <details class="panel lineup-team" open>
-                    <summary>◄ Away — <span id="lineup-away-team">Visitor</span></summary>
-                    <div class="panel-body">
-                      <div class="team-load">
-                        <select id="team-sel-away"><option value="">— load saved team —</option></select>
-                        <button id="team-save-away" class="fxbtn">💾 Save</button>
-                        <button id="team-del-away" class="fxbtn cardclear">🗑</button>
-                      </div>
-                      <div class="lineup-row pitcher">
-                        <span class="ord p">P</span>
-                        <input id="lp-num-away" class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" />
-                        <input id="lp-name-away" class="b-name" placeholder="Pitcher name" />
-                      </div>
-                      <div class="lineup-list" id="lineup-away"></div>
-                    </div>
-                  </details>
-
-                  <details class="panel lineup-team">
-                    <summary>► Home — <span id="lineup-home-team">Home</span></summary>
-                    <div class="panel-body">
-                      <div class="team-load">
-                        <select id="team-sel-home"><option value="">— load saved team —</option></select>
-                        <button id="team-save-home" class="fxbtn">💾 Save</button>
-                        <button id="team-del-home" class="fxbtn cardclear">🗑</button>
-                      </div>
-                      <div class="lineup-row pitcher">
-                        <span class="ord p">P</span>
-                        <input id="lp-num-home" class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" />
-                        <input id="lp-name-home" class="b-name" placeholder="Pitcher name" />
-                      </div>
-                      <div class="lineup-list" id="lineup-home"></div>
-                    </div>
-                  </details>
-                </div>
-              </details>
-
-              <details class="panel" id="panel-defense">
-                <summary>🧤 Defense (positions)</summary>
-                <div class="panel-body" id="def-panel">
-                  <p class="hint">Drag a player onto a spot. <b>P</b> is your lineup's pitcher. Drag a filled spot back to the bench to clear it.</p>
-                  <div class="team-toggle">
-                    <button id="def-away" class="base-btn on">◄ Away</button>
-                    <button id="def-home" class="base-btn">Home ►</button>
-                  </div>
-                  <div class="diamond-edit" id="diamond-edit"></div>
-                  <span class="bases-label">Bench — drag onto the field</span>
-                  <div class="bench" id="def-bench" data-pool="1"></div>
-                  <p class="hint">On-air card: Broadcast cards → Defense.</p>
-                </div>
-              </details>
-            </div>
+            <!-- Lineups moved to their own sheet in v3.62, opened from the batter line. -->
+            <p class="hint sport-only" data-sport="baseball">Lineups, positions and saved teams: tap the batter line under the count.</p>
           </section>
 
           <section class="dw-pane" id="dw-pane-look" data-tab="look" role="tabpanel" aria-labelledby="dw-tab-look" hidden>
@@ -1020,6 +967,46 @@
     </div>
   </div>
 
+  <!-- LINEUP SHEET -->
+  <!-- The batter line under the count opens it, on the team at bat. Number, name
+       and position on every row; a position someone already holds sends them to
+       the bench. Both teams' lists stay built — the switch only shows one. -->
+  <div id="lineup-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="lineup-title" tabindex="-1" hidden>
+    <div class="sheet-card scroll lineup-card">
+      <span class="grab"></span>
+      <div class="sit-head"><h3 id="lineup-title">Lineup</h3><span class="sit-sub">saves as you type</span></div>
+      <div class="lu-tabs" role="group" aria-label="Team">
+        <button id="lu-tab-away" type="button" aria-pressed="true">Away</button>
+        <button id="lu-tab-home" type="button" aria-pressed="false">Home</button>
+      </div>
+
+      <section class="lu-side" id="lu-side-away" aria-label="Away lineup">
+        <div class="team-load">
+          <select id="team-sel-away" aria-label="Load a saved team for away"><option value="">— load saved team —</option></select>
+          <button id="team-save-away" class="fxbtn">💾 Save</button>
+          <button id="team-del-away" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
+        </div>
+        <p class="fieldcheck" id="fieldcheck-away"></p>
+        <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
+        <div class="lineup-list" id="lineup-away"></div>
+      </section>
+
+      <section class="lu-side" id="lu-side-home" aria-label="Home lineup" hidden>
+        <div class="team-load">
+          <select id="team-sel-home" aria-label="Load a saved team for home"><option value="">— load saved team —</option></select>
+          <button id="team-save-home" class="fxbtn">💾 Save</button>
+          <button id="team-del-home" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
+        </div>
+        <p class="fieldcheck" id="fieldcheck-home"></p>
+        <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
+        <div class="lineup-list" id="lineup-home"></div>
+      </section>
+
+      <p class="hint"><b>◎</b> marks who's up; <b>Next Batter</b> moves it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters — positions go with them. <b>P</b> is the pitcher; <b>—</b> means not in the field.</p>
+      <div class="sheet-actions"><button id="lu-done" class="primary">Done</button></div>
+    </div>
+  </div>
+
   <!-- BALL IN PLAY SHEET -->
   <!-- OUT opens it on the fielder pick. Hits with runners on, and a dropped third
        strike, open it straight on the runner step. -->
@@ -1150,7 +1137,7 @@
         <label><input type="checkbox" id="su-show-runrule" /> Run-rule</label>
       </div>
 
-      <p class="hint">Batter, pitcher &amp; pitch count are driven by <b>Teams &amp; lineups</b> now — set them there. The toggles above just show/hide those lines on the overlay.</p>
+      <p class="hint">Batter, pitcher &amp; pitch count are driven by the <b>Lineup</b> sheet — tap the batter line under the count. The toggles above just show/hide those lines on the overlay.</p>
         </div>
       </details>
 

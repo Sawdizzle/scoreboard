@@ -1302,7 +1302,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -1963,6 +1963,8 @@ function renderAdjust() {
 // Rosters live in the `lineups` jsonb column (written directly, not undoable).
 // The current-hitter index lives in state.batIdx (undoable via apply_event).
 const LINEUP_SLOTS = 12;
+// A row's position dropdown: the nine spots, then '' for not in the field (DH/EH/bench).
+const POS_OPTIONS = [...L.FIELD_POSITIONS, ''];
 let lineupBuiltFor = null;
 
 const teamOf = (side) => {
@@ -1973,24 +1975,40 @@ const batIdxOf = (side) => (((game.state && game.state.batIdx) || {})[side] | 0)
 
 function buildLineup(side) {
   let html = '';
+  const opts = POS_OPTIONS.map((p) => `<option value="${p}">${p || '—'}</option>`).join('');
   for (let i = 0; i < LINEUP_SLOTS; i++) {
     html += `<div class="lineup-row" data-i="${i}">` +
-      `<button class="cur-dot" data-i="${i}" title="Set at-bat">◎</button>` +
+      `<button class="cur-dot" data-i="${i}" title="Set at-bat" aria-label="Batter ${i + 1} is up">◎</button>` +
       `<span class="ord">${i + 1}</span>` +
-      `<input class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" />` +
-      `<input class="b-name" placeholder="Batter ${i + 1}" /></div>`;
+      `<input class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" aria-label="Number, batter ${i + 1}" />` +
+      `<input class="b-name" placeholder="Batter ${i + 1}" aria-label="Name, batter ${i + 1}" />` +
+      `<select class="b-pos" aria-label="Position, batter ${i + 1}">${opts}</select></div>`;
   }
   $('lineup-' + side).innerHTML = html;
 }
 function fillLineup(side) {
+  const raw = (game.lineups || {})[side] || {};
   const t = teamOf(side);
-  $('lp-num-' + side).value = t.pitcher.num || '';
-  $('lp-name-' + side).value = t.pitcher.name || '';
   $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row, i) => {
     const b = t.batters[i] || {};
     row.querySelector('.b-num').value = b.num || '';
     row.querySelector('.b-name').value = b.name || '';
+    const sel = row.querySelector('.b-pos');
+    sel.value = L.positionOf(raw, i);
+    // An empty slot has nobody to put in the field.
+    sel.disabled = !(b.num || b.name);
+    sel.classList.toggle('none', !sel.value);
   });
+  renderFieldCheck(side);
+}
+// Which of the nine spots are still empty — the thing to fix before first pitch.
+function renderFieldCheck(side) {
+  const el = $('fieldcheck-' + side); if (!el) return;
+  const miss = L.missingPositions((game.lineups || {})[side] || {});
+  el.classList.toggle('ok', !miss.length);
+  if (!miss.length) { el.textContent = '✓ All nine positions filled'; return; }
+  el.replaceChildren(document.createTextNode('Empty:'));
+  for (const p of miss) { const s = document.createElement('b'); s.textContent = p; el.append(s); }
 }
 function renderCurrentHitter(side) {
   const idx = batIdxOf(side);
@@ -2005,13 +2023,31 @@ function readLineup(side) {
   $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row) => {
     batters.push({ num: row.querySelector('.b-num').value.trim(), name: row.querySelector('.b-name').value.trim() });
   });
-  return { pitcher: { num: $('lp-num-' + side).value.trim(), name: $('lp-name-' + side).value.trim() }, batters };
+  return { batters };
 }
 // Merge over the stored blob: readLineup() only knows names and numbers, and
-// replacing the whole side dropped `positions` — every name edit cleared the defense.
+// replacing the whole side dropped `positions` — every name edit cleared the
+// defense. mergeLineupEdits also carries the pitcher along with their row.
 async function saveLineup(side) {
   const lineups = game.lineups || {};
-  await saveRoster({ ...lineups, [side]: { ...(lineups[side] || {}), ...readLineup(side) } });
+  await saveRoster({ ...lineups, [side]: L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters) });
+}
+// A row's position dropdown. Whoever held that spot goes to the bench; their row
+// flashes so it's clear who needs a new position.
+async function setRowPosition(side, i, pos) {
+  const lineups = game.lineups || {};
+  const cur = L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters);
+  const { team, benched } = L.setPosition(cur, i, pos);
+  const next = { ...lineups, [side]: team };
+  game = { ...game, lineups: next };
+  fillLineup(side);
+  if (benched >= 0) {
+    const row = $('lineup-' + side).querySelector(`.lineup-row[data-i="${benched}"]`);
+    if (row) { row.classList.remove('benched'); void row.offsetWidth; row.classList.add('benched'); }
+    const b = team.batters[benched] || {};
+    showToast(`${b.name || '#' + b.num} to the bench — pick a new spot`, 2800);
+  }
+  await saveRoster(next);
 }
 function setCurrentHitter(side, i) {
   const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
@@ -2020,15 +2056,43 @@ function setCurrentHitter(side, i) {
 // Wire the static containers/inputs once (rows are delegated, so rebuilds are safe).
 ['away', 'home'].forEach((side) => {
   const list = $('lineup-' + side);
-  list.addEventListener('change', () => saveLineup(side));
+  list.addEventListener('change', (e) => {
+    if (e.target.classList.contains('b-pos')) return setRowPosition(side, +e.target.closest('.lineup-row').dataset.i, e.target.value);
+    saveLineup(side);
+  });
   list.addEventListener('click', (e) => {
     const dot = e.target.closest('.cur-dot');
     if (dot) setCurrentHitter(side, +dot.dataset.i);
   });
-  $('lp-num-' + side).addEventListener('change', () => saveLineup(side));
-  $('lp-name-' + side).addEventListener('change', () => saveLineup(side));
   list.addEventListener('pointerdown', (e) => { if (e.target.closest('.ord')) lineupDragStart(side, e); });
 });
+
+// ---- Lineup sheet ---------------------------------------------------------
+// The batter line under the count opens it, on the team at bat. One team at a
+// time; both lists stay built, so switching is instant and nothing re-renders
+// under a half-typed name.
+let luSide = 'away';
+function openLineupSheet(side) {
+  if (!game) return;
+  luSide = side || L.battingSide(game);
+  renderLineups();
+  openSheet('lineup-sheet');
+}
+function showLineupSide() {
+  if (!game) return;
+  const bat = L.battingSide(game);
+  for (const s of ['away', 'home']) {
+    $('lu-side-' + s).hidden = s !== luSide;
+    const tab = $('lu-tab-' + s);
+    tab.setAttribute('aria-pressed', String(s === luSide));
+    const abbr = s === 'home' ? (game.home_abbr || game.home_name || 'HOME') : (game.away_abbr || game.away_name || 'AWAY');
+    tab.textContent = `${s === 'home' ? 'Home' : 'Away'} · ${abbr}${s === bat ? ' · batting' : ''}`;
+  }
+}
+$('lu-tab-away').onclick = () => { luSide = 'away'; showLineupSide(); };
+$('lu-tab-home').onclick = () => { luSide = 'home'; showLineupSide(); };
+$('lu-done').onclick = () => closeSheet('lineup-sheet');
+$('gm-batter').onclick = () => { if (game && (game.sport || 'baseball') === 'baseball') openLineupSheet(); };
 
 // Batting order — drag a row by its number onto another slot to swap them.
 // Same pointer-based pattern as the defense diamond, so it works on touch.
@@ -2073,16 +2137,15 @@ function lineupDragEnd(e) {
   if (!row || +row.dataset.i === from) return;
   // Start from what's on screen, so a name typed but not yet blurred isn't lost.
   const lineups = game.lineups || {};
-  const cur = { ...(lineups[side] || {}), ...readLineup(side) };
+  const cur = L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters);
   saveRoster({ ...lineups, [side]: L.swapBatters(cur, from, +row.dataset.i) });
   fillLineup(side);
-  renderDefense();
 }
 function lineupDragStart(side, e) {
   const src = e.target.closest('.lineup-row[data-i]');
   if (!src || lbd) return;
   e.preventDefault();
-  if (document.activeElement && src.closest('.lineup-team').contains(document.activeElement)) document.activeElement.blur();
+  if (document.activeElement && src.closest('.lu-side').contains(document.activeElement)) document.activeElement.blur();
   const num = src.querySelector('.b-num').value.trim(), name = src.querySelector('.b-name').value.trim();
   const ghost = document.createElement('div');
   ghost.className = 'lb-ghost';
@@ -2097,117 +2160,14 @@ function lineupDragStart(side, e) {
 }
 function renderLineups() {
   if (lineupBuiltFor !== game.id) { buildLineup('away'); buildLineup('home'); lineupBuiltFor = game.id; }
-  $('lineup-away-team').textContent = game.away_name || 'Visitor';
-  $('lineup-home-team').textContent = game.home_name || 'Home';
   // Don't overwrite inputs the user is actively typing into; always refresh the marker.
-  const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lineup-team');
+  const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lu-side');
   if (!editing) { fillLineup('away'); fillLineup('home'); }
   renderCurrentHitter('away'); renderCurrentHitter('home');
+  showLineupSide();
 }
-
-// Defense (positions) — pointer-based drag & drop (works on mouse + touch) ---
-let defSide = 'away';
-const chipLabel = (b) => (b.num ? '#' + b.num + ' ' : '') + (b.name || '');
-// The batting-order index whose num+name matches the team's pitcher, or -1
-// (the pitcher is stored as {num,name}; this links it back to a lineup slot).
-function pitcherIdx(team) {
-  const p = team.pitcher || {};
-  if (!(p.num || p.name)) return -1;
-  const bs = Array.isArray(team.batters) ? team.batters : [];
-  return bs.findIndex((b) => b && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || ''));
-}
-function renderDefense() {
-  if (!game || (game.sport || 'baseball') !== 'baseball') return;
-  $('def-away').classList.toggle('on', defSide === 'away');
-  $('def-home').classList.toggle('on', defSide === 'home');
-  const team = (game.lineups || {})[defSide] || {};
-  const batters = Array.isArray(team.batters) ? team.batters : [];
-  const positions = team.positions || {};
-  const pIdx = pitcherIdx(team);
-  $('diamond-edit').innerHTML = L.FIELD_POSITIONS.map((pos) => {
-    if (pos === 'P') {
-      const p = team.pitcher || {};
-      const inner = !(p.num || p.name) ? '<i class="dz-ph">drop</i>'
-        : (pIdx >= 0 ? `<span class="dz-chip in-slot" data-idx="${pIdx}">${esc(chipLabel(p))}</span>`
-                     : `<span class="dz-slot-name">${esc(chipLabel(p))}</span>`);
-      return `<div class="dz-slot" data-slot="P" data-pos="P"><span class="dz-slot-lab">P</span>${inner}</div>`;
-    }
-    const idx = positions[pos];
-    const b = (idx != null) ? batters[idx] : null;
-    const inner = (b && (b.num || b.name))
-      ? `<span class="dz-chip in-slot" data-idx="${idx}">${esc(chipLabel(b))}</span>`
-      : '<i class="dz-ph">drop</i>';
-    return `<div class="dz-slot" data-slot="${pos}" data-pos="${pos}"><span class="dz-slot-lab">${pos}</span>${inner}</div>`;
-  }).join('');
-  const assigned = new Set(Object.values(positions));
-  if (pIdx >= 0) assigned.add(pIdx);
-  $('def-bench').innerHTML = batters.map((b, i) =>
-    (b && (b.num || b.name) && !assigned.has(i)) ? `<div class="dz-chip" data-idx="${i}">${esc(chipLabel(b))}</div>` : ''
-  ).join('');
-}
-async function saveDefTeam(patch) {
-  const side = defSide;
-  const lineups = { ...(game.lineups || {}), [side]: { ...((game.lineups || {})[side] || {}), ...patch } };
-  game = { ...game, lineups };
-  renderDefense();
-  await saveRoster(lineups);
-}
-$('def-away').onclick = () => { defSide = 'away'; renderDefense(); };
-$('def-home').onclick = () => { defSide = 'home'; renderDefense(); };
-
-let dnd = null;
-function dropTargetAt(e) {
-  dnd.ghost.style.display = 'none';
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  dnd.ghost.style.display = '';
-  if (!el) return {};
-  const slot = el.closest('.dz-slot[data-slot]');
-  if (slot) return { type: 'slot', pos: slot.dataset.slot, el: slot };
-  const bench = el.closest('.bench');
-  if (bench) return { type: 'bench', el: bench };
-  return {};
-}
-function clearHot() { document.querySelectorAll('.dz-slot.hot, .bench.hot').forEach((el) => el.classList.remove('hot')); }
-function defMove(e) {
-  if (!dnd) return;
-  e.preventDefault();
-  dnd.ghost.style.left = e.clientX + 'px'; dnd.ghost.style.top = e.clientY + 'px';
-  clearHot(); const t = dropTargetAt(e); if (t.el) t.el.classList.add('hot');
-}
-function defUp(e) {
-  if (!dnd) return;
-  const t = dropTargetAt(e);
-  dnd.ghost.remove(); clearHot();
-  const idx = dnd.idx; dnd = null;
-  window.removeEventListener('pointermove', defMove);
-  window.removeEventListener('pointerup', defUp);
-  if (!t.el) return;
-  const team = (game.lineups || {})[defSide] || {};
-  const batters = Array.isArray(team.batters) ? team.batters : [];
-  const positions = { ...(team.positions || {}) };
-  let pitcher = { ...(team.pitcher || {}) };
-  // Vacate this player from any field position; if they were the pitcher, clear the mound.
-  for (const k of Object.keys(positions)) if (positions[k] === idx) delete positions[k];
-  if (pitcherIdx(team) === idx) pitcher = { num: '', name: '' };
-  if (t.type === 'slot') {
-    if (t.pos === 'P') pitcher = { num: batters[idx] ? (batters[idx].num || '') : '', name: batters[idx] ? (batters[idx].name || '') : '' };
-    else positions[t.pos] = idx;
-  }
-  // A bench drop just leaves the player unassigned (handled by the removals above).
-  saveDefTeam({ positions, pitcher });
-}
-$('def-panel').addEventListener('pointerdown', (e) => {
-  const chip = e.target.closest('.dz-chip');
-  if (!chip) return;
-  e.preventDefault();
-  const ghost = chip.cloneNode(true);
-  ghost.classList.add('dz-ghost');
-  document.body.appendChild(ghost);
-  dnd = { idx: +chip.dataset.idx, ghost };
-  ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
-  window.addEventListener('pointermove', defMove);
-  window.addEventListener('pointerup', defUp);
-});
+// The drag-onto-a-diamond Defense panel lived here until v3.62. Positions are
+// now a dropdown on each lineup row (setRowPosition / L.setPosition).
 
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
@@ -2269,6 +2229,7 @@ function showSport(sport) {
   document.body.classList.toggle('bb', sport === 'baseball');
   $('sit-btn').disabled = sport !== 'baseball';
   $('g-batting').hidden = sport === 'baseball';
+  $('gm-batter').disabled = sport !== 'baseball';   // the lineup sheet is baseball's
   if (sport !== 'baseball') {
     $('gm-batter').hidden = false;
     $('gm-hitter').textContent = '';
@@ -2377,7 +2338,7 @@ $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuid
 // had, so from 700px the CSS drops the sheet chrome and nothing else changes.
 // The pad underneath is never unmounted — closing the drawer must be instant.
 const DW_TAB = 'sb:drawerTab';
-const PANEL_TAB = { 'panel-lineups': 'teams', 'panel-defense': 'teams', 'panel-appearance': 'look',
+const PANEL_TAB = { 'panel-appearance': 'look',
   'panel-overlay': 'obs', 'panel-cameras': 'obs', 'panel-obs': 'obs' };
 function setDrawerTab(tab) {
   // A remembered tab can outlive the tab itself (Cards left the drawer in v3.59);
@@ -2464,8 +2425,7 @@ $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
   if (go === 'teams') { fillSetup(); setupDirty = false; openSheet('setup-sheet'); }
-  else if (go === 'lineups') jumpPanel('panel-lineups');
-  else if (go === 'defense') jumpPanel('panel-defense');
+  else if (go === 'lineups' || go === 'defense') openLineupSheet(L.battingSide(game));
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
 });
 
@@ -2519,8 +2479,8 @@ function renderBaseballControl() {
   // roster_rev rather than the lineups blob itself: it is bumped on every roster
   // write, which is exactly what that column is for, and it saves stringifying
   // two full rosters on every pitch.
-  paintIf('lineups', [game.roster_rev, batIdxOfGame(), game.away_name, game.home_name], renderLineups);
-  paintIf('defense', [game.roster_rev, defSide, game.sport], renderDefense);
+  paintIf('lineups', [game.roster_rev, batIdxOfGame(), game.away_name, game.home_name,
+    game.away_abbr, game.home_abbr, game.half], renderLineups);
 }
 // Who is up, and who they are facing. Empty when there is no lineup yet, and
 // the row goes with it rather than sitting there as a blank strip.
@@ -2532,9 +2492,12 @@ function renderBatterLine() {
   const hitter = [b.num, b.name].filter(Boolean).join(' ');
   const pitcher = [p.num, p.name].filter(Boolean).join(' ');
   $('gm-hitter').textContent = hitter;
-  $('gm-vs').textContent = [hitter && ordinal(i + 1), pitcher && `P ${pitcher}, ${L.pitchCount(game)}`]
-    .filter(Boolean).join(' · ');
-  $('gm-batter').hidden = !hitter && !pitcher;
+  // Never hidden in baseball: this line is the way into the lineup sheet, so an
+  // empty lineup has to say so rather than take the door away with it.
+  $('gm-vs').textContent = hitter || pitcher
+    ? [hitter && ordinal(i + 1), pitcher && `P ${pitcher}, ${L.pitchCount(game)}`].filter(Boolean).join(' · ')
+    : 'No lineup yet — tap to set it';
+  $('gm-batter').hidden = false;
 }
 
 function renderFootballControl() {

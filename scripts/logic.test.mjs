@@ -692,3 +692,63 @@ test('a ball in play leaves its code and fielder, and nothing about who batted',
   const r = L.onPlay(g, { kind: 'SF', pos: 'CF', dest: L.playDefaults(g, 'SF') });
   assert.deepEqual(r.payload.play, { kind: 'SF', pos: 'CF', code: 'SF8', outs: 1, runs: 1, inning: 1, half: 'top' });
 });
+
+// ---------------------------------------------------------------------------
+// Positions from the lineup sheet's dropdowns
+// ---------------------------------------------------------------------------
+const roster = () => ({
+  batters: [{ num: '3', name: 'Morales' }, { num: '11', name: 'Carter' }, { num: '12', name: 'Reyes' }, { num: '7', name: 'Jensen' }],
+  positions: { SS: 1, '2B': 2 },
+  pitcher: { num: '7', name: 'Jensen' },
+});
+
+test('picking a position someone holds sends them to the bench, not into a swap', () => {
+  const { team, benched } = L.setPosition(roster(), 2, 'SS');
+  assert.equal(team.positions.SS, 2);
+  assert.equal(team.positions['2B'], undefined, 'Reyes left second base');
+  assert.equal(benched, 1);
+  assert.equal(L.positionOf(team, 1), '', 'Carter is off the field');
+});
+
+test('P makes that row the pitcher, and benches the old one', () => {
+  const { team, benched } = L.setPosition(roster(), 0, 'P');
+  assert.deepEqual(team.pitcher, { num: '3', name: 'Morales' });
+  assert.equal(benched, 3);
+  assert.equal(L.positionOf(team, 0), 'P');
+  assert.equal(L.positionOf(team, 3), '');
+});
+
+test('moving the pitcher to a field spot clears the mound', () => {
+  const { team } = L.setPosition(roster(), 3, 'CF');
+  assert.deepEqual(team.pitcher, { num: '', name: '' });
+  assert.equal(team.positions.CF, 3);
+  assert.ok(L.missingPositions(team).includes('P'));
+});
+
+test('taking a player out of the field benches nobody else', () => {
+  const { team, benched } = L.setPosition(roster(), 1, '');
+  assert.equal(team.positions.SS, undefined);
+  assert.equal(benched, -1);
+});
+
+test('the field check lists the empty spots in field order', () => {
+  assert.deepEqual(L.missingPositions(roster()), ['C', '1B', '3B', 'LF', 'CF', 'RF']);
+  assert.deepEqual(L.missingPositions({}), L.FIELD_POSITIONS);
+});
+
+test('renaming the pitcher’s row carries the pitcher with it, and keeps the defense', () => {
+  const r = roster();
+  const batters = r.batters.map((b) => ({ ...b }));
+  batters[3] = { num: '17', name: 'Jensen Jr' };
+  const out = L.mergeLineupEdits(r, batters);
+  assert.deepEqual(out.pitcher, { num: '17', name: 'Jensen Jr' });
+  assert.deepEqual(out.positions, r.positions);
+  assert.equal(L.currentPitcher({ half: 'bottom', lineups: { away: out } }).name, 'Jensen Jr');
+});
+
+test('a position set from the sheet is what the fielder tray and defense card read', () => {
+  const { team } = L.setPosition(roster(), 0, 'LF');
+  const g = { half: 'top', lineups: { home: team } };
+  assert.equal(L.fielderAt(g, 'home', 'LF').name, 'Morales');
+  assert.equal(L.fielderAt(g, 'home', 'P').name, 'Jensen');
+});

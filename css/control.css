@@ -137,7 +137,14 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .mb.b3 { left: calc(50% - 15px); top: 50%; }
 .mb.mh { left: 50%; top: calc(50% + 15px); width: 11px; height: 11px; background: var(--line); border-color: var(--line); }
 
-.gm-batter { display: flex; align-items: baseline; gap: 10px; padding: 10px 18px 2px; min-width: 0; }
+/* A button: it opens the lineup sheet. Reads as a line, not a control, so the
+   pad keeps its shape — the LINEUP › tag is what says it can be tapped. */
+.gm-batter { display: flex; align-items: center; gap: 10px; padding: 8px 18px 6px; min-height: 40px; min-width: 0; width: 100%;
+  background: none; border: 0; border-radius: 0; color: var(--chalk); text-align: left; font-weight: 400; cursor: pointer; }
+.gm-batter:disabled { cursor: default; }
+.gm-batter:active:not(:disabled) { filter: brightness(1.25); }
+.gm-edit { margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--steel); }
+.gm-edit[hidden] { display: none; }
 .gm-batter[hidden] { display: none; }
 .gm-hitter { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gm-vs { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -731,43 +738,40 @@ body.no-obs .obs-only { display: none; }
 .sg-go { background: var(--steel); color: #06090f; border: none; border-radius: 10px; padding: 9px 15px; font-weight: 700; font-size: 13px; }
 .sg-step.done .sg-go { background: var(--bg-2); color: var(--muted); border: 1px solid var(--line); }
 
-/* Defense (positions) drag-drop editor */
-.team-toggle { display: flex; gap: 8px; margin: 4px 0 12px; }
-.team-toggle .base-btn { flex: 1; }
-.diamond-edit { position: relative; height: 300px; margin: 4px 0 12px; touch-action: none;
-  background: radial-gradient(120% 95% at 50% 100%, #2f6b3f, #1f4a2b 65%, #16341e);
-  border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.diamond-edit::before { content: ''; position: absolute; width: 150px; height: 150px; left: 50%; top: 57%;
-  transform: translate(-50%, -50%) rotate(45deg); border: 2px solid rgba(255,255,255,.45);
-  background: rgba(176,120,66,.28); border-radius: 4px; }
-.dz-slot { position: absolute; transform: translate(-50%, -50%); width: 90px; padding: 3px 2px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 10px; }
-.dz-slot.hot { background: rgba(232,178,58,.28); box-shadow: 0 0 0 2px var(--accent); }
-.dz-slot-lab { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: .06em; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
-.dz-slot-name { font-size: 12px; font-weight: 700; color: #fff; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
-.dz-slot .dz-ph { font-style: normal; font-size: 10px; color: rgba(255,255,255,.6); border: 1px dashed rgba(255,255,255,.4); border-radius: 8px; padding: 3px 7px; }
-.dz-slot[data-pos="CF"] { top: 11%; left: 50%; }
-.dz-slot[data-pos="LF"] { top: 24%; left: 19%; }
-.dz-slot[data-pos="RF"] { top: 24%; left: 81%; }
-.dz-slot[data-pos="SS"] { top: 45%; left: 36%; }
-.dz-slot[data-pos="2B"] { top: 45%; left: 64%; }
-.dz-slot[data-pos="3B"] { top: 56%; left: 18%; }
-.dz-slot[data-pos="1B"] { top: 56%; left: 82%; }
-.dz-slot[data-pos="P"]  { top: 62%; left: 50%; }
-.dz-slot[data-pos="C"]  { top: 90%; left: 50%; }
-.dz-chip { display: inline-block; background: var(--steel); color: #06090f; font-size: 12px; font-weight: 700;
-  padding: 6px 10px; border-radius: 999px; touch-action: none; cursor: grab; user-select: none;
-  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dz-chip.in-slot { background: var(--out-ui); font-size: 11px; padding: 4px 8px; }
-.bench { display: flex; flex-wrap: wrap; gap: 6px; min-height: 46px; padding: 8px; margin-bottom: 10px;
-  border: 1px dashed var(--line); border-radius: 10px; touch-action: none; }
-.bench.hot { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.dz-ghost { position: fixed; z-index: 9999; transform: translate(-50%, -50%); pointer-events: none; opacity: .92; }
+/* Lineup sheet — one team at a time; # · name · position on every row. */
+.lu-tabs { display: flex; gap: 4px; padding: 3px; margin-bottom: 12px; background: var(--sunken);
+  border: 1px solid var(--line); border-radius: 12px; }
+.lu-tabs button { flex: 1; min-width: 0; padding: 10px 6px; border-radius: 9px; background: none; color: var(--body);
+  font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lu-tabs button[aria-pressed="true"] { background: var(--card); color: var(--chalk); box-shadow: inset 0 0 0 1px var(--line-2); }
+.lu-side[hidden] { display: none; }
+.lu-cols { display: flex; gap: 6px; padding: 0 0 2px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); }
+.lu-cols .c-ord { flex: 0 0 calc(34px + 3.4ch + 6px); }
+.lu-cols .c-num { flex: 0 0 calc(3ch + 20px); text-align: center; }
+.lu-cols .c-name { flex: 1 1 0; }
+.lu-cols .c-pos { flex: 0 0 64px; text-align: center; }
+.fieldcheck { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 2px 8px; font-size: 12px; color: var(--body); }
+.fieldcheck b { padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(224, 169, 42, 0.5);
+  color: var(--out-ui); font-family: var(--num); font-size: 13px; }
+.fieldcheck.ok { color: var(--ball); font-weight: 700; }
+.lu-side .lineup-row { gap: 6px; }
+.lineup-row .b-pos { flex: 0 0 64px; width: 64px; min-width: 0; margin: 0; padding: 10px 4px 10px 8px;
+  font-family: var(--num); font-size: 17px; font-weight: 700; color: var(--steel);
+  background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; }
+.lineup-row .b-pos.none { color: var(--muted); }
+.lineup-row .b-pos:disabled { opacity: 0.35; }
+/* The player a dropdown just moved off their spot — they need a new one. */
+.lineup-row.benched { animation: benched 1.8s ease; }
+@keyframes benched { 0%, 60% { background: rgba(224, 169, 42, 0.2); box-shadow: 0 0 0 2px var(--out-ui); border-radius: 10px; } }
+@media (prefers-reduced-motion: reduce) { .lineup-row.benched { animation: none; box-shadow: 0 0 0 2px var(--out-ui); border-radius: 10px; } }
 
 /* Saved-team load/save row */
 .team-load { display: flex; gap: 6px; align-items: stretch; margin-bottom: 10px; }
-.team-load select { flex: 1; min-width: 0; padding: 10px; font-size: 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
-.team-load .fxbtn { flex: 0 0 auto; padding: 10px 12px; }
+.team-load select { flex: 1 1 0; min-width: 0; padding: 10px; font-size: 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
+/* width/margin reset: .fxbtn.cardclear is width:100% with a top margin for its
+   full-row uses, which here stretched 🗑 across the row and crushed the picker. */
+.team-load .fxbtn { flex: 0 0 auto; width: auto; margin-top: 0; padding: 10px 12px; }
 
 /* Nested sub-panels (lineup teams, custom theme) — compact, accordion-exempt */
 .panel .panel { margin-top: 8px; background: var(--bg-2); }
@@ -780,8 +784,6 @@ body.no-obs .obs-only { display: none; }
 .lineup-row .b-num { flex: 0 0 calc(3ch + 20px); width: calc(3ch + 20px); min-width: 0; text-align: center; font-family: var(--num); padding-left: 4px; padding-right: 4px; }
 .lineup-row .b-name { flex: 1 1 0; width: 0; min-width: 0; }
 .lineup-row .ord { flex: 0 0 1.6ch; text-align: center; font-family: var(--num); font-size: 13px; color: var(--muted); }
-.lineup-row .ord.p { color: var(--steel); font-weight: 800; }
-.lineup-row.pitcher { margin-top: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
 .cur-dot { flex: 0 0 auto; width: 34px; height: 34px; font-size: 16px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; }
 .lineup-row.at-bat .cur-dot { background: var(--out-ui); border-color: var(--out-ui); color: #06090f; }
 .lineup-row.at-bat .b-name { border-color: var(--out-ui); }
