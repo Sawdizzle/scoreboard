@@ -503,3 +503,168 @@ test('the pitcher and the original roster are left alone', () => {
   assert.equal(team.batters[0].name, 'B0');
   assert.deepEqual(team.positions, { C: 0 });
 });
+
+// ---------------------------------------------------------------------------
+// Balls in play: who fielded it, and where everyone ended up
+// ---------------------------------------------------------------------------
+const playOf = (g, kind, pos) => L.onPlay(g, { kind, pos, dest: L.playDefaults(g, kind) });
+
+test('a grounder to short is a 6-3 groundout that ends the at-bat', () => {
+  const g = G({ strikes: 1, balls: 2, lineups: { away: order([1, 1, 1]) } });
+  const r = playOf(g, 'GB', 'SS');
+  assert.equal(r.type, 'play');
+  assert.equal(r.text, 'Groundout 6-3');
+  assert.equal(r.patch.outs, 1);
+  assert.equal(r.patch.balls, 0);
+  assert.equal(r.patch.state.batIdx.away, 1, 'the order moves on');
+  assert.deepEqual(r.patch.state.pitches, { home: 1 }, 'and the pitch counts');
+  assert.equal(r.anim, 'play');
+});
+
+test('a fielder with no type picked: infield grounds out, outfield flies out', () => {
+  for (const p of ['P', 'C', '1B', '2B', '3B', 'SS']) assert.equal(L.autoKind(p), 'GB', p);
+  for (const p of ['LF', 'CF', 'RF']) assert.equal(L.autoKind(p), 'FB', p);
+});
+
+test('the scorebook codes read the way a scorer writes them', () => {
+  assert.equal(L.playCode('GB', '1B'), '3U', 'the first baseman fielding it himself is unassisted');
+  assert.equal(L.playCode('GB', 'P'), '1-3');
+  assert.equal(L.playCode('FB', 'CF'), 'F8');
+  assert.equal(L.playCode('LD', 'SS'), 'L6');
+  assert.equal(L.playCode('PU', 'C'), 'P2');
+  assert.equal(L.playCode('E', 'SS'), 'E6');
+  assert.equal(L.playCode('DP', 'SS'), '6-4-3');
+  assert.equal(L.playCode('DP', '2B'), '4-6-3');
+  assert.equal(L.playCode('DP', '3B'), '5-4-3');
+  assert.equal(L.playCode('SF', 'RF'), 'SF9');
+  assert.equal(L.playCode('H1', null), '');
+});
+
+test('on a groundout, forced runners move up and the rest hold', () => {
+  assert.deepEqual(L.playDefaults(G({ bases: bases(1, 0, 1) }), 'GB'), { batter: 'out', first: 2, third: 3 },
+    'first is forced, third is not');
+  assert.deepEqual(L.playDefaults(G({ bases: bases(1, 1, 1) }), 'GB'), { batter: 'out', first: 2, second: 3, third: 4 });
+});
+
+test('on a fly ball the runners hold, and on a sac fly the runner on third scores', () => {
+  const g = G({ bases: bases(1, 0, 1) });
+  assert.deepEqual(L.playDefaults(g, 'FB'), { batter: 'out', first: 1, third: 3 });
+  const r = playOf(g, 'SF', 'CF');
+  assert.equal(r.text, 'Sac fly SF8');
+  assert.equal(r.payload.runs, 1);
+  assert.equal(r.patch.away_score, 1);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 0));
+});
+
+test('a groundout scores the runner from third when you say he scored', () => {
+  const r = L.onPlay(G({ bases: bases(0, 0, 1) }), { kind: 'GB', pos: 'SS', dest: { batter: 'out', third: 4 } });
+  assert.equal(r.patch.away_score, 1);
+  assert.equal(r.patch.line_score[0].top, 1);
+  assert.equal(r.patch.outs, 1);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+});
+
+test('a double play is two outs and takes the runner from first', () => {
+  const r = playOf(G({ bases: bases(1, 0, 0) }), 'DP', 'SS');
+  assert.equal(r.patch.outs, 2);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+  assert.equal(r.text, 'Double play 6-4-3');
+  assert.equal(r.anim, 'doubleplay', 'still the double play stinger, and its auto-clip');
+});
+
+test('a fielder’s choice puts the batter on first and the lead forced runner out', () => {
+  const r = playOf(G({ bases: bases(1, 0, 0) }), 'FC', 'SS');
+  assert.equal(r.patch.outs, 1);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 0));
+});
+
+test('an error puts the batter on, moves everyone up, and is charged to the field', () => {
+  const r = playOf(G({ bases: bases(0, 1, 0) }), 'E', 'SS');
+  assert.equal(r.text, 'Reached on error E6');
+  assert.deepEqual(r.patch.bases, bases(1, 0, 1));
+  assert.equal(r.patch.home_errors, 1);
+  assert.equal(r.patch.outs, 0, 'nobody is out');
+  assert.equal(r.patch.away_hits, undefined, 'and it is not a hit');
+});
+
+test('a throwing error can take the batter to second', () => {
+  const r = L.onPlay(G(), { kind: 'E', pos: 'SS', dest: { batter: 2 } });
+  assert.deepEqual(r.patch.bases, bases(0, 1, 0));
+});
+
+test('a dropped third strike: the batter reaches and the runners move up', () => {
+  const g = G({ strikes: 2, bases: bases(0, 1, 0) });
+  assert.equal(L.playBlocked(g, 'K3'), '');
+  const r = playOf(g, 'K3', 'C');
+  assert.equal(r.text, 'Dropped 3rd strike');
+  assert.deepEqual(r.patch.bases, bases(1, 0, 1));
+  assert.equal(r.patch.outs, 0);
+  assert.equal(r.patch.strikes, 0);
+  assert.deepEqual(r.patch.state.pitches, { home: 1 }, 'the third strike is still a pitch');
+});
+
+test('the batter may only run on a dropped third strike with first open or two outs', () => {
+  assert.notEqual(L.playBlocked(G({ strikes: 2, bases: bases(1, 0, 0) }), 'K3'), '');
+  assert.equal(L.playBlocked(G({ strikes: 2, outs: 2, bases: bases(1, 0, 0) }), 'K3'), '');
+  assert.notEqual(L.playBlocked(G({ strikes: 1 }), 'K3'), '', 'and only with two strikes on him');
+});
+
+test('plays that can’t have happened with these bases say why', () => {
+  assert.notEqual(L.playBlocked(G(), 'DP'), '');
+  assert.notEqual(L.playBlocked(G({ bases: bases(1, 0, 0), outs: 2 }), 'DP'), '');
+  assert.notEqual(L.playBlocked(G({ bases: bases(1, 0, 0) }), 'SF'), '');
+  assert.notEqual(L.playBlocked(G(), 'FC'), '');
+  assert.equal(L.playBlocked(G(), 'GB'), '');
+});
+
+test('two runners finishing on the same base is refused, not recorded', () => {
+  const g = G({ bases: bases(1, 1, 0) });
+  const dest = { batter: 'out', first: 2, second: 2 };
+  assert.equal(L.resolvePlay(g, dest).clash, 'second');
+  assert.equal(L.onPlay(g, { kind: 'GB', pos: 'SS', dest }), null);
+});
+
+test('no run scores when the third out is the batter', () => {
+  const r = L.onPlay(G({ outs: 2, bases: bases(0, 0, 1) }), { kind: 'FB', pos: 'CF', dest: { batter: 'out', third: 4 } });
+  assert.equal(r.patch.half, 'bottom');
+  assert.equal(r.payload.runs, 0);
+  assert.equal(r.patch.away_score, undefined);
+});
+
+test('no run scores when the third out is a force', () => {
+  const r = L.onPlay(G({ outs: 2, bases: bases(1, 0, 1) }), { kind: 'FC', pos: 'SS', dest: { batter: 1, first: 'out', third: 4 } });
+  assert.equal(r.payload.runs, 0);
+  assert.equal(r.patch.half, 'bottom');
+});
+
+test('a play that ends the half rolls it and clears the bases', () => {
+  const r = playOf(G({ outs: 1, bases: bases(1, 0, 0) }), 'DP', '2B');
+  assert.equal(r.patch.half, 'bottom');
+  assert.equal(r.patch.outs, 0);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+});
+
+test('a hit through the runner step agrees with the one-tap hit', () => {
+  for (const [kind, n] of [['H1', 1], ['H2', 2], ['H3', 3]]) {
+    const g = G({ bases: bases(1, 0, 1) });
+    const viaPlay = playOf(g, kind, null);
+    const viaHit = L.onHit(g, n);
+    assert.deepEqual(viaPlay.patch.bases, viaHit.patch.bases, kind);
+    assert.equal(viaPlay.patch.away_score, viaHit.patch.away_score, kind);
+    assert.equal(viaPlay.patch.away_hits, 1, kind);
+  }
+});
+
+test('a runner thrown out on a hit is an out, and the hit still counts', () => {
+  const r = L.onPlay(G({ bases: bases(1, 0, 0) }), { kind: 'H1', dest: { batter: 1, first: 'out' } });
+  assert.equal(r.patch.outs, 1);
+  assert.equal(r.patch.away_hits, 1);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 0));
+});
+
+test('the stinger carries the batter’s slot, never a name — the row is public', () => {
+  const g = G({ lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 2 } } });
+  const r = playOf(g, 'GB', 'SS');
+  assert.deepEqual(r.animMeta, { text: 'Groundout 6-3', side: 'away', idx: 2, runs: 0 });
+  assert.ok(!JSON.stringify(r.payload).includes('B2'), 'and no roster name in the event log either');
+});

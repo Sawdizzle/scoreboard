@@ -324,6 +324,136 @@ export function toggleBase(g, key) {
   return { type: 'base', patch: { bases: { ...b, [key]: !b[key] } } };
 }
 
+// ---- Balls in play --------------------------------------------------------
+// An out, an error, a fielder's choice, a dropped third strike and a hit all
+// end the same way: someone fielded it, and every runner finished somewhere.
+// The pad asks for both. These turn the answer into the play.
+//
+// A destination is 'out', a base (1, 2, 3) or 4 for home. `dest` is keyed by
+// where each person started: 'batter', 'first', 'second', 'third'.
+export const POS_NUM = { P: 1, C: 2, '1B': 3, '2B': 4, '3B': 5, SS: 6, LF: 7, CF: 8, RF: 9 };
+const START = { batter: 0, first: 1, second: 2, third: 3 };
+const BASE_KEY = { 1: 'first', 2: 'second', 3: 'third' };
+const HIT_BASES = { H1: 1, H2: 2, H3: 3 };
+export const PLAY_LABEL = {
+  GB: 'Groundout', FB: 'Flyout', LD: 'Lineout', PU: 'Pop-up', E: 'Reached on error',
+  FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
+  H1: 'Single', H2: 'Double', H3: 'Triple',
+};
+
+// A fielder tapped with no type picked: infielders make groundouts, outfielders flyouts.
+export const autoKind = (pos) => ((POS_NUM[pos] || 0) >= 7 ? 'FB' : 'GB');
+
+// The scorebook shorthand. A groundout is thrown to first unless the first
+// baseman fielded it himself (3U); a double play takes the usual pivot.
+const DP_PATH = { 1: '1-6-3', 2: '2-6-3', 3: '3-6-3', 4: '4-6-3', 5: '5-4-3', 6: '6-4-3' };
+export function playCode(kind, pos) {
+  if (kind === 'K3') return 'K';
+  const n = POS_NUM[pos];
+  if (!n || HIT_BASES[kind]) return '';
+  switch (kind) {
+    case 'GB': return n === 3 ? '3U' : `${n}-3`;
+    case 'FB': return `F${n}`;
+    case 'LD': return `L${n}`;
+    case 'PU': return `P${n}`;
+    case 'E':  return `E${n}`;
+    case 'FC': return `${n}-${n === 4 ? 6 : 4}`;
+    case 'DP': return DP_PATH[n] || `${n}-2`;
+    case 'SF': return `SF${n}`;
+  }
+  return '';
+}
+
+// Why a play can't have happened with the game as it stands, or '' if it can.
+export function playBlocked(g, kind) {
+  const b = safeBases(g.bases);
+  const anyone = b.first || b.second || b.third;
+  const outs = g.outs | 0;
+  switch (kind) {
+    case 'FC': return anyone ? '' : 'A fielder’s choice needs a runner on base';
+    case 'DP': return !anyone ? 'A double play needs a runner on base' : outs >= 2 ? 'A double play needs fewer than 2 outs' : '';
+    case 'SF': return !b.third ? 'A sac fly needs a runner on 3rd' : outs >= 2 ? 'A sac fly needs fewer than 2 outs' : '';
+    case 'K3':
+      if ((g.strikes | 0) < 2) return 'A dropped 3rd strike needs 2 strikes on the batter — Undo the strikeout first';
+      return b.first && outs < 2 ? 'The batter can’t run: 1st base is taken with fewer than 2 outs' : '';
+  }
+  return '';
+}
+
+// Is the runner on this base forced by the batter taking first?
+const forcedFrom = (b, key) => (key === 'first' ? true : key === 'second' ? b.first : b.first && b.second);
+
+// The likely result, pre-picked so the common play is one tap on Record.
+export function playDefaults(g, kind) {
+  const b = safeBases(g.bases);
+  const on = ['first', 'second', 'third'].filter((k) => b[k]);
+  const lead = on[on.length - 1];
+  const dest = {};
+  const each = (fn) => on.forEach((k) => { dest[k] = fn(k, START[k]); });
+  const up = (n) => (k, s) => Math.min(4, s + n);
+  switch (kind) {
+    case 'GB': dest.batter = 'out'; each((k, s) => (forcedFrom(b, k) ? s + 1 : s)); break;
+    case 'FB': case 'LD': case 'PU': dest.batter = 'out'; each((k, s) => s); break;
+    case 'SF': dest.batter = 'out'; each((k, s) => (k === 'third' ? 4 : s)); break;
+    case 'FC': { dest.batter = 1; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : forcedFrom(b, k) ? s + 1 : s)); break; }
+    case 'DP': { dest.batter = 'out'; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : s)); break; }
+    case 'E': case 'K3': dest.batter = 1; each(up(1)); break;
+    default: { const n = HIT_BASES[kind]; if (n) { dest.batter = n; each(up(n)); } }
+  }
+  return dest;
+}
+
+// Where everyone finished. `clash` names a base two people ended up on — the
+// play can't be recorded until one of them moves.
+export function resolvePlay(g, dest) {
+  let outs = 0, runs = 0, clash = null;
+  const bases = { first: false, second: false, third: false };
+  for (const to of Object.values(dest || {})) {
+    if (to === 'out') { outs++; continue; }
+    if (to === 4) { runs++; continue; }
+    const key = BASE_KEY[to];
+    if (!key) continue;
+    if (bases[key]) clash = key;
+    bases[key] = true;
+  }
+  return { outs, runs, bases, clash };
+}
+
+// The play itself. Returns null for a play that can't be recorded as given.
+//
+// Runs don't count on a play whose third out is the batter (he never reached)
+// or a force (a groundout, fielder's choice or double play). A runner thrown
+// out on the bases after another run crossed is a timing play, and that run
+// stands — the rule a scorer applies, close enough that the rare exception is a
+// Runs correction in the Situation sheet.
+//
+// The stinger carries the batter's lineup slot and never a name: current_animation
+// is on the public row. The overlay looks the name up in the roster it holds.
+export function onPlay(g, { kind, pos = null, dest }) {
+  if (!PLAY_LABEL[kind]) return null;
+  const r = resolvePlay(g, dest);
+  if (r.clash) return null;
+  const outs = (g.outs | 0) + r.outs;
+  const endsHalf = outs >= 3;
+  const force = kind === 'GB' || kind === 'FC' || kind === 'DP';
+  const runs = endsHalf && (dest.batter === 'out' || force) ? 0 : r.runs;
+  let patch = { balls: 0, strikes: 0, bases: r.bases, ...runsPatch(g, runs) };
+  if (HIT_BASES[kind]) { const hk = battingSide(g) === 'home' ? 'home_hits' : 'away_hits'; patch[hk] = (g[hk] | 0) + 1; }
+  if (kind === 'E') { const ek = fieldingSide(g) === 'home' ? 'home_errors' : 'away_errors'; patch[ek] = (g[ek] | 0) + 1; }
+  patch = endsHalf ? { ...patch, ...endHalfPatch({ ...g, ...patch }) } : { ...patch, outs };
+  const code = playCode(kind, pos);
+  const text = code && kind !== 'K3' ? `${PLAY_LABEL[kind]} ${code}` : PLAY_LABEL[kind];
+  const side = battingSide(g);
+  return {
+    type: 'play',
+    patch: endPA(g, patch),
+    payload: { runs, play: { kind, pos, code, outs: r.outs, runs, inning: g.inning | 0, half: g.half } },
+    anim: kind === 'DP' ? 'doubleplay' : kind === 'H3' ? 'bigplay' : 'play',
+    animMeta: { text, side, idx: currentBatterIdx(g, side), runs },
+    text,
+  };
+}
+
 // ---- Manual adjusters (direct edits; undoable via apply_event) -------------
 // Each nudges a single field by d, clamped to its DB constraint. Score/hits/
 // errors adjust the running total only (line score is left to game-flow plays).

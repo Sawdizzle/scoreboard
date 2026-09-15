@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
@@ -192,7 +192,7 @@ function render(s) {
   const a = s.current_animation;
   const nonce = (a && Number(a.nonce)) || 0;
   if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
-  else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(a); audio.play(a.type); }
+  else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(withBatterName(a, s)); audio.play(soundFor(a)); }
 
   syncSponsors(s);
   replayHello();
@@ -201,6 +201,21 @@ function render(s) {
   handleScene(s.scene_cmd);
   handleObsCmd(s.obs_cmd);
 }
+
+// A play's stinger names the hitter. The row is public, so the pad sends only
+// the lineup slot (side + index) and the name is looked up here, in the roster
+// this overlay fetched by token. Without the token there is no name, and the
+// play still shows.
+function withBatterName(a, s) {
+  const m = a && a.meta;
+  if (!m || !m.side || m.idx == null) return a;
+  const b = teamLineup(s, m.side).batters[m.idx | 0];
+  const sub = b ? [b.num ? `#${b.num}` : '', b.name || ''].filter(Boolean).join(' ') : '';
+  return sub ? { ...a, meta: { ...m, sub } } : a;
+}
+// A play plays the run sound when a run scored on it, and is quiet otherwise —
+// outs happen every inning and the stream doesn't need a sting for each.
+const soundFor = (a) => (a.type === 'play' ? (a.meta && a.meta.runs ? 'run' : null) : a.type);
 
 // Audio needs one gesture in a normal browser; OBS browser sources autoplay.
 audio.resume();

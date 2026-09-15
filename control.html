@@ -255,6 +255,9 @@
         <div class="panel-body help-body">
           <ul>
             <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End this half-inning now</b> is in the Situation sheet for the rare one that ends another way.</li>
+            <li><b>OUT</b> asks who fielded it — tap SS and it records <b>Groundout 6-3</b>, tap CF for <b>Flyout F8</b>. Pick a type first for an error, fielder's choice, double play, sac fly or dropped 3rd strike. With runners on, the next step asks where everyone ended up, already filled in with the likely result. <b>Just an out</b> skips all of it.</li>
+            <li><b>1B / 2B / 3B</b> with runners on open the same runner step; with nobody on they're still one tap.</li>
+            <li>Missed that the catcher dropped strike three? The strikeout message has <b>Dropped 3rd?</b> for a few seconds.</li>
             <li><b>↶ Undo</b> reverses the last action.</li>
             <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
             <li><b>Moments</b> in <b>🎬 On Air</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
@@ -936,7 +939,6 @@
           <button id="btn-clear" class="base-btn">Clear bases</button>
         </div>
       </div>
-      <button id="hit-e" class="base-btn sit-wide">Reached on error — batter to 1st</button>
 
       <div id="adj-panel" class="sit-steps">
         <div class="adj-row"><span class="adj-lab">Balls</span><button class="step" data-adj="balls" data-d="-1">–</button><b id="adj-balls">0</b><button class="step" data-adj="balls" data-d="1">+</button></div>
@@ -1015,6 +1017,37 @@
       </div>
 
       <div class="sheet-actions"><button id="onair-done" class="primary">Done</button></div>
+    </div>
+  </div>
+
+  <!-- BALL IN PLAY SHEET -->
+  <!-- OUT opens it on the fielder pick. Hits with runners on, and a dropped third
+       strike, open it straight on the runner step. -->
+  <div id="play-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="play-title" tabindex="-1" hidden>
+    <div class="sheet-card scroll play-card">
+      <span class="grab"></span>
+      <div class="sit-head"><h3 id="play-title">Ball in play</h3><span class="sit-sub" id="play-sub"></span></div>
+
+      <div id="play-pick">
+        <div class="play-chips" id="play-chips" role="group" aria-label="Type of play"></div>
+        <p class="play-will" id="play-will"></p>
+        <div class="play-field" id="play-field"><span class="pf-arc"></span><span class="pf-dirt"></span></div>
+        <div class="sheet-actions">
+          <button id="play-cancel" class="ghost">Cancel</button>
+          <button id="play-just-out" class="primary play-out">Just an out</button>
+        </div>
+      </div>
+
+      <div id="play-runners" hidden>
+        <p class="rs-play" id="rs-play"></p>
+        <p class="confirm-copy">Where did everyone end up? The likely result is already picked.</p>
+        <div class="rs-grid" id="rs-grid" role="group" aria-label="Where each runner finished"></div>
+        <p class="rs-sum" id="rs-sum" aria-live="polite"></p>
+        <div class="sheet-actions">
+          <button id="rs-back" class="ghost">‹ Back</button>
+          <button id="rs-record" class="primary">Record</button>
+        </div>
+      </div>
     </div>
   </div>
 

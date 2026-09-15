@@ -2,6 +2,8 @@
 // inside #fx; setRally() toggles the ambient state. GPU-friendly (transform/opacity),
 // alpha-transparent, each effect <= ~4.8s. Safe to fire mid-play.
 
+// Titles now come off the game row (a play's text), not only from literals here.
+const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const FX = () => document.getElementById('fx');
 const BUG = () => document.getElementById('bug');
 
@@ -45,12 +47,14 @@ export function playAnimation(anim) {
     case 'walkoff':         return walkoff();          // stays centered
     case 'goal':            return goalCelebration();  // stays centered
     // These slide out from behind the bug:
-    case 'doubleplay': return reveal('DOUBLE PLAY');
+    // A play from the pad: "Groundout 6-3", with the hitter's name under it.
+    case 'play':       if (meta.runs) runFlash(); return reveal(meta.text || 'PLAY', meta.sub);
+    case 'doubleplay': return reveal(meta.text || 'DOUBLE PLAY', meta.sub);
     case 'webgem':     return reveal('WALK');
     case 'stolenbase': return reveal('STOLEN BASE');
     case 'fieldgoal':  return reveal('FIELD GOAL');
     case 'turnover':   return reveal('TURNOVER');
-    case 'bigplay':    return reveal('BIG PLAY');
+    case 'bigplay':    return reveal(meta.text || 'BIG PLAY', meta.sub);
     case 'ace':        return reveal('ACE!');
     // The score that won it, since the scorebug has already reset to 0-0 for
     // the next set by the time this plays.
@@ -63,12 +67,12 @@ export function playAnimation(anim) {
 
 // A same-size card that slides out from behind the bug — up if the bug sits low,
 // down if it's anchored at the top. Ends hidden behind the bug again.
-function reveal(title) {
+function reveal(title, sub) {
   const layer = document.getElementById('reveal');
   if (!layer) return;
   const down = (document.body.dataset.pos || 'bottom-center').startsWith('top');
   layer.className = down ? 'from-top' : 'from-bottom';
-  layer.innerHTML = `<div class="reveal-card">${title}</div>`;
+  layer.innerHTML = `<div class="reveal-card"><span class="rv-title">${esc(title)}</span>${sub ? `<span class="rv-sub">${esc(sub)}</span>` : ''}</div>`;
   const card = layer.querySelector('.reveal-card');
   card.style.animation = `${down ? 'reveal-down' : 'reveal-up'} 2.6s cubic-bezier(.2, .8, .2, 1) both`;
   clearTimeout(layer._t);

@@ -55,7 +55,11 @@
 @keyframes chalk-fly { 0% { opacity: 0; transform: translate(0,0) scale(1.2) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(.35) rotate(var(--r)); } }
 
 /* ---- Reveal card: slides out from behind the bug ---- */
-.reveal-card { width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+/* Column: a play adds the hitter's name under its title. Uppercase because play
+   text arrives as "Groundout 6-3" and every other reveal title is capitals. */
+.rv-title { text-transform: uppercase; }
+.rv-sub { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--steel); margin-top: 3px; }
+.reveal-card { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--panel); color: var(--chalk); font-family: var(--disp); font-weight: 900;
   letter-spacing: 0.05em; text-align: center; padding: 11px 18px; font-size: 22px;
   border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius);

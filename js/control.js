@@ -32,10 +32,23 @@ function announce(text) {
 }
 
 let toastTimer;
-function showToast(msg, ms = 1600) {
+function showToast(msg, ms = 1600, action = null) {
   announce(msg);
   const t = $('toast'); if (!t) return;
-  t.textContent = msg; t.hidden = false;
+  t.replaceChildren(document.createTextNode(msg));
+  // An action makes the toast something you press, so while it is up it has to
+  // be in the accessibility tree; a plain message stays out (the live region
+  // above has already said it).
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
+    b.onclick = () => { clearTimeout(toastTimer); t.hidden = true; action.run(); };
+    t.append(b);
+    t.removeAttribute('aria-hidden');
+  } else {
+    t.setAttribute('aria-hidden', 'true');
+  }
+  t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, ms);
 }
@@ -523,8 +536,11 @@ async function doUndo() {
   if (queue.pendingFor(game.id)) return undoQueued();
   const { data, error } = await db.rpc('undo', { p_game: game.id });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); }
-  else showToast('Nothing to undo');
+  // Returns whether a play was actually reversed, for callers that go on to
+  // re-record it differently (a strikeout turned into a dropped third strike).
+  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); return true; }
+  showToast('Nothing to undo');
+  return false;
 }
 
 // Drop the newest play we haven't sent yet and rebuild from the last row the
@@ -547,19 +563,28 @@ function undoQueued() {
   game = { ...res.state, lineups: game.lineups };
   renderGame();
   showToast(queue.pendingFor(game.id) ? '↶ Undone — still saving the rest' : '↶ Undone');
+  return true;
 }
 
 // Buttons
 $('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? openWalkSheet(r) : commit(r); };
-$('btn-strike').onclick  = () => commit(L.onStrike(game));
+// A dropped third strike looks like a strikeout until the catcher misses it, so
+// the strikeout is recorded as usual and its message offers to turn it into one
+// — only when the batter is allowed to run (1st open, or two outs).
+$('btn-strike').onclick  = () => {
+  const r = L.onStrike(game);
+  const canRun = r.type === 'strikeout' && !L.playBlocked(game, 'K3');
+  commit(r);
+  if (canRun) showToast('Strikeout', 5000, { label: 'Dropped 3rd?', run: droppedThird });
+};
+async function droppedThird() { if (await doUndo()) startPlay('K3', 'C', 'toast'); }
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
-$('btn-out').onclick     = () => commit(L.onOut(game));
+$('btn-out').onclick     = () => openPlaySheet();
 $('btn-run').onclick     = () => commit(L.onRun(game));
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
-$('hit-1b').onclick      = () => commit(L.onHit(game, 1));
-$('hit-2b').onclick      = () => commit(L.onHit(game, 2));
-$('hit-3b').onclick      = () => commit(L.onHit(game, 3));
-$('hit-e').onclick       = () => commit(L.onError(game));
+$('hit-1b').onclick      = () => startPlay('H1', null, 'hit');
+$('hit-2b').onclick      = () => startPlay('H2', null, 'hit');
+$('hit-3b').onclick      = () => startPlay('H3', null, 'hit');
 $('btn-endhalf').onclick = () => commit(L.onEndHalf(game));
 $('btn-advance').onclick = () => commit(L.onAdvance(game));
 $('btn-clear').onclick   = () => commit(L.onClearBases(game));
@@ -1277,7 +1302,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -1696,6 +1721,180 @@ function renderAudio() {
   $('mute-btn').classList.toggle('on', !!a.muted);
   $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
   $('sound-pack').value = game.sound_pack || 'bigleague';
+}
+
+// Ball in play ---------------------------------------------------------------
+// OUT opens this on the fielder pick: tap who fielded it and the play records.
+// With runners on, a second step asks where everyone finished, pre-filled with
+// the likely answer (L.playDefaults), so the usual play is one more tap on
+// Record. Hits with runners on and a dropped third strike start on that step.
+// Nobody on and an out, or a hit: no second step at all.
+const PLAY_CHIPS = [['auto', 'Auto'], ['GB', 'Ground ball'], ['FB', 'Fly ball'], ['LD', 'Line drive'], ['PU', 'Pop-up'],
+  ['E', 'Error'], ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['SF', 'Sac fly'], ['K3', 'Dropped 3rd strike']];
+// Where each fielder stands on the drawn field, as % of its box.
+const FIELD_SPOT = { LF: [18, 24], CF: [50, 11], RF: [82, 24], SS: [33, 45], '2B': [67, 43],
+  '3B': [15, 64], '1B': [85, 64], P: [50, 63], C: [50, 90] };
+const RS_COLS = [['out', 'Out'], [1, '1st'], [2, '2nd'], [3, '3rd'], [4, 'Home']];
+const RS_START = { third: 3, second: 2, first: 1, batter: 0 };
+const BASE_NAME = { first: '1st', second: '2nd', third: '3rd' };
+let playType = 'auto';
+let play = null;   // { kind, pos, dest, from: 'pick' | 'hit' | 'toast' }
+
+const basesEmpty = () => { const b = L.safeBases(game.bases); return !b.first && !b.second && !b.third; };
+// "M. Reyes" fits a fielder tile; a player with only a number reads as "#12".
+const shortName = (p) => {
+  if (!p) return '';
+  const parts = String(p.name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return p.num ? `#${p.num}` : '';
+  return parts.length > 1 ? `${parts[0][0]}. ${parts[parts.length - 1]}` : parts[0];
+};
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+function openPlaySheet(type = 'auto') {
+  if (!game) return;
+  playType = type; play = null;
+  $('play-pick').hidden = false; $('play-runners').hidden = true;
+  paintPlayPick();
+  openSheet('play-sheet');
+}
+function paintPlayPick() {
+  const batter = L.currentBatter(game);
+  $('play-sub').textContent = batter ? `${shortName(batter)} · who fielded it?` : 'who fielded it?';
+  $('play-chips').replaceChildren(...PLAY_CHIPS.map(([kind, label]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'play-chip'; btn.dataset.kind = kind; btn.textContent = label;
+    btn.classList.toggle('on', playType === kind);
+    btn.setAttribute('aria-pressed', String(playType === kind));
+    // Not `disabled`: a disabled button swallows the tap, and the tap is when you
+    // want to hear why a double play isn't possible with nobody on.
+    if (kind !== 'auto' && L.playBlocked(game, kind)) { btn.classList.add('blocked'); btn.setAttribute('aria-disabled', 'true'); }
+    return btn;
+  }));
+  const chosen = PLAY_CHIPS.find(([k]) => k === playType);
+  $('play-will').textContent = playType === 'auto'
+    ? 'Tap who fielded it. Infield records a groundout (SS → 6-3), outfield a flyout (CF → F8). For anything else, pick the type first.'
+    : `Tap who fielded the ${chosen[1].toLowerCase()}.`;
+  const side = L.fieldingSide(game);
+  const field = $('play-field');
+  field.querySelectorAll('.fielder').forEach((x) => x.remove());
+  for (const pos of L.FIELD_POSITIONS) {
+    const f = L.fielderAt(game, side, pos);
+    const [x, y] = FIELD_SPOT[pos];
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'fielder'; btn.dataset.pos = pos;
+    btn.style.left = `${x}%`; btn.style.top = `${y}%`;
+    const b = document.createElement('b'); b.textContent = pos;
+    const s = document.createElement('span'); s.textContent = shortName(f) || '—';
+    btn.append(b, s);
+    btn.setAttribute('aria-label', f ? `${pos}, ${f.name || '#' + f.num}` : pos);
+    field.appendChild(btn);
+  }
+}
+$('play-chips').onclick = (e) => {
+  const c = e.target.closest('.play-chip'); if (!c) return;
+  const kind = c.dataset.kind;
+  if (c.classList.contains('blocked')) return showToast(L.playBlocked(game, kind), 3200);
+  if (kind === 'K3') return startPlay('K3', 'C', 'pick');   // nobody to pick: the catcher had it
+  playType = playType === kind ? 'auto' : kind;
+  paintPlayPick();
+};
+$('play-field').onclick = (e) => {
+  const f = e.target.closest('.fielder'); if (!f) return;
+  startPlay(playType === 'auto' ? L.autoKind(f.dataset.pos) : playType, f.dataset.pos, 'pick');
+};
+$('play-just-out').onclick = () => { closeSheet('play-sheet'); commit(L.onOut(game)); };
+$('play-cancel').onclick = () => closeSheet('play-sheet');
+
+function startPlay(kind, pos, from) {
+  if (!game) return;
+  play = { kind, pos, dest: L.playDefaults(game, kind), from };
+  // Nobody on base: nothing to ask. An error or a dropped third still asks,
+  // because the batter may not have stopped at first.
+  if (basesEmpty() && kind !== 'E' && kind !== 'K3') return recordPlay();
+  $('play-pick').hidden = true; $('play-runners').hidden = false;
+  paintRunners();
+  if ($('play-sheet').hidden) openSheet('play-sheet');
+  else (focusablesIn($('play-sheet'))[0] || $('play-sheet')).focus({ preventScroll: true });
+}
+function paintRunners() {
+  const { kind, pos, dest } = play;
+  const code = L.playCode(kind, pos);
+  $('rs-play').textContent = code && kind !== 'K3' ? `${L.PLAY_LABEL[kind]} ${code}` : L.PLAY_LABEL[kind];
+  // "who fielded it?" is answered by now; the header just names the hitter.
+  $('play-sub').textContent = shortName(L.currentBatter(game));
+  const b = L.safeBases(game.bases);
+  const rows = ['third', 'second', 'first'].filter((k) => b[k]).map((k) => [k, 'Runner', `on ${BASE_NAME[k]}`]);
+  rows.push(['batter', shortName(L.currentBatter(game)) || 'Batter', 'batter']);
+  const r = L.resolvePlay(game, dest);
+  const clashAt = r.clash ? RS_START[r.clash] : null;
+  const had = document.activeElement && document.activeElement.closest && document.activeElement.closest('.rs-opt');
+  const keep = had ? `[data-who="${had.dataset.who}"][data-to="${had.dataset.to}"]` : null;
+
+  const grid = $('rs-grid');
+  const kids = [document.createElement('span')];
+  for (const [, label] of RS_COLS) { const h = document.createElement('span'); h.className = 'rs-hd'; h.textContent = label; kids.push(h); }
+  for (const [who, name, from] of rows) {
+    const w = document.createElement('span'); w.className = 'rs-who';
+    const nb = document.createElement('b'); nb.textContent = name;
+    w.append(nb, document.createTextNode(from));
+    kids.push(w);
+    for (const [to, label] of RS_COLS) {
+      // A runner can finish where he started or further on, never behind it.
+      if (to !== 'out' && to < RS_START[who]) { kids.push(document.createElement('span')); continue; }
+      const on = dest[who] === to;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'rs-opt'; btn.dataset.who = who; btn.dataset.to = String(to);
+      btn.textContent = to === 4 ? 'H' : label;
+      btn.classList.toggle('on', on);
+      btn.classList.toggle('o', to === 'out');
+      btn.classList.toggle('h', to === 4);
+      btn.classList.toggle('stay', to === RS_START[who]);
+      btn.classList.toggle('clash', on && to === clashAt);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', `${name} ${from}: ${label}`);
+      kids.push(btn);
+    }
+  }
+  grid.replaceChildren(...kids);
+  if (keep) { const again = grid.querySelector(keep); if (again) again.focus({ preventScroll: true }); }
+
+  const rec = $('rs-record');
+  const sum = $('rs-sum');
+  if (r.clash) {
+    sum.className = 'rs-sum bad';
+    sum.textContent = `Two players finished on ${BASE_NAME[r.clash]}. Move one of them to record the play.`;
+    rec.disabled = true; rec.textContent = 'Record';
+    return;
+  }
+  const res = L.onPlay(game, play);
+  const runs = res.payload.runs;
+  const outs = (game.outs | 0) + r.outs;
+  const onBase = ['first', 'second', 'third'].filter((k) => r.bases[k]).map((k) => BASE_NAME[k]);
+  sum.className = 'rs-sum';
+  sum.textContent = outs >= 3
+    ? `Side retired${r.runs > runs ? ' — no run counts when the third out is the batter or a force' : ''}.`
+    : `${plural(outs, 'out', 'outs')} · ${plural(runs, 'run', 'runs')} · on base: ${onBase.length ? onBase.join(', ') : 'nobody'}`;
+  rec.disabled = false;
+  // Short: at 375pt "Record · 1 run scores" wrapped onto two lines.
+  rec.textContent = runs ? `Record · ${plural(runs, 'run', 'runs')}` : 'Record';
+}
+$('rs-grid').onclick = (e) => {
+  const o = e.target.closest('.rs-opt'); if (!o || !play) return;
+  play.dest = { ...play.dest, [o.dataset.who]: o.dataset.to === 'out' ? 'out' : +o.dataset.to };
+  paintRunners();
+};
+$('rs-back').onclick = () => {
+  if (play && play.from === 'pick') { play = null; $('play-runners').hidden = true; $('play-pick').hidden = false; paintPlayPick(); return; }
+  play = null; closeSheet('play-sheet');
+};
+$('rs-record').onclick = () => recordPlay();
+function recordPlay() {
+  const r = play && L.onPlay(game, play);
+  if (!r) return;
+  play = null; playType = 'auto';
+  closeSheet('play-sheet');
+  commit(r);
+  showToast(r.payload.runs ? `${r.text} · ${plural(r.payload.runs, 'run scores', 'runs score')}` : r.text);
 }
 
 // Home-run sheet ------------------------------------------------------------
@@ -2415,8 +2614,9 @@ document.addEventListener('keydown', (e) => {
   if ((game.sport || 'baseball') === 'baseball') {
     const map = {
       b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-batter',
-      1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', e: 'hit-e', a: 'btn-advance', c: 'btn-clear',
+      1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', a: 'btn-advance', c: 'btn-clear',
     };
+    if (k === 'e') { e.preventDefault(); return openPlaySheet('E'); }
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });

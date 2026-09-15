@@ -274,6 +274,53 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   background: var(--steel); color: #06090f; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); animation: toast-in 0.2s ease; }
 .toast[hidden] { display: none; }
+/* In a game the toast sits above the bottom bar, not on Undo — and it can hold
+   a button now (Dropped 3rd?), which must never land under a thumb meant for Undo. */
+body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
+.toast-act { margin-left: 12px; padding: 7px 12px; border-radius: 999px; background: #06090f;
+  color: var(--steel); font-size: 13px; font-weight: 800; }
+
+/* ---- Ball in play ------------------------------------------------------- */
+.play-card .sit-head { margin-bottom: 12px; }
+.play-chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 -18px; padding: 0 18px 4px; scrollbar-width: none; }
+.play-chips::-webkit-scrollbar { display: none; }
+.play-chip { flex: 0 0 auto; padding: 10px 13px; border-radius: 999px; background: var(--card);
+  border: 1px solid var(--line-2); color: var(--chalk); font-size: 13px; font-weight: 700; }
+.play-chip.on { background: var(--steel); border-color: var(--steel); color: #06090f; }
+.play-chip.blocked { opacity: 0.4; }
+.play-will { margin: 10px 2px 12px; font-size: 13px; line-height: 1.45; color: var(--body); text-wrap: pretty; }
+/* A ballfield, because the tap is "who fielded it", and people find SS by where it stands. */
+.play-field { position: relative; width: 100%; aspect-ratio: 1 / 0.9; max-height: 46dvh; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 100%, #10281b 0%, #0b1c13 70%); border: 1px solid #1b3a28; }
+.pf-dirt { position: absolute; left: 50%; top: 66%; width: 42%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(45deg);
+  border: 2px solid rgba(224, 169, 42, 0.28); background: rgba(168, 108, 20, 0.08); }
+.pf-arc { position: absolute; left: 50%; top: 66%; width: 150%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 50%; border: 1px dashed rgba(242, 246, 252, 0.08); }
+.fielder { position: absolute; transform: translate(-50%, -50%); min-width: 76px; min-height: 48px; padding: 6px 8px;
+  border-radius: 12px; background: rgba(20, 28, 44, 0.95); border: 1px solid var(--line-2); color: var(--chalk);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.fielder b { font-family: var(--num); font-size: 20px; font-weight: 700; line-height: 1; color: var(--steel); }
+.fielder span { font-size: 11px; font-weight: 600; max-width: 86px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fielder:active { background: var(--steel); }
+.fielder:active b, .fielder:active span { color: #06090f; }
+.sheet-actions .primary.play-out { background: var(--out); }
+
+.rs-play { margin: 0 0 4px; font-family: var(--num); font-size: 26px; font-weight: 700; letter-spacing: 0.02em; }
+.rs-grid { display: grid; grid-template-columns: minmax(64px, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 5px; align-items: center; margin-top: 12px; }
+.rs-hd { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.rs-who { min-width: 0; font-size: 11px; line-height: 1.2; color: var(--muted); }
+.rs-who b { display: block; font-size: 13px; color: var(--chalk); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-opt { height: 46px; padding: 0; border-radius: 10px; background: var(--card); border: 1px solid var(--line-2);
+  color: var(--body); font-family: var(--num); font-size: 16px; font-weight: 700; }
+/* Underlined: "where he already is", so holding a runner is easy to find. */
+.rs-opt.stay { box-shadow: inset 0 -3px 0 var(--line-2); }
+.rs-opt.on { background: var(--steel); border-color: var(--steel); color: #06090f; }
+.rs-opt.on.o { background: var(--out); border-color: var(--out); color: #fff; }
+.rs-opt.on.h { background: var(--run); border-color: var(--run); color: #fff; }
+.rs-opt.clash { box-shadow: inset 0 0 0 2px var(--strike); }
+.rs-sum { margin: 12px 2px 0; font-size: 13px; line-height: 1.45; color: var(--body); }
+.rs-sum.bad { color: #ff9b94; }
+#rs-record:disabled { opacity: 0.45; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .muted { color: var(--muted); }
 
