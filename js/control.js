@@ -1962,7 +1962,7 @@ function renderAdjust() {
 // Teams & lineups (baseball) ------------------------------------------------
 // Rosters live in the `lineups` jsonb column (written directly, not undoable).
 // The current-hitter index lives in state.batIdx (undoable via apply_event).
-const LINEUP_SLOTS = 12;
+const LINEUP_SLOTS = 15;
 // A row's position dropdown: the nine spots, then '' for not in the field (DH/EH/bench).
 const POS_OPTIONS = [...L.FIELD_POSITIONS, ''];
 let lineupBuiltFor = null;
