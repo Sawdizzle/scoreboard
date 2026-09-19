@@ -516,7 +516,10 @@ async function commit(res) {
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
   // The first play of the game is what makes it live. Riding the play's own
   // write means undoing that play puts the game back to Not started too.
-  if (game.status === 'setup' && !('status' in res.patch)) res = { ...res, patch: { ...res.patch, status: 'live' } };
+  if (game.status === 'setup' && !('status' in res.patch)) {
+    res = { ...res, patch: { ...res.patch, status: 'live' } };
+    dropStartingSoon();
+  }
   haptic();
   const prev = game;
   const gameId = game.id;
@@ -912,6 +915,12 @@ async function showCard(type) {
   if (type === 'lineup') meta.auto = true;
   await writeField({ card: { type, meta, nonce: nextNonce() } });
   showToast(`🎬 ${cardLabel(type)} on air`);
+}
+// The game going live ends the pre-game: a Starting Soon raised by hand comes
+// down with it, the same as the automatic one. Its own write — apply_event
+// does not carry the card column.
+function dropStartingSoon() {
+  if (game && game.card && game.card.type === 'starting') writeField({ card: null });
 }
 async function clearCard() {
   const was = game.card && game.card.type;
@@ -1523,7 +1532,10 @@ $('clock-start').onclick = () => {
   if (!game.time_limit_seconds) return;
   const rem = game.clock_remaining_seconds ?? game.time_limit_seconds;
   // Written here, read in the overlay: it has to be an instant on the shared clock.
-  writeField({ clock_running: true, clock_ends_at: new Date(serverNow() + rem * 1000).toISOString(), clock_remaining_seconds: rem });
+  // Starting the clock starts the game: it goes live and the automatic Starting Soon comes down.
+  if (game.status === 'setup') dropStartingSoon();
+  writeField({ clock_running: true, clock_ends_at: new Date(serverNow() + rem * 1000).toISOString(), clock_remaining_seconds: rem,
+    ...(game.status === 'setup' ? { status: 'live' } : {}) });
 };
 $('clock-pause').onclick = () => {
   if ((game.sport || 'baseball') === 'soccer') return commit(S.clockPause(game, serverNow()));

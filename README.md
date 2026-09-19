@@ -140,7 +140,7 @@ Baseball games also get a **play-by-play**, one card per half-inning with the ne
 
 ## Broadcast cards
 
-All of them live in **🎬 On Air** on the bottom bar: tap a card to raise it (the sheet closes behind it), tap it again or the header chip's ✕ to take it down. When the game is baseball the sheet leads with a **Right now** row guessing the likely card — Mid-Inning and Due Up at the top of a half, Starting Soon before first pitch.
+All of them live in **🎬 On Air** on the bottom bar: tap a card to raise it (the sheet closes behind it), tap it again or the header chip's ✕ to take it down. When the game is baseball the sheet outlines the likely card — Mid-Inning and Due Up at the top of a half, Starting Soon before first pitch.
 
 Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
 
@@ -150,7 +150,7 @@ They breathe: a slow accent-tinted flare drifts across on a 38s cycle with a fai
 
 - **🔁 Mid-Inning** — the full scoreboard while the teams change over: logos, big score, and the baseball line score. The header reads the game state, so raising it after the top of the 3rd says "Middle of the 3rd" and after the bottom says "End of the 3rd" (football/basketball get "End of Q2", soccer "Halftime"). It stays **live** while it's up — fix a score or roll the inning behind it and the card follows without re-animating.
 - **🏁 Final (full)** — the same slab with a Final header. The corner Final card is unchanged; this is the full-frame version for the end of the broadcast.
-- **🕐 Starting Soon** — both logos, VS, and a live countdown to first pitch. Set **First pitch** in Setup to get the countdown (leave it empty and the card just shows the matchup); at zero it flips to "STARTING NOW" and stays up until you clear it or raise another card. The subtitle field retitles it — "Varsity Baseball", "Game 2 of 3".
+- **🕐 Starting Soon** — both logos, VS, and a live countdown to first pitch. Set **Start time** in Setup to get the countdown (leave it empty and the card just shows the matchup); at zero it flips to "STARTING NOW". **It is on air automatically until the game starts** — the overlay shows it whenever the game is Not started and no other card is up. Starting the game clock or scoring the first play makes the game live and takes it down, including one you raised by hand. The subtitle field retitles it — "Varsity Baseball", "Game 2 of 3".
 
 ## Game management
 

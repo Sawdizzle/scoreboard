@@ -440,9 +440,13 @@ function cardSig(c, s) {
   }
   return null; // other cards are pure snapshots
 }
+// Before the game starts, the frame belongs to Starting Soon unless another card
+// is up. It is not written to the row: starting the clock or the first play
+// makes the game live, and the card goes with it — nothing left to take down.
+const AUTO_STARTING = { type: 'starting', nonce: 0 };
 function renderCard(s) {
   const layer = document.getElementById('card');
-  const c = s.card;
+  const c = s.card || (s.status === 'setup' ? AUTO_STARTING : null);
   const key = c && c.type ? `${c.type}:${c.nonce || 0}` : null;
   const sig = key ? cardSig(c, s) : null;
   if (key === lastCardKey && sig === lastCardSig) return;
