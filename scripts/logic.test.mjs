@@ -818,3 +818,46 @@ test('a runner cannot steal onto an occupied base', () => {
   assert.equal(L.onRunnerPlay(G({ bases: bases(1, 1, 0) }), 'first', 'SB'), null);
   assert.equal(L.runnerBlocked(G({ bases: bases(1, 1, 0) }), 'first', 'CS'), '');
 });
+
+// ---------------------------------------------------------------------------
+// Field screen: trade spots
+// ---------------------------------------------------------------------------
+const fieldTeam = () => ({
+  batters: [0, 1, 2, 3].map((i) => ({ num: String(10 + i), name: 'K' + i })),
+  positions: { '1B': 0, '3B': 1 }, pitcher: { num: '12', name: 'K2' },
+});
+test('moving a kid onto a taken spot trades the two', () => {
+  const { team, moved } = L.assignSpot(fieldTeam(), '3B', 0);
+  assert.equal(L.slotAt(team, '3B'), 0);
+  assert.equal(L.slotAt(team, '1B'), 1, 'the old 3B takes 1B');
+  assert.deepEqual(moved, { idx: 1, to: '1B' });
+});
+test('trading with the pitcher moves the pitcher too', () => {
+  const { team } = L.assignSpot(fieldTeam(), 'P', 0);
+  assert.equal(L.slotAt(team, 'P'), 0);
+  assert.equal(team.pitcher.num, '10');
+  assert.equal(L.slotAt(team, '1B'), 2, 'old pitcher plays 1B');
+});
+test('a kid off the bench sends the one he replaces to the bench', () => {
+  const { team, moved } = L.assignSpot(fieldTeam(), '1B', 3);
+  assert.equal(L.slotAt(team, '1B'), 3);
+  assert.equal(L.positionOf(team, 0), '');
+  assert.deepEqual(moved, { idx: 0, to: '' });
+});
+test('an empty spot just takes the kid', () => {
+  const { team, moved } = L.assignSpot(fieldTeam(), 'SS', 3);
+  assert.equal(L.slotAt(team, 'SS'), 3);
+  assert.equal(moved, null);
+});
+
+// ---------------------------------------------------------------------------
+// Mid-Inning goes up on its own, except when the half ended the game
+// ---------------------------------------------------------------------------
+test('a half that ends a regulation game is not a mid-inning', () => {
+  assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'bottom', inning: 6, home_score: 5, away_score: 3 }), true);
+  assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'bottom', inning: 6, home_score: 3, away_score: 5 }), false);
+  assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'top', inning: 7, home_score: 3, away_score: 5 }), true);
+  assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'top', inning: 7, home_score: 4, away_score: 4 }), false);
+  assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'top', inning: 4, home_score: 0, away_score: 9 }), false);
+  assert.equal(L.halfEndsGame({ regulation_innings: 0, half: 'top', inning: 9, home_score: 0, away_score: 9 }), false);
+});

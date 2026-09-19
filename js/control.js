@@ -582,6 +582,22 @@ async function commit(res) {
   game = { ...game, ...patch };
   renderGame();
   queue.enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
+  midInningFollow(prev, game, res.type);
+}
+// The third out puts Mid-Inning up by itself: the stream has the full scoreboard
+// while the teams change and you fix positions. Its toast opens the Field screen.
+// The next half's first pitch or play takes it down. A Situation-sheet flip is a
+// correction, not a half ending, so it does neither.
+function midInningFollow(prev, next, type) {
+  if ((next.sport || 'baseball') !== 'baseball' || type === 'half' || type === 'inning') return;
+  const up = next.card && next.card.type === 'midinning';
+  if (next.half !== prev.half) {
+    if (next.status === 'final' || L.halfEndsGame(next)) return;
+    if (!up) writeField({ card: { type: 'midinning', meta: {}, nonce: nextNonce() } });
+    showToast('🔁 Mid-Inning on air', 6000, { label: 'Set field', run: () => openField(L.fieldingSide(game)) });
+  } else if (up && L.HALF_STARTERS.has(type)) {
+    writeField({ card: null });
+  }
 }
 
 // Strictly-increasing nonce so two triggers in the same millisecond don't collide
@@ -703,6 +719,99 @@ $('rn-list').onclick = (e) => {
   // Stay open while anyone is left on base: a double steal is two taps.
   if (basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
 };
+// ---- Field screen ----------------------------------------------------------
+// Positions by jersey number, the way you see them from the dugout fence. A
+// full screen, not a sheet: nothing behind it, one Back. Tap a spot, tap the
+// number playing there; if that kid was somewhere else the two trade.
+const FIELD_TILE = { LF: [15, 12], CF: [50, 4], RF: [85, 12], SS: [31, 38], '2B': [69, 36],
+  '3B': [12, 60], '1B': [88, 60], P: [50, 56], C: [50, 84] };
+let fieldSide = 'home', fieldPick = null;
+function openField(side) {
+  if (!game) return;
+  fieldSide = side || L.fieldingSide(game); fieldPick = null;
+  closeDrawer();
+  for (const id of [...sheetStack]) closeSheet(id);
+  $('field-view').hidden = false;
+  document.body.classList.add('field-open');
+  paintField();
+  $('field-back').focus({ preventScroll: true });
+}
+function closeField() {
+  if (fieldPick) { fieldPick = null; return paintField(); }   // Back from the numbers goes to the field first
+  $('field-view').hidden = true;
+  document.body.classList.remove('field-open');
+}
+const teamAbbr = (s) => (s === 'home' ? game.home_abbr || game.home_name || 'HOME' : game.away_abbr || game.away_name || 'AWAY');
+function paintField() {
+  if (!game || $('field-view').hidden) return;
+  const team = (game.lineups || {})[fieldSide] || {};
+  const batters = teamOf(fieldSide).batters;
+  const inField = L.fieldingSide(game);
+  for (const s of ['away', 'home']) {
+    const b = $('fv-tab-' + s);
+    b.textContent = `${teamAbbr(s)}${s === inField ? ' · in the field' : ''}`;
+    b.setAttribute('aria-pressed', String(s === fieldSide));
+  }
+  const miss = L.missingPositions(team);
+  $('fv-note').textContent = fieldPick ? `Who's playing ${fieldPick}? Tap the jersey number.`
+    : miss.length ? `Empty: ${miss.join(' · ')} — tap a spot to fill it` : 'Tap a spot to change who plays there.';
+  $('fv-field').hidden = !!fieldPick;
+  $('fv-numbers').hidden = !fieldPick;
+  if (!fieldPick) {
+    const field = $('fv-field');
+    field.querySelectorAll('.fv-tile').forEach((x) => x.remove());
+    for (const pos of L.FIELD_POSITIONS) {
+      const i = L.slotAt(team, pos);
+      const p = i >= 0 ? batters[i] : null;
+      const [x, y] = FIELD_TILE[pos];
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'fv-tile' + (p ? '' : ' empty'); btn.dataset.pos = pos;
+      btn.style.left = x + '%'; btn.style.top = y + '%';
+      const lab = document.createElement('small'); lab.textContent = pos;
+      const num = document.createElement('b'); num.textContent = p ? (p.num ? '#' + p.num : shortName(p)) : '—';
+      btn.append(lab, num);
+      btn.setAttribute('aria-label', p ? `${pos}: ${p.num ? 'number ' + p.num + ', ' : ''}${p.name || ''}` : `${pos}: empty`);
+      field.appendChild(btn);
+    }
+    return;
+  }
+  const here = L.slotAt(team, fieldPick);
+  $('fv-numbers').replaceChildren(...batters.map((b, i) => [b, i]).filter(([b]) => b && (b.num || b.name)).map(([b, i]) => {
+    const at = L.positionOf(team, i);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'fv-num' + (i === here ? ' on' : '') + (at ? '' : ' bench'); btn.dataset.i = i;
+    const n = document.createElement('b'); n.textContent = b.num ? '#' + b.num : shortName(b);
+    const w = document.createElement('small'); w.textContent = i === here ? 'here now' : at ? `at ${at}` : 'bench';
+    const nm = document.createElement('span'); nm.textContent = shortName(b);
+    btn.append(n, nm, w);
+    btn.setAttribute('aria-label', `${b.num ? 'Number ' + b.num + ', ' : ''}${b.name || ''}, ${at ? 'playing ' + at : 'on the bench'}`);
+    return btn;
+  }));
+}
+$('field-open').onclick = () => openField();
+$('field-back').onclick = closeField;
+$('fv-tab-away').onclick = () => { fieldSide = 'away'; fieldPick = null; paintField(); };
+$('fv-tab-home').onclick = () => { fieldSide = 'home'; fieldPick = null; paintField(); };
+$('fv-field').onclick = (e) => {
+  const t = e.target.closest('.fv-tile'); if (!t) return;
+  haptic(); fieldPick = t.dataset.pos; paintField();
+};
+$('fv-numbers').onclick = (e) => {
+  const o = e.target.closest('.fv-num'); if (!o) return;
+  const side = fieldSide, pos = fieldPick, i = +o.dataset.i;
+  const lineups = game.lineups || {};
+  const { team, moved } = L.assignSpot(lineups[side] || {}, pos, i);
+  haptic();
+  fieldPick = null;
+  saveRoster({ ...lineups, [side]: team });
+  const who = (b) => (b && b.num ? '#' + b.num : shortName(b));
+  const bs = teamOf(side).batters;
+  showToast(`✓ ${who(bs[i])} to ${pos}` + (moved ? (moved.to ? ` · ${who(bs[moved.idx])} to ${moved.to}` : ` · ${who(bs[moved.idx])} to bench`) : ''), 3000);
+  paintField();
+  renderLineups();
+};
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('field-view').hidden) { e.preventDefault(); closeField(); } });
+
 $('hit-hbp').onclick     = () => commit(L.onHitByPitch(game));
 $('hit-e').onclick       = () => openPlaySheet('E');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
@@ -2221,12 +2330,14 @@ async function saveLineup(side) {
   const lineups = game.lineups || {};
   await saveRoster({ ...lineups, [side]: L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters) });
 }
-// A row's position dropdown. Whoever held that spot goes to the bench; their row
-// flashes so it's clear who needs a new position.
+// A row's position dropdown. Same rule as the Field screen: whoever held that
+// spot trades into this kid's old one (or goes to the bench if this kid had
+// none). Their row flashes so the move is easy to see.
 async function setRowPosition(side, i, pos) {
   const lineups = game.lineups || {};
   const cur = L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters);
-  const { team, benched } = L.setPosition(cur, i, pos);
+  const r = pos ? L.assignSpot(cur, pos, i) : { team: L.setPosition(cur, i, '').team, moved: null };
+  const team = r.team, benched = r.moved ? r.moved.idx : -1;
   const next = { ...lineups, [side]: team };
   game = { ...game, lineups: next };
   fillLineup(side);
@@ -2234,7 +2345,7 @@ async function setRowPosition(side, i, pos) {
     const row = $('lineup-' + side).querySelector(`.lineup-row[data-i="${benched}"]`);
     if (row) { row.classList.remove('benched'); void row.offsetWidth; row.classList.add('benched'); }
     const b = team.batters[benched] || {};
-    showToast(`${b.name || '#' + b.num} to the bench — pick a new spot`, 2800);
+    showToast(`${b.name || '#' + b.num} to ${r.moved.to || 'the bench'}`, 2800);
   }
   await saveRoster(next);
 }
@@ -2357,6 +2468,7 @@ function renderLineups() {
   else delete panelPainted.lineups;
   renderCurrentHitter('away'); renderCurrentHitter('home');
   showLineupSide();
+  paintField();   // a roster saved elsewhere repaints an open Field screen too
 }
 // The drag-onto-a-diamond Defense panel lived here until v3.62. Positions are
 // now a dropdown on each lineup row (setRowPosition / L.setPosition).

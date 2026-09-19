@@ -787,10 +787,28 @@
       <button id="undo-btn" class="undo"><i aria-hidden="true">↶</i>Undo</button>
       <button id="fx-replay" class="gm-b replay obs-only"><i aria-hidden="true">🎞️</i>Replay</button>
       <button id="cam-open" class="gm-b cam obs-only" hidden><i aria-hidden="true">🎥</i>Cameras</button>
+      <button id="field-open" class="gm-b field sport-only" data-sport="baseball"><i aria-hidden="true">🧢</i>Field</button>
       <button id="onair-open" class="gm-b onair"><i aria-hidden="true">🎬</i>On Air</button>
       <button id="dw-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
     </div>
   </section>
+
+  <!-- FIELD SCREEN -->
+  <!-- Positions by jersey number. Full screen on purpose: nothing behind it,
+       nothing to scroll, one Back. -->
+  <div id="field-view" class="field-view" role="dialog" aria-modal="true" aria-labelledby="fv-title" hidden>
+    <div class="fv-top">
+      <button id="field-back" class="fv-back" type="button">‹ Back</button>
+      <h2 id="fv-title">Field</h2>
+    </div>
+    <div class="fv-tabs" role="group" aria-label="Team">
+      <button id="fv-tab-away" type="button" aria-pressed="false">Away</button>
+      <button id="fv-tab-home" type="button" aria-pressed="true">Home</button>
+    </div>
+    <p id="fv-note" class="fv-note" aria-live="polite"></p>
+    <div id="fv-field" class="fv-field"><span class="fv-dirt" aria-hidden="true"></span></div>
+    <div id="fv-numbers" class="fv-numbers" hidden></div>
+  </div>
 
   <!-- Signed out mid-game: the one failure the pad cannot recover from on its
        own, and the one a toast is wrong for — it would vanish while the queue
@@ -1009,7 +1027,7 @@
         <div class="lineup-list" id="lineup-home"></div>
       </section>
 
-      <p class="hint"><b>◎</b> marks who's up; <b>Next Batter</b> moves it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters — positions go with them. <b>P</b> is the pitcher; <b>—</b> means not in the field.</p>
+      <p class="hint"><b>◎</b> marks who's up; tap another ◎ to move it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters — positions go with them. <b>P</b> is the pitcher; <b>—</b> means not in the field.</p>
       <div class="sheet-actions"><button id="lu-done" class="primary">Done</button></div>
     </div>
   </div>

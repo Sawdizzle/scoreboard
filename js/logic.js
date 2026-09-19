@@ -296,6 +296,41 @@ export function setPosition(team, idx, pos) {
   }
   return { team: { ...t, positions, pitcher }, benched };
 }
+// The Field screen: put lineup slot `idx` at `pos`, and the kid who had `pos`
+// TRADES into idx's old spot. Kids rotate far more often than they sit, so this
+// is one tap per move. A kid coming off the bench (no old spot) sends the one he
+// replaces to the bench. Returns the team and who moved as a side effect, if anyone.
+export function assignSpot(team, pos, idx) {
+  const from = positionOf(team, idx);
+  if (from === pos) return { team, moved: null };
+  const r = setPosition(team, idx, pos);
+  if (r.benched < 0) return { team: r.team, moved: null };
+  if (!from) return { team: r.team, moved: { idx: r.benched, to: '' } };
+  return { team: setPosition(r.team, r.benched, from).team, moved: { idx: r.benched, to: from } };
+}
+// Which lineup slot plays `pos`, or -1.
+export function slotAt(team, pos) {
+  const t = team || {};
+  if (pos === 'P') return pitcherIdx(t);
+  const i = (t.positions || {})[pos];
+  return i == null ? -1 : i;
+}
+
+// ---- Mid-Inning, on its own -----------------------------------------------
+// The third out raises the Mid-Inning card so the stream has something up while
+// the teams change and the operator fixes positions. Not when that half ended
+// the game (home ahead after the top of the last inning, or a lead after a
+// completed extra inning): that is the Final card's moment.
+export function halfEndsGame(after) {
+  const reg = after.regulation_innings | 0;
+  if (!reg) return false;
+  const inn = after.inning | 0, h = after.home_score | 0, a = after.away_score | 0;
+  if (after.half === 'bottom') return inn >= reg && h > a;     // top of the last just ended, home leads
+  return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
+}
+// A play that belongs to the new half takes Mid-Inning down.
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'hbp', 'hit', 'play', 'homerun', 'runner', 'run', 'error']);
+
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
   const t = team || {};
