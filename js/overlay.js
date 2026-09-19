@@ -36,9 +36,14 @@ let rosterBackoff = 2000;
 // than roster_rev, because the row carries the new revision before the fetch
 // that satisfies it has landed.
 let rosterGen = 0;
+let rosterAsk = 0;
 async function pullRoster(rev) {
   rosterRev = rev; // claim it first: a slow fetch must not re-trigger on every paint
+  const ask = ++rosterAsk;
   const { data, error } = await db.rpc('get_roster', { p_game: gameId, p_token: rosterToken });
+  // Two edits close together start two fetches; the older can answer last.
+  // Only the newest request gets to set the roster.
+  if (ask !== rosterAsk) return;
   if (error) {
     // Claiming the revision and then failing left the overlay believing it
     // already had this roster, so it never asked again and the lineup and

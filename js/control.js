@@ -359,11 +359,28 @@ async function loadRoster(id) {
 // separate bump read off the local row, so two devices editing lineups between
 // innings produced the same number and one edit left the overlay pointing at a
 // revision it thought it already had. The returned value is authoritative.
+//
+// One save in flight at a time. Every call carries the whole roster, so a
+// burst of edits between innings (a drag, then a position, then a name) used
+// to send three overlapping writes, and on field LTE the last to land was not
+// always the last made: the pad showed one order while the server, and so the
+// overlay, kept an older one. Now a save made while another is out waits, and
+// only the newest waiting roster is sent.
+let rosterSending = false, rosterNext = null;
 async function saveRoster(lineups) {
   game = { ...game, lineups };
-  const { data, error } = await db.rpc('save_roster', { p_game: game.id, p_data: lineups });
-  if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  game = { ...game, roster_rev: data | 0 };
+  rosterNext = { id: game.id, lineups };
+  if (rosterSending) return;
+  rosterSending = true;
+  try {
+    while (rosterNext) {
+      const { id, lineups: data } = rosterNext;
+      rosterNext = null;
+      const res = await db.rpc('save_roster', { p_game: id, p_data: data });
+      if (res.error) { showToast(`⚠️ Lineup not saved: ${res.error.message}`, 4000); continue; }
+      if (game && game.id === id) game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) };
+    }
+  } finally { rosterSending = false; }
 }
 const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
 
@@ -380,6 +397,10 @@ async function openGame(id) {
   // uncorrected clock is one the other device can never beat.
   const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
   game.lineups = lineups;
+  // The saved-team pickers are a one-shot action, not a label. Left showing the
+  // last game's pick, they said a team was loaded here when it wasn't, and
+  // choosing that same team again fired no change, so nothing would load.
+  for (const s of ['away', 'home']) { const sel = $('team-sel-' + s); if (sel) sel.value = ''; }
   // Open only while there is real setup left; one step to go is a slim line you can tap.
   guideCollapsed = setupSteps().filter(([, ok]) => !ok).length <= 1;
   show('game'); renderGame();
@@ -821,7 +842,10 @@ async function saveTeam(side) {
 }
 async function loadTeamInto(side, id) {
   const t = savedTeams.find((x) => x.id === id);
+  $('team-sel-' + side).value = '';   // one-shot: picking the same team again must reload it
   if (!t) return;
+  const has = teamOf(side).batters.some((b) => b && (b.name || b.num));
+  if (has && !confirm(`Replace this game's ${side} lineup with the saved "${t.name}" lineup?`)) return;
   await saveRoster({ ...(game.lineups || {}), [side]: t.roster || {} });
   const patch = {};
   patch[side + '_name'] = t.name;
@@ -2266,6 +2290,9 @@ function renderLineups() {
   // Don't overwrite inputs the user is actively typing into; always refresh the marker.
   const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lu-side');
   if (!editing) { fillLineup('away'); fillLineup('home'); }
+  // Skipped while typing: forget the paint so the next render fills it in,
+  // instead of the sheet holding an old lineup until the roster changes again.
+  else delete panelPainted.lineups;
   renderCurrentHitter('away'); renderCurrentHitter('home');
   showLineupSide();
 }
