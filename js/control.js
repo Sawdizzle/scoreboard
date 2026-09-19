@@ -332,7 +332,7 @@ async function openGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).single();
   if (error) return alert(error.message);
   lastRowAt = 0;   // a different game's timestamps say nothing about this one
-  game = adopted(data); queue.setBaseline(data); overlayCopied = false; guideCollapsed = setupAllDone();
+  game = adopted(data); queue.setBaseline(data); overlayCopied = false;
   panelPainted = {};   // nothing on screen belongs to this game yet
   lastSaidScore = null;
   resetReplayUi();
@@ -340,6 +340,8 @@ async function openGame(id) {
   // uncorrected clock is one the other device can never beat.
   const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
   game.lineups = lineups;
+  // Open only while there is real setup left; one step to go is a slim line you can tap.
+  guideCollapsed = setupSteps().filter(([, ok]) => !ok).length <= 1;
   show('game'); renderGame();
   $('overlay-url').value = overlayUrl();
   $('recap-url').value = `${location.origin}/recap?game=${id}`;
@@ -1089,25 +1091,32 @@ function renderScenes() {
   const obs = game.obs_scenes;
   const names = (obs && Array.isArray(obs.list) ? obs.list : []).filter((n) => typeof n === 'string');
   const level = obs ? obs.level | 0 : -1;
-  list.innerHTML = '';
-  for (const name of names) {
-    const b = document.createElement('button');
-    b.className = 'fxbtn scene' + (name === obs.current ? ' on' : '');
-    b.textContent = name;
-    b.onclick = () => switchScene(name);
-    b.disabled = level < 4;
-    list.appendChild(b);
+  // The drawer panel and the bottom-bar sheet show the same buttons.
+  for (const [l, h] of [[list, hint], [$('cam-list'), $('cam-hint')]]) {
+    l.innerHTML = '';
+    for (const name of names) {
+      const b = document.createElement('button');
+      b.className = 'fxbtn scene' + (name === obs.current ? ' on' : '');
+      b.textContent = name;
+      b.onclick = () => switchScene(name);
+      b.disabled = level < 4;
+      l.appendChild(b);
+    }
+    if (level < 4) {
+      const note = needNote(4);
+      h.dataset.tone = note.tone; h.textContent = note.text;
+    } else if (!names.length) {
+      h.dataset.tone = 'off'; h.textContent = 'OBS reported no scenes.';
+    } else {
+      h.dataset.tone = 'ok'; h.textContent = `On air: ${obs.current || '—'}`;
+    }
   }
   setNeedBadge('scene-need', 4);
-  if (level < 4) {
-    const note = needNote(4);
-    hint.dataset.tone = note.tone; hint.textContent = note.text;
-  } else if (!names.length) {
-    hint.dataset.tone = 'off'; hint.textContent = 'OBS reported no scenes.';
-  } else {
-    hint.dataset.tone = 'ok'; hint.textContent = `On air: ${obs.current || '—'}`;
-  }
+  // Only a door worth having once OBS has told us what there is to cut to.
+  $('cam-open').hidden = !names.length;
 }
+$('cam-open').onclick = () => openSheet('cam-sheet');
+$('cam-done').onclick = () => closeSheet('cam-sheet');
 
 // ---- OBS replay buffer ----------------------------------------------------
 // This pad has no window.obsstudio, so we can't clip directly: we stamp a nonce
@@ -1214,7 +1223,7 @@ function renderReplay() {
 
   const waiting = replayPending.size ? Math.round((soonestDeadline() - Date.now()) / 1000) : 0;
   // Short enough for a quarter of the bottom bar on a 375pt phone.
-  b.textContent = !replayPending.size ? '🎞️ Replay' : waiting > 0 ? `🎞️ ${waiting}s` : '🎞️ Saving…';
+  b.innerHTML = '<i aria-hidden="true">🎞️</i>' + (!replayPending.size ? 'Replay' : waiting > 0 ? `${waiting}s` : 'Saving…');
   b.classList.toggle('busy', !!replayPending.size);
   const auto = $('replay-auto');
   if (auto) auto.checked = !!(game && game.auto_clip);
@@ -1286,7 +1295,7 @@ function closeSheet(id) {
   const back = sheetReturn.get(id);
   sheetReturn.delete(id);
   // Focus cannot go back to the control that opened the sheet if it went with
-  // the drawer. "⋯ More" is the door back to it, and it is only in the layout
+  // the drawer. "⚙ Setup" is the door back to it, and it is only in the layout
   // where the drawer is a sheet at all — above 700px it is display:none and the
   // panes never left the screen, so the ordinary restore still applies there.
   const gone = back && back.closest('#drawer') && !drawerOpen() && $('dw-open').getClientRects().length;
@@ -2307,11 +2316,15 @@ function setupSteps() {
     : [['teams', !!teams], ['overlay', overlayCopied]];
 }
 const setupAllDone = () => setupSteps().every(([, ok]) => ok);
+// Any pitch, out, run or half-inning on the board means first pitch has been thrown.
+const gameStarted = () => !!game && ((game.home_score | 0) + (game.away_score | 0) + (game.balls | 0) + (game.strikes | 0)
+  + (game.outs | 0) + (game.pitch_count | 0) > 0 || (game.inning | 0) > 1 || game.half === 'bottom');
 function renderSetupGuide() {
   const el = $('setup-guide'); if (!el || !game) return;
   // Once every step is done it is a finished list sitting on top of the pad, and
   // the pad is what the height belongs to. Each Set → has its own home now.
-  el.hidden = setupAllDone();
+  // Nor once play has begun: by then it is a checklist between you and the keys.
+  el.hidden = setupAllDone() || gameStarted();
   const sport = game.sport || 'baseball';
   el.querySelector('.sg-step[data-step="lineups"]').hidden = sport !== 'baseball';
   el.querySelector('.sg-step[data-step="defense"]').hidden = sport !== 'baseball';

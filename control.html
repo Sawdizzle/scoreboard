@@ -315,7 +315,7 @@
     <button id="sit-btn" class="gm-sit" type="button">
       <!-- Dots and a diamond: shape, not text. The button carries the words. -->
       <span class="gm-mid" id="sc-mid" aria-hidden="true"></span>
-      <span class="gm-chev" aria-hidden="true">▸</span>
+      <span class="gm-edit" aria-hidden="true">EDIT ›</span>
     </button>
 
     <!-- Who's up, and the way into the lineup sheet. -->
@@ -842,10 +842,11 @@
     <!-- Fixed. Undo is the one thing you reach for when something has already
          gone wrong, so it never moves and never scrolls away. -->
     <div class="gm-bottom">
-      <button id="undo-btn" class="undo">↶ Undo</button>
-      <button id="fx-replay" class="gm-b replay obs-only">🎞️ Replay</button>
-      <button id="onair-open" class="gm-b onair">🎬 On Air</button>
-      <button id="dw-open" class="gm-b more" aria-label="More settings">⋯</button>
+      <button id="undo-btn" class="undo"><i aria-hidden="true">↶</i>Undo</button>
+      <button id="fx-replay" class="gm-b replay obs-only"><i aria-hidden="true">🎞️</i>Replay</button>
+      <button id="cam-open" class="gm-b cam obs-only" hidden><i aria-hidden="true">🎥</i>Cameras</button>
+      <button id="onair-open" class="gm-b onair"><i aria-hidden="true">🎬</i>On Air</button>
+      <button id="dw-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
     </div>
   </section>
 
@@ -912,6 +913,19 @@
       </div>
 
       <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>
+    </div>
+  </div>
+
+  <!-- CAMERAS SHEET -->
+  <!-- Scene cuts happen all game, so they get their own door on the bottom bar.
+       Same buttons as the drawer's Cameras panel, rendered from the same list. -->
+  <div id="cam-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="cam-title" tabindex="-1" hidden>
+    <div class="sheet-card scroll">
+      <span class="grab"></span>
+      <div class="sit-head"><h3 id="cam-title">Cameras</h3><span class="sit-sub">tap to cut</span></div>
+      <div id="cam-list" class="scene-list"></div>
+      <p id="cam-hint" class="hint"></p>
+      <div class="sheet-actions"><button id="cam-done" class="primary">Done</button></div>
     </div>
   </div>
 
