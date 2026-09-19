@@ -25,9 +25,16 @@ export function distanceDelta(g, d) {
 }
 export function setGoal(g) { return { type: 'fb-dist', patch: withState(g, { distance: 'goal' }) }; }
 export function firstDown(g) { return { type: 'fb-first', patch: withState(g, { down: 1, distance: 10 }) }; }
-export function timeout(g, team) {
+// Timeouts left, clamped to 0..3. A called timeout is -1; +1 gives one back.
+export function adjustTimeouts(g, team, d) {
   const st = fbState(g); const key = team === 'home' ? 'home_timeouts' : 'away_timeouts';
-  return { type: 'fb-to', patch: withState(g, { [key]: Math.max(0, st[key] - 1) }) };
+  return { type: 'fb-to', patch: withState(g, { [key]: Math.max(0, Math.min(3, st[key] + d)) }) };
+}
+export function timeout(g, team) { return adjustTimeouts(g, team, -1); }
+// A correction, so the clock is left alone (Next Qtr is the one that reloads it).
+export function adjustQuarter(g, d) {
+  const st = fbState(g);
+  return { type: 'fb-quarter', patch: withState(g, { quarter: Math.max(1, Math.min(9, st.quarter + d)) }) };
 }
 export function resetTimeouts(g) { return { type: 'fb-to', patch: withState(g, { home_timeouts: 3, away_timeouts: 3 }) }; }
 export function nextQuarter(g) {

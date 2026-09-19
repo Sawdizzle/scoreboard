@@ -631,6 +631,10 @@ $('fb-home-up').onclick = () => commit(F.manualScore(game, 'home', 1));
 $('fb-to-away').onclick = () => commit(F.timeout(game, 'away'));
 $('fb-to-home').onclick = () => commit(F.timeout(game, 'home'));
 $('fb-to-reset').onclick = () => commit(F.resetTimeouts(game));
+$('fb-to-away-up').onclick = () => commit(F.adjustTimeouts(game, 'away', 1));
+$('fb-to-home-up').onclick = () => commit(F.adjustTimeouts(game, 'home', 1));
+$('fb-q-dn').onclick = () => commit(F.adjustQuarter(game, -1));
+$('fb-q-up').onclick = () => commit(F.adjustQuarter(game, 1));
 $('fb-kickoff').onclick = () => commit(F.kickoff(game));
 $('fx-turnover').onclick = () => commit(F.turnover(game));
 $('fx-bigplay').onclick = () => fireAnim('bigplay');
@@ -666,6 +670,8 @@ $('vb-sets-home-dn').onclick = () => commit(V.adjustSets(game, 'home', -1));
 $('vb-sets-home-up').onclick = () => commit(V.adjustSets(game, 'home', 1));
 $('vb-away-dn').onclick = () => commit(V.manualScore(game, 'away', -1));
 $('vb-home-dn').onclick = () => commit(V.manualScore(game, 'home', -1));
+$('vb-away-up').onclick = () => commit(V.manualScore(game, 'away', 1));
+$('vb-home-up').onclick = () => commit(V.manualScore(game, 'home', 1));
 $('fx-ace').onclick = () => commitOrAsk(V.ace(game), 'Set the serving team first');
 
 // Basketball buttons
@@ -687,6 +693,13 @@ $('bk-foul-home-dn').onclick = () => commit(B.foul(game, 'home', -1));
 $('bk-to-away').onclick = () => commit(B.timeout(game, 'away'));
 $('bk-to-home').onclick = () => commit(B.timeout(game, 'home'));
 $('bk-to-reset').onclick = () => commit(B.resetTimeouts(game));
+// The sheet's + are corrections: one point or one foul (only +3 has a stinger).
+$('bk-away-up').onclick = () => commit(B.score(game, 'away', 1));
+$('bk-home-up').onclick = () => commit(B.score(game, 'home', 1));
+$('bk-foul-away-up').onclick = () => commit(B.foul(game, 'away', 1));
+$('bk-foul-home-up').onclick = () => commit(B.foul(game, 'home', 1));
+$('bk-to-away-up').onclick = () => commit(B.adjustTimeouts(game, 'away', 1));
+$('bk-to-home-up').onclick = () => commit(B.adjustTimeouts(game, 'home', 1));
 $('fx-bigplay-bk').onclick = () => fireAnim('bigplay');
 
 // Look presets (per-user saved bundles of presentation settings)
@@ -1975,7 +1988,6 @@ const endGameClick = () => {
 document.querySelectorAll('.end-game').forEach((b) => { b.onclick = endGameClick; });
 function renderEndGame() {
   const over = game.status === 'final';
-  $('end-row').hidden = (game.sport || 'baseball') === 'baseball';
   document.querySelectorAll('.end-game').forEach((b) => {
     b.textContent = over ? '↺ Reopen game' : '🏁 End game';
     b.classList.toggle('over', over);
@@ -2259,11 +2271,13 @@ function showSport(sport) {
   // The full-face pad is baseball's; the other sports keep their scrolling pads
   // under the same shell until they get their own key sets.
   document.body.classList.toggle('bb', sport === 'baseball');
-  $('sit-btn').disabled = sport !== 'baseball';
-  $('g-batting').hidden = sport === 'baseball';
+  // Every sport has a Situation sheet now, and the bar already says what the
+  // batter line used to repeat for the other sports, so that line is baseball's.
+  $('sit-btn').disabled = false;
+  $('g-batting').hidden = true;
   $('gm-batter').disabled = sport !== 'baseball';   // the lineup sheet is baseball's
   if (sport !== 'baseball') {
-    $('gm-batter').hidden = false;
+    $('gm-batter').hidden = true;
     $('gm-hitter').textContent = '';
     $('gm-vs').textContent = '';
     $('g-away-name').classList.remove('bat');
@@ -2540,12 +2554,16 @@ function renderBatterLine() {
 function renderFootballControl() {
   const st = F.fbState(game);
   const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
-  const poss = st.possession === 'away' ? '🏈 ◄' : st.possession === 'home' ? '► 🏈' : '—';
+  const abbr = (t) => (t === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
+  const poss = st.possession === 'away' ? `◄ ${esc(abbr('away'))} ball` : st.possession === 'home' ? `${esc(abbr('home'))} ball ►` : 'no ball set';
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
   setSitLabel(`Quarter ${st.quarter}, ${dd}` +
     (st.possession ? `, ${st.possession === 'home' ? game.home_name : game.away_name} ball` : ', possession not set'));
   $('g-batting').textContent = st.possession ? `Ball: ${st.possession === 'home' ? game.home_name : game.away_name}` : 'Possession: —';
-  $('fb-dist-val').textContent = st.distance === 'goal' ? 'Gl' : st.distance;
+  $('fb-dist-val').textContent = st.distance === 'goal' ? 'Goal' : st.distance;
+  $('fbs-away').textContent = game.away_score | 0; $('fbs-home').textContent = game.home_score | 0;
+  $('fb-q-val').textContent = st.quarter;
+  $('fb-to-away-val').textContent = st.away_timeouts; $('fb-to-home-val').textContent = st.home_timeouts;
   $('fb-poss-away').classList.toggle('on', st.possession === 'away');
   $('fb-poss-home').classList.toggle('on', st.possession === 'home');
   for (const d of [1, 2, 3, 4]) $('fb-down-' + d).classList.toggle('on', st.down === d);
@@ -2557,6 +2575,7 @@ function renderSoccerControl() {
   setSitLabel(`${st.half === 2 ? 'Second' : 'First'} half` + (st.stoppage ? `, plus ${st.stoppage} minutes stoppage` : ''));
   $('g-batting').textContent = 'Soccer';
   $('sc-stop-val').textContent = '+' + st.stoppage;
+  $('scs-away').textContent = game.away_score | 0; $('scs-home').textContent = game.home_score | 0;
   $('sc-half-1').classList.toggle('on', st.half === 1);
   $('sc-half-2').classList.toggle('on', st.half === 2);
 }
@@ -2569,6 +2588,8 @@ function renderVolleyballControl() {
     (st.serve ? `, ${st.serve === 'home' ? game.home_name : game.away_name} serving` : ', server not set'));
   $('g-batting').textContent = st.serve ? `Serving: ${st.serve === 'home' ? game.home_name : game.away_name}` : 'Serving: —';
   $('vb-set-val').textContent = st.set;
+  $('vbs-away').textContent = game.away_score | 0; $('vbs-home').textContent = game.home_score | 0;
+  $('vb-sets-away-val').textContent = st.sets.away; $('vb-sets-home-val').textContent = st.sets.home;
   $('vb-target').textContent = 'To ' + st.target;
   $('vb-serve-away').classList.toggle('on', st.serve === 'away');
   $('vb-serve-home').classList.toggle('on', st.serve === 'home');
@@ -2577,10 +2598,13 @@ function renderBasketballControl() {
   const st = B.bkState(game);
   const bonus = [B.bonusOf(st, 'away') && 'AWAY ' + B.bonusOf(st, 'away'), B.bonusOf(st, 'home') && 'HOME ' + B.bonusOf(st, 'home')].filter(Boolean).join(' · ');
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.period}</span>` +
-    `<span class="sc-count">F ${st.fouls.away}·${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
+    `<span class="sc-count">Fouls ${st.fouls.away}–${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
   setSitLabel(`Quarter ${st.period}, fouls ${st.fouls.away} to ${st.fouls.home}` + (bonus ? `, ${bonus}` : ''));
   $('g-batting').textContent = `Q${st.period}` + (bonus ? ` · ${bonus}` : '');
-  $('bk-period-val').textContent = 'Q' + st.period;
+  $('bk-period-val').textContent = st.period;
+  $('bks-away').textContent = game.away_score | 0; $('bks-home').textContent = game.home_score | 0;
+  $('bk-foul-away-val').textContent = st.fouls.away; $('bk-foul-home-val').textContent = st.fouls.home;
+  $('bk-to-away-val').textContent = st.timeouts.away; $('bk-to-home-val').textContent = st.timeouts.home;
 }
 
 $('rotate-url-btn').onclick = async () => {

@@ -254,7 +254,7 @@
         <summary>⚾ Running the game</summary>
         <div class="panel-body help-body">
           <ul>
-            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End this half-inning now</b> is in the Situation sheet for the rare one that ends another way.</li>
+            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End half-inning</b> is in the Situation sheet for the rare one that ends another way.</li>
             <li><b>OUT</b> asks who fielded it — tap SS and it records <b>Groundout 6-3</b>, tap CF for <b>Flyout F8</b>. Pick a type first for an error, fielder's choice, double play, sac fly or dropped 3rd strike. With runners on, the next step asks where everyone ended up, already filled in with the likely result. <b>Just an out</b> skips all of it.</li>
             <li><b>1B / 2B / 3B</b> with runners on open the same runner step; with nobody on they're still one tap.</li>
             <li>Missed that the catcher dropped strike three? The strikeout message has <b>Dropped 3rd?</b> for a few seconds.</li>
@@ -371,31 +371,31 @@
     </div>
 
     <!-- ============ FOOTBALL ============ -->
-    <div class="sport-only" data-sport="football" hidden>
+    <div class="sport-only sp-pad" data-sport="football" hidden>
       <span class="bases-label">Possession</span>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="fb-poss-away" class="base-btn">◄ Away ball</button>
         <button id="fb-kickoff" class="base-btn">Kickoff ⇄</button>
         <button id="fb-poss-home" class="base-btn">Home ball ►</button>
       </div>
 
       <span class="bases-label">Down &amp; distance</span>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="fb-down-1" class="base-btn">1st</button>
         <button id="fb-down-2" class="base-btn">2nd</button>
         <button id="fb-down-3" class="base-btn">3rd</button>
         <button id="fb-down-4" class="base-btn">4th</button>
       </div>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="fb-dist-dn" class="base-btn">– yd</button>
-        <b id="fb-dist-val" class="fb-dist">10</b>
+        <b class="sp-val"><span id="fb-dist-val">10</span><small>yds</small></b>
         <button id="fb-dist-up" class="base-btn">+ yd</button>
         <button id="fb-goal" class="base-btn">&amp; Goal</button>
-        <button id="fb-firstdown" class="base-btn wide">1st &amp; 10</button>
+        <button id="fb-firstdown" class="base-btn">1st &amp; 10</button>
       </div>
 
-      <span class="bases-label">Score (offense = possession)</span>
-      <div class="pad fb-score">
+      <span class="bases-label">Score <em>for the team with the ball</em></span>
+      <div class="pad sp-keys">
         <button id="fb-td"     class="key run">TD +6</button>
         <button id="fb-fg"     class="key out">FG +3</button>
         <button id="fb-xp"     class="key util">XP +1</button>
@@ -403,146 +403,81 @@
         <button id="fb-safety" class="key strike">SAFETY +2</button>
         <button id="fb-nextq"  class="key batter">Next Qtr ▸</button>
       </div>
-      <div class="bases-row">
-        <button id="fb-away-dn" class="base-btn">Away –</button>
-        <button id="fb-away-up" class="base-btn">Away +</button>
-        <button id="fb-home-dn" class="base-btn">Home –</button>
-        <button id="fb-home-up" class="base-btn">Home +</button>
-      </div>
-
-      <div class="util-row">
-        <button id="fb-to-away"  class="key util">Away Timeout</button>
-        <button id="fb-to-home"  class="key util">Home Timeout</button>
-        <button id="fb-to-reset" class="key util">Reset TOs</button>
-      </div>
-
-      <div class="fx-pad">
-        <span class="bases-label">Moments — TD / FG / Safety animate from the score buttons</span>
-        <div class="fx-grid">
-          <button id="fx-turnover" class="fxbtn">Turnover</button>
-          <button id="fx-bigplay" class="fxbtn">Big Play</button>
-        </div>
-      </div>
     </div>
 
     <!-- ============ SOCCER ============ -->
-    <div class="sport-only" data-sport="soccer" hidden>
-      <span class="bases-label">Goals (fires the GOAL! celebration)</span>
-      <div class="pad">
+    <div class="sport-only sp-pad" data-sport="soccer" hidden>
+      <span class="bases-label">Goals <em>fires the GOAL! celebration</em></span>
+      <div class="pad sp-keys">
         <button id="sc-goal-away" class="key run">◄ AWAY GOAL</button>
         <button id="sc-goal-home" class="key run">HOME GOAL ►</button>
       </div>
 
       <span class="bases-label">Half &amp; stoppage</span>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="sc-half-1" class="base-btn">1st Half</button>
         <button id="sc-half-2" class="base-btn">2nd Half</button>
-        <button id="sc-stop-dn" class="base-btn">– Stop</button>
-        <b id="sc-stop-val" class="fb-dist">+0</b>
-        <button id="sc-stop-up" class="base-btn">+ Stop</button>
+      </div>
+      <div class="sp-row">
+        <button id="sc-stop-dn" class="base-btn">– min</button>
+        <b class="sp-val"><span id="sc-stop-val">+0</span><small>min added</small></b>
+        <button id="sc-stop-up" class="base-btn">+ min</button>
       </div>
 
       <span class="bases-label">Cards</span>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="sc-yc-away" class="base-btn">Away 🟨</button>
         <button id="sc-rc-away" class="base-btn">Away 🟥</button>
         <button id="sc-yc-home" class="base-btn">Home 🟨</button>
         <button id="sc-rc-home" class="base-btn">Home 🟥</button>
       </div>
-      <div class="bases-row">
-        <button id="sc-away-dn" class="base-btn">Away –</button>
-        <button id="sc-away-up" class="base-btn">Away +</button>
-        <button id="sc-home-dn" class="base-btn">Home –</button>
-        <button id="sc-home-up" class="base-btn">Home +</button>
-      </div>
     </div>
 
     <!-- ============ VOLLEYBALL ============ -->
-    <div class="sport-only" data-sport="volleyball" hidden>
-      <span class="bases-label">Rally point (serve follows the scorer)</span>
-      <div class="pad">
+    <div class="sport-only sp-pad" data-sport="volleyball" hidden>
+      <span class="bases-label">Rally point <em>serve follows the scorer</em></span>
+      <div class="pad sp-keys">
         <button id="vb-point-away" class="key run">◄ AWAY +1</button>
         <button id="vb-point-home" class="key run">HOME +1 ►</button>
       </div>
 
-      <span class="bases-label">Serve &amp; set target</span>
-      <div class="bases-row">
+      <span class="bases-label">Serve</span>
+      <div class="sp-row">
         <button id="vb-serve-away" class="base-btn">◄ Away serve</button>
         <button id="vb-serve-home" class="base-btn">Home serve ►</button>
-        <button id="vb-target" class="base-btn">To 25</button>
+      </div>
+      <div class="sp-row">
+        <button id="fx-ace" class="base-btn hit">🏐 Ace <small>point to the server</small></button>
       </div>
 
-      <span class="bases-label">Sets — auto-won at target with a 2-point lead</span>
-      <div class="bases-row">
-        <button id="vb-endset" class="base-btn wide">End Set → leader</button>
-        <button id="vb-set-dn" class="base-btn">– Set</button>
-        <b id="vb-set-val" class="fb-dist">1</b>
-        <button id="vb-set-up" class="base-btn">+ Set</button>
-      </div>
-      <div class="bases-row">
-        <button id="vb-sets-away-dn" class="base-btn">Away sets –</button>
-        <button id="vb-sets-away-up" class="base-btn">Away sets +</button>
-        <button id="vb-sets-home-dn" class="base-btn">Home sets –</button>
-        <button id="vb-sets-home-up" class="base-btn">Home sets +</button>
-      </div>
-      <div class="bases-row">
-        <button id="vb-away-dn" class="base-btn">Away point –</button>
-        <button id="vb-home-dn" class="base-btn">Home point –</button>
-      </div>
-
-      <div class="fx-pad">
-        <span class="bases-label">Moments</span>
-        <button id="fx-ace" class="fxbtn hr">🏐 ACE — point to the serving team</button>
+      <span class="bases-label">Set <em>auto-won at the target with a 2-point lead</em></span>
+      <div class="sp-row">
+        <button id="vb-endset" class="base-btn">End set → leader wins it</button>
       </div>
     </div>
 
     <!-- ============ BASKETBALL ============ -->
-    <div class="sport-only" data-sport="basketball" hidden>
-      <span class="bases-label">Score (+3 fires the THREE! stinger)</span>
-      <div class="pad">
+    <div class="sport-only sp-pad" data-sport="basketball" hidden>
+      <span class="bases-label">Score <em>+3 fires the THREE! stinger</em></span>
+      <div class="pad sp-keys">
         <button id="bk-away-2" class="key run">◄ AWAY +2</button>
         <button id="bk-home-2" class="key run">HOME +2 ►</button>
       </div>
-      <div class="bases-row">
+      <div class="sp-row">
         <button id="bk-away-1" class="base-btn hit">Away +1</button>
         <button id="bk-away-3" class="base-btn hit">Away +3</button>
         <button id="bk-home-1" class="base-btn hit">Home +1</button>
         <button id="bk-home-3" class="base-btn hit">Home +3</button>
       </div>
-      <div class="bases-row">
-        <button id="bk-away-dn" class="base-btn">Away –1</button>
-        <button id="bk-home-dn" class="base-btn">Home –1</button>
-      </div>
 
-      <span class="bases-label">Period &amp; team fouls (bonus at 7, double at 10)</span>
-      <div class="bases-row">
-        <button id="bk-period-dn" class="base-btn">– Qtr</button>
-        <b id="bk-period-val" class="fb-dist">Q1</b>
-        <button id="bk-period-up" class="base-btn">+ Qtr</button>
-        <button id="bk-nextperiod" class="base-btn wide">Next Qtr ▸ fouls reset</button>
-      </div>
-      <div class="bases-row">
+      <span class="bases-label">Team fouls <em>bonus at 7, double at 10</em></span>
+      <div class="sp-row">
         <button id="bk-foul-away" class="base-btn">Away foul +</button>
-        <button id="bk-foul-away-dn" class="base-btn">–</button>
         <button id="bk-foul-home" class="base-btn">Home foul +</button>
-        <button id="bk-foul-home-dn" class="base-btn">–</button>
       </div>
-      <div class="util-row">
-        <button id="bk-to-away" class="key util">Away Timeout</button>
-        <button id="bk-to-home" class="key util">Home Timeout</button>
-        <button id="bk-to-reset" class="key util">Reset TOs</button>
+      <div class="sp-row">
+        <button id="bk-nextperiod" class="base-btn">Next Qtr ▸ <small>fouls reset</small></button>
       </div>
-
-      <div class="fx-pad">
-        <span class="bases-label">Moments</span>
-        <button id="fx-bigplay-bk" class="fxbtn hr">🏀 BIG PLAY</button>
-      </div>
-    </div>
-
-    <!-- Baseball ends its game from the Situation sheet; the other sports have no
-         such sheet, so the same button sits at the foot of their pad. -->
-    <div id="end-row" class="end-row" hidden>
-      <button class="base-btn sit-end end-game" type="button">🏁 End game</button>
     </div>
 
     </div><!-- /.col-live -->
@@ -879,6 +814,7 @@
       <span class="grab"></span>
       <div class="sit-head"><h3 id="sit-title">Situation</h3><span class="sit-sub">every change is undoable</span></div>
 
+      <div class="sport-only" data-sport="baseball">
       <div class="sit-bases">
         <div class="diamond">
           <button id="base-2" class="dbase b2" type="button"><i></i><span class="vh">2nd base</span></button>
@@ -918,8 +854,54 @@
             <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
           </div>
         </details>
-        <button id="btn-endgame" class="base-btn sit-wide sit-end end-game">🏁 End game</button>
       </div>
+      </div>
+
+      <!-- The other sports: every correction lives here, off the pad. -->
+      <div class="sport-only sit-steps" data-sport="football" hidden>
+        <span class="sublabel">Score</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="fb-away-dn" class="step">–</button><b id="fbs-away">0</b><button id="fb-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="fb-home-dn" class="step">–</button><b id="fbs-home">0</b><button id="fb-home-up" class="step">+</button></div>
+        <span class="sublabel">Quarter</span>
+        <div class="adj-row"><span class="adj-lab">Quarter</span><button id="fb-q-dn" class="step">–</button><b id="fb-q-val">1</b><button id="fb-q-up" class="step">+</button></div>
+        <span class="sublabel">Timeouts left</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="fb-to-away" class="step">–</button><b id="fb-to-away-val">3</b><button id="fb-to-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="fb-to-home" class="step">–</button><b id="fb-to-home-val">3</b><button id="fb-to-home-up" class="step">+</button></div>
+        <button id="fb-to-reset" class="base-btn sit-wide">Reset timeouts (new half)</button>
+      </div>
+
+      <div class="sport-only sit-steps" data-sport="soccer" hidden>
+        <span class="sublabel">Score</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="sc-away-dn" class="step">–</button><b id="scs-away">0</b><button id="sc-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="sc-home-dn" class="step">–</button><b id="scs-home">0</b><button id="sc-home-up" class="step">+</button></div>
+      </div>
+
+      <div class="sport-only sit-steps" data-sport="volleyball" hidden>
+        <span class="sublabel">Points this set</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="vb-away-dn" class="step">–</button><b id="vbs-away">0</b><button id="vb-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="vb-home-dn" class="step">–</button><b id="vbs-home">0</b><button id="vb-home-up" class="step">+</button></div>
+        <span class="sublabel">Sets</span>
+        <div class="adj-row"><span class="adj-lab">Set being played</span><button id="vb-set-dn" class="step">–</button><b id="vb-set-val">1</b><button id="vb-set-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Away sets won</span><button id="vb-sets-away-dn" class="step">–</button><b id="vb-sets-away-val">0</b><button id="vb-sets-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home sets won</span><button id="vb-sets-home-dn" class="step">–</button><b id="vb-sets-home-val">0</b><button id="vb-sets-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Sets are played to</span><button id="vb-target" class="base-btn">To 25</button></div>
+      </div>
+
+      <div class="sport-only sit-steps" data-sport="basketball" hidden>
+        <span class="sublabel">Score</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="bk-away-dn" class="step">–</button><b id="bks-away">0</b><button id="bk-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="bk-home-dn" class="step">–</button><b id="bks-home">0</b><button id="bk-home-up" class="step">+</button></div>
+        <span class="sublabel">Quarter &amp; fouls</span>
+        <div class="adj-row"><span class="adj-lab">Quarter</span><button id="bk-period-dn" class="step">–</button><b id="bk-period-val">1</b><button id="bk-period-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Away fouls</span><button id="bk-foul-away-dn" class="step">–</button><b id="bk-foul-away-val">0</b><button id="bk-foul-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home fouls</span><button id="bk-foul-home-dn" class="step">–</button><b id="bk-foul-home-val">0</b><button id="bk-foul-home-up" class="step">+</button></div>
+        <span class="sublabel">Timeouts left</span>
+        <div class="adj-row"><span class="adj-lab">Away</span><button id="bk-to-away" class="step">–</button><b id="bk-to-away-val">4</b><button id="bk-to-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab">Home</span><button id="bk-to-home" class="step">–</button><b id="bk-to-home-val">4</b><button id="bk-to-home-up" class="step">+</button></div>
+        <button id="bk-to-reset" class="base-btn sit-wide">Reset timeouts</button>
+      </div>
+
+      <button id="btn-endgame" class="base-btn sit-wide sit-end end-game">🏁 End game</button>
 
       <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>
     </div>
@@ -976,6 +958,9 @@
         <button id="fx-dp" class="fxbtn moment sport-only" data-sport="baseball" type="button">Double Play</button>
         <button id="fx-sb" class="fxbtn moment sport-only" data-sport="baseball" type="button">Stolen Base</button>
         <button id="fx-walkoff" class="fxbtn moment sport-only" data-sport="baseball" type="button">Walk-Off</button>
+        <button id="fx-turnover" class="fxbtn moment sport-only" data-sport="football" type="button" hidden>Turnover</button>
+        <button id="fx-bigplay" class="fxbtn moment sport-only" data-sport="football" type="button" hidden>Big Play</button>
+        <button id="fx-bigplay-bk" class="fxbtn moment sport-only" data-sport="basketball" type="button" hidden>🏀 Big Play</button>
         <button id="fx-charge" class="fxbtn moment charge" type="button">🎺 Charge!</button>
       </div>
       <span class="sublabel">Mode</span>

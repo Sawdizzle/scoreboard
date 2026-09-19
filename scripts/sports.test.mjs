@@ -302,3 +302,19 @@ test('basketball timeouts floor at zero and reset to four', () => {
   assert.equal(B.timeout(G({ state: { timeouts: { away: 0, home: 0 } } }), 'home').patch.state.timeouts.home, 0);
   assert.deepEqual(B.resetTimeouts(G()).patch.state.timeouts, { away: 4, home: 4 });
 });
+
+test('football timeouts go back up to 3 and no further; quarter corrections stay 1..9 and leave the clock', () => {
+  assert.equal(F.adjustTimeouts(G({ state: { home_timeouts: 1 } }), 'home', 1).patch.state.home_timeouts, 2);
+  assert.equal(F.adjustTimeouts(G(), 'away', 1).patch.state.away_timeouts, 3);
+  assert.equal(F.timeout(G({ state: { away_timeouts: 0 } }), 'away').patch.state.away_timeouts, 0);
+  assert.equal(F.adjustQuarter(G(), -1).patch.state.quarter, 1);
+  const r = F.adjustQuarter(G({ state: { quarter: 2 } }), 1);
+  assert.equal(r.patch.state.quarter, 3);
+  assert.equal('clock_running' in r.patch, false);
+});
+
+test('basketball timeouts go back up to 4 and no further', () => {
+  assert.equal(B.adjustTimeouts(G({ state: { timeouts: { away: 2, home: 4 } } }), 'away', 1).patch.state.timeouts.away, 3);
+  assert.equal(B.adjustTimeouts(G(), 'home', 1).patch.state.timeouts.home, 4);
+  assert.equal(B.timeout(G(), 'home').patch.state.timeouts.home, 3);
+});

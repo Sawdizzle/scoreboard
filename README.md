@@ -25,6 +25,8 @@ State syncs control → Postgres → Realtime → overlay in ~250 ms. The overla
 
 Pick the sport when you create a game; the control panel and overlay both swap to that sport's controls and layout.
 
+Every sport's pad follows the same split: the pad holds only what you tap during play and fits one phone screen; every correction (score ±, quarter/set ±, timeouts left, fouls ±, set target) and **🏁 End game** live in the **Situation** sheet, opened by tapping the bar under the score.
+
 - **Baseball** — inning + ▲/▼, balls/strikes, outs, base diamond, R/H/E, line score. Smart logic: 4th ball auto-walks (force-advance confirm sheet), 3rd strike auto-outs, 3rd out rolls the half-inning. Multi-level **undo** backed by a Postgres event log (survives reloads/disconnects), capped at the newest 200 plays per game and snapshotting only the columns undo restores — the log used to grow for the life of the season.
 - **Football** — quarter clock, down & distance (incl. *& Goal* / *1st & 10*), possession, timeouts. Scoring: TD +6, XP +1, 2-PT +2, FG +3, Safety +2, plus manual ± — score buttons credit the possession team and fire their stinger automatically. With nobody set they refuse and say so rather than picking a team: **Kickoff ⇄** or a possession button is how you tell the pad who has the ball.
 - **Soccer** — count-up match clock + stoppage time, halves, goals (auto GOAL! celebration), yellow/red cards. **Half length** is the game's period length (Setup → Times & rules), so the second half starts at the right number — youth halves run 25, 30 or 35 minutes, and it used to be hardcoded to 45.

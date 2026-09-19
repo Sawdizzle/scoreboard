@@ -52,10 +52,12 @@ export function adjustPeriod(g, d) {
   return { type: 'bk-period', patch: withState(g, { period: Math.max(1, st.period + d) }) };
 }
 
-export function timeout(g, team) {
+// Timeouts left, clamped to 0..4. A called timeout is -1; +1 gives one back.
+export function adjustTimeouts(g, team, d) {
   const st = bkState(g);
-  return { type: 'bk-to', patch: withState(g, { timeouts: { ...st.timeouts, [team]: Math.max(0, st.timeouts[team] - 1) } }) };
+  return { type: 'bk-to', patch: withState(g, { timeouts: { ...st.timeouts, [team]: Math.max(0, Math.min(4, st.timeouts[team] + d)) } }) };
 }
+export function timeout(g, team) { return adjustTimeouts(g, team, -1); }
 export function resetTimeouts(g) {
   return { type: 'bk-to', patch: withState(g, { timeouts: { away: 4, home: 4 } }) };
 }

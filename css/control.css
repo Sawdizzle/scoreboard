@@ -194,6 +194,11 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   body.in-game.bb.guide-open .col-live > .sport-only[data-sport="baseball"] { flex: 0 0 auto; min-height: 380px; }
   body.in-game.bb .col-live > .sport-only[data-sport="baseball"] { flex: 1; min-height: 0; display: flex; }
   body.in-game.bb .pad { flex: 1; min-height: 0; grid-template-rows: 1.35fr 1fr 1fr 0.8fr; }
+  /* The other sports: the same fixed shell. Their pads hold game flow only
+     (corrections are in the Situation sheet), so the big keys take what is left. */
+  body.in-game:not(.bb) .col-live > .sp-pad:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  body.in-game:not(.bb) .sp-keys { flex: 1; min-height: 132px; grid-auto-rows: 1fr; }
+  body.in-game:not(.bb) .sp-keys .key { padding: 0 6px; font-size: 19px; }
   body.in-game.bb .key.ball, body.in-game.bb .key.strike { font-size: 27px; letter-spacing: 0.05em; }
   body.in-game.bb .key { padding: 0; font-size: 20px; }
   body.in-game.bb .key.batter { font-size: 17px; }
@@ -851,3 +856,21 @@ body.no-obs .obs-only { display: none; }
 .urlbar { display: flex; gap: 8px; margin-top: 16px; }
 .urlbar input { font-family: var(--mono); font-size: 16px; }
 .hint { color: var(--body); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+
+/* Other sports' pads: rows never wrap, values sit in a box, labels breathe. */
+.sp-pad .bases-label { margin: 12px 0 6px; }
+.sp-pad .bases-label:first-child { margin-top: 0; }
+.sp-pad .bases-label em { font-style: normal; text-transform: none; letter-spacing: 0; opacity: 0.8; }
+.sp-row { display: flex; gap: 8px; }
+.sp-row + .sp-row, .sp-keys + .sp-row { margin-top: 8px; }
+.sp-row > * { flex: 1 1 0; min-width: 0; }
+.sp-row .base-btn { padding: 13px 4px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-row .base-btn small { font-size: 11px; opacity: 0.75; font-weight: 600; }
+.sp-val { flex: 0 0 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--sunken); border: 1px solid var(--line); border-radius: 12px;
+  font-family: var(--num); font-size: 20px; line-height: 1; }
+.sp-val small { font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.sit-steps > .sublabel:first-child { margin-top: 0; }
+.adj-row > .base-btn#vb-target { min-width: 96px; }
+#fb-firstdown { flex-grow: 1.6; }
+#fb-dist-dn, #fb-dist-up { flex-grow: 0.8; }
