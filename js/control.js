@@ -283,7 +283,7 @@ $('new-game-btn').addEventListener('click', () => openSheet('newgame-sheet'));
 $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value, style = $('ng-style').value;
-  const row = { status: 'live', sport, style };
+  const row = { status: 'setup', sport, style };   // 'live' on the first play
   if (sport === 'football') row.state = F.fbState({});
   else if (sport === 'soccer') row.state = S.scState({});
   else if (sport === 'volleyball') row.state = V.vbState({});
@@ -481,6 +481,9 @@ addEventListener('beforeunload', (e) => { if (queue.size()) { e.preventDefault()
 async function commit(res) {
   if (!game) return;
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
+  // The first play of the game is what makes it live. Riding the play's own
+  // write means undoing that play puts the game back to Not started too.
+  if (game.status === 'setup' && !('status' in res.patch)) res = { ...res, patch: { ...res.patch, status: 'live' } };
   haptic();
   const prev = game;
   const gameId = game.id;
@@ -1366,7 +1369,7 @@ $('reset-game').onclick = async () => {
   if (!confirm('Reset this game to 0? Score, situation, clock, cards and undo history are cleared. Teams and look are kept.')) return;
   const sport = game.sport || 'baseball';
   const patch = {
-    status: 'live', home_score: 0, away_score: 0,
+    status: 'setup', home_score: 0, away_score: 0,
     home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0,
     line_score: [], current_animation: null, card: null, rally_mode: false,
     clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds || null,
@@ -1961,6 +1964,14 @@ $('adj-half').onclick = () => commit(L.onToggleHalf(game));
 // commit, and the pad underneath stays mounted so closing it is instant.
 const closeSit = () => closeSheet('sit-sheet');
 $('sit-btn').onclick = () => openSheet('sit-sheet');
+// Ending is a play like any other: one event, so Undo reopens the game.
+$('btn-endgame').onclick = () => {
+  if (!game) return;
+  if (game.status === 'final') return commit({ type: 'reopen_game', patch: { status: 'live' } });
+  if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
+  commit({ type: 'end_game', patch: { status: 'final', clock_running: false } });
+  closeSheet('sit-sheet');
+};
 $('sit-done').onclick = closeSit;
 function renderAdjust() {
   const set = (id, v) => { $(id).textContent = v | 0; };
@@ -2485,6 +2496,9 @@ function renderBaseballControl() {
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
   renderBatterLine();
   $('pc-val').textContent = L.pitchCount(game);
+  const over = game.status === 'final';
+  $('btn-endgame').textContent = over ? '↺ Reopen game' : '🏁 End game';
+  $('btn-endgame').classList.toggle('over', over);
   renderAdjust();
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);
