@@ -227,6 +227,10 @@ function situationLabel(g) {  // ordinal() is defined further down; both run aft
     default: return `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
   }
 }
+// Nothing moves a game out of 'live' (there is no end-game step), so the status
+// alone would badge every game ever made. LIVE means touched in the last 3 hours.
+const LIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
+const isOnNow = (g) => g.status === 'live' && Date.now() - new Date(g.updated_at).getTime() < LIVE_WINDOW_MS;
 const rowState = (g) => (g.status === 'final' ? 'Final' : g.status === 'setup' ? 'Not started' : situationLabel(g));
 
 async function loadGames() {
@@ -245,7 +249,7 @@ async function loadGames() {
     open.className = 'game-row';
     open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
       `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
-      `<span class="g-state">${g.status === 'live' ? '<span class="g-live">LIVE</span>' : ''}` +
+      `<span class="g-state">${isOnNow(g) ? '<span class="g-live">LIVE</span>' : ''}` +
       `<span>${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span></span>` +
       `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
     open.onclick = () => openGame(g.id);
