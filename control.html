@@ -846,12 +846,12 @@
           <summary>Runs · hits · errors</summary>
           <div class="sit-more-body">
             <p class="hint">Direct edits for corrections — each is undoable. Runs, hits and errors change the total only.</p>
-            <div class="adj-row"><span class="adj-lab">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
-            <div class="adj-row"><span class="adj-lab">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
-            <div class="adj-row"><span class="adj-lab">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
-            <div class="adj-row"><span class="adj-lab">Home hits</span><button class="step" data-adj="hits-home" data-d="-1">–</button><b id="adj-hits-home">0</b><button class="step" data-adj="hits-home" data-d="1">+</button></div>
-            <div class="adj-row"><span class="adj-lab">Away errors</span><button class="step" data-adj="errors-away" data-d="-1">–</button><b id="adj-errors-away">0</b><button class="step" data-adj="errors-away" data-d="1">+</button></div>
-            <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" runs">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" runs">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" hits">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" hits">Home hits</span><button class="step" data-adj="hits-home" data-d="-1">–</button><b id="adj-hits-home">0</b><button class="step" data-adj="hits-home" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" errors">Away errors</span><button class="step" data-adj="errors-away" data-d="-1">–</button><b id="adj-errors-away">0</b><button class="step" data-adj="errors-away" data-d="1">+</button></div>
+            <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" errors">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
           </div>
         </details>
       </div>
@@ -860,44 +860,44 @@
       <!-- The other sports: every correction lives here, off the pad. -->
       <div class="sport-only sit-steps" data-sport="football" hidden>
         <span class="sublabel">Score</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="fb-away-dn" class="step">–</button><b id="fbs-away">0</b><button id="fb-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="fb-home-dn" class="step">–</button><b id="fbs-home">0</b><button id="fb-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="fb-away-dn" class="step">–</button><b id="fbs-away">0</b><button id="fb-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="fb-home-dn" class="step">–</button><b id="fbs-home">0</b><button id="fb-home-up" class="step">+</button></div>
         <span class="sublabel">Quarter</span>
         <div class="adj-row"><span class="adj-lab">Quarter</span><button id="fb-q-dn" class="step">–</button><b id="fb-q-val">1</b><button id="fb-q-up" class="step">+</button></div>
         <span class="sublabel">Timeouts left</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="fb-to-away" class="step">–</button><b id="fb-to-away-val">3</b><button id="fb-to-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="fb-to-home" class="step">–</button><b id="fb-to-home-val">3</b><button id="fb-to-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="fb-to-away" class="step">–</button><b id="fb-to-away-val">3</b><button id="fb-to-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="fb-to-home" class="step">–</button><b id="fb-to-home-val">3</b><button id="fb-to-home-up" class="step">+</button></div>
         <button id="fb-to-reset" class="base-btn sit-wide">Reset timeouts (new half)</button>
       </div>
 
       <div class="sport-only sit-steps" data-sport="soccer" hidden>
         <span class="sublabel">Score</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="sc-away-dn" class="step">–</button><b id="scs-away">0</b><button id="sc-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="sc-home-dn" class="step">–</button><b id="scs-home">0</b><button id="sc-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="sc-away-dn" class="step">–</button><b id="scs-away">0</b><button id="sc-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="sc-home-dn" class="step">–</button><b id="scs-home">0</b><button id="sc-home-up" class="step">+</button></div>
       </div>
 
       <div class="sport-only sit-steps" data-sport="volleyball" hidden>
         <span class="sublabel">Points this set</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="vb-away-dn" class="step">–</button><b id="vbs-away">0</b><button id="vb-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="vb-home-dn" class="step">–</button><b id="vbs-home">0</b><button id="vb-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="vb-away-dn" class="step">–</button><b id="vbs-away">0</b><button id="vb-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="vb-home-dn" class="step">–</button><b id="vbs-home">0</b><button id="vb-home-up" class="step">+</button></div>
         <span class="sublabel">Sets</span>
         <div class="adj-row"><span class="adj-lab">Set being played</span><button id="vb-set-dn" class="step">–</button><b id="vb-set-val">1</b><button id="vb-set-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Away sets won</span><button id="vb-sets-away-dn" class="step">–</button><b id="vb-sets-away-val">0</b><button id="vb-sets-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home sets won</span><button id="vb-sets-home-dn" class="step">–</button><b id="vb-sets-home-val">0</b><button id="vb-sets-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" sets won">Away sets won</span><button id="vb-sets-away-dn" class="step">–</button><b id="vb-sets-away-val">0</b><button id="vb-sets-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" sets won">Home sets won</span><button id="vb-sets-home-dn" class="step">–</button><b id="vb-sets-home-val">0</b><button id="vb-sets-home-up" class="step">+</button></div>
         <div class="adj-row"><span class="adj-lab">Sets are played to</span><button id="vb-target" class="base-btn">To 25</button></div>
       </div>
 
       <div class="sport-only sit-steps" data-sport="basketball" hidden>
         <span class="sublabel">Score</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="bk-away-dn" class="step">–</button><b id="bks-away">0</b><button id="bk-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="bk-home-dn" class="step">–</button><b id="bks-home">0</b><button id="bk-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="bk-away-dn" class="step">–</button><b id="bks-away">0</b><button id="bk-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="bk-home-dn" class="step">–</button><b id="bks-home">0</b><button id="bk-home-up" class="step">+</button></div>
         <span class="sublabel">Quarter &amp; fouls</span>
         <div class="adj-row"><span class="adj-lab">Quarter</span><button id="bk-period-dn" class="step">–</button><b id="bk-period-val">1</b><button id="bk-period-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Away fouls</span><button id="bk-foul-away-dn" class="step">–</button><b id="bk-foul-away-val">0</b><button id="bk-foul-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home fouls</span><button id="bk-foul-home-dn" class="step">–</button><b id="bk-foul-home-val">0</b><button id="bk-foul-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" fouls">Away fouls</span><button id="bk-foul-away-dn" class="step">–</button><b id="bk-foul-away-val">0</b><button id="bk-foul-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" fouls">Home fouls</span><button id="bk-foul-home-dn" class="step">–</button><b id="bk-foul-home-val">0</b><button id="bk-foul-home-up" class="step">+</button></div>
         <span class="sublabel">Timeouts left</span>
-        <div class="adj-row"><span class="adj-lab">Away</span><button id="bk-to-away" class="step">–</button><b id="bk-to-away-val">4</b><button id="bk-to-away-up" class="step">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Home</span><button id="bk-to-home" class="step">–</button><b id="bk-to-home-val">4</b><button id="bk-to-home-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix="">Away</span><button id="bk-to-away" class="step">–</button><b id="bk-to-away-val">4</b><button id="bk-to-away-up" class="step">+</button></div>
+        <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix="">Home</span><button id="bk-to-home" class="step">–</button><b id="bk-to-home-val">4</b><button id="bk-to-home-up" class="step">+</button></div>
         <button id="bk-to-reset" class="base-btn sit-wide">Reset timeouts</button>
       </div>
 

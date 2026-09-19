@@ -1986,6 +1986,13 @@ const endGameClick = () => {
   closeSheet('sit-sheet');
 };
 document.querySelectorAll('.end-game').forEach((b) => { b.onclick = endGameClick; });
+// Situation sheet rows name the teams the way the scorebug does.
+function renderTeamLabels() {
+  const ab = { away: game.away_abbr || 'Away', home: game.home_abbr || 'Home' };
+  document.querySelectorAll('#sit-sheet .adj-lab[data-team]').forEach((el) => {
+    el.textContent = ab[el.dataset.team] + (el.dataset.suffix || '');
+  });
+}
 function renderEndGame() {
   const over = game.status === 'final';
   document.querySelectorAll('.end-game').forEach((b) => {
@@ -2313,6 +2320,7 @@ function renderGame() {
   // ---- the fixed shell: always, this is what a commit is for ----
   showSport(sport);
   renderEndGame();
+  renderTeamLabels();
   $('g-away-name').textContent = g.away_abbr || g.away_name || 'VIS';
   $('g-home-name').textContent = g.home_abbr || g.home_name || 'HOME';
   $('g-away-runs').textContent = g.away_score;
