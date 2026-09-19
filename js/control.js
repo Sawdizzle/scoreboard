@@ -366,10 +366,20 @@ async function loadRoster(id) {
 // always the last made: the pad showed one order while the server, and so the
 // overlay, kept an older one. Now a save made while another is out waits, and
 // only the newest waiting roster is sent.
-let rosterSending = false, rosterNext = null;
+// The lineup screen says which it is — Saving…, ✓ Saved, or Not saved — and a
+// failed save tries again on its own (the newest roster, every few seconds)
+// until it lands or a newer edit replaces it.
+let rosterSending = false, rosterNext = null, rosterRetry = null;
+function luStatus(state) {
+  const el = $('lu-status'); if (!el) return;
+  el.textContent = { saving: 'Saving…', saved: '✓ Saved', failed: '⚠ Not saved yet — retrying' }[state];
+  el.dataset.state = state;
+}
 async function saveRoster(lineups) {
   game = { ...game, lineups };
   rosterNext = { id: game.id, lineups };
+  clearTimeout(rosterRetry);
+  luStatus('saving');
   if (rosterSending) return;
   rosterSending = true;
   try {
@@ -377,7 +387,15 @@ async function saveRoster(lineups) {
       const { id, lineups: data } = rosterNext;
       rosterNext = null;
       const res = await db.rpc('save_roster', { p_game: id, p_data: data });
-      if (res.error) { showToast(`⚠️ Lineup not saved: ${res.error.message}`, 4000); continue; }
+      if (res.error) {
+        if (!rosterNext) {
+          luStatus('failed');
+          showToast(`⚠️ Lineup not saved yet — retrying`, 3000);
+          rosterRetry = setTimeout(() => { if (game && game.id === id && !rosterNext) saveRoster(game.lineups); }, 4000);
+        }
+        continue;
+      }
+      if (!rosterNext) luStatus('saved');
       if (game && game.id === id) { game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) }; rosterHave = game.roster_rev; }
     }
   } finally { rosterSending = false; }
@@ -408,6 +426,8 @@ async function openGame(id) {
   panelPainted = {};   // nothing on screen belongs to this game yet
   lastSaidScore = null;
   resetReplayUi();
+  $('last-play').hidden = true;   // the last game's last play says nothing about this one
+  $('lu-status').textContent = 'saves as you type'; delete $('lu-status').dataset.state;
   // Before the first nonce of this game, not after: a nonce minted on an
   // uncorrected clock is one the other device can never beat.
   const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
@@ -583,6 +603,40 @@ async function commit(res) {
   renderGame();
   queue.enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
   midInningFollow(prev, game, res.type);
+  sayLastPlay(res, prev, game);
+}
+// One line for the last thing recorded. Pitches read with the count they left;
+// plays with what the scorebook would say; the hitter's number leads when known.
+const COUNT_TYPES = { ball: 'Ball', strike: 'Strike', foul: 'Foul' };
+function lastPlayText(res, prev, next) {
+  if (COUNT_TYPES[res.type]) return `${COUNT_TYPES[res.type]} · ${next.balls | 0}-${next.strikes | 0}`;
+  const pl = res.payload && res.payload.play;
+  let t = res.text || (pl && L.PLAY_LABEL[pl.kind]
+    ? L.PLAY_LABEL[pl.kind] + (pl.code && pl.kind !== 'K3' ? ' ' + pl.code : '') : '');
+  if (!t) t = { run: 'Run scored', base: 'Runner moved', advance: 'Runners advanced', clear: 'Bases cleared',
+    endhalf: 'Half-inning ended', batter: 'Next batter', end_game: 'Game ended', reopen_game: 'Game reopened' }[res.type] || '';
+  if (!t && String(res.type).startsWith('adj')) t = 'Corrected';
+  if (!t) return '';
+  const runs = (res.payload && res.payload.runs) | 0;
+  if (runs && !/run/i.test(t)) t += ` · ${runs} run${runs > 1 ? 's' : ''}`;
+  if (next.half !== prev.half) t += ' · side retired';
+  // The hitter it happened to: the one who was up before this play moved the order on.
+  const side = L.battingSide(prev);
+  const b = pl ? (teamOf(side).batters[batIdxOf(side, prev)] || {}) : {};
+  return (b.num && res.type !== 'runner' ? `#${b.num} · ` : '') + t;
+}
+function markUndone() {
+  const el = $('last-play'); if (!el || el.hidden || el.classList.contains('undone')) return;
+  el.textContent = '↶ Undone: ' + el.textContent.replace(/^✓ /, '');
+  el.classList.add('undone');
+}
+function sayLastPlay(res, prev, next) {
+  const el = $('last-play'); if (!el || (next.sport || 'baseball') !== 'baseball') return;
+  const t = lastPlayText(res, prev, next);
+  if (!t) return;
+  el.textContent = '✓ ' + t;
+  el.classList.remove('undone');
+  el.hidden = false;
 }
 // The third out puts Mid-Inning up by itself: the stream has the full scoreboard
 // while the teams change and you fix positions. Its toast opens the Field screen.
@@ -639,7 +693,7 @@ async function doUndo() {
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
   // Returns whether a play was actually reversed, for callers that go on to
   // re-record it differently (a strikeout turned into a dropped third strike).
-  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); return true; }
+  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); markUndone(); return true; }
   showToast('Nothing to undo');
   return false;
 }
@@ -663,6 +717,7 @@ function undoQueued() {
   queue.drop(res.dropped);
   game = { ...res.state, lineups: game.lineups };
   renderGame();
+  markUndone();
   showToast(queue.pendingFor(game.id) ? '↶ Undone — still saving the rest' : '↶ Undone');
   return true;
 }
@@ -2261,26 +2316,23 @@ function renderAdjust() {
 // Rosters live in the `lineups` jsonb column (written directly, not undoable).
 // The current-hitter index lives in state.batIdx (undoable via apply_event).
 const LINEUP_SLOTS = 15;
-// A row's position dropdown: the nine spots, then '' for not in the field (DH/EH/bench).
-const POS_OPTIONS = [...L.FIELD_POSITIONS, ''];
 let lineupBuiltFor = null;
 
 const teamOf = (side) => {
   const t = (game.lineups || {})[side] || {};
   return { pitcher: t.pitcher || { name: '', num: '' }, batters: Array.isArray(t.batters) ? t.batters : [] };
 };
-const batIdxOf = (side) => (((game.state && game.state.batIdx) || {})[side] | 0);
+const batIdxOf = (side, g = game) => (((g.state && g.state.batIdx) || {})[side] | 0);
 
 function buildLineup(side) {
   let html = '';
-  const opts = POS_OPTIONS.map((p) => `<option value="${p}">${p || '—'}</option>`).join('');
   for (let i = 0; i < LINEUP_SLOTS; i++) {
     html += `<div class="lineup-row" data-i="${i}">` +
       `<button class="cur-dot" data-i="${i}" title="Set at-bat" aria-label="Batter ${i + 1} is up">◎</button>` +
       `<span class="ord">${i + 1}</span>` +
       `<input class="b-num" inputmode="numeric" maxlength="3" size="3" placeholder="#" aria-label="Number, batter ${i + 1}" />` +
       `<input class="b-name" placeholder="Batter ${i + 1}" aria-label="Name, batter ${i + 1}" />` +
-      `<select class="b-pos" aria-label="Position, batter ${i + 1}">${opts}</select></div>`;
+      `<button type="button" class="b-pos" data-i="${i}"></button></div>`;
   }
   $('lineup-' + side).innerHTML = html;
 }
@@ -2291,11 +2343,13 @@ function fillLineup(side) {
     const b = t.batters[i] || {};
     row.querySelector('.b-num').value = b.num || '';
     row.querySelector('.b-name').value = b.name || '';
-    const sel = row.querySelector('.b-pos');
-    sel.value = L.positionOf(raw, i);
-    // An empty slot has nobody to put in the field.
-    sel.disabled = !(b.num || b.name);
-    sel.classList.toggle('none', !sel.value);
+    // Read-only here: positions have one home, the Field screen. Tapping goes there.
+    const pos = L.positionOf(raw, i);
+    const chip = row.querySelector('.b-pos');
+    chip.textContent = pos || '—';
+    chip.disabled = !(b.num || b.name);
+    chip.classList.toggle('none', !pos);
+    chip.setAttribute('aria-label', `${pos ? 'Plays ' + pos : 'Not in the field'}. Set positions on the Field screen.`);
   });
   renderFieldCheck(side);
 }
@@ -2304,9 +2358,10 @@ function renderFieldCheck(side) {
   const el = $('fieldcheck-' + side); if (!el) return;
   const miss = L.missingPositions((game.lineups || {})[side] || {});
   el.classList.toggle('ok', !miss.length);
-  if (!miss.length) { el.textContent = '✓ All nine positions filled'; return; }
+  if (!miss.length) { el.textContent = '✓ All nine positions filled · Field ›'; return; }
   el.replaceChildren(document.createTextNode('Empty:'));
   for (const p of miss) { const s = document.createElement('b'); s.textContent = p; el.append(s); }
+  el.append(document.createTextNode(' · Set on Field ›'));
 }
 function renderCurrentHitter(side) {
   const idx = batIdxOf(side);
@@ -2330,37 +2385,19 @@ async function saveLineup(side) {
   const lineups = game.lineups || {};
   await saveRoster({ ...lineups, [side]: L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters) });
 }
-// A row's position dropdown. Same rule as the Field screen: whoever held that
-// spot trades into this kid's old one (or goes to the bench if this kid had
-// none). Their row flashes so the move is easy to see.
-async function setRowPosition(side, i, pos) {
-  const lineups = game.lineups || {};
-  const cur = L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters);
-  const r = pos ? L.assignSpot(cur, pos, i) : { team: L.setPosition(cur, i, '').team, moved: null };
-  const team = r.team, benched = r.moved ? r.moved.idx : -1;
-  const next = { ...lineups, [side]: team };
-  game = { ...game, lineups: next };
-  fillLineup(side);
-  if (benched >= 0) {
-    const row = $('lineup-' + side).querySelector(`.lineup-row[data-i="${benched}"]`);
-    if (row) { row.classList.remove('benched'); void row.offsetWidth; row.classList.add('benched'); }
-    const b = team.batters[benched] || {};
-    showToast(`${b.name || '#' + b.num} to ${r.moved.to || 'the bench'}`, 2800);
-  }
-  await saveRoster(next);
-}
 function setCurrentHitter(side, i) {
   const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
   commit({ type: 'batidx', patch: { state: { ...(game.state || {}), batIdx } }, payload: { side, i } });
 }
 // Wire the static containers/inputs once (rows are delegated, so rebuilds are safe).
 ['away', 'home'].forEach((side) => {
+  $('fieldcheck-' + side).onclick = () => openField(side);
   const list = $('lineup-' + side);
   list.addEventListener('change', (e) => {
-    if (e.target.classList.contains('b-pos')) return setRowPosition(side, +e.target.closest('.lineup-row').dataset.i, e.target.value);
     saveLineup(side);
   });
   list.addEventListener('click', (e) => {
+    if (e.target.closest('.b-pos')) return openField(side);
     const dot = e.target.closest('.cur-dot');
     if (dot) setCurrentHitter(side, +dot.dataset.i);
   });
@@ -2471,7 +2508,7 @@ function renderLineups() {
   paintField();   // a roster saved elsewhere repaints an open Field screen too
 }
 // The drag-onto-a-diamond Defense panel lived here until v3.62. Positions are
-// now a dropdown on each lineup row (setRowPosition / L.setPosition).
+// set on the Field screen (openField / L.assignSpot); lineup rows show them read-only.
 
 // Walk sheet ----------------------------------------------------------------
 let wState = { first: false, second: false, third: false, runs: 0 };
@@ -2777,7 +2814,7 @@ function renderBaseballControl() {
       '<span class="mb mh"></span>' +
     '</span>';
   setSitLabel(L.situationSentence(game) + '. Edit the situation.');
-  $('g-batting').textContent = `Batting: ${game.half === 'bottom' ? game.home_name : game.away_name}`;
+  $('g-batting').hidden = true;   // the batter strip names the hitter; the bold abbreviation up top says which team
   $('g-away-name').classList.toggle('bat', game.half === 'top');
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
   renderBatterLine();
@@ -2802,14 +2839,18 @@ function renderBatterLine() {
   const bat = teamOf(batSide), i = batIdxOf(batSide);
   const b = bat.batters[i] || {};
   const p = teamOf(batSide === 'home' ? 'away' : 'home').pitcher;
-  const hitter = [b.num, b.name].filter(Boolean).join(' ');
-  const pitcher = [p.num, p.name].filter(Boolean).join(' ');
-  $('gm-hitter').textContent = hitter;
-  // Never hidden in baseball: this line is the way into the lineup sheet, so an
-  // empty lineup has to say so rather than take the door away with it.
-  $('gm-vs').textContent = hitter || pitcher
-    ? [hitter && ordinal(i + 1), pitcher && `P ${pitcher}, ${L.pitchCount(game)}`].filter(Boolean).join(' · ')
-    : 'No lineup yet — tap to set it';
+  // Jersey number first: it is what you can read from the fence. The name is
+  // the second line, then who follows, so you can see the order is right.
+  const has = !!(b.num || b.name);
+  $('gm-num').textContent = has ? (b.num ? '#' + b.num : '') : '';
+  $('gm-hitter').textContent = has ? (b.name || `#${b.num}`) : 'No lineup yet — tap to set it';
+  const next = L.dueUp(game, 2).map((x) => (x.num ? '#' + x.num : shortName(x))).filter(Boolean);
+  $('gm-vs').textContent = has ? `${ordinal(i + 1)} up${next.length ? ' · then ' + next.join(', ') : ''}` : '';
+  const pn = p.num ? '#' + p.num : shortName(p);
+  $('gm-pitch').textContent = pn ? `${pn} · ${L.pitchCount(game)}` : `— · ${L.pitchCount(game)}`;
+  $('gm-batter').setAttribute('aria-label', has
+    ? `Batting: ${b.num ? 'number ' + b.num + ', ' : ''}${b.name || ''}, ${ordinal(i + 1)} in the order. Pitcher ${p.num ? 'number ' + p.num : p.name || 'not set'}, ${L.pitchCount(game)} pitches. Open the lineup.`
+    : 'No lineup yet. Open the lineup to set it.');
   $('gm-batter').hidden = false;
 }
 

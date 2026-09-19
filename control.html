@@ -320,11 +320,16 @@
 
     <!-- Who's up, and the way into the lineup sheet. -->
     <button class="gm-batter" id="gm-batter" type="button">
-      <span id="gm-hitter" class="gm-hitter"></span>
-      <span id="gm-vs" class="gm-vs"></span>
+      <b id="gm-num" class="gm-num sport-only" data-sport="baseball"></b>
+      <span class="gm-who"><span id="gm-hitter" class="gm-hitter"></span><span id="gm-vs" class="gm-vs"></span></span>
+      <span class="gm-p sport-only" data-sport="baseball"><small>PITCHER</small><b id="gm-pitch"></b></span>
       <span id="g-batting" class="tag">Batting: —</span>
-      <span class="gm-edit sport-only" data-sport="baseball" aria-hidden="true">LINEUP ›</span>
     </button>
+
+    <!-- What the last tap recorded, in words, until the next one. You look away
+         from the phone a lot; this is the check that the tap did what you meant.
+         Undo stays where it always is, on the bottom bar. -->
+    <p id="last-play" class="last-play sport-only" data-sport="baseball" role="status" hidden></p>
 
     <div id="setup-guide" class="setup-guide" hidden>
       <button id="sg-head" class="sg-head" type="button">
@@ -994,7 +999,7 @@
        the bench. Both teams' lists stay built — the switch only shows one. -->
   <div id="lineup-sheet" class="sheet full" role="dialog" aria-modal="true" aria-labelledby="lineup-title" tabindex="-1" hidden>
     <div class="sheet-card scroll lineup-card">
-      <div class="full-top"><button id="lu-done" class="fv-back" type="button">‹ Back</button><h3 id="lineup-title">Lineup</h3><span class="sit-sub">saves as you type</span></div>
+      <div class="full-top"><button id="lu-done" class="fv-back" type="button">‹ Back</button><h3 id="lineup-title">Lineup</h3><span id="lu-status" class="sit-sub lu-status" aria-live="polite">saves as you type</span></div>
       <div class="lu-tabs" role="group" aria-label="Team">
         <button id="lu-tab-away" type="button" aria-pressed="true">Away</button>
         <button id="lu-tab-home" type="button" aria-pressed="false">Home</button>
@@ -1006,7 +1011,7 @@
           <button id="team-save-away" class="fxbtn">💾 Save</button>
           <button id="team-del-away" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
         </div>
-        <p class="fieldcheck" id="fieldcheck-away"></p>
+        <button type="button" class="fieldcheck" id="fieldcheck-away"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-away"></div>
       </section>
@@ -1017,12 +1022,12 @@
           <button id="team-save-home" class="fxbtn">💾 Save</button>
           <button id="team-del-home" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
         </div>
-        <p class="fieldcheck" id="fieldcheck-home"></p>
+        <button type="button" class="fieldcheck" id="fieldcheck-home"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-home"></div>
       </section>
 
-      <p class="hint"><b>◎</b> marks who's up; tap another ◎ to move it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters — positions go with them. <b>P</b> is the pitcher; <b>—</b> means not in the field.</p>
+      <p class="hint"><b>◎</b> marks who's up; tap another ◎ to move it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters. Positions are set on the <b>Field</b> screen — tap one to go there.</p>
     </div>
   </div>
 

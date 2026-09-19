@@ -943,3 +943,27 @@ body.field-open { overflow: hidden; }
 .full-top h3 { margin: 0; font-size: 22px; font-weight: 700; }
 .full-top .sit-sub { flex-basis: 100%; margin-top: -4px; }
 @media (min-width: 700px) { .sheet.full { padding: 0; align-items: stretch; } .full-top .sit-sub { flex-basis: auto; margin-top: 0; } }
+
+/* Batter strip: jersey number first, then name and who follows; pitcher on the right. */
+.gm-num { flex: 0 0 auto; font-family: var(--num); font-size: 40px; font-weight: 700; line-height: 1; color: var(--chalk); }
+.gm-num:empty { display: none; }
+.gm-who { display: flex; flex-direction: column; min-width: 0; flex: 1; text-align: left; }
+.gm-batter .gm-hitter { font-size: 17px; }
+.gm-batter .gm-vs { font-size: 14px; color: var(--body); }
+.gm-p { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.gm-p small { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); }
+.gm-p b { font-family: var(--num); font-size: 24px; font-weight: 700; color: var(--chalk); line-height: 1.05; }
+
+/* Last play recorded, in words */
+.last-play { margin: 2px 16px 0; padding: 10px 14px; border-radius: 12px; background: #16233a; border: 1px solid #2b4a78;
+  color: var(--chalk); font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.last-play[hidden] { display: none; }
+.last-play.undone { background: var(--card); border-color: var(--line-2); color: var(--body); }
+@media (min-width: 700px) { .last-play { margin: 0; } }
+
+/* Lineup: positions are read-only chips (tap = Field screen); save status in the header */
+button.lineup-row .b-pos, .lineup-row .b-pos { text-align: center; }
+.lineup-row .b-pos.none { color: var(--muted); }
+button.fieldcheck { width: 100%; background: none; border: none; padding: 6px 2px; text-align: left; font-weight: 600; min-height: 40px; }
+.lu-status[data-state="saved"] { color: var(--ball); font-weight: 700; }
+.lu-status[data-state="failed"] { color: var(--out-ui); font-weight: 700; }
