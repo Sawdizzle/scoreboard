@@ -539,6 +539,12 @@
       </div>
     </div>
 
+    <!-- Baseball ends its game from the Situation sheet; the other sports have no
+         such sheet, so the same button sits at the foot of their pad. -->
+    <div id="end-row" class="end-row" hidden>
+      <button class="base-btn sit-end end-game" type="button">🏁 End game</button>
+    </div>
+
     </div><!-- /.col-live -->
 
     <!-- Everything you set once. On a phone this is a bottom sheet dragged up
@@ -912,7 +918,7 @@
             <div class="adj-row"><span class="adj-lab">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
           </div>
         </details>
-        <button id="btn-endgame" class="base-btn sit-wide sit-end">🏁 End game</button>
+        <button id="btn-endgame" class="base-btn sit-wide sit-end end-game">🏁 End game</button>
       </div>
 
       <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>

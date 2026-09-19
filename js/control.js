@@ -1965,13 +1965,22 @@ $('adj-half').onclick = () => commit(L.onToggleHalf(game));
 const closeSit = () => closeSheet('sit-sheet');
 $('sit-btn').onclick = () => openSheet('sit-sheet');
 // Ending is a play like any other: one event, so Undo reopens the game.
-$('btn-endgame').onclick = () => {
+const endGameClick = () => {
   if (!game) return;
   if (game.status === 'final') return commit({ type: 'reopen_game', patch: { status: 'live' } });
   if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
   commit({ type: 'end_game', patch: { status: 'final', clock_running: false } });
   closeSheet('sit-sheet');
 };
+document.querySelectorAll('.end-game').forEach((b) => { b.onclick = endGameClick; });
+function renderEndGame() {
+  const over = game.status === 'final';
+  $('end-row').hidden = (game.sport || 'baseball') === 'baseball';
+  document.querySelectorAll('.end-game').forEach((b) => {
+    b.textContent = over ? '↺ Reopen game' : '🏁 End game';
+    b.classList.toggle('over', over);
+  });
+}
 $('sit-done').onclick = closeSit;
 function renderAdjust() {
   const set = (id, v) => { $(id).textContent = v | 0; };
@@ -2289,6 +2298,7 @@ function renderGame() {
   const sport = g.sport || 'baseball';
   // ---- the fixed shell: always, this is what a commit is for ----
   showSport(sport);
+  renderEndGame();
   $('g-away-name').textContent = g.away_abbr || g.away_name || 'VIS';
   $('g-home-name').textContent = g.home_abbr || g.home_name || 'HOME';
   $('g-away-runs').textContent = g.away_score;
@@ -2496,9 +2506,6 @@ function renderBaseballControl() {
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
   renderBatterLine();
   $('pc-val').textContent = L.pitchCount(game);
-  const over = game.status === 'final';
-  $('btn-endgame').textContent = over ? '↺ Reopen game' : '🏁 End game';
-  $('btn-endgame').classList.toggle('over', over);
   renderAdjust();
   $('base-1').classList.toggle('on', b.first);
   $('base-2').classList.toggle('on', b.second);

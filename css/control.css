@@ -522,6 +522,10 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .sit-side .base-btn, .sit-wide { background: var(--bg-2); border: 1px solid var(--line-2); color: #c8d4e8;
   border-radius: 12px; padding: 13px 10px; font-size: 14px; font-weight: 700; }
 .sit-wide { display: block; width: 100%; margin-top: 9px; }
+.end-row { margin: 14px 0 6px; }
+.end-row .end-game { width: 100%; padding: 13px 8px; font-size: 14px; }
+.end-row .sit-end, .sit-card .sit-end { background: var(--danger-bg); border: 1px solid var(--danger-line); color: var(--danger-text); }
+.end-row .sit-end.over { background: var(--bg-2); border-color: var(--line-2); color: #c8d4e8; }
 .sit-card .sit-end { margin-top: 16px; background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-text); }
 .sit-card .sit-end.over { background: var(--bg-2); border-color: var(--line-2); color: #c8d4e8; }
 .sit-pair { display: flex; gap: 9px; margin-top: 9px; }
