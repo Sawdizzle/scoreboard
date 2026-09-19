@@ -244,9 +244,9 @@ async function loadGames() {
     const open = document.createElement('button');
     open.className = 'game-row';
     open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
-      `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}` +
-      `${g.status === 'live' ? '<span class="g-live">LIVE</span>' : ''}</span>` +
-      `<span class="g-state">${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span>` +
+      `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
+      `<span class="g-state">${g.status === 'live' ? '<span class="g-live">LIVE</span>' : ''}` +
+      `<span>${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span></span>` +
       `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
     open.onclick = () => openGame(g.id);
     list.appendChild(open);
@@ -907,12 +907,11 @@ function renderOnAir() {
     $('card-bat-auto').textContent = label('lineup');
     $('card-def-auto').textContent = label('defense');
     const s = airSuggestions(game);
-    $('air-why').textContent = s.why;
-    $('air-sugg').replaceChildren(...s.ids.map((t) => {
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'fxbtn sugg'; btn.dataset.card = t; btn.textContent = label(t);
-      return btn;
-    }));
+    $('air-why').textContent = s.why ? `· ${s.why}` : '';
+    // Outline the real buttons rather than copying them into a row of their own.
+    document.querySelectorAll('#onair-sheet [data-card]').forEach((btn) => {
+      btn.classList.toggle('sugg', s.ids.includes(btn.dataset.card));
+    });
   }
   document.querySelectorAll('#onair-sheet [data-card]').forEach((btn) => {
     const on = btn.dataset.card === up;

@@ -547,13 +547,11 @@
     <div id="drawer" class="drawer">
       <div class="dw-scrim" id="dw-scrim"></div>
       <div class="dw-sheet">
-        <!-- The handle is a real control, not decoration: flick it down or tap
-             the ✕. The scrim is 12% of a phone screen and most of that sits
-             under the status bar, so it cannot be the only way out. -->
-        <div class="dw-grip" id="dw-grip">
-          <span class="grab"></span>
-          <button id="dw-close" class="dw-close" type="button" aria-label="Close">✕</button>
-        </div>
+        <!-- The handle is a real control, not decoration: flick it down, or tap
+             Done at the foot like every other sheet. The scrim is 12% of a phone
+             screen and most of that sits under the status bar, so it cannot be
+             the only way out. -->
+        <div class="dw-grip" id="dw-grip"><span class="grab"></span></div>
         <div class="dw-tabs" role="tablist">
           <button class="dw-tab on" id="dw-tab-teams" data-tab="teams" role="tab" aria-selected="true" aria-controls="dw-pane-teams">Teams</button>
           <button class="dw-tab" id="dw-tab-look" data-tab="look" role="tab" aria-selected="false" aria-controls="dw-pane-look">Look</button>
@@ -628,7 +626,7 @@
                   <button data-pos="top-center" title="Top-center">↑</button>
                   <button data-pos="top-right" title="Top-right">↗</button>
                   <button data-pos="mid-left" title="Middle-left">←</button>
-                  <button data-pos="mid-center" title="Center">＋</button>
+                  <button data-pos="mid-center" title="Center">●</button>
                   <button data-pos="mid-right" title="Middle-right">→</button>
                   <button data-pos="bottom-left" title="Bottom-left">↙</button>
                   <button data-pos="bottom-center" title="Bottom-center">↓</button>
@@ -835,6 +833,7 @@
           </section>
 
         </div>
+        <div class="dw-foot"><button id="dw-close" class="primary" type="button">Done</button></div>
       </div>
     </div>
     </div><!-- /.game-cols -->
@@ -892,10 +891,13 @@
         <div class="adj-row"><span class="adj-lab">Balls</span><button class="step" data-adj="balls" data-d="-1">–</button><b id="adj-balls">0</b><button class="step" data-adj="balls" data-d="1">+</button></div>
         <div class="adj-row"><span class="adj-lab">Strikes</span><button class="step" data-adj="strikes" data-d="-1">–</button><b id="adj-strikes">0</b><button class="step" data-adj="strikes" data-d="1">+</button></div>
         <div class="adj-row"><span class="adj-lab">Outs</span><button class="step" data-adj="outs" data-d="-1">–</button><b id="adj-outs">0</b><button class="step" data-adj="outs" data-d="1">+</button></div>
-        <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button><button id="adj-half" class="base-btn">Flip ½</button></div>
+        <div class="adj-row"><span class="adj-lab">Inning</span><button class="step" data-adj="inning" data-d="-1">–</button><b id="adj-inning">1</b><button class="step" data-adj="inning" data-d="1">+</button></div>
         <!-- The third out ends the half on its own; this is for the half that ends
              some other way (a run limit, a called inning). -->
-        <button id="btn-endhalf" class="base-btn sit-wide">End this half-inning now</button>
+        <div class="sit-pair">
+          <button id="adj-half" class="base-btn">Flip top/bottom</button>
+          <button id="btn-endhalf" class="base-btn">End half-inning</button>
+        </div>
         <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
 
         <details class="sit-more">
@@ -937,10 +939,11 @@
       <span class="grab"></span>
       <div class="sit-head"><h3 id="onair-title">On Air</h3><span class="sit-sub">tap to show · tap again to take down</span></div>
 
-      <div class="sport-only" data-sport="baseball">
-        <span class="sublabel">Right now <em id="air-why"></em></span>
-        <div class="fx-grid" id="air-sugg"></div>
-      </div>
+      <p class="air-why sport-only" data-sport="baseball"><span class="sugg-dot" aria-hidden="true"></span>Outlined = good right now <em id="air-why"></em></p>
+
+      <label class="air-text">Card text <em>optional — type before tapping a card</em>
+        <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
+      </label>
 
       <span class="sublabel">Cards</span>
       <div class="fx-grid">
@@ -949,22 +952,15 @@
         <button id="card-def-auto" class="fxbtn sport-only" data-sport="baseball" type="button" data-card="defense">Defense</button>
         <button class="fxbtn" type="button" data-card="matchup">Matchup</button>
         <button class="fxbtn" type="button" data-card="sponsor">Sponsor</button>
-        <button class="fxbtn" type="button" data-card="final">Final</button>
+        <button class="fxbtn" type="button" data-card="final">Final score</button>
       </div>
 
       <span class="sublabel">Full screen <em>hides the scorebug</em></span>
       <div class="fx-grid">
         <button class="fxbtn takeover" type="button" data-card="starting">Starting Soon</button>
         <button class="fxbtn takeover" type="button" data-card="midinning">Mid-Inning</button>
-        <button class="fxbtn takeover" type="button" data-card="finalfull">Final</button>
+        <button class="fxbtn takeover" type="button" data-card="finalfull">Final screen</button>
       </div>
-
-      <details class="sit-more air-text">
-        <summary>Card text — type it before you tap the card</summary>
-        <div class="sit-more-body">
-          <input id="card-text" placeholder="Due Up names / sponsor / matchup subtitle…" />
-        </div>
-      </details>
 
       <span class="sublabel">Moments <em>play once</em></span>
       <div class="fx-grid">
@@ -974,8 +970,9 @@
         <button id="fx-sb" class="fxbtn moment sport-only" data-sport="baseball" type="button">Stolen Base</button>
         <button id="fx-walkoff" class="fxbtn moment sport-only" data-sport="baseball" type="button">Walk-Off</button>
         <button id="fx-charge" class="fxbtn moment charge" type="button">🎺 Charge!</button>
-        <button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button>
       </div>
+      <span class="sublabel">Mode</span>
+      <div class="fx-grid"><button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button></div>
 
       <div class="sheet-actions"><button id="onair-done" class="primary">Done</button></div>
     </div>

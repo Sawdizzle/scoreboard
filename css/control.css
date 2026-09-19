@@ -219,7 +219,7 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   .gm-bottom { position: sticky; bottom: 0; z-index: 15; margin-top: 16px;
     padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--bg);
     box-shadow: 0 -10px 14px -8px rgba(0, 0, 0, 0.6); }
-  .gm-bottom .gm-b { flex: 0 1 220px; }
+  .gm-bottom > button { flex: 0 1 220px; }
   .game-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
   /* Sheets centre and round on all sides — they're dialogs here, not phone sheets. */
   .sheet { align-items: center; padding: 20px; }
@@ -256,11 +256,13 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .game-row:active { filter: brightness(1.2); }
 .g-sport { flex: 0 0 auto; font-size: 22px; line-height: 1; }
 .g-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.g-name { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Long team names wrap to a second line instead of vanishing under the score. */
+.g-name { font-size: 15px; font-weight: 700; line-height: 1.25;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .g-live { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
   padding: 2px 7px; border-radius: 5px; background: var(--strike); color: #fff; }
-.g-state { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-state { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+.g-state > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-score { flex: 0 0 auto; font-family: var(--num); font-size: 30px; font-weight: 600; line-height: 1; }
 .g-chev { flex: 0 0 auto; font-size: 13px; color: var(--muted); }
 .danger-row { display: flex; gap: 12px; margin-top: 14px; }
@@ -463,7 +465,12 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .fb-dist { align-self: center; font-family: var(--num); font-size: 20px; min-width: 2.5ch; text-align: center; }
 .fb-score { margin-top: 8px; }
 .shared-fx { display: flex; gap: 12px; margin-top: 16px; }
-.shared-fx .fxbtn { flex: 1; margin-top: 0; } /* keep the row's baselines even */
+.shared-fx .fxbtn, .shared-fx .fxbtn.cardclear { flex: 1; width: auto; margin-top: 0; } /* keep the row's baselines even */
+/* A button beside a labelled select lines up with the select, not the label. */
+.audio-row > .fxbtn { align-self: flex-end; padding: 13px 16px; margin: 0; }
+.audio-row > .sel { margin-bottom: 0; }
+.audio-row { margin-bottom: 12px; }
+.shared-fx + .audio-row, .panel-body > input + .shared-fx { margin-top: 14px; }
 .replay-row { margin-top: 10px; }
 .replay-auto { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--chalk); }
 .replay-auto .switch .track { width: 46px; height: 28px; }
@@ -491,7 +498,11 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .onair-card [data-card].on { background: var(--steel); border-color: var(--steel); color: #06090f; }
 .onair-card .rally-toggle { grid-column: 1 / -1; }
 .onair-card .air-text { margin-top: 10px; }
-.onair-card .air-text > summary { padding: 11px; font-size: 13px; }
+.onair-card .air-text { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+.onair-card .air-text em { font-style: normal; opacity: 0.8; }
+.onair-card .air-why { margin: 8px 0 0; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.onair-card .air-why em { font-style: normal; color: var(--steel); }
+.sugg-dot { width: 12px; height: 12px; border-radius: 4px; border: 2px solid var(--steel); }
 .onair-card #card-text { margin-top: 0; }
 
 /* Situation sheet — bases, count, inning, and the corrections for all three.
@@ -511,6 +522,8 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .sit-side .base-btn, .sit-wide { background: var(--bg-2); border: 1px solid var(--line-2); color: #c8d4e8;
   border-radius: 12px; padding: 13px 10px; font-size: 14px; font-weight: 700; }
 .sit-wide { display: block; width: 100%; margin-top: 9px; }
+.sit-pair { display: flex; gap: 9px; margin-top: 9px; }
+.sit-pair .base-btn { flex: 1; padding: 13px 8px; font-size: 14px; background: var(--bg-2); border: 1px solid var(--line-2); color: #c8d4e8; }
 
 /* The diamond. Bases are 38px of ink inside a 44px target — nothing on this
    sheet is smaller than a thumb. */
@@ -578,10 +591,8 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .dw-grip { position: relative; display: flex; align-items: center; justify-content: center;
   height: 30px; touch-action: none; }
 .dw-grip .grab { margin: 0; }
-.dw-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  width: 40px; height: 40px; font-size: 15px; background: var(--card);
-  border: 1px solid var(--line); color: #c8d4e8; border-radius: 999px; }
-.dw-close:active { filter: brightness(1.3); }
+.dw-foot { padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #1d2740; }
+.dw-foot .primary { width: 100%; margin: 0; background: var(--run); }
 .dw-tabs { display: flex; gap: 7px; padding: 6px 16px 12px; border-bottom: 1px solid #1d2740; }
 .dw-tab { flex: 1; padding: 10px 6px; font-size: 13px; font-weight: 700; border-radius: 12px;
   background: var(--card); border: 1px solid var(--line); color: #c8d4e8; }
@@ -610,7 +621,7 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
      positioned — leaving 25 behind kept the drawer in its own stacking context
      above every sheet, so Game Setup opened underneath the panel column. */
   .drawer { position: static; z-index: auto; visibility: visible; }
-  .dw-scrim, .dw-tabs, .dw-grip { display: none; }
+  .dw-scrim, .dw-tabs, .dw-grip, .dw-foot { display: none; }
   .dw-sheet { position: static; max-width: none; margin: 0; height: auto; transform: none;
     background: none; border: none; border-radius: 0; padding-top: 0; box-shadow: none; }
   .dw-body { overflow: visible; padding: 0; }
@@ -664,8 +675,8 @@ body.no-obs .obs-only { display: none; }
 .fxbtn.scene { padding: 16px 10px; text-align: left; background: var(--bg-2); }
 .fxbtn.scene.on { background: var(--ball); border-color: var(--ball); color: #fff; }
 .fxbtn.scene:disabled { opacity: 0.5; }
-#scene-hint[data-tone="ok"] { color: var(--ball); }
-#scene-hint[data-tone="warn"] { color: var(--out-ui); }
+#scene-hint[data-tone="ok"], #cam-hint[data-tone="ok"] { color: var(--ball); }
+#scene-hint[data-tone="warn"], #cam-hint[data-tone="warn"] { color: var(--out-ui); }
 
 /* Lobby help / setup instructions */
 .help { margin-top: 22px; }
@@ -815,8 +826,9 @@ body.no-obs .obs-only { display: none; }
 /* Save/Close ride along at the bottom of a scrolling sheet. A phone in landscape
    has ~390pt of height — no dialog fits, so the actions must never be something
    you have to go looking for. */
-.sheet-card.scroll .sheet-actions { position: sticky; bottom: 0; z-index: 1;
-  margin-top: 14px; padding: 12px 0 2px; background: var(--panel);
+/* Pinned into the card's bottom padding too, so rows never peek out beneath it. */
+.sheet-card.scroll .sheet-actions { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); z-index: 1;
+  margin-top: 14px; padding: 12px 0 calc(18px + env(safe-area-inset-bottom)); margin-bottom: calc(-18px - env(safe-area-inset-bottom)); background: var(--panel);
   box-shadow: 0 -10px 14px -8px rgba(0, 0, 0, 0.55); }
 .setup-cols { display: flex; gap: 12px; }
 .setup-col { flex: 1; display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
