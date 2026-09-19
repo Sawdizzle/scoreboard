@@ -884,3 +884,9 @@ body.no-obs .obs-only { display: none; }
 .adj-row > .base-btn#vb-target { min-width: 96px; }
 #fb-firstdown { flex-grow: 1.6; }
 #fb-dist-dn, #fb-dist-up { flex-grow: 0.8; }
+
+/* Strike three: swinging / looking / dropped */
+.k3-opts { display: grid; gap: 10px; }
+.k3-opts .base-btn { padding: 16px; font-size: 16px; }
+.k3-opts .blocked { opacity: 0.4; }
+.k-back { display: inline-block; transform: scaleX(-1); }

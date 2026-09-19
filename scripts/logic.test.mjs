@@ -752,3 +752,34 @@ test('a position set from the sheet is what the fielder tray and defense card re
   assert.equal(L.fielderAt(g, 'home', 'LF').name, 'Morales');
   assert.equal(L.fielderAt(g, 'home', 'P').name, 'Jensen');
 });
+
+// ---------------------------------------------------------------------------
+// Strike three looking, hit by pitch
+// ---------------------------------------------------------------------------
+test('strike three looking is the same out with its own note and stinger', () => {
+  const sw = L.onStrike(G({ strikes: 2 }));
+  const lk = L.onStrike(G({ strikes: 2 }), { looking: true });
+  assert.equal(sw.payload.play.kind, 'K');
+  assert.equal(sw.anim, 'strikeout');
+  assert.equal(lk.payload.play.kind, 'KL');
+  assert.equal(lk.anim, 'strikeoutlooking');
+  assert.deepEqual(lk.patch, sw.patch, 'the game moves the same either way');
+});
+
+test('hit by pitch puts the batter on first, forces runners, counts the pitch', () => {
+  const r = L.onHitByPitch(G({ balls: 1, strikes: 2, bases: bases(1, 1, 1), lineups: { away: order([1, 1, 1]) } }));
+  assert.equal(r.type, 'hbp');
+  assert.deepEqual(r.patch.bases, bases(1, 1, 1));
+  assert.equal(r.patch.away_score, 1, 'bases loaded forces a run in');
+  assert.equal(r.patch.balls, 0);
+  assert.deepEqual(r.patch.state.pitches, { home: 1 });
+  assert.equal(r.patch.state.batIdx.away, 1, 'next batter up');
+  assert.equal(r.payload.play.kind, 'HBP');
+  assert.equal(r.payload.runs, 1);
+});
+
+test('hit by pitch with nobody forced leaves runners where they are', () => {
+  const r = L.onHitByPitch(G({ bases: bases(0, 1, 1) }));
+  assert.deepEqual(r.patch.bases, bases(1, 1, 1));
+  assert.equal(r.payload.runs, 0);
+});

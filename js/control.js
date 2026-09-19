@@ -637,16 +637,28 @@ function undoQueued() {
 
 // Buttons
 $('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? openWalkSheet(r) : commit(r); };
-// A dropped third strike looks like a strikeout until the catcher misses it, so
-// the strikeout is recorded as usual and its message offers to turn it into one
-// — only when the batter is allowed to run (1st open, or two outs).
+// Strike three asks how: swinging, looking, or dropped. It used to record a
+// swinging K on the spot and offer "Dropped 3rd?" on a toast, so a called
+// third strike went into the book and onto the stream as the wrong K.
 $('btn-strike').onclick  = () => {
-  const r = L.onStrike(game);
-  const canRun = r.type === 'strikeout' && !L.playBlocked(game, 'K3');
-  commit(r);
-  if (canRun) showToast('Strikeout', 5000, { label: 'Dropped 3rd?', run: droppedThird });
+  if ((game.strikes | 0) < 2) return commit(L.onStrike(game));
+  const why = L.playBlocked(game, 'K3');
+  const k3 = $('k3-dropped');
+  k3.classList.toggle('blocked', !!why);
+  k3.setAttribute('aria-disabled', String(!!why));
+  $('k3-why').textContent = why ? 'Dropped 3rd: batter can’t run — 1st is taken with fewer than 2 outs.' : '';
+  openSheet('k3-sheet');
 };
-async function droppedThird() { if (await doUndo()) startPlay('K3', 'C', 'toast'); }
+$('k3-swing').onclick = () => { closeSheet('k3-sheet'); commit(L.onStrike(game)); };
+$('k3-look').onclick  = () => { closeSheet('k3-sheet'); commit(L.onStrike(game, { looking: true })); };
+$('k3-dropped').onclick = () => {
+  const why = L.playBlocked(game, 'K3');
+  if (why) return showToast(why, 3200);
+  closeSheet('k3-sheet'); startPlay('K3', 'C', 'hit');
+};
+$('k3-cancel').onclick = () => closeSheet('k3-sheet');
+$('hit-hbp').onclick     = () => commit(L.onHitByPitch(game));
+$('hit-e').onclick       = () => openPlaySheet('E');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-out').onclick     = () => openPlaySheet();
 $('btn-run').onclick     = () => commit(L.onRun(game));
@@ -1398,7 +1410,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -1830,7 +1842,7 @@ function renderAudio() {
 // Record. Hits with runners on and a dropped third strike start on that step.
 // Nobody on and an out, or a hit: no second step at all.
 const PLAY_CHIPS = [['auto', 'Auto'], ['GB', 'Ground ball'], ['FB', 'Fly ball'], ['LD', 'Line drive'], ['PU', 'Pop-up'],
-  ['E', 'Error'], ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['SF', 'Sac fly'], ['K3', 'Dropped 3rd strike']];
+  ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['SF', 'Sac fly']];
 // Where each fielder stands on the drawn field, as % of its box.
 const FIELD_SPOT = { LF: [18, 24], CF: [50, 11], RF: [82, 24], SS: [33, 45], '2B': [67, 43],
   '3B': [15, 64], '1B': [85, 64], P: [50, 63], C: [50, 90] };
@@ -1838,7 +1850,7 @@ const RS_COLS = [['out', 'Out'], [1, '1st'], [2, '2nd'], [3, '3rd'], [4, 'Home']
 const RS_START = { third: 3, second: 2, first: 1, batter: 0 };
 const BASE_NAME = { first: '1st', second: '2nd', third: '3rd' };
 let playType = 'auto';
-let play = null;   // { kind, pos, dest, from: 'pick' | 'hit' | 'toast' }
+let play = null;   // { kind, pos, dest, from: 'pick' | 'hit' }
 
 const basesEmpty = () => { const b = L.safeBases(game.bases); return !b.first && !b.second && !b.third; };
 // "M. Reyes" fits a fielder tile; a player with only a number reads as "#12".
@@ -1871,8 +1883,13 @@ function paintPlayPick() {
     return btn;
   }));
   const chosen = PLAY_CHIPS.find(([k]) => k === playType);
+  // Error comes from its own E key on the hit bar, not a chip: charge it to a fielder.
+  $('play-chips').hidden = playType === 'E';
+  $('play-just-out').style.display = playType === 'E' ? 'none' : '';
+  if (playType === 'E') $('play-sub').textContent = batter ? `${shortName(batter)} reached · who made the error?` : 'Who made the error?';
   $('play-will').textContent = playType === 'auto'
     ? 'Tap who fielded it. Infield records a groundout (SS → 6-3), outfield a flyout (CF → F8). For anything else, pick the type first.'
+    : playType === 'E' ? 'Tap the fielder charged with the error (SS → E6). Then set where the runners ended up.'
     : `Tap who fielded the ${chosen[1].toLowerCase()}.`;
   const side = L.fieldingSide(game);
   const field = $('play-field');
@@ -1894,7 +1911,6 @@ $('play-chips').onclick = (e) => {
   const c = e.target.closest('.play-chip'); if (!c) return;
   const kind = c.dataset.kind;
   if (c.classList.contains('blocked')) return showToast(L.playBlocked(game, kind), 3200);
-  if (kind === 'K3') return startPlay('K3', 'C', 'pick');   // nobody to pick: the catcher had it
   playType = playType === kind ? 'auto' : kind;
   paintPlayPick();
 };

@@ -30,7 +30,7 @@ const REQUIRED_HANDLERS = [
   'setup-btn', 'setup-save', 'setup-cancel', 'delete-game', 'reset-game',
   'new-game-btn', 'back-btn', 'logout-btn', 'undo-btn', 'signup-btn',
   'btn-ball', 'btn-strike', 'btn-foul', 'btn-out', 'btn-run', 'btn-batter', 'btn-endhalf',
-  'onair-open', 'onair-done', 'air-clear', 'play-just-out', 'play-cancel', 'rs-record', 'rs-back', 'hit-1b', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
+  'onair-open', 'onair-done', 'air-clear', 'play-just-out', 'k3-swing', 'k3-look', 'k3-dropped', 'k3-cancel', 'hit-hbp', 'hit-e', 'play-cancel', 'rs-record', 'rs-back', 'hit-1b', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
 ];
 
 // ---- 1. Syntax ------------------------------------------------------------

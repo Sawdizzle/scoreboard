@@ -365,7 +365,9 @@
           <button id="hit-1b">1B</button><span class="hb-sep" aria-hidden="true">|</span>
           <button id="hit-2b">2B</button><span class="hb-sep" aria-hidden="true">|</span>
           <button id="hit-3b">3B</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="fx-homerun">HR</button>
+          <button id="fx-homerun">HR</button><span class="hb-sep" aria-hidden="true">|</span>
+          <button id="hit-hbp" aria-label="Hit by pitch">HBP</button><span class="hb-sep" aria-hidden="true">|</span>
+          <button id="hit-e" aria-label="Reached on error">E</button>
         </div>
       </div>
     </div>
@@ -1038,6 +1040,21 @@
           <button id="rs-record" class="primary">Record</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- STRIKE THREE SHEET -->
+  <div id="k3-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="k3-title" tabindex="-1" hidden>
+    <div class="sheet-card confirm-card">
+      <span class="grab"></span>
+      <h3 id="k3-title">Strike three</h3>
+      <div class="k3-opts">
+        <button id="k3-swing" class="confirm-go">K · Swinging</button>
+        <button id="k3-look" class="confirm-go"><span class="k-back">K</span> · Looking</button>
+        <button id="k3-dropped" class="base-btn">Dropped 3rd — batter runs</button>
+      </div>
+      <p id="k3-why" class="confirm-copy"></p>
+      <button id="k3-cancel" class="ghost">Cancel</button>
     </div>
   </div>
 

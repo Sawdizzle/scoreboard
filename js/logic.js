@@ -100,12 +100,15 @@ export function onBall(g) {
   return { type: 'ball', patch: withPitch(g, { balls }) };
 }
 
-export function onStrike(g) {
+// `looking`: called third strike. Same out, its own note (a backwards K in the
+// book and on the recap) and its own stinger.
+export function onStrike(g, { looking = false } = {}) {
   const strikes = (g.strikes | 0) + 1;
   // 3rd strike ends the at-bat (pitch + advance batter); earlier strikes just count the pitch.
   if (strikes >= 3) {
     const res = outResult(g, 'strikeout');
-    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, 'K', { outs: 1 }) } };
+    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
+      anim: looking ? 'strikeoutlooking' : 'strikeout' };
   }
   return { type: 'strike', patch: withPitch(g, { strikes }) };
 }
@@ -121,6 +124,14 @@ export function onFoul(g) {
 export function onOut(g) {
   const res = outResult(g, 'out');
   return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, 'OUT', { outs: 1 }) } };
+}
+
+// Hit by pitch: the batter takes first and forced runners move up, like a walk,
+// but it is its own line in the play-by-play. The pitch counts.
+export function onHitByPitch(g) {
+  const w = computeWalk(g.bases);
+  return { type: 'hbp', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
+    payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
 }
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
@@ -409,7 +420,7 @@ export const PLAY_LABEL = {
   FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
-  K: 'Strikeout', BB: 'Walk', HR: 'Home run', OUT: 'Out',
+  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', HBP: 'Hit by pitch', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event
