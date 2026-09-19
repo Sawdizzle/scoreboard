@@ -98,19 +98,71 @@ body.takeover #bug-wrap { display: none; }
 }
 @keyframes takeover-in { from { opacity: 0; } to { opacity: 1; } }
 
-/* Starting Soon */
-.card.starting .card-sub { font-size: 30px; letter-spacing: 0.22em; margin-bottom: 34px; color: var(--chalk); opacity: 0.75; }
-.card.starting .card-vs { display: flex; align-items: center; gap: 90px; }
-.card.starting .side { display: flex; flex-direction: column; align-items: center; gap: 24px; min-width: 420px; }
-.card.starting .side img { width: 300px; height: 300px; object-fit: contain;
-  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.55)); }
-.card.starting .cname { font-size: 62px; font-weight: 900; letter-spacing: 0.02em; }
-.card.starting .vs { font-size: 54px; font-weight: 900; color: var(--accent); }
-.card.starting .cd { font-family: var(--num); font-size: 132px; font-weight: 800; line-height: 1;
-  margin-top: 46px; letter-spacing: 0.02em; }
-.card.starting .cd.now { font-family: var(--disp); font-size: 96px; color: var(--accent); letter-spacing: 0.08em; }
-.card.starting .cd-when { margin-top: 12px; font-size: 26px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--steel); }
+/* Starting Soon — the pre-game scene. Three equal columns so VS is always the
+   exact centre of the frame, whatever the names; the names fit themselves to
+   two lines (fitStartingNames in overlay.js). */
+.card.starting { position: relative; width: 1760px; display: flex; flex-direction: column; align-items: center; color: #f4f7fb; }
+/* The takeover backdrop is always dark, so the scene keeps light ink even on light themes (Ice, Sunrise). */
+.card.starting .cd { color: #f4f7fb; }
+.ss-field { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.16; }
+.ss-field .ln { fill: none; stroke: #f4f7fb; stroke-width: 4; stroke-linecap: round;
+  stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: ss-draw 3.2s cubic-bezier(.3, .6, .2, 1) 0.2s forwards; }
+.ss-field .ln.thin { stroke-width: 2; }
+.ss-field .base { fill: #f4f7fb; opacity: 0; animation: ss-fade 0.6s ease 2.6s forwards; }
+@keyframes ss-draw { to { stroke-dashoffset: 0; } }
+@keyframes ss-fade { to { opacity: 1; } }
+/* After drawing in, each field keeps one slow movement of its own. */
+.ss-football .ss-field .yards { animation: ss-yards 14s linear 3.4s infinite; }
+@keyframes ss-yards { from { transform: translateX(0); } to { transform: translateX(-160px); } }
+.ss-baseball .ss-field, .ss-soccer .ss-field, .ss-basketball .ss-field { animation: ss-breathe 9s ease-in-out 3.4s infinite alternate; transform-origin: 50% 60%; }
+@keyframes ss-breathe { from { transform: scale(1); } to { transform: scale(1.035); } }
+.ss-volleyball .ss-field .net { animation: ss-sway 5s ease-in-out 3.4s infinite alternate; transform-origin: 50% 540px; }
+@keyframes ss-sway { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
+
+.ss-kicker { display: flex; align-items: center; gap: 22px; margin-bottom: 58px; font-size: 30px; letter-spacing: 0.24em; text-transform: uppercase; }
+.ss-sport { padding: 9px 22px 9px 26px; border-radius: 999px; background: var(--accent); color: #0b0f17; font-weight: 900; letter-spacing: 0.2em; }
+.ss-sub { font-weight: 700; opacity: 0.85; }
+
+.ss-main { width: 100%; display: grid; grid-template-columns: 1fr 300px 1fr; align-items: center; }
+.ss-team { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 26px; padding: 0 30px; }
+.ss-team.away { animation: ss-in-left 0.9s cubic-bezier(.2, .8, .2, 1) 0.15s both; }
+.ss-team.home { animation: ss-in-right 0.9s cubic-bezier(.2, .8, .2, 1) 0.15s both; }
+@keyframes ss-in-left { from { opacity: 0; transform: translateX(-160px); } to { opacity: 1; transform: none; } }
+@keyframes ss-in-right { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+.ss-logo { width: 280px; height: 280px; display: grid; place-items: center; }
+.ss-logo img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.6)); }
+.ss-mono { width: 250px; height: 250px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--num); font-size: 92px; font-weight: 800; letter-spacing: 0; color: #fff; overflow: hidden; white-space: nowrap;
+  border: 6px solid rgba(255, 255, 255, 0.85); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 -18px 40px rgba(0, 0, 0, 0.25); }
+.ss-team.away .ss-mono { background: var(--away-tc, #4a5260); }
+.ss-team.home .ss-mono { background: var(--home-tc, #4a5260); }
+.ss-team .cname { max-width: 100%; font-size: 72px; font-weight: 900; line-height: 1.08; letter-spacing: 0.01em;
+  text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere; min-height: calc(2 * 1.08em); display: flex; align-items: center; justify-content: center; }
+.ss-bar { width: 220px; height: 8px; border-radius: 4px; transform-origin: center; animation: ss-bar 0.8s cubic-bezier(.2, .8, .2, 1) 0.8s both; }
+.ss-team.away .ss-bar { background: var(--away-tc, var(--steel)); }
+.ss-team.home .ss-bar { background: var(--home-tc, var(--steel)); }
+@keyframes ss-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.ss-mid { position: relative; width: 300px; height: 300px; display: grid; place-items: center; }
+.ss-ball { position: absolute; width: 190px; height: 190px; opacity: 0.95;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55));
+  animation: ss-ball-in 1s cubic-bezier(.2, .9, .3, 1.2) 0.35s both, ss-spin 16s linear 1.4s infinite; }
+.ss-football .ss-ball { animation: ss-ball-in 1s cubic-bezier(.2, .9, .3, 1.2) 0.35s both, ss-spiral 2.8s ease-in-out 1.4s infinite; }
+@keyframes ss-ball-in { from { opacity: 0; transform: scale(0.2) rotate(-200deg); } to { opacity: 0.95; transform: none; } }
+@keyframes ss-spin { to { transform: rotate(360deg); } }
+@keyframes ss-spiral { 0%, 100% { transform: rotate(-18deg) scaleY(1); } 50% { transform: rotate(-18deg) scaleY(0.82); } }
+.ss-vs { position: relative; font-size: 86px; font-weight: 900; color: #fff; letter-spacing: 0.04em;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.9), 0 4px 0 rgba(0, 0, 0, 0.55);
+  animation: ss-pop 0.6s cubic-bezier(.2, .9, .3, 1.4) 0.9s both; }
+@keyframes ss-pop { from { opacity: 0; transform: scale(1.8); } to { opacity: 1; transform: none; } }
+
+.ss-clock { margin-top: 56px; display: flex; flex-direction: column; align-items: center;
+  padding: 18px 64px 20px; border-radius: 28px; background: rgba(8, 12, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
+  animation: rise-in 0.8s cubic-bezier(.2, .8, .2, 1) 1.1s both; }
+.card.starting .cd { font-family: var(--num); font-size: 120px; font-weight: 800; line-height: 1; letter-spacing: 0.02em; }
+.card.starting .cd.now { font-family: var(--disp); font-size: 88px; color: var(--accent); letter-spacing: 0.08em; animation: ss-pulse 1.6s ease-in-out infinite; }
+@keyframes ss-pulse { 50% { transform: scale(1.06); } }
+.card.starting .cd-when { margin-top: 10px; font-size: 26px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
 
 /* Mid-inning / full-page final: one big scoreboard slab */
 .card.slab .card-sub { font-size: 30px; letter-spacing: 0.2em; margin-bottom: 40px; color: var(--chalk); opacity: 0.75; }
@@ -164,10 +216,10 @@ body.takeover #bug-wrap { display: none; }
 
 /* Entrance: the card fades, its parts rise just behind it. Gated on .enter so a
    live refresh (the mid-inning card tracking the score) never replays it. */
-.card.takeover-card.enter > * { animation: rise-in 0.7s cubic-bezier(.2, .8, .2, 1) both; }
-.card.takeover-card.enter > *:nth-child(2) { animation-delay: 0.1s; }
-.card.takeover-card.enter > *:nth-child(3) { animation-delay: 0.18s; }
-.card.takeover-card.enter > *:nth-child(4) { animation-delay: 0.26s; }
+.card.takeover-card:not(.ss).enter > * { animation: rise-in 0.7s cubic-bezier(.2, .8, .2, 1) both; }
+.card.takeover-card:not(.ss).enter > *:nth-child(2) { animation-delay: 0.1s; }
+.card.takeover-card:not(.ss).enter > *:nth-child(3) { animation-delay: 0.18s; }
+.card.takeover-card:not(.ss).enter > *:nth-child(4) { animation-delay: 0.26s; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 
 /* Last minute before first pitch: the countdown goes gold. */
@@ -176,6 +228,8 @@ body.takeover #bug-wrap { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #card.takeover::before, #card.takeover::after { animation: none; }
   .card.takeover-card.enter > * { animation: none; }
+  .ss-field, .ss-field *, .ss-team, .ss-bar, .ss-ball, .ss-vs, .ss-clock, .card.starting .cd.now { animation: none !important; }
+  .ss-field .ln { stroke-dashoffset: 0; } .ss-field .base { opacity: 1; }
 }
 
 /* ---- Sponsor bug ----------------------------------------------------------

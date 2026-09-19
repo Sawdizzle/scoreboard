@@ -316,7 +316,10 @@ $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = '';
 $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value, style = $('ng-style').value;
-  const row = { status: 'setup', sport, style, starts_at: fromLocalInput($('ng-startsat').value) };   // 'live' on the first play
+  // Every game opens on Starting Soon: a real card, so it can be taken down by
+  // hand like any other. Starting the clock or the first play also drops it.
+  const row = { status: 'setup', sport, style, starts_at: fromLocalInput($('ng-startsat').value),
+    card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
   if (sport === 'football') row.state = F.fbState({});
   else if (sport === 'soccer') row.state = S.scState({});
   else if (sport === 'volleyball') row.state = V.vbState({});
@@ -916,9 +919,8 @@ async function showCard(type) {
   await writeField({ card: { type, meta, nonce: nextNonce() } });
   showToast(`🎬 ${cardLabel(type)} on air`);
 }
-// The game going live ends the pre-game: a Starting Soon raised by hand comes
-// down with it, the same as the automatic one. Its own write — apply_event
-// does not carry the card column.
+// The game going live ends the pre-game, so Starting Soon comes down with it.
+// Its own write — apply_event does not carry the card column.
 function dropStartingSoon() {
   if (game && game.card && game.card.type === 'starting') writeField({ card: null });
 }
@@ -1426,7 +1428,7 @@ $('reset-game').onclick = async () => {
   const patch = {
     status: 'setup', home_score: 0, away_score: 0,
     home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0,
-    line_score: [], current_animation: null, card: null, rally_mode: false,
+    line_score: [], current_animation: null, card: { type: 'starting', meta: {}, nonce: nextNonce() }, rally_mode: false,
     clock_running: false, clock_ends_at: null, clock_remaining_seconds: game.time_limit_seconds || null,
   };
   if (sport === 'baseball') Object.assign(patch, {

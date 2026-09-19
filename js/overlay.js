@@ -2,6 +2,7 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
+import { startingCard, fitStartingNames } from './starting.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
@@ -440,13 +441,9 @@ function cardSig(c, s) {
   }
   return null; // other cards are pure snapshots
 }
-// Before the game starts, the frame belongs to Starting Soon unless another card
-// is up. It is not written to the row: starting the clock or the first play
-// makes the game live, and the card goes with it — nothing left to take down.
-const AUTO_STARTING = { type: 'starting', nonce: 0 };
 function renderCard(s) {
   const layer = document.getElementById('card');
-  const c = s.card || (s.status === 'setup' ? AUTO_STARTING : null);
+  const c = s.card;
   const key = c && c.type ? `${c.type}:${c.nonce || 0}` : null;
   const sig = key ? cardSig(c, s) : null;
   if (key === lastCardKey && sig === lastCardSig) return;
@@ -463,6 +460,8 @@ function renderCard(s) {
   if (remount || !cur) {
     layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
+    fitStartingNames(layer);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitStartingNames(layer));
     const fresh = layer.querySelector('.takeover-card');
     if (fresh) {
       fresh.classList.add('enter');
@@ -545,19 +544,7 @@ function buildCard(c, s) {
       <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
     </div>${meta.text ? `<div class="card-meta">${escapeHtml(meta.text)}</div>` : ''}</div>`;
   }
-  if (c.type === 'starting') {
-    const t = s.starts_at ? new Date(s.starts_at) : null;
-    const when = t ? t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-    return `<div class="card takeover-card starting">
-      <div class="card-sub">${escapeHtml(meta.text || 'Game Starting Soon')}</div>
-      <div class="card-vs">
-        <div class="side">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
-        <div class="vs">VS</div>
-        <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
-      </div>
-      ${t ? `<div class="cd" id="card-cd">--:--</div><div class="cd-when">First pitch ${escapeHtml(when)}</div>` : ''}
-    </div>`;
-  }
+  if (c.type === 'starting') return startingCard(meta, s);
   if (c.type === 'midinning' || c.type === 'finalfull') {
     const fin = c.type === 'finalfull';
     return `<div class="card takeover-card slab">
@@ -924,3 +911,4 @@ if (!gameId) {
   fetchState();
   subscribe();
 }
+
