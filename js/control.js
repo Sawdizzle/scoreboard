@@ -1980,7 +1980,12 @@ $('sit-btn').onclick = () => openSheet('sit-sheet');
 // Ending is a play like any other: one event, so Undo reopens the game.
 const endGameClick = () => {
   if (!game) return;
-  if (game.status === 'final') return commit({ type: 'reopen_game', patch: { status: 'live' } });
+  if (game.status === 'final') {
+    // Same confirm as ending: the button flips in place, so a second tap (or a
+    // second device that just ended it) must not quietly reopen the game.
+    if (!confirm('Reopen this game? It goes back to live in your games and on the recap page.')) return;
+    return commit({ type: 'reopen_game', patch: { status: 'live' } });
+  }
   if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
   commit({ type: 'end_game', patch: { status: 'final', clock_running: false } });
   closeSheet('sit-sheet');
