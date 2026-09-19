@@ -256,6 +256,14 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 #lobby-view .primary.big { padding: 19px; font-size: 18px; font-weight: 800; border-radius: 16px; margin: 0 0 18px; }
 
 .games-list { display: flex; flex-direction: column; gap: 9px; }
+.past-games { margin-top: 6px; }
+.past-games > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 12px 4px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.past-games > summary::-webkit-details-marker { display: none; }
+.past-games > summary::after { content: '▸'; margin-left: auto; transition: transform 0.15s; }
+.past-games[open] > summary::after { transform: rotate(90deg); }
+.past-n { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: #c8d4e8; letter-spacing: 0; }
+.game-row.final { opacity: 0.8; }
 .game-row { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
   background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; color: var(--chalk); }
 .game-row:active { filter: brightness(1.2); }

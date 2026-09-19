@@ -242,19 +242,35 @@ async function loadGames() {
   list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
   if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
-  for (const g of data) {
-    // Delete lives in the game's own Setup, not here: an always-visible bin on a
-    // list you scroll one-handed is a mis-tap that cannot be undone.
-    const open = document.createElement('button');
-    open.className = 'game-row';
-    open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
-      `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
-      `<span class="g-state">${isOnNow(g) ? '<span class="g-live">LIVE</span>' : ''}` +
-      `<span>${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span></span>` +
-      `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
-    open.onclick = () => openGame(g.id);
-    list.appendChild(open);
+  // Games still to play or in progress on top; finished ones fold away below.
+  const current = data.filter((g) => g.status !== 'final');
+  const past = data.filter((g) => g.status === 'final');
+  if (!current.length) list.insertAdjacentHTML('beforeend', '<p class="muted">No upcoming games — create one.</p>');
+  for (const g of current) list.appendChild(gameRow(g));
+  if (past.length) {
+    const box = document.createElement('details');
+    box.className = 'past-games';
+    try { box.open = localStorage.getItem(PAST_OPEN) === '1'; } catch {}
+    box.ontoggle = () => { try { localStorage.setItem(PAST_OPEN, box.open ? '1' : '0'); } catch {} };
+    box.innerHTML = `<summary>Past games <span class="past-n">${past.length}</span></summary><div class="games-list"></div>`;
+    const inner = box.querySelector('.games-list');
+    for (const g of past) inner.appendChild(gameRow(g));
+    list.appendChild(box);
   }
+}
+const PAST_OPEN = 'sb-past-open';
+// Delete lives in the game's own Setup, not here: an always-visible bin on a
+// list you scroll one-handed is a mis-tap that cannot be undone.
+function gameRow(g) {
+  const open = document.createElement('button');
+  open.className = 'game-row' + (g.status === 'final' ? ' final' : '');
+  open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
+    `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
+    `<span class="g-state">${isOnNow(g) ? '<span class="g-live">LIVE</span>' : ''}` +
+    `<span>${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span></span>` +
+    `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
+  open.onclick = () => openGame(g.id);
+  return open;
 }
 
 // Help: four shortcut tiles over the same accordion, with the other ten folded
