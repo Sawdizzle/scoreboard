@@ -1122,7 +1122,7 @@
       <details class="panel su-panel">
         <summary>⏱️ Times &amp; rules</summary>
         <div class="panel-body">
-          <label class="fld">First pitch — for the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
+          <label class="fld">Start time — sorts your games list and runs the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
           <label class="fld"><span id="su-time-label">Time limit — minutes (0 = none)</span><input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
           <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
         </div>
@@ -1176,6 +1176,9 @@
           <option value="minimal">Minimal (slim)</option>
           <option value="lowerthird">Lower-third</option>
         </select>
+      </label>
+      <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Game setup</em>
+        <input id="ng-startsat" type="datetime-local" />
       </label>
       <div class="sheet-actions">
         <button id="ng-cancel" class="ghost">Cancel</button>

@@ -264,6 +264,8 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .past-games[open] > summary::after { transform: rotate(90deg); }
 .past-n { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: #c8d4e8; letter-spacing: 0; }
 .game-row.final { opacity: 0.8; }
+.sel .opt { font-style: normal; opacity: 0.75; }
+#ng-startsat { margin-top: 6px; padding: 12px; font-size: 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; color: var(--chalk); }
 .game-row { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
   background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 15px; color: var(--chalk); }
 .game-row:active { filter: brightness(1.2); }

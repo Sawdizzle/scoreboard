@@ -237,14 +237,20 @@ async function loadGames() {
   const list = $('games-list');
   list.innerHTML = '<p class="muted">Loading…</p>';
   const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at,inning,half,state')
+    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at,starts_at,inning,half,state')
     .eq('owner_id', user.id).order('updated_at', { ascending: false });
   list.innerHTML = '';
   if (error) { list.textContent = error.message; return; }
   if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
   // Games still to play or in progress on top; finished ones fold away below.
-  const current = data.filter((g) => g.status !== 'final');
-  const past = data.filter((g) => g.status === 'final');
+  // Top: what is on now, then what is scheduled soonest, then anything with no
+  // start time (most recently touched first). Past: newest game first.
+  const t = (g) => (g.starts_at ? new Date(g.starts_at).getTime() : null);
+  const rank = (g) => (isOnNow(g) ? 0 : t(g) != null ? 1 : 2);
+  const current = data.filter((g) => g.status !== 'final').sort((a, b) =>
+    rank(a) - rank(b) || (rank(a) === 1 ? t(a) - t(b) : 0));
+  const past = data.filter((g) => g.status === 'final').sort((a, b) =>
+    (t(b) ?? new Date(b.updated_at).getTime()) - (t(a) ?? new Date(a.updated_at).getTime()));
   if (!current.length) list.insertAdjacentHTML('beforeend', '<p class="muted">No upcoming games — create one.</p>');
   for (const g of current) list.appendChild(gameRow(g));
   if (past.length) {
@@ -259,6 +265,17 @@ async function loadGames() {
   }
 }
 const PAST_OPEN = 'sb-past-open';
+// "Sat, Sep 20 · 10:00 AM" — the year only when it is not this one.
+function whenLabel(iso) {
+  const d = new Date(iso), now = new Date();
+  const day = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric',
+    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
+  return `${day} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+}
+// A game not yet started says when it starts; one under way says where it is.
+const rowLine = (g) => (g.status === 'setup' && g.starts_at
+  ? whenLabel(g.starts_at)
+  : `${rowState(g)} · ${g.status === 'final' && g.starts_at ? whenLabel(g.starts_at).split(' · ')[0] : timeAgo(g.updated_at)}`);
 // Delete lives in the game's own Setup, not here: an always-visible bin on a
 // list you scroll one-handed is a mis-tap that cannot be undone.
 function gameRow(g) {
@@ -267,7 +284,7 @@ function gameRow(g) {
   open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
     `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
     `<span class="g-state">${isOnNow(g) ? '<span class="g-live">LIVE</span>' : ''}` +
-    `<span>${esc(rowState(g))} · ${timeAgo(g.updated_at)}</span></span></span>` +
+    `<span>${esc(rowLine(g))}</span></span></span>` +
     `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
   open.onclick = () => openGame(g.id);
   return open;
@@ -295,11 +312,11 @@ document.querySelector('.help-tiles').addEventListener('click', (e) => {
 });
 
 // New game: pick sport + style first, then create with the right initial state.
-$('new-game-btn').addEventListener('click', () => openSheet('newgame-sheet'));
+$('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
 $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value, style = $('ng-style').value;
-  const row = { status: 'setup', sport, style };   // 'live' on the first play
+  const row = { status: 'setup', sport, style, starts_at: fromLocalInput($('ng-startsat').value) };   // 'live' on the first play
   if (sport === 'football') row.state = F.fbState({});
   else if (sport === 'soccer') row.state = S.scState({});
   else if (sport === 'volleyball') row.state = V.vbState({});
