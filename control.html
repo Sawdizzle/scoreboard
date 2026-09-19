@@ -358,7 +358,7 @@
         <button id="btn-foul"   class="key foul">FOUL</button>
         <button id="btn-out"    class="key out">OUT</button>
         <button id="btn-run"    class="key run">RUN</button>
-        <button id="btn-batter" class="key batter">NEXT BATTER</button>
+        <button id="btn-runners" class="key batter">RUNNERS</button>
         <!-- One bar, four hit targets: the at-bat result, which auto-advances
              runners and the order. HR confirms the run count first. -->
         <div class="hitbar" role="group" aria-label="At-bat result">
@@ -842,6 +842,8 @@
           <button id="adj-half" class="base-btn">Flip top/bottom</button>
           <button id="btn-endhalf" class="base-btn">End half-inning</button>
         </div>
+        <!-- Every at-bat result already moves the order on; this is the fix for when it didn't. -->
+        <button id="btn-batter" class="base-btn sit-wide">Next batter ▸ (skip without a result)</button>
         <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
 
         <details class="sit-more">
@@ -1040,6 +1042,18 @@
           <button id="rs-record" class="primary">Record</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- RUNNERS SHEET -->
+  <!-- Plays on the bases between pitches. The count and the batter stay. -->
+  <div id="runners-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="runners-title" tabindex="-1" hidden>
+    <div class="sheet-card confirm-card scroll">
+      <span class="grab"></span>
+      <h3 id="runners-title">Runners</h3>
+      <p class="confirm-copy">Count and batter stay. For a wild pitch or passed ball, tap Ball or Strike too.</p>
+      <div id="rn-list" class="rn-list"></div>
+      <button id="runners-done" class="ghost">Done</button>
     </div>
   </div>
 

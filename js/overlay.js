@@ -37,6 +37,12 @@ let rosterBackoff = 2000;
 // that satisfies it has landed.
 let rosterGen = 0;
 let rosterAsk = 0;
+// No token, or one that isn't this game's (a link copied from another game with
+// only the game id changed): the lineup and defense cards say so instead of
+// showing a team name over an empty list. get_roster answers null for a token
+// that doesn't match, and {} for a real roster nobody has filled in yet.
+let rosterBad = !rosterToken;
+const LINK_STALE = 'Overlay link is out of date — copy it again from the pad';
 async function pullRoster(rev) {
   rosterRev = rev; // claim it first: a slow fetch must not re-trigger on every paint
   const ask = ++rosterAsk;
@@ -58,6 +64,9 @@ async function pullRoster(rev) {
     return;
   }
   rosterBackoff = 2000;
+  const bad = data === null;
+  if (bad && !rosterBad) console.warn('Scoreboard: this overlay link\'s &t= token is not this game\'s. ' + LINK_STALE + '.');
+  rosterBad = bad;
   roster = data || {};
   rosterGen++;
   if (last) render(last);
@@ -581,6 +590,7 @@ function buildCard(c, s) {
   if (c.type === 'lineup') {
     const side = meta.auto ? battingSide(s) : (meta.side || battingSide(s));
     const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
+    if (rosterBad) return `<div class="card lineupcard"><div class="card-sub">Lineup — ${teamName}</div><table class="lc-table"><tr><td class="lc-name">${LINK_STALE}</td></tr></table></div>`;
     const rows = battingOrderCard(s, side).map((r) =>
       `<tr class="${r.current ? 'lc-cur' : ''}"><td class="lc-ord">${r.order}</td><td class="lc-num">${r.num ? escapeHtml(r.num) : ''}</td><td class="lc-name">${escapeHtml(r.name)}</td><td class="lc-pos">${escapeHtml(r.pos)}</td></tr>`
     ).join('');
@@ -596,6 +606,7 @@ function buildCard(c, s) {
         : '<span class="dc-empty">—</span>';
       return `<div class="dc-pos" data-pos="${pos}"><span class="dc-lab">${pos}</span>${who}</div>`;
     };
+    if (rosterBad) return `<div class="card defense"><div class="card-sub">Defense — ${teamName}</div><div class="card-title">${LINK_STALE}</div></div>`;
     return `<div class="card defense"><div class="card-sub">Defense — ${teamName}</div>
       <div class="dc-field">${FIELD_POSITIONS.map(spot).join('')}</div></div>`;
   }

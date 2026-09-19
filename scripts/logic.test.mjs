@@ -783,3 +783,38 @@ test('hit by pitch with nobody forced leaves runners where they are', () => {
   assert.deepEqual(r.patch.bases, bases(1, 1, 1));
   assert.equal(r.payload.runs, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Runner plays: steals, caught stealing, pickoffs
+// ---------------------------------------------------------------------------
+test('caught stealing is an out that keeps the count and the batter', () => {
+  const r = L.onRunnerPlay(G({ balls: 2, strikes: 1, outs: 0, bases: bases(1, 0, 0), state: { batIdx: { away: 3 } } }), 'first', 'CS');
+  assert.equal(r.patch.outs, 1);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+  assert.equal(r.patch.balls, undefined, 'count untouched');
+  assert.equal(r.patch.state, undefined, 'same batter, no pitch');
+  assert.equal(r.payload.play.kind, 'CS');
+});
+
+test('caught stealing for the third out ends the half', () => {
+  const r = L.onRunnerPlay(G({ outs: 2, strikes: 2, bases: bases(1, 1, 0) }), 'second', 'CS');
+  assert.equal(r.patch.half, 'bottom');
+  assert.equal(r.patch.outs, 0);
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+});
+
+test('a steal moves the runner one base; stealing home scores', () => {
+  const s = L.onRunnerPlay(G({ bases: bases(1, 0, 0) }), 'first', 'SB');
+  assert.deepEqual(s.patch.bases, bases(0, 1, 0));
+  assert.equal(s.anim, 'stolenbase');
+  const h = L.onRunnerPlay(G({ bases: bases(0, 0, 1) }), 'third', 'SB');
+  assert.deepEqual(h.patch.bases, bases(0, 0, 0));
+  assert.equal(h.patch.away_score, 1);
+  assert.equal(h.payload.runs, 1);
+});
+
+test('a runner cannot steal onto an occupied base', () => {
+  assert.ok(L.runnerBlocked(G({ bases: bases(1, 1, 0) }), 'first', 'SB'));
+  assert.equal(L.onRunnerPlay(G({ bases: bases(1, 1, 0) }), 'first', 'SB'), null);
+  assert.equal(L.runnerBlocked(G({ bases: bases(1, 1, 0) }), 'first', 'CS'), '');
+});

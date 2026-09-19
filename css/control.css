@@ -890,3 +890,10 @@ body.no-obs .obs-only { display: none; }
 .k3-opts .base-btn { padding: 16px; font-size: 16px; }
 .k3-opts .blocked { opacity: 0.4; }
 .k-back { display: inline-block; transform: scaleX(-1); }
+
+/* Runners: one row per runner */
+.rn-list { display: grid; gap: 12px; }
+.rn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rn-who { grid-column: 1 / -1; font-size: 15px; }
+.rn-b { padding: 14px 8px; font-size: 15px; }
+.rn-b.blocked { opacity: 0.4; }

@@ -134,6 +134,40 @@ export function onHitByPitch(g) {
     payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
 }
 
+// Runner plays between pitches: a steal, caught stealing, a pickoff, or a runner
+// moving up on a wild pitch / passed ball / balk. `from` is the base the runner
+// started on ('first' | 'second' | 'third'). None of them end the at-bat: the
+// count stays, no pitch is added, the same batter is still up. A third out
+// ends the half, and the batter leads off next inning (batIdx is not moved).
+export const RUNNER_LABEL = { SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced' };
+const NEXT_BASE = { first: 'second', second: 'third', third: null };
+export function runnerBlocked(g, from, kind) {
+  const b = safeBases(g.bases);
+  if (!b[from]) return 'Nobody on that base';
+  if (kind === 'SB' || kind === 'ADV') {
+    const to = NEXT_BASE[from];
+    if (to && b[to]) return `${to === 'second' ? '2nd' : '3rd'} is taken — move that runner first`;
+  }
+  return '';
+}
+export function onRunnerPlay(g, from, kind) {
+  if (!RUNNER_LABEL[kind] || runnerBlocked(g, from, kind)) return null;
+  const b = safeBases(g.bases);
+  const bases = { ...b, [from]: false };
+  if (kind === 'CS' || kind === 'PO') {
+    const outs = (g.outs | 0) + 1;
+    const patch = outs >= 3 ? endHalfPatch({ ...g, bases }) : { outs, bases };
+    return { type: 'runner', patch, payload: { play: playNote(g, kind, { outs: 1 }) },
+      anim: 'play', animMeta: { text: RUNNER_LABEL[kind] }, text: RUNNER_LABEL[kind] };
+  }
+  const to = NEXT_BASE[from];
+  const runs = to ? 0 : 1;
+  if (to) bases[to] = true;
+  const text = kind === 'SB' ? (to ? `Stole ${to === 'second' ? '2nd' : '3rd'}` : 'Stole home') : RUNNER_LABEL[kind];
+  return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, kind, { runs }) },
+    anim: kind === 'SB' ? 'stolenbase' : runs ? 'run' : null, animMeta: {}, text };
+}
+
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
 
 // A base hit reaching `reached` (1/2/3). Smart default: every existing runner
@@ -420,7 +454,8 @@ export const PLAY_LABEL = {
   FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
-  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', HBP: 'Hit by pitch', HR: 'Home run', OUT: 'Out',
+  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', HBP: 'Hit by pitch',
+  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event

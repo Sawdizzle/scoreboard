@@ -378,9 +378,24 @@ async function saveRoster(lineups) {
       rosterNext = null;
       const res = await db.rpc('save_roster', { p_game: id, p_data: data });
       if (res.error) { showToast(`⚠️ Lineup not saved: ${res.error.message}`, 4000); continue; }
-      if (game && game.id === id) game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) };
+      if (game && game.id === id) { game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) }; rosterHave = game.roster_rev; }
     }
   } finally { rosterSending = false; }
+}
+// Another device (or this one after a reload elsewhere) saved a roster: the
+// row's roster_rev has moved past the one we hold. Re-read it, unless we have a
+// save of our own going out — ours is the newer edit, and it bumps the rev too.
+// A save started while the read was out also wins over the read.
+let rosterHave = 0;
+async function syncRoster(id, rev) {
+  if (!game || game.id !== id || rev <= rosterHave || rosterSending || rosterNext) return;
+  rosterHave = rev;
+  const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
+  if (error) { rosterHave = 0; return; }   // try again on the next row
+  if (!game || game.id !== id || rosterSending || rosterNext) return;
+  game = { ...game, lineups: (data && data.data) || {} };
+  delete panelPainted.lineups;
+  renderGame();
 }
 const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
 
@@ -397,6 +412,7 @@ async function openGame(id) {
   // uncorrected clock is one the other device can never beat.
   const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
   game.lineups = lineups;
+  rosterHave = game.roster_rev | 0;
   // The saved-team pickers are a one-shot action, not a label. Left showing the
   // last game's pick, they said a team was loaded here when it wasn't, and
   // choosing that same team again fired no change, so nothing would load.
@@ -657,6 +673,36 @@ $('k3-dropped').onclick = () => {
   closeSheet('k3-sheet'); startPlay('K3', 'C', 'hit');
 };
 $('k3-cancel').onclick = () => closeSheet('k3-sheet');
+// Runners: one row per runner, lead runner first. Each button is one undoable play.
+const RN_BASE = { first: '1st', second: '2nd', third: '3rd' };
+const RN_NEXT = { first: '2nd', second: '3rd', third: 'home' };
+function paintRunnerSheet() {
+  const b = L.safeBases(game.bases);
+  const on = ['third', 'second', 'first'].filter((k) => b[k]);
+  const list = $('rn-list');
+  if (!on.length) { list.innerHTML = '<p class="confirm-copy">Nobody on base.</p>'; return; }
+  list.innerHTML = on.map((k) => {
+    const btn = (kind, label) => {
+      const why = L.runnerBlocked(game, k, kind);
+      return `<button type="button" class="base-btn rn-b${why ? ' blocked' : ''}" data-from="${k}" data-kind="${kind}"${why ? ` aria-disabled="true" data-why="${why}"` : ''}>${label}</button>`;
+    };
+    return `<div class="rn-row"><b class="rn-who">On ${RN_BASE[k]}</b>` +
+      btn('SB', `Stole ${RN_NEXT[k]}`) + btn('CS', 'Caught stealing') + btn('PO', 'Picked off') +
+      btn('ADV', `To ${RN_NEXT[k]} · WP/PB`) + `</div>`;
+  }).join('');
+}
+$('btn-runners').onclick = () => { if (!game) return; paintRunnerSheet(); openSheet('runners-sheet'); };
+$('runners-done').onclick = () => closeSheet('runners-sheet');
+$('rn-list').onclick = (e) => {
+  const o = e.target.closest('.rn-b'); if (!o) return;
+  if (o.dataset.why) return showToast(o.dataset.why, 3000);
+  const r = L.onRunnerPlay(game, o.dataset.from, o.dataset.kind);
+  if (!r) return;
+  commit(r);
+  showToast(r.text, 1800);
+  // Stay open while anyone is left on base: a double steal is two taps.
+  if (basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
+};
 $('hit-hbp').onclick     = () => commit(L.onHitByPitch(game));
 $('hit-e').onclick       = () => openPlaySheet('E');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
@@ -1410,7 +1456,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'runners-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2410,6 +2456,7 @@ const batIdxOfGame = () => (game.state && game.state.batIdx) || {};
 
 function renderGame() {
   if (!game) return;
+  if ((game.roster_rev | 0) > rosterHave) syncRoster(game.id, game.roster_rev | 0);
   const g = game;
   const sport = g.sport || 'baseball';
   // ---- the fixed shell: always, this is what a commit is for ----
@@ -2743,7 +2790,7 @@ document.addEventListener('keydown', (e) => {
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
     const map = {
-      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-batter',
+      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-runners',
       1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', a: 'btn-advance', c: 'btn-clear',
     };
     if (k === 'e') { e.preventDefault(); return openPlaySheet('E'); }
