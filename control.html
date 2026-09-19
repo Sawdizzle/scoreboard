@@ -829,10 +829,9 @@
   <!-- SITUATION SHEET -->
   <!-- Bases, count, inning and the corrections that go with them. All of it used
        to sit under the pad, so a strike moved every time the game state changed. -->
-  <div id="sit-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sit-title" tabindex="-1" hidden>
+  <div id="sit-sheet" class="sheet full" role="dialog" aria-modal="true" aria-labelledby="sit-title" tabindex="-1" hidden>
     <div class="sheet-card sit-card scroll">
-      <span class="grab"></span>
-      <div class="sit-head"><h3 id="sit-title">Situation</h3><span class="sit-sub">every change is undoable</span></div>
+      <div class="full-top"><button id="sit-done" class="fv-back" type="button">‹ Back</button><h3 id="sit-title">Situation</h3><span class="sit-sub">every change is undoable</span></div>
 
       <div class="sport-only" data-sport="baseball">
       <div class="sit-bases">
@@ -864,7 +863,7 @@
         <button id="btn-batter" class="base-btn sit-wide">Next batter ▸ (skip without a result)</button>
         <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
 
-        <details class="sit-more">
+        <details class="sit-more" open>
           <summary>Runs · hits · errors</summary>
           <div class="sit-more-body">
             <p class="hint">Direct edits for corrections — each is undoable. Runs, hits and errors change the total only.</p>
@@ -925,7 +924,6 @@
 
       <button id="btn-endgame" class="base-btn sit-wide sit-end end-game">🏁 End game</button>
 
-      <div class="sheet-actions"><button id="sit-done" class="primary">Done</button></div>
     </div>
   </div>
 
@@ -945,10 +943,9 @@
   <!-- ON AIR SHEET -->
   <!-- Every card, takeover and moment, one tap from the pad. Raising a card or
        firing a moment closes it again; the header chip takes a card down. -->
-  <div id="onair-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="onair-title" tabindex="-1" hidden>
+  <div id="onair-sheet" class="sheet full" role="dialog" aria-modal="true" aria-labelledby="onair-title" tabindex="-1" hidden>
     <div class="sheet-card scroll onair-card">
-      <span class="grab"></span>
-      <div class="sit-head"><h3 id="onair-title">On Air</h3><span class="sit-sub">tap to show · tap again to take down</span></div>
+      <div class="full-top"><button id="onair-done" class="fv-back" type="button">‹ Back</button><h3 id="onair-title">On Air</h3><span class="sit-sub">tap to show · again to take down</span></div>
 
       <p class="air-why sport-only" data-sport="baseball"><span class="sugg-dot" aria-hidden="true"></span>Outlined = good right now <em id="air-why"></em></p>
 
@@ -988,7 +985,6 @@
       <span class="sublabel">Mode</span>
       <div class="fx-grid"><button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button></div>
 
-      <div class="sheet-actions"><button id="onair-done" class="primary">Done</button></div>
     </div>
   </div>
 
@@ -996,10 +992,9 @@
   <!-- The batter line under the count opens it, on the team at bat. Number, name
        and position on every row; a position someone already holds sends them to
        the bench. Both teams' lists stay built — the switch only shows one. -->
-  <div id="lineup-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="lineup-title" tabindex="-1" hidden>
+  <div id="lineup-sheet" class="sheet full" role="dialog" aria-modal="true" aria-labelledby="lineup-title" tabindex="-1" hidden>
     <div class="sheet-card scroll lineup-card">
-      <span class="grab"></span>
-      <div class="sit-head"><h3 id="lineup-title">Lineup</h3><span class="sit-sub">saves as you type</span></div>
+      <div class="full-top"><button id="lu-done" class="fv-back" type="button">‹ Back</button><h3 id="lineup-title">Lineup</h3><span class="sit-sub">saves as you type</span></div>
       <div class="lu-tabs" role="group" aria-label="Team">
         <button id="lu-tab-away" type="button" aria-pressed="true">Away</button>
         <button id="lu-tab-home" type="button" aria-pressed="false">Home</button>
@@ -1028,7 +1023,6 @@
       </section>
 
       <p class="hint"><b>◎</b> marks who's up; tap another ◎ to move it. Drag a <b>⋮⋮ number</b> onto another row to swap hitters — positions go with them. <b>P</b> is the pitcher; <b>—</b> means not in the field.</p>
-      <div class="sheet-actions"><button id="lu-done" class="primary">Done</button></div>
     </div>
   </div>
 

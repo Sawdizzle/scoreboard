@@ -929,3 +929,17 @@ body.field-open { overflow: hidden; }
 .fv-num.bench small { color: var(--out-ui); }
 .fv-num.on { background: var(--steel); border-color: #cfe3ff; color: #06090f; }
 .fv-num.on span, .fv-num.on small { color: #06090f; }
+
+/* The big three (Situation, On Air, Lineup) are full screens, not sheets:
+   nothing half-covered behind them, no flick to dismiss, one ‹ Back that is
+   always in the same place at the top. */
+.sheet.full { background: var(--bg); align-items: stretch; padding: 0; }
+.sheet.full > .sheet-card { max-width: 720px; height: 100%; max-height: none; border: none; border-radius: 0; box-shadow: none;
+  background: var(--bg); overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom)); animation: fade-in 0.15s linear; }
+.full-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 -16px 14px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: var(--bg);
+  border-bottom: 1px solid var(--line); }
+.full-top h3 { margin: 0; font-size: 22px; font-weight: 700; }
+.full-top .sit-sub { flex-basis: 100%; margin-top: -4px; }
+@media (min-width: 700px) { .sheet.full { padding: 0; align-items: stretch; } .full-top .sit-sub { flex-basis: auto; margin-top: 0; } }
