@@ -648,7 +648,7 @@ const BASE_KEY = { 1: 'first', 2: 'second', 3: 'third' };
 const HIT_BASES = { H1: 1, H2: 2, H3: 3 };
 export const PLAY_LABEL = {
   GB: 'Groundout', FB: 'Flyout', LD: 'Lineout', PU: 'Pop-up', E: 'Reached on error',
-  FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
+  FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', SAC: 'Sac bunt', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
   K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
@@ -681,6 +681,7 @@ export function playCode(kind, pos) {
     case 'FC': return `${n}-${n === 4 ? 6 : 4}`;
     case 'DP': return DP_PATH[n] || `${n}-2`;
     case 'SF': return `SF${n}`;
+    case 'SAC': return n === 3 ? '3U' : `${n}-3`;
   }
   return '';
 }
@@ -694,6 +695,7 @@ export function playBlocked(g, kind) {
     case 'FC': return anyone ? '' : 'A fielder’s choice needs a runner on base';
     case 'DP': return !anyone ? 'A double play needs a runner on base' : outs >= 2 ? 'A double play needs fewer than 2 outs' : '';
     case 'SF': return !b.third ? 'A sac fly needs a runner on 3rd' : outs >= 2 ? 'A sac fly needs fewer than 2 outs' : '';
+    case 'SAC': return !anyone ? 'A sac bunt needs a runner on base' : outs >= 2 ? 'A sac bunt needs fewer than 2 outs' : '';
     case 'K3':
       if ((g.strikes | 0) < 2) return 'A dropped 3rd strike needs 2 strikes on the batter — Undo the strikeout first';
       return b.first && outs < 2 ? 'The batter can’t run: 1st base is taken with fewer than 2 outs' : '';
@@ -716,6 +718,7 @@ export function playDefaults(g, kind) {
     case 'GB': dest.batter = 'out'; each((k, s) => (forcedFrom(b, k) ? s + 1 : s)); break;
     case 'FB': case 'LD': case 'PU': dest.batter = 'out'; each((k, s) => s); break;
     case 'SF': dest.batter = 'out'; each((k, s) => (k === 'third' ? 4 : s)); break;
+    case 'SAC': dest.batter = 'out'; each(up(1)); break;
     case 'FC': { dest.batter = 1; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : forcedFrom(b, k) ? s + 1 : s)); break; }
     case 'DP': { dest.batter = 'out'; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : s)); break; }
     case 'E': case 'K3': dest.batter = 1; each(up(1)); break;

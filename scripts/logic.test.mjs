@@ -1104,3 +1104,19 @@ test('intentional walk with no lineup still clears the count', () => {
   assert.equal(r.patch.strikes, 0);
   assert.equal(r.patch.state, undefined);
 });
+
+test('sac bunt: batter out, every runner up one, its own label and code', () => {
+  const g = G({ bases: bases(1, 1, 0) });
+  assert.equal(L.playBlocked(g, 'SAC'), '');
+  const dest = L.playDefaults(g, 'SAC');
+  assert.deepEqual(dest, { batter: 'out', first: 2, second: 3 });
+  const r = L.onPlay(g, { kind: 'SAC', pos: 'P', dest });
+  assert.equal(r.patch.outs, 1);
+  assert.deepEqual(r.patch.bases, bases(0, 1, 1));
+  assert.equal(r.text, 'Sac bunt 1-3');
+});
+
+test('sac bunt needs a runner and fewer than 2 outs', () => {
+  assert.match(L.playBlocked(G(), 'SAC'), /runner/);
+  assert.match(L.playBlocked(G({ outs: 2, bases: bases(1, 0, 0) }), 'SAC'), /2 outs/);
+});
