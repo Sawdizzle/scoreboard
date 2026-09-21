@@ -133,7 +133,7 @@ export function onOut(g) {
 export function onHitByPitch(g) {
   const w = computeWalk(g.bases);
   return { type: 'hbp', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
-    payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
+    payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) }, ...reachAnim(g, 'Hit by pitch', w.runs) };
 }
 
 // Catcher's interference: the batter is awarded first and forced runners move
@@ -141,18 +141,18 @@ export function onHitByPitch(g) {
 export function onCatcherInterference(g) {
   const w = computeWalk(g.bases);
   return { type: 'ci', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
-    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) } };
+    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) }, ...reachAnim(g, 'Catcher’s interference', w.runs) };
 }
 
 // Intentional walk: awarded without a pitch, so the pitch count stays and the
 // order moves on. Forced advance only — nobody runs on an intentional walk, so
-// there is no sheet to confirm. Fires the same WALK stinger as a four-ball walk.
+// there is no sheet to confirm. Its own slide-out, so it doesn't read as ball four.
 export function onIntentionalWalk(g) {
   const w = computeWalk(g.bases);
   const patch = { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) };
   const bi = advanceBatterState(g);
   if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
-  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, anim: 'webgem' };
+  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, ...reachAnim(g, 'Intentional walk', w.runs) };
 }
 
 // Runner plays between pitches: a steal, caught stealing, a pickoff, or a runner
@@ -180,7 +180,7 @@ export function onBalk(g) {
   const runs = b.third ? 1 : 0;
   const bases = { first: false, second: b.first, third: b.second };
   return { type: 'balk', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, 'BK', { runs }) },
-    anim: runs ? 'run' : null, animMeta: {}, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
+    anim: 'play', animMeta: { text: 'Balk', runs }, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
 }
 
 export function onRunnerPlay(g, from, kind) {
@@ -198,7 +198,9 @@ export function onRunnerPlay(g, from, kind) {
   if (to) bases[to] = true;
   const text = kind === 'SB' ? (to ? `Stole ${to === 'second' ? '2nd' : '3rd'}` : 'Stole home') : RUNNER_LABEL[kind];
   return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { from, kind, runs, play: playNote(g, kind, { runs }) },
-    anim: kind === 'SB' ? 'stolenbase' : runs ? 'run' : null, animMeta: {}, text };
+    // SB has its own stinger; a runner moving up on a wild pitch or passed ball
+    // slides out like any other play, and flashes the run if he scored.
+    anim: kind === 'SB' ? 'stolenbase' : 'play', animMeta: kind === 'SB' ? {} : { text: runs ? 'Runner scores' : 'Runner advances', runs }, text };
 }
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
@@ -673,6 +675,13 @@ export const PLAY_LABEL = {
 export function playNote(g, kind, { pos = null, code = '', outs = 0, runs = 0 } = {}) {
   return { kind, pos, code, outs, runs, inning: g.inning | 0, half: g.half };
 }
+
+// The slide-out a batter-reaching play earns: its name, with the hitter's name
+// under it (the overlay looks the slot up in its roster; no name rides here).
+const reachAnim = (g, text, runs) => {
+  const side = battingSide(g);
+  return { anim: 'play', animMeta: { text, side, idx: currentBatterIdx(g, side), runs } };
+};
 
 // A fielder tapped with no type picked: infielders make groundouts, outfielders flyouts.
 export const autoKind = (pos) => ((POS_NUM[pos] || 0) >= 7 ? 'FB' : 'GB');

@@ -1095,7 +1095,9 @@ test('intentional walk forces runners, moves the order, and throws no pitch', ()
   assert.equal(r.patch.state.batIdx.away, 1, 'next batter up');
   assert.equal(r.patch.state.pitches, undefined, 'no pitch counted');
   assert.equal(r.payload.play.kind, 'IBB');
-  assert.equal(r.anim, 'webgem', 'same stinger as a walk');
+  assert.equal(r.anim, 'play');
+  assert.equal(r.animMeta.text, 'Intentional walk');
+  assert.equal(r.animMeta.runs, 1, 'the forced run flashes');
 });
 
 test('intentional walk with no lineup still clears the count', () => {
@@ -1135,4 +1137,23 @@ test('balk moves every runner up one, scores from 3rd, leaves the count and batt
 
 test('balk with the bases empty is not a play', () => {
   assert.equal(L.onBalk(G()), null);
+});
+
+test('every non-pitch play has a stinger: HBP, CI, balk, WP/PB, CS, PO', () => {
+  const g = G({ bases: bases(1, 0, 1) });
+  assert.equal(L.onHitByPitch(g).animMeta.text, 'Hit by pitch');
+  assert.equal(L.onCatcherInterference(g).animMeta.text, 'Catcher’s interference');
+  const bk = L.onBalk(g);
+  assert.equal(bk.anim, 'play'); assert.equal(bk.animMeta.text, 'Balk'); assert.equal(bk.animMeta.runs, 1);
+  const adv = L.onRunnerPlay(g, 'third', 'ADV');
+  assert.equal(adv.anim, 'play'); assert.equal(adv.animMeta.text, 'Runner scores');
+  assert.equal(L.onRunnerPlay(g, 'first', 'ADV').animMeta.text, 'Runner advances');
+  assert.equal(L.onRunnerPlay(g, 'first', 'CS').animMeta.text, 'Caught stealing');
+  assert.equal(L.onRunnerPlay(g, 'first', 'PO').animMeta.text, 'Picked off');
+  assert.equal(L.onRunnerPlay(g, 'first', 'SB').anim, 'stolenbase');
+});
+
+test('a batter-reaching stinger names the slot, never the player', () => {
+  const r = L.onHitByPitch(G({ lineups: { away: order([1, 1]) }, state: { batIdx: { away: 1 } } }));
+  assert.deepEqual(r.animMeta, { text: 'Hit by pitch', side: 'away', idx: 1, runs: 0 });
 });
