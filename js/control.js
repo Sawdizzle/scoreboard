@@ -889,7 +889,7 @@ let fieldSide = 'home', fieldPick = null;
 function openField(side) {
   if (!game) return;
   fieldSide = side || L.fieldingSide(game); fieldPick = null;
-  closeDrawer();
+  closeSetup();
   for (const id of [...sheetStack]) closeSheet(id);
   $('field-view').hidden = false;
   document.body.classList.add('field-open');
@@ -1700,10 +1700,6 @@ function openSheet(id) {
   const el = $(id);
   if (!el || !el.hidden) return;
   sheetReturn.set(id, document.activeElement);
-  // Game Setup is opened from a button inside the drawer, so the two would
-  // otherwise be on screen together — two stacked sheets, the lower one only
-  // reachable by dismissing the upper. One thing over the pad at a time.
-  closeDrawer();
   el.hidden = false;
   sheetStack.push(id);
   // The first control, not the sheet itself: land on something you can act on.
@@ -1717,13 +1713,7 @@ function closeSheet(id) {
   if (i >= 0) sheetStack.splice(i, 1);
   const back = sheetReturn.get(id);
   sheetReturn.delete(id);
-  // Focus cannot go back to the control that opened the sheet if it went with
-  // the drawer. "⚙ Setup" is the door back to it, and it is only in the layout
-  // where the drawer is a sheet at all — above 700px it is display:none and the
-  // panes never left the screen, so the ordinary restore still applies there.
-  const gone = back && back.closest('#drawer') && !drawerOpen() && $('dw-open').getClientRects().length;
-  const land = gone ? $('dw-open') : back;
-  if (land && land !== document.body && document.contains(land)) land.focus({ preventScroll: true });
+  if (back && back !== document.body && document.contains(back)) back.focus({ preventScroll: true });
   const next = topSheet();   // a sheet opened over another hands focus back to it
   if (next) (focusablesIn($(next))[0] || $(next)).focus({ preventScroll: true });
 }
@@ -1777,16 +1767,24 @@ function closeSetup() {
   $('setup-view').hidden = true;
   document.body.classList.remove('setup-open');
 }
-const SV_TITLE = { home: 'Setup', teams: 'Teams', game: 'Sport & scorebug', times: 'Times & rules', overlay: 'Show on overlay' };
+// A pane names itself, so the header cannot drift from the pane it sits over.
 function svGo(pane) {
   svPane = pane;
-  document.querySelectorAll('#setup-view .sv-pane').forEach((p) => { p.hidden = p.dataset.pane !== pane; });
-  $('setup-title').textContent = SV_TITLE[pane] || 'Setup';
+  let title = 'Setup';
+  document.querySelectorAll('#setup-view .sv-pane').forEach((p) => {
+    const on = p.dataset.pane === pane;
+    p.hidden = !on;
+    if (on) title = p.dataset.title || 'Setup';
+  });
+  $('setup-title').textContent = title;
   $('setup-view').scrollTop = 0;
   if (pane === 'home') renderSetupRows();
 }
-$('setup-btn').onclick = openSetup;
-$('setup-back').onclick = () => (svPane === 'home' ? closeSetup() : svGo('home'));
+$('setup-open').onclick = openSetup;
+// Back climbs one level: a panel pane (look-2) returns to its section (look),
+// a section returns home, and home leaves.
+const svUp = (pane) => (pane.includes('-') ? pane.split('-')[0] : 'home');
+$('setup-back').onclick = () => (svPane === 'home' ? closeSetup() : svGo(svUp(svPane)));
 $('setup-view').addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
   if (go) svGo(go.dataset.go);
@@ -1794,7 +1792,7 @@ $('setup-view').addEventListener('click', (e) => {
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || $('setup-view').hidden) return;
   e.preventDefault();
-  if (svPane === 'home') closeSetup(); else svGo('home');
+  if (svPane === 'home') closeSetup(); else svGo(svUp(svPane));
 });
 // The rows on the first pane answer their own question, so the screen is worth
 // reading before anything is opened.
@@ -1816,8 +1814,8 @@ function renderSetupRows() {
 }
 // Look and OBS still live in the drawer until their panes are built; the row
 // opens the drawer on that tab rather than pretending the section is missing.
-$('sv-look').onclick = () => { closeSetup(); openDrawer('look'); };
-$('sv-obs').onclick = () => { closeSetup(); openDrawer('obs'); };
+$('sv-look').onclick = () => svGo('look');
+$('sv-obs').onclick = () => svGo('obs');
 $('sv-lineups').onclick = () => { closeSetup(); openLineupSheet(); };
 
 $('delete-game').onclick = async () => {
@@ -2942,81 +2940,13 @@ function renderSetupGuide() {
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
 
-// ---- The drawer -----------------------------------------------------------
-// Everything set once, out of the way of everything pressed every pitch. It is
-// presentation only: the panes hold the same panel bodies the column always
-// had, so from 700px the CSS drops the sheet chrome and nothing else changes.
-// The pad underneath is never unmounted — closing the drawer must be instant.
-const DW_TAB = 'sb:drawerTab';
-const PANEL_TAB = { 'panel-appearance': 'look',
-  'panel-overlay': 'obs', 'panel-cameras': 'obs', 'panel-obs': 'obs' };
-function setDrawerTab(tab) {
-  // A remembered tab can outlive the tab itself (Cards left the drawer in v3.59);
-  // with no pane to show, every pane would stay hidden and the drawer open empty.
-  if (!document.querySelector(`.dw-pane[data-tab="${tab}"]`)) tab = 'teams';
-  document.querySelectorAll('.dw-tab').forEach((b) => {
-    const on = b.dataset.tab === tab;
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-selected', String(on));
-  });
-  document.querySelectorAll('.dw-pane').forEach((p) => { p.hidden = p.dataset.tab !== tab; });
-  // A tab that opens onto four closed summaries is a menu, not a panel. Open the
-  // pane's first panel unless the operator has already chosen one in here.
-  const pane = document.querySelector(`.dw-pane[data-tab="${tab}"]`);
-  const first = pane && [...pane.querySelectorAll(':scope > details.panel, :scope > .sport-only > details.panel')]
-    .find((d) => !d.hidden && !(d.closest('.sport-only') || {}).hidden);
-  if (pane && first && !pane.querySelector('details.panel[open]')) first.open = true;
-  try { localStorage.setItem(DW_TAB, tab); } catch {}
-}
-const drawerOpen = () => $('drawer').classList.contains('open');
-function openDrawer(tab) {
-  if (tab) setDrawerTab(tab);
-  $('drawer').classList.add('open');
-}
-const closeDrawer = () => $('drawer').classList.remove('open');
-$('dw-open').onclick = () => openDrawer();
-$('dw-scrim').onclick = closeDrawer;
-$('dw-close').onclick = closeDrawer;
-
-// Flick the handle down to dismiss, which is what a grab handle promises. Only
-// in portrait — in landscape the sheet comes in from the side, and there the
-// scrim is half the screen and the ✕ is right there.
-const sideSheet = () => window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
-let dwDrag = null;
-const dwSheet = () => document.querySelector('.dw-sheet');
-$('dw-grip').addEventListener('pointerdown', (e) => {
-  if (sideSheet()) return;
-  dwDrag = { from: e.clientY, moved: 0 };
-  try { $('dw-grip').setPointerCapture(e.pointerId); } catch {}
-  dwSheet().style.transition = 'none';
-});
-$('dw-grip').addEventListener('pointermove', (e) => {
-  if (!dwDrag) return;
-  dwDrag.moved = Math.max(0, e.clientY - dwDrag.from);
-  dwSheet().style.transform = `translateY(${dwDrag.moved}px)`;
-});
-function endDwDrag() {
-  if (!dwDrag) return;
-  const dismiss = dwDrag.moved > 90;
-  dwDrag = null;
-  const sh = dwSheet();
-  sh.style.transition = '';
-  sh.style.transform = '';
-  if (dismiss) closeDrawer();
-}
-$('dw-grip').addEventListener('pointerup', endDwDrag);
-$('dw-grip').addEventListener('pointercancel', endDwDrag);
-document.querySelector('.dw-tabs').addEventListener('click', (e) => {
-  const b = e.target.closest('.dw-tab');
-  if (b) { setDrawerTab(b.dataset.tab); document.querySelector('.dw-body').scrollTop = 0; }
-});
-try { setDrawerTab(localStorage.getItem(DW_TAB) || 'teams'); } catch { setDrawerTab('teams'); }
-
-// The setup checklist still says "go here" — it just opens the drawer on the
-// right tab instead of scrolling a page that no longer scrolls.
+// The setup checklist says "go here" — now a pane on the Setup screen rather
+// than a tab in a drawer that no longer exists.
+const PANEL_PANE = { 'panel-appearance': 'look', 'panel-cameras': 'obs', 'panel-obs': 'obs', 'panel-overlay': 'obs' };
 function jumpPanel(id) {
   const p = $(id); if (!p) return;
-  openDrawer(PANEL_TAB[id] || 'teams');
+  openSetup();
+  svGo(PANEL_PANE[id] || 'home');
   p.open = true;
   requestAnimationFrame(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
@@ -3198,7 +3128,6 @@ document.addEventListener('keydown', (e) => {
   if (sheetOpen() || e.defaultPrevented) return;
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === 'Escape' && drawerOpen()) { e.preventDefault(); return closeDrawer(); }
   const k = e.key.toLowerCase();
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {

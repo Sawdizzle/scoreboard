@@ -498,298 +498,7 @@
     <!-- Everything you set once. On a phone this is a bottom sheet dragged up
          over the pad; from 700px the sheet chrome falls away and it is the
          panel column it has always been — same panel bodies either way. -->
-    <div id="drawer" class="drawer">
-      <div class="dw-scrim" id="dw-scrim"></div>
-      <div class="dw-sheet">
-        <!-- The handle is a real control, not decoration: flick it down, or tap
-             Done at the foot like every other sheet. The scrim is 12% of a phone
-             screen and most of that sits under the status bar, so it cannot be
-             the only way out. -->
-        <div class="dw-grip" id="dw-grip"><span class="grab"></span></div>
-        <div class="dw-tabs" role="tablist">
-          <button class="dw-tab on" id="dw-tab-teams" data-tab="teams" role="tab" aria-selected="true" aria-controls="dw-pane-teams">Teams</button>
-          <button class="dw-tab" id="dw-tab-look" data-tab="look" role="tab" aria-selected="false" aria-controls="dw-pane-look">Look</button>
-          <button class="dw-tab" id="dw-tab-obs" data-tab="obs" role="tab" aria-selected="false" aria-controls="dw-pane-obs">OBS</button>
-        </div>
-        <div class="dw-body">
 
-          <section class="dw-pane" id="dw-pane-teams" data-tab="teams" role="tabpanel" aria-labelledby="dw-tab-teams">
-            <button id="setup-btn" class="ghost dw-row">⚙ Game setup — teams, style, times &amp; rules</button>
-            <!-- Lineups moved to their own sheet in v3.62, opened from the batter line. -->
-            <p class="hint sport-only" data-sport="baseball">Lineups, positions and saved teams: tap the batter line under the count.</p>
-          </section>
-
-          <section class="dw-pane" id="dw-pane-look" data-tab="look" role="tabpanel" aria-labelledby="dw-tab-look" hidden>
-            <details class="panel" id="panel-appearance">
-              <summary>🎨 Appearance</summary>
-              <div class="panel-body">
-                <span class="sublabel">Saved looks</span>
-                <div class="audio-row">
-                  <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
-                  <button id="preset-apply" class="fxbtn">Apply</button>
-                </div>
-                <input id="preset-name" placeholder="Name this look…" />
-                <div class="shared-fx">
-                  <button id="preset-save" class="fxbtn">💾 Save current</button>
-                  <button id="preset-del" class="fxbtn cardclear">Delete</button>
-                </div>
-
-                <div class="audio-row">
-                  <label class="sel">Theme
-                    <select id="theme-sel">
-                      <option value="custom">✦ Custom (your colors)</option>
-                      <option value="nightgame">Midnight</option>
-                      <option value="espn">Broadcast Minimal</option>
-                      <option value="retro">Retro 8-bit</option>
-                      <option value="green">Classic Green</option>
-                      <option value="neon">Neon</option>
-                      <option value="sunset">Sunset</option>
-                      <option value="ice">Ice (light)</option>
-                      <option value="mono">Newsprint</option>
-                      <option value="gold">Gold</option>
-                      <option value="carbon">Carbon</option>
-                      <option value="vapor">Vaporwave</option>
-                      <option value="royal">Royal</option>
-                      <option value="volt">Volt (electric)</option>
-                      <option value="ember">Ember (molten)</option>
-                      <option value="blueprint">Blueprint</option>
-                      <option value="bubblegum">Bubblegum</option>
-                      <option value="cosmic">Cosmic</option>
-                      <option value="sunrise">Sunrise (light)</option>
-                      <option value="jumbotron">Jumbotron (LED)</option>
-                      <option value="crt">CRT (amber)</option>
-                      <option value="neonsign">Neon Sign</option>
-                      <option value="chrome">Chrome (metal)</option>
-                      <option value="ticker">Ticker (thin)</option>
-                      <option value="outline">Outline (frosted)</option>
-                      <option value="stack">Stack (modules)</option>
-                      <option value="chalkboard">Chalkboard (sandlot)</option>
-                      <option value="monster">Green Monster (painted)</option>
-                      <option value="marquee">Marquee (bulbs)</option>
-                      <option value="comic">Comic (pop art)</option>
-                      <option value="americana">Americana (bunting)</option>
-                      <option value="foil">Holo Foil (refractor)</option>
-                      <option value="dugout">Dugout (woodgrain)</option>
-                    </select>
-                  </label>
-                </div>
-                <span class="sublabel">Position on the 1080p frame</span>
-                <div class="pos-row">
-                <div class="pos-grid" id="pos-grid">
-                  <button data-pos="top-left" title="Top-left">↖</button>
-                  <button data-pos="top-center" title="Top-center">↑</button>
-                  <button data-pos="top-right" title="Top-right">↗</button>
-                  <button data-pos="mid-left" title="Middle-left">←</button>
-                  <button data-pos="mid-center" title="Center">●</button>
-                  <button data-pos="mid-right" title="Middle-right">→</button>
-                  <button data-pos="bottom-left" title="Bottom-left">↙</button>
-                  <button data-pos="bottom-center" title="Bottom-center">↓</button>
-                  <button data-pos="bottom-right" title="Bottom-right">↘</button>
-                </div>
-                <!-- Where the bug actually lands, without alt-tabbing to OBS. -->
-                <div class="pos-side">
-                  <p class="pos-note" id="pos-note"></p>
-                  <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
-                </div>
-                </div>
-                <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
-
-                <details class="panel">
-                  <summary>🎛️ Custom theme</summary>
-                  <div class="panel-body">
-                <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
-
-                <span class="sublabel">Row fills</span>
-                <div class="fill-row"><span class="fill-label">Away (row 1)</span>
-                  <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Home (row 2)</span>
-                  <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Details (bottom)</span>
-                  <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Panel (behind)</span>
-                  <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
-                </div>
-                <label class="slider">Gradient angle <input id="cust-angle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
-
-                <span class="sublabel">Text &amp; accents</span>
-                <div class="audio-row">
-                  <label class="sel">Text<input id="cust-text" type="color" /></label>
-                  <label class="sel">Accent<input id="cust-accent" type="color" /></label>
-                  <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
-                  <label class="sel">Border<input id="cust-line" type="color" /></label>
-                </div>
-
-                <span class="sublabel">Type &amp; layout</span>
-                <div class="audio-row">
-                  <label class="sel">Font
-                    <select id="cust-font">
-                      <option value="">Default</option>
-                      <option value="condensed">Condensed</option>
-                      <option value="clean">Clean sans</option>
-                      <option value="mono">Monospace</option>
-                      <option value="serif">Serif</option>
-                      <option value="system">System</option>
-                    </select>
-                  </label>
-                  <label class="sel">Corners
-                    <select id="cust-radius">
-                      <option value="">Default</option>
-                      <option value="16">Round</option>
-                      <option value="8">Soft</option>
-                      <option value="0">Sharp</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="audio-row">
-                  <label class="sel">Logo size
-                    <select id="cust-logosize">
-                      <option value="">Default</option>
-                      <option value="sm">Small</option>
-                      <option value="lg">Large</option>
-                    </select>
-                  </label>
-                  <label class="sel">Border
-                    <select id="cust-border">
-                      <option value="">Default</option>
-                      <option value="0">None</option>
-                      <option value="2">Thick</option>
-                      <option value="3">Bold</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="toggles">
-                  <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
-                  <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
-                  <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
-                  <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
-                  <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
-                  <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
-                </div>
-
-                    <button id="cust-reset" class="fxbtn">Reset customizations</button>
-                  </div>
-                </details>
-              </div>
-            </details>
-            <details class="panel">
-              <summary>🔊 Sound</summary>
-              <div class="panel-body">
-                <div class="audio-row">
-                  <label class="sel">Pack
-                    <select id="sound-pack">
-                      <option value="bigleague">Big League (organ)</option>
-                      <option value="modern">Modern (hits/whooshes)</option>
-                      <option value="sandlot">Sandlot (playful)</option>
-                      <option value="arcade">Arcade (chiptune)</option>
-                      <option value="cinematic">Cinematic (orchestral)</option>
-                      <option value="airhorn">Stadium (air horns)</option>
-                      <option value="chill">Chill (bells)</option>
-                      <option value="organ">Pipe Organ</option>
-                      <option value="radio">Vintage Radio</option>
-                      <option value="edm">EDM (drops)</option>
-                    </select>
-                  </label>
-                  <button id="mute-btn" class="fxbtn mute">Mute</button>
-                </div>
-                <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
-                <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
-              </div>
-            </details>
-            <!-- Set once before the game, so it lives with the rest of the look;
-                 raising a sponsor card is On Air's job. -->
-            <details class="panel">
-              <summary>💵 Sponsors</summary>
-              <div class="panel-body">
-                <div id="sponsor-list"></div>
-                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
-                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
-                <div class="sp-timing">
-                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
-                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
-                </div>
-                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
-              </div>
-            </details>
-          </section>
-
-          <section class="dw-pane" id="dw-pane-obs" data-tab="obs" role="tabpanel" aria-labelledby="dw-tab-obs" hidden>
-            <div class="pad-opt">
-              <span class="pad-opt-lab">🎛️ OBS controls</span>
-              <label class="switch" title="Hide the OBS panels if you don't use OBS">
-                <input type="checkbox" id="obs-ui" checked />
-                <span class="track"><span class="knob"></span></span>
-              </label>
-            </div>
-            <div class="obs-only">
-              <div class="obs-tier">
-                <span class="ot-lab">Page permissions: <b id="obs-tier">—</b></span>
-                <button id="obs-tier-help" class="ghost small">What this unlocks</button>
-              </div>
-              <p id="obs-tier-note" class="hint" hidden></p>
-              <span class="sublabel">Instant replay</span>
-              <p class="hint">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
-              <div class="replay-row">
-                <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
-                <p id="replay-hint" class="hint replay-hint" hidden></p>
-              </div>
-            </div>
-            <details class="panel" id="panel-cameras">
-              <summary><span>🎥 Cameras</span><span class="panel-need" id="scene-need"></span></summary>
-              <div class="panel-body">
-                <div id="scene-list" class="scene-list"></div>
-                <p id="scene-hint" class="hint"></p>
-              </div>
-            </details>
-            <details class="panel" id="panel-obs">
-              <summary><span>📡 Stream &amp; record</span><span class="panel-need" id="obs-need"></span></summary>
-              <div class="panel-body">
-                <div class="obs-row">
-                  <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
-                  <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
-                  <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
-                </div>
-                <p id="obs-hint" class="hint"></p>
-              </div>
-            </details>
-            <details class="panel" id="panel-overlay">
-              <summary>🔗 Overlay link &amp; practice</summary>
-              <div class="panel-body">
-                <div class="urlbar">
-                  <input id="overlay-url" readonly />
-                  <button id="copy-url-btn" class="ghost small">Copy</button>
-                  <button id="open-url-btn" class="ghost small">Open ▸</button>
-                </div>
-                <p class="hint">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
-                <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
-
-                <span class="sublabel">Share the recap</span>
-                <div class="urlbar">
-                  <input id="recap-url" readonly />
-                  <button id="copy-recap-btn" class="ghost small">Copy</button>
-                </div>
-                <p class="hint">A public scoreboard page for parents — score and line score only, never lineups.</p>
-                <div class="practice-row">
-                  <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
-                  <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
-                </div>
-              </div>
-            </details>
-            <p class="hint kbd-hint">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
-          </section>
-
-        </div>
-        <div class="dw-foot"><button id="dw-close" class="primary" type="button">Done</button></div>
-      </div>
-    </div>
     </div><!-- /.game-cols -->
 
     <!-- Fixed. Undo is the one thing you reach for when something has already
@@ -800,7 +509,7 @@
       <button id="cam-open" class="gm-b cam obs-only" hidden><i aria-hidden="true">🎥</i>Cameras</button>
       <button id="field-open" class="gm-b field sport-only" data-sport="baseball"><i aria-hidden="true">🧢</i>Field</button>
       <button id="onair-open" class="gm-b onair"><i aria-hidden="true">🎬</i>On Air</button>
-      <button id="dw-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
+      <button id="setup-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
     </div>
   </section>
 
@@ -1172,7 +881,7 @@
       <h3 id="setup-title">Setup</h3>
     </div>
 
-    <section class="sv-pane" data-pane="home">
+    <section class="sv-pane" data-pane="home" data-title="Setup">
       <div class="set-sec">
         <span class="set-head">Teams</span>
         <div class="set-card">
@@ -1230,7 +939,7 @@
       </div>
     </section>
 
-    <section class="sv-pane" data-pane="teams" hidden>
+    <section class="sv-pane" data-pane="teams" data-title="Teams" hidden>
       <div class="set-sec">
         <span class="set-head">Away / visitor</span>
         <div class="set-card">
@@ -1252,7 +961,7 @@
       </div>
     </section>
 
-    <section class="sv-pane" data-pane="game" hidden>
+    <section class="sv-pane" data-pane="game" data-title="Sport &amp; scorebug" hidden>
       <div class="set-sec">
         <span class="set-head">Sport &amp; scorebug</span>
         <div class="set-card">
@@ -1279,7 +988,7 @@
       </div>
     </section>
 
-    <section class="sv-pane" data-pane="times" hidden>
+    <section class="sv-pane" data-pane="times" data-title="Times &amp; rules" hidden>
       <div class="set-sec">
         <span class="set-head">Times &amp; rules</span>
         <div class="set-card">
@@ -1291,7 +1000,7 @@
       </div>
     </section>
 
-    <section class="sv-pane" data-pane="overlay" hidden>
+    <section class="sv-pane" data-pane="overlay" data-title="Show on overlay" hidden>
       <div class="set-sec">
         <span class="set-head">Show on overlay</span>
         <div class="set-card">
@@ -1305,6 +1014,304 @@
         <p class="set-note">Batter, pitcher and pitch count come from the lineup. These only decide whether the overlay shows those lines.</p>
       </div>
     </section>
+
+    <section class="sv-pane" data-pane="look" data-title="Look" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="look-0"><span class="set-lab">🎨 Appearance</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-1"><span class="set-lab">🔊 Sound</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-2"><span class="set-lab">💵 Sponsors</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+
+
+            
+            
+            <!-- Set once before the game, so it lives with the rest of the look;
+                 raising a sponsor card is On Air's job. -->
+    </section>
+
+    <section class="sv-pane" data-pane="look-0" data-title="Appearance" hidden>
+
+              <div class="panel-body">
+                <span class="sublabel">Saved looks</span>
+                <div class="audio-row">
+                  <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
+                  <button id="preset-apply" class="fxbtn">Apply</button>
+                </div>
+                <input id="preset-name" placeholder="Name this look…" />
+                <div class="shared-fx">
+                  <button id="preset-save" class="fxbtn">💾 Save current</button>
+                  <button id="preset-del" class="fxbtn cardclear">Delete</button>
+                </div>
+
+                <div class="audio-row">
+                  <label class="sel">Theme
+                    <select id="theme-sel">
+                      <option value="custom">✦ Custom (your colors)</option>
+                      <option value="nightgame">Midnight</option>
+                      <option value="espn">Broadcast Minimal</option>
+                      <option value="retro">Retro 8-bit</option>
+                      <option value="green">Classic Green</option>
+                      <option value="neon">Neon</option>
+                      <option value="sunset">Sunset</option>
+                      <option value="ice">Ice (light)</option>
+                      <option value="mono">Newsprint</option>
+                      <option value="gold">Gold</option>
+                      <option value="carbon">Carbon</option>
+                      <option value="vapor">Vaporwave</option>
+                      <option value="royal">Royal</option>
+                      <option value="volt">Volt (electric)</option>
+                      <option value="ember">Ember (molten)</option>
+                      <option value="blueprint">Blueprint</option>
+                      <option value="bubblegum">Bubblegum</option>
+                      <option value="cosmic">Cosmic</option>
+                      <option value="sunrise">Sunrise (light)</option>
+                      <option value="jumbotron">Jumbotron (LED)</option>
+                      <option value="crt">CRT (amber)</option>
+                      <option value="neonsign">Neon Sign</option>
+                      <option value="chrome">Chrome (metal)</option>
+                      <option value="ticker">Ticker (thin)</option>
+                      <option value="outline">Outline (frosted)</option>
+                      <option value="stack">Stack (modules)</option>
+                      <option value="chalkboard">Chalkboard (sandlot)</option>
+                      <option value="monster">Green Monster (painted)</option>
+                      <option value="marquee">Marquee (bulbs)</option>
+                      <option value="comic">Comic (pop art)</option>
+                      <option value="americana">Americana (bunting)</option>
+                      <option value="foil">Holo Foil (refractor)</option>
+                      <option value="dugout">Dugout (woodgrain)</option>
+                    </select>
+                  </label>
+                </div>
+                <span class="sublabel">Position on the 1080p frame</span>
+                <div class="pos-row">
+                <div class="pos-grid" id="pos-grid">
+                  <button data-pos="top-left" title="Top-left">↖</button>
+                  <button data-pos="top-center" title="Top-center">↑</button>
+                  <button data-pos="top-right" title="Top-right">↗</button>
+                  <button data-pos="mid-left" title="Middle-left">←</button>
+                  <button data-pos="mid-center" title="Center">●</button>
+                  <button data-pos="mid-right" title="Middle-right">→</button>
+                  <button data-pos="bottom-left" title="Bottom-left">↙</button>
+                  <button data-pos="bottom-center" title="Bottom-center">↓</button>
+                  <button data-pos="bottom-right" title="Bottom-right">↘</button>
+                </div>
+                <!-- Where the bug actually lands, without alt-tabbing to OBS. -->
+                <div class="pos-side">
+                  <p class="pos-note" id="pos-note"></p>
+                  <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
+                </div>
+                </div>
+                <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
+
+                <details class="panel">
+                  <summary>🎛️ Custom theme</summary>
+                  <div class="panel-body">
+                <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
+
+                <span class="sublabel">Row fills</span>
+                <div class="fill-row"><span class="fill-label">Away (row 1)</span>
+                  <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Home (row 2)</span>
+                  <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Details (bottom)</span>
+                  <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Panel (behind)</span>
+                  <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
+                </div>
+                <label class="slider">Gradient angle <input id="cust-angle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
+
+                <span class="sublabel">Text &amp; accents</span>
+                <div class="audio-row">
+                  <label class="sel">Text<input id="cust-text" type="color" /></label>
+                  <label class="sel">Accent<input id="cust-accent" type="color" /></label>
+                  <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
+                  <label class="sel">Border<input id="cust-line" type="color" /></label>
+                </div>
+
+                <span class="sublabel">Type &amp; layout</span>
+                <div class="audio-row">
+                  <label class="sel">Font
+                    <select id="cust-font">
+                      <option value="">Default</option>
+                      <option value="condensed">Condensed</option>
+                      <option value="clean">Clean sans</option>
+                      <option value="mono">Monospace</option>
+                      <option value="serif">Serif</option>
+                      <option value="system">System</option>
+                    </select>
+                  </label>
+                  <label class="sel">Corners
+                    <select id="cust-radius">
+                      <option value="">Default</option>
+                      <option value="16">Round</option>
+                      <option value="8">Soft</option>
+                      <option value="0">Sharp</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="audio-row">
+                  <label class="sel">Logo size
+                    <select id="cust-logosize">
+                      <option value="">Default</option>
+                      <option value="sm">Small</option>
+                      <option value="lg">Large</option>
+                    </select>
+                  </label>
+                  <label class="sel">Border
+                    <select id="cust-border">
+                      <option value="">Default</option>
+                      <option value="0">None</option>
+                      <option value="2">Thick</option>
+                      <option value="3">Bold</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="toggles">
+                  <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
+                  <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
+                  <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
+                  <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
+                  <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
+                  <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
+                </div>
+
+                    <button id="cust-reset" class="fxbtn">Reset customizations</button>
+                  </div>
+                </details>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-1" data-title="Sound" hidden>
+
+              <div class="panel-body">
+                <div class="audio-row">
+                  <label class="sel">Pack
+                    <select id="sound-pack">
+                      <option value="bigleague">Big League (organ)</option>
+                      <option value="modern">Modern (hits/whooshes)</option>
+                      <option value="sandlot">Sandlot (playful)</option>
+                      <option value="arcade">Arcade (chiptune)</option>
+                      <option value="cinematic">Cinematic (orchestral)</option>
+                      <option value="airhorn">Stadium (air horns)</option>
+                      <option value="chill">Chill (bells)</option>
+                      <option value="organ">Pipe Organ</option>
+                      <option value="radio">Vintage Radio</option>
+                      <option value="edm">EDM (drops)</option>
+                    </select>
+                  </label>
+                  <button id="mute-btn" class="fxbtn mute">Mute</button>
+                </div>
+                <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+                <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
+                <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
+                <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-2" data-title="Sponsors" hidden>
+
+              <div class="panel-body">
+                <div id="sponsor-list"></div>
+                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
+                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
+                <div class="sp-timing">
+                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
+                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
+                </div>
+                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
+              </div>
+    </section>
+
+
+    <section class="sv-pane" data-pane="obs" data-title="OBS" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="obs-0"><span class="set-lab">🎥 Cameras</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="obs-1"><span class="set-lab">📡 Stream &amp; record</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="obs-2"><span class="set-lab">🔗 Overlay link &amp; practice</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+
+
+            <div class="pad-opt">
+              <span class="pad-opt-lab">🎛️ OBS controls</span>
+              <label class="switch" title="Hide the OBS panels if you don't use OBS">
+                <input type="checkbox" id="obs-ui" checked />
+                <span class="track"><span class="knob"></span></span>
+              </label>
+            </div>
+            <div class="obs-only">
+              <div class="obs-tier">
+                <span class="ot-lab">Page permissions: <b id="obs-tier">—</b></span>
+                <button id="obs-tier-help" class="ghost small">What this unlocks</button>
+              </div>
+              <p id="obs-tier-note" class="hint" hidden></p>
+              <span class="sublabel">Instant replay</span>
+              <p class="hint">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
+              <div class="replay-row">
+                <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
+                <p id="replay-hint" class="hint replay-hint" hidden></p>
+              </div>
+            </div>
+            
+            
+            
+            <p class="hint kbd-hint">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-0" data-title="Cameras" hidden>
+
+              <div class="panel-body">
+                <div id="scene-list" class="scene-list"></div>
+                <p id="scene-hint" class="hint"></p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-1" data-title="Stream &amp; record" hidden>
+
+              <div class="panel-body">
+                <div class="obs-row">
+                  <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
+                  <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
+                  <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
+                </div>
+                <p id="obs-hint" class="hint"></p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-2" data-title="Overlay link &amp; practice" hidden>
+
+              <div class="panel-body">
+                <div class="urlbar">
+                  <input id="overlay-url" readonly />
+                  <button id="copy-url-btn" class="ghost small">Copy</button>
+                  <button id="open-url-btn" class="ghost small">Open ▸</button>
+                </div>
+                <p class="hint">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
+
+                <span class="sublabel">Share the recap</span>
+                <div class="urlbar">
+                  <input id="recap-url" readonly />
+                  <button id="copy-recap-btn" class="ghost small">Copy</button>
+                </div>
+                <p class="hint">A public scoreboard page for parents — score and line score only, never lineups.</p>
+                <div class="practice-row">
+                  <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
+                  <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
+                </div>
+              </div>
+    </section>
+
   </div>
 
   <!-- NEW GAME SHEET -->

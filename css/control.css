@@ -430,8 +430,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .sheet-card { animation: fade-in 0.18s linear; }
-  .dw-sheet { transform: none; opacity: 0; transition: opacity 0.18s linear; }
-  .drawer.open .dw-sheet { opacity: 1; }
   .key:active, .hitbar button:active, .base-btn:active, .fxbtn:active, .gm-b:active { transform: none; }
   .gm-score b.pop { animation: none; }
 }
@@ -606,34 +604,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 /* ---- The drawer ----------------------------------------------------------
    A bottom sheet on a phone, the panel column from 700px. Presentation only:
    both states wrap the same panel bodies. */
-.drawer { position: fixed; inset: 0; z-index: 25; visibility: hidden; }
-.drawer.open { visibility: visible; }
-.dw-scrim { position: absolute; inset: 0; background: rgba(6, 9, 15, 0.62); opacity: 0;
-  transition: opacity 0.18s linear; }
-.drawer.open .dw-scrim { opacity: 1; }
-.dw-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
-  display: flex; flex-direction: column; height: min(88dvh, 740px);
-  background: var(--panel); border: 1px solid var(--line-2); border-bottom: none;
-  border-radius: 24px 24px 0 0; padding-top: 6px;
-  box-shadow: 0 -24px 50px -20px #000;
-  transform: translateY(100%); transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.drawer.open .dw-sheet { transform: none; }
-.dw-grip { position: relative; display: flex; align-items: center; justify-content: center;
-  height: 30px; touch-action: none; }
-.dw-grip .grab { margin: 0; }
-.dw-foot { padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #1d2740; }
-.dw-foot .primary { width: 100%; margin: 0; background: var(--run); }
-.dw-tabs { display: flex; gap: 7px; padding: 6px 16px 12px; border-bottom: 1px solid #1d2740; }
-.dw-tab { flex: 1; padding: 10px 6px; font-size: 13px; font-weight: 700; border-radius: 12px;
-  background: var(--card); border: 1px solid var(--line); color: #c8d4e8; }
-.dw-tab.on { background: var(--steel); border-color: var(--steel); color: #06090f; }
-.dw-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain; padding: 4px 16px calc(18px + env(safe-area-inset-bottom)); }
-.dw-pane[hidden] { display: none; }
-.dw-pane > .panel:first-of-type { margin-top: 10px; }
-.dw-row { text-align: left; }
-.dw-sec { margin-top: 16px; }
-.dw-sec .shared-fx { margin-top: 8px; }
 
 /* The tier the pad is actually running at, said once at the top of the tab, so
    a disabled control reads as not-unlocked instead of broken. */
@@ -643,32 +613,11 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .ot-lab b { color: var(--chalk); }
 .obs-tier .ghost.small { margin: 0; font-size: 12px; }
 
-/* Tablet and desktop have no reach problem, so the sheet chrome falls away and
-   the panes stack as the column they were before. */
-@media (min-width: 700px) and (min-height: 501px) {
-  /* z-index has to go back to auto with the fixed positioning. .game-cols is a
-     grid here, and z-index applies to a grid item whether or not it is
-     positioned — leaving 25 behind kept the drawer in its own stacking context
-     above every sheet, so Game Setup opened underneath the panel column. */
-  .drawer { position: static; z-index: auto; visibility: visible; }
-  .dw-scrim, .dw-tabs, .dw-grip, .dw-foot { display: none; }
-  .dw-sheet { position: static; max-width: none; margin: 0; height: auto; transform: none;
-    background: none; border: none; border-radius: 0; padding-top: 0; box-shadow: none; }
-  .dw-body { overflow: visible; padding: 0; }
-  .dw-pane[hidden] { display: block; }
-  #dw-open { display: none; }
-}
-
 /* Landscape phone: no room for a bottom sheet over a 390pt-tall screen, so the
    drawer comes in from the side instead and keeps the pad visible. */
 @media (max-height: 500px) and (orientation: landscape) {
-  .dw-sheet { top: 0; left: auto; right: 0; margin: 0; width: min(420px, 88vw); max-width: none;
-    height: 100%; border-radius: 24px 0 0 24px; border-right: none;
-    transform: translateX(100%); }
-  .drawer.open .dw-sheet { transform: none; }
 }
 @media (max-height: 500px) and (orientation: landscape) and (prefers-reduced-motion: reduce) {
-  .dw-sheet { transform: none; }
 }
 
 /* The OBS on/off switch, and everything it hides */
