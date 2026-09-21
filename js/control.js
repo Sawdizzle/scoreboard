@@ -900,13 +900,7 @@ $('pad-dia').onclick = (e) => {
   openRunners(k);
 };
 $('runners-done').onclick = () => closeSheet('runners-sheet');
-$('rn-balk').onclick = () => {
-  const r = game && L.onBalk(game);
-  if (!r) return showToast('Nobody on base — with the bases empty a balk is a ball', 3000);
-  commit(r);
-  showToast(r.text, 1800);
-  closeSheet('runners-sheet');
-};
+
 $('rn-list').onclick = (e) => {
   const o = e.target.closest('.rn-b'); if (!o) return;
   if (o.dataset.why) return showToast(o.dataset.why, 3000);
@@ -1015,6 +1009,13 @@ $('btn-more').onclick    = () => { if (game) openSheet('more-sheet'); };
 $('more-hbp').onclick    = () => { closeSheet('more-sheet'); commit(L.onHitByPitch(game)); };
 $('more-ci').onclick     = () => { closeSheet('more-sheet'); commit(L.onCatcherInterference(game)); };
 $('more-ibb').onclick    = () => { closeSheet('more-sheet'); commit(L.onIntentionalWalk(game)); };
+// A balk with the bases empty is a ball on the batter, so it goes the way BALL does.
+$('more-balk').onclick   = () => {
+  closeSheet('more-sheet');
+  const r = L.onBalk(game);
+  if (!r) { showToast('Bases empty — balk counts as a ball', 2200); return $('btn-ball').click(); }
+  commit(r); showToast(r.text, 1800);
+};
 $('more-cancel').onclick = () => closeSheet('more-sheet');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-inplay').onclick  = () => openPlaySheet();
