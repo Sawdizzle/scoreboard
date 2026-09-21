@@ -900,6 +900,13 @@ $('pad-dia').onclick = (e) => {
   openRunners(k);
 };
 $('runners-done').onclick = () => closeSheet('runners-sheet');
+$('rn-balk').onclick = () => {
+  const r = game && L.onBalk(game);
+  if (!r) return showToast('Nobody on base — with the bases empty a balk is a ball', 3000);
+  commit(r);
+  showToast(r.text, 1800);
+  closeSheet('runners-sheet');
+};
 $('rn-list').onclick = (e) => {
   const o = e.target.closest('.rn-b'); if (!o) return;
   if (o.dataset.why) return showToast(o.dataset.why, 3000);

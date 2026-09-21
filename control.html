@@ -257,7 +257,7 @@
             <li>The main pad is game flow — balls, strikes, fouls, outs, hits. Runs come from the plays that score them. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End half-inning</b> is in the Situation sheet for the rare one that ends another way.</li>
             <li><b>IN PLAY</b> asks what happened: a hit, an error or fielder's choice, or the kind of out. For outs and errors, tap who fielded it — SS on a ground out records <b>Groundout 6-3</b>, CF on a fly out <b>Flyout F8</b>. With runners on, the last step asks where everyone ended up, already filled in with the likely result. With nobody on, it skips that step. <b>Just an out</b> skips all of it.</li>
             <li>Missed that the catcher dropped strike three? The strikeout message has <b>Dropped 3rd?</b> for a few seconds.</li>
-            <li>The <b>diamond</b> on the pad shows who's on. Tap a runner for a steal, caught stealing, pickoff, or a wild pitch / passed ball. The count and the batter stay.</li>
+            <li>The <b>diamond</b> on the pad shows who's on. Tap a runner for a steal, caught stealing, pickoff, or a wild pitch / passed ball. <b>Balk</b> is on the same sheet and moves every runner up. The count and the batter stay.</li>
             <li><b>MORE</b> holds the rare ways to first base: hit by pitch, catcher’s interference, intentional walk.</li>
             <li>A run with no play behind it goes in with <b>+1 run</b> in the Situation sheet.</li>
             <li><b>↶ Undo</b> reverses the last action.</li>
@@ -828,6 +828,8 @@
       <h3 id="runners-title">Runners</h3>
       <p class="confirm-copy">Count and batter stay. For a wild pitch or passed ball, tap Ball or Strike too.</p>
       <div id="rn-list" class="rn-list"></div>
+      <!-- Every runner at once, so it is not a per-runner button. -->
+      <button id="rn-balk" class="base-btn wide" type="button">Balk · every runner up one</button>
       <button id="runners-done" class="ghost">Done</button>
     </div>
   </div>

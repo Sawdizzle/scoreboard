@@ -171,6 +171,18 @@ export function runnerBlocked(g, from, kind) {
   }
   return '';
 }
+// Balk: every runner moves up one base and a runner on 3rd scores. No pitch,
+// the count stays, the same batter is still up. Null with nobody on (with the
+// bases empty a balk is a ball, and BALL is the key for that).
+export function onBalk(g) {
+  const b = safeBases(g.bases);
+  if (!b.first && !b.second && !b.third) return null;
+  const runs = b.third ? 1 : 0;
+  const bases = { first: false, second: b.first, third: b.second };
+  return { type: 'balk', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, 'BK', { runs }) },
+    anim: runs ? 'run' : null, animMeta: {}, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
+}
+
 export function onRunnerPlay(g, from, kind) {
   if (!RUNNER_LABEL[kind] || runnerBlocked(g, from, kind)) return null;
   const b = safeBases(g.bases);
@@ -432,7 +444,7 @@ export function halfEndsGame(after) {
   return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
 }
 // A play that belongs to the new half takes Mid-Inning down.
-export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'run', 'error']);
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'run', 'error']);
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
@@ -652,7 +664,7 @@ export const PLAY_LABEL = {
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
   K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
-  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', HR: 'Home run', OUT: 'Out',
+  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event
@@ -807,7 +819,7 @@ export function subjectOf(res, g) {
     const from = res.payload && res.payload.from;
     return from ? `runner@${from}` : 'runners';
   }
-  if (res.type === 'advance' || res.type === 'clearbases') return 'runners';
+  if (res.type === 'advance' || res.type === 'clearbases' || res.type === 'balk') return 'runners';
   if (BATTER_EVENTS.has(res.type)) return 'batter';
   return 'game';
 }
@@ -899,6 +911,7 @@ const REBUILD = {
   batter:    (g) => onNextBatter(g),
   half:      (g) => onToggleHalf(g),
   inning:    (g, p) => (p.inputs ? onNudgeInning(g, p.inputs.d) : null),
+  balk:      (g) => onBalk(g),
   runner:    (g, p) => (p.from && p.kind ? onRunnerPlay(g, p.from, p.kind) : null),
   base:      (g, p) => (p.inputs && p.inputs.key ? toggleBase(g, p.inputs.key) : null),
   // Built on the pad from their own sheets, so the fold rebuilds them from the

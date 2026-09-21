@@ -1120,3 +1120,19 @@ test('sac bunt needs a runner and fewer than 2 outs', () => {
   assert.match(L.playBlocked(G(), 'SAC'), /runner/);
   assert.match(L.playBlocked(G({ outs: 2, bases: bases(1, 0, 0) }), 'SAC'), /2 outs/);
 });
+
+test('balk moves every runner up one, scores from 3rd, leaves the count and batter', () => {
+  const g = G({ balls: 2, strikes: 1, bases: bases(1, 0, 1), state: { batIdx: { away: 4 } } });
+  const r = L.onBalk(g);
+  assert.equal(r.type, 'balk');
+  assert.deepEqual(r.patch.bases, bases(0, 1, 0));
+  assert.equal(r.patch.away_score, 1);
+  assert.equal(r.patch.balls, undefined, 'count untouched');
+  assert.equal(r.patch.state, undefined, 'no pitch, same batter');
+  assert.equal(r.payload.play.kind, 'BK');
+  assert.equal(L.subjectOf(r), 'runners');
+});
+
+test('balk with the bases empty is not a play', () => {
+  assert.equal(L.onBalk(G()), null);
+});
