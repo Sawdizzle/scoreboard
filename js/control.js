@@ -376,7 +376,33 @@ function luStatus(state) {
   el.textContent = { saving: 'Saving…', saved: '✓ Saved', failed: '⚠ Not saved yet — retrying' }[state];
   el.dataset.state = state;
 }
-async function saveRoster(lineups) {
+// `allowClear` is for the one deliberate wipe: loading a saved team over this
+// side. Every other caller is an edit to one row or one spot, and none of them
+// can legitimately empty a team — so a write that would is dropped at the door
+// rather than sent to a server that keeps no history to undo it with.
+// True when this roster would empty a side that has somebody in it — checked
+// before the model moves, not just before the write, so a change the pad has
+// already adopted can never become the "before" that lets the next one through.
+let wipeGuarding = false;
+function wipeRefused(lineups, allowClear) {
+  if (allowClear) return false;
+  if (wipeGuarding) return true;   // the blur below fires one more change event; one toast is enough
+  const wiped = L.rosterWipes(game && game.lineups, lineups);
+  if (!wiped.length) return false;
+  console.warn('Scoreboard: refused a roster write that would have emptied', wiped.join(' and '));
+  showToast('⚠️ That would have cleared the lineup — nothing was saved', 4000);
+  // Blur first: fillLineup leaves the focused input alone, and the input we are
+  // refusing is usually the one under the finger. Screen and model have to agree.
+  wipeGuarding = true;
+  try {
+    const el = document.activeElement;
+    if (el && el.closest && el.closest('.lu-side')) el.blur();
+    renderLineups();   // put the roster that is still here back on screen
+  } finally { wipeGuarding = false; }
+  return true;
+}
+async function saveRoster(lineups, { allowClear = false } = {}) {
+  if (wipeRefused(lineups, allowClear)) return;
   game = { ...game, lineups };
   rosterNext = { id: game.id, lineups };
   clearTimeout(rosterRetry);
@@ -412,7 +438,12 @@ async function syncRoster(id, rev) {
   const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   if (error) { rosterHave = 0; return; }   // try again on the next row
   if (!game || game.id !== id || rosterSending || rosterNext) return;
-  game = { ...game, lineups: L.normalizeRoster((data && data.data) || {}) };
+  const incoming = L.normalizeRoster((data && data.data) || {});
+  // The same rule as saveRoster, on the way in: a read that comes back empty
+  // against a roster we are holding is a bad answer, not an edit somebody made.
+  const wiped = L.rosterWipes(game.lineups, incoming);
+  if (wiped.length) { console.warn('Scoreboard: ignored an empty roster read for', wiped.join(' and ')); rosterHave = 0; return; }
+  game = { ...game, lineups: incoming };
   delete panelPainted.lineups;
   renderGame();
 }
@@ -1070,7 +1101,7 @@ async function loadTeamInto(side, id) {
   if (!t) return;
   const has = teamOf(side).batters.some((b) => b && (b.name || b.num));
   if (has && !confirm(`Replace this game's ${side} lineup with the saved "${t.name}" lineup?`)) return;
-  await saveRoster({ ...(game.lineups || {}), [side]: L.normalizeTeam(t.roster || {}) });
+  await saveRoster({ ...(game.lineups || {}), [side]: L.normalizeTeam(t.roster || {}) }, { allowClear: true });
   const patch = {};
   patch[side + '_name'] = t.name;
   if (t.abbr) patch[side + '_abbr'] = t.abbr;
@@ -2391,6 +2422,7 @@ function lineupEdit(side, idx, field, value, now) {
   const team = L.setBatterField(lineups[side] || {}, idx, field, value);
   const next = { ...lineups, [side]: team };
   clearTimeout(luFlush); luFlush = null;
+  if (wipeRefused(next, false)) return;
   if (now) { saveRoster(next); }
   else {
     game = { ...game, lineups: next };   // the model moves now; the write follows

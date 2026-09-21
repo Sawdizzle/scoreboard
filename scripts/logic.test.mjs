@@ -785,6 +785,42 @@ test('renaming a row does not move the defense', () => {
   assert.equal(L.fielderAt({ half: 'top', lineups: { home: t } }, 'home', 'SS').name, 'Carter Jr');
 });
 
+// ---------------------------------------------------------------------------
+// The wipe guard: no ordinary edit empties a team
+// ---------------------------------------------------------------------------
+test('a write that would empty a side is named as one', () => {
+  const before = { away: roster(), home: roster() };
+  assert.deepEqual(L.rosterWipes(before, { away: roster(), home: {} }), ['home']);
+  assert.deepEqual(L.rosterWipes(before, {}), ['away', 'home']);
+  assert.deepEqual(L.rosterWipes(before, { away: {}, home: {} }), ['away', 'home']);
+});
+
+test('rows blanked one at a time are still a wipe by the time the team is empty', () => {
+  const one = { away: L.normalizeTeam({ batters: [{ num: '3', name: 'Morales' }] }) };
+  const blanked = { away: L.setBatterField(L.setBatterField(one.away, 0, 'name', ''), 0, 'num', '') };
+  assert.deepEqual(L.rosterWipes(one, blanked), ['away'], 'the last name off the sheet is the one to ask about');
+});
+
+test('ordinary edits are not wipes', () => {
+  const before = { away: roster() };
+  assert.deepEqual(L.rosterWipes(before, { away: L.setBatterField(before.away, 1, 'name', 'Carter Jr') }), []);
+  assert.deepEqual(L.rosterWipes(before, { away: L.swapBatters(before.away, 0, 3) }), []);
+  assert.deepEqual(L.rosterWipes(before, { away: L.setPosition(before.away, 1, '').team }), []);
+  assert.deepEqual(L.rosterWipes(before, { away: before.away, home: roster() }), [], 'filling the other side is not a wipe');
+});
+
+test('an empty side that stays empty is not a wipe', () => {
+  assert.deepEqual(L.rosterWipes({ away: {}, home: roster() }, { away: {}, home: roster() }), []);
+  assert.deepEqual(L.rosterWipes({}, {}), []);
+});
+
+test('a team is empty only when there is nobody in it', () => {
+  assert.equal(L.teamIsEmpty({}), true);
+  assert.equal(L.teamIsEmpty({ batters: [{ num: '', name: '' }] }), true);
+  assert.equal(L.teamIsEmpty({ batters: [{ num: '9', name: '' }] }), false, 'a number with no name is somebody');
+  assert.equal(L.teamIsEmpty({ pitcher: { num: '40', name: 'Ruiz' } }), false);
+});
+
 test('the field check lists the empty spots in field order', () => {
   assert.deepEqual(L.missingPositions(roster()), ['C', '1B', '3B', 'LF', 'CF', 'RF']);
   assert.deepEqual(L.missingPositions({}), L.FIELD_POSITIONS);

@@ -298,6 +298,24 @@ export const normalizeRoster = (lineups) => {
   for (const [side, team] of Object.entries(lineups || {})) out[side] = normalizeTeam(team);
   return out;
 };
+// Is there anyone in this side's roster at all?
+export function teamIsEmpty(team) {
+  const t = team || {};
+  const bs = Array.isArray(t.batters) ? t.batters : [];
+  if (bs.some(filled)) return false;
+  if (filled(t.pitcher)) return false;
+  return !Object.keys(t.positions || {}).length;
+}
+// The sides a write would empty out. Nothing in the pad blanks a whole team by
+// itself — a lineup is typed in once and edited a row at a time — so a write
+// that does is a bug on its way to the server, and the server keeps no history
+// to undo it with. The last two seasons' worth of vanished lineups all looked
+// like this on the wire. The pad refuses these and says so; a deliberate clear
+// (loading a different saved team over this one) says so at the call.
+export function rosterWipes(prev, next) {
+  const before = prev || {}, after = next || {};
+  return Object.keys(before).filter((side) => !teamIsEmpty(before[side]) && teamIsEmpty(after[side]));
+}
 // `pitcher` stays a plain {num, name} copy, because that is what the overlay's
 // cards and the pad's "vs P" line read. positions.P is the truth; this keeps the
 // copy in step after any edit.
