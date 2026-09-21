@@ -331,6 +331,28 @@ $('ng-create').onclick = async () => {
   openSetupGuide(); // fresh game → expand the checklist
 };
 
+// The shell's height, measured rather than assumed. `100dvh` is supposed to
+// track the keyboard, and on iOS after a number pad closes it can stay at the
+// shrunken value — the pad then ends partway up the screen with the bottom bar
+// floating in the middle of it, which is what changing a game's time limit did.
+// visualViewport reports what is actually visible and fires on every change,
+// including the keyboard opening and closing.
+function setAppHeight() {
+  const vv = window.visualViewport;
+  const h = Math.round((vv && vv.height) || window.innerHeight || 0);
+  if (h > 120) document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', setAppHeight);
+  visualViewport.addEventListener('scroll', setAppHeight);
+}
+addEventListener('resize', setAppHeight);
+addEventListener('orientationchange', () => setTimeout(setAppHeight, 150));
+// A field losing focus is a keyboard closing; the viewport event for it is the
+// one iOS sometimes skips, so measure again just after.
+addEventListener('focusout', () => setTimeout(setAppHeight, 80));
+setAppHeight();
+
 // ---------------------------------------------------------------- Game
 // Keep the phone awake while a game is open — a sleeping screen mid-inning
 // kills the realtime feed and costs taps. Progressive enhancement only.
@@ -1820,6 +1842,15 @@ function renderSetupTimeLabel() {
 }
 $('su-sport').addEventListener('change', renderSetupTimeLabel);
 
+// What goes on the bug. A true abbreviation is upper-cased, the way scoreboards
+// write them; a short name is left as it was typed, because BLUE STEEL is both
+// wider than Blue Steel and not how anyone writes it.
+function bugLabel(v, fallback) {
+  const t = String(v || '').trim();
+  if (!t) return fallback;
+  return t.length <= 5 ? t.toUpperCase() : t;
+}
+
 function fillSetup() {
   $('su-sport').value = game.sport || 'baseball';
   renderSetupTimeLabel();
@@ -1848,9 +1879,9 @@ $('setup-save').onclick = async () => {
   const sport = $('su-sport').value;
   const patch = {
     sport, style: $('su-style').value,
-    away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
+    away_name: suVal('su-away-name') || 'Visitor', away_abbr: bugLabel(suVal('su-away-abbr'), 'VIS'),
     away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
-    home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
+    home_name: suVal('su-home-name') || 'Home', home_abbr: bugLabel(suVal('su-home-abbr'), 'HOME'),
     home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
     time_limit_seconds,
     starts_at: fromLocalInput($('su-startsat').value),
@@ -2790,8 +2821,12 @@ function renderGame() {
   showSport(sport);
   renderEndGame();
   renderTeamLabels();
-  $('g-away-name').textContent = g.away_abbr || g.away_name || 'VIS';
-  $('g-home-name').textContent = g.home_abbr || g.home_name || 'HOME';
+  const awayLab = g.away_abbr || g.away_name || 'VIS';
+  const homeLab = g.home_abbr || g.home_name || 'HOME';
+  $('g-away-name').textContent = awayLab;
+  $('g-home-name').textContent = homeLab;
+  // Longer than an abbreviation: the score digits give way rather than the name.
+  document.querySelector('.gm-head').classList.toggle('longnames', Math.max(awayLab.length, homeLab.length) > 5);
   $('g-away-runs').textContent = g.away_score;
   $('g-home-runs').textContent = g.home_score;
   ctrlScorePop('away', g.away_score, 'g-away-runs');
