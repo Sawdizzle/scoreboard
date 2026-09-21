@@ -1160,80 +1160,151 @@
   </div>
 
   <!-- SETUP SHEET -->
-  <div id="setup-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1" hidden>
-    <div class="sheet-card scroll">
-      <h3 id="setup-title">Game Setup</h3>
-      <div class="audio-row">
-        <label class="sel">Sport
-          <select id="su-sport">
-            <option value="baseball">Baseball</option>
-            <option value="football">Football</option>
-            <option value="soccer">Soccer</option>
-            <option value="volleyball">Volleyball</option>
-            <option value="basketball">Basketball</option>
-          </select>
-        </label>
-        <label class="sel">Style
-          <select id="su-style">
-            <option value="scorebox">Scorebox (full broadcast)</option>
-            <option value="bar">Bar (wide strip)</option>
-            <option value="bug">Bug (stacked)</option>
-            <option value="minimal">Minimal (slim)</option>
-            <option value="lowerthird">Lower-third</option>
-          </select>
-        </label>
-      </div>
-      <div class="setup-cols">
-        <div class="setup-col">
-          <span class="col-h">Away / Visitor</span>
-          <input id="su-away-name" placeholder="Team name" />
-          <input id="su-away-abbr" placeholder="ABBR" maxlength="6" />
-          <input id="su-away-logo" placeholder="Logo URL (optional)" />
-          <label class="colorlab">Color <input id="su-away-color" type="color" /></label>
-        </div>
-        <div class="setup-col">
-          <span class="col-h">Home</span>
-          <input id="su-home-name" placeholder="Team name" />
-          <input id="su-home-abbr" placeholder="ABBR" maxlength="6" />
-          <input id="su-home-logo" placeholder="Logo URL (optional)" />
-          <label class="colorlab">Color <input id="su-home-color" type="color" /></label>
-        </div>
-      </div>
-
-      <details class="panel su-panel">
-        <summary>⏱️ Times &amp; rules</summary>
-        <div class="panel-body">
-          <label class="fld">Start time — sorts your games list and runs the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
-          <label class="fld"><span id="su-time-label">Time limit — minutes (0 = none)</span><input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
-          <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
-        </div>
-      </details>
-
-      <details class="panel su-panel">
-        <summary>👁️ Show on overlay</summary>
-        <div class="panel-body">
-      <div class="toggles">
-        <label><input type="checkbox" id="su-show-clock" /> Clock</label>
-        <label><input type="checkbox" id="su-show-batter" /> Batter</label>
-        <label><input type="checkbox" id="su-show-pitcher" /> Pitcher</label>
-        <label><input type="checkbox" id="su-show-pitchcount" /> Pitch count</label>
-        <label><input type="checkbox" id="su-show-rhe" /> R-H-E on bug</label>
-        <label><input type="checkbox" id="su-show-runrule" /> Run-rule</label>
-      </div>
-
-      <p class="hint">Batter, pitcher &amp; pitch count are driven by the <b>Lineup</b> sheet — tap the batter line under the count. The toggles above just show/hide those lines on the overlay.</p>
-        </div>
-      </details>
-
-      <div class="danger-row">
-        <button id="reset-game" class="fxbtn">↺ Reset game</button>
-        <button id="delete-game" class="fxbtn cardclear">🗑 Delete game</button>
-      </div>
-      <div class="sheet-actions">
-        <button id="setup-cancel" class="ghost">Close</button>
-        <button id="setup-save" class="primary">Save</button>
-      </div>
+  <!-- SETUP SCREEN -->
+  <!-- Was a slide-up drawer with tabs, one of which held a single button that
+       opened a modal sheet with its own Close/Save footer. Now it is a screen
+       that pushes, like Field, Lineup and On Air — one Back, one chrome, and
+       every row built from the five in control.css. Edits write as you make
+       them, the way the lineup does, so there is one save contract. -->
+  <div id="setup-view" class="setup-view" hidden>
+    <div class="full-top">
+      <button id="setup-back" class="fv-back" type="button">‹ Back</button>
+      <h3 id="setup-title">Setup</h3>
     </div>
+
+    <section class="sv-pane" data-pane="home">
+      <div class="set-sec">
+        <span class="set-head">Teams</span>
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="teams">
+            <span class="set-lab">Names, colours &amp; logos<span class="set-sub" id="sv-teams-sub">Away and home</span></span>
+            <span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" id="sv-lineups">
+            <span class="set-lab">Lineups &amp; positions<span class="set-sub">The batter line opens these mid-game</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Game</span>
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="game">
+            <span class="set-lab">Sport &amp; scorebug</span><span class="set-val" id="sv-sport-val">Baseball</span><span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" data-go="times">
+            <span class="set-lab">Times &amp; rules</span><span class="set-val" id="sv-times-val">—</span><span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" data-go="overlay">
+            <span class="set-lab">Show on overlay</span><span class="set-val" id="sv-show-val">—</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Look</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="sv-look">
+            <span class="set-lab">Theme &amp; position</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">OBS</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="sv-obs">
+            <span class="set-lab">Clips &amp; cameras</span><span class="set-tag" id="sv-obs-tag">not connected</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">This game</span>
+        <div class="set-card">
+          <button class="set-row danger" id="reset-game" type="button"><span class="set-lab">↺ Reset to 0–0</span><span class="set-go">›</span></button>
+          <button class="set-row danger" id="delete-game" type="button"><span class="set-lab">🗑 Delete game</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">Reset keeps the teams and the look. Delete cannot be undone.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams" hidden>
+      <div class="set-sec">
+        <span class="set-head">Away / visitor</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-away-name" placeholder="Visitor" /></label>
+          <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-away-abbr" placeholder="VIS" maxlength="6" /></label>
+          <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-away-logo" placeholder="optional" /></label>
+          <label class="set-row"><span class="set-lab">Colour</span><input id="su-away-color" type="color" /></label>
+        </div>
+      </div>
+      <div class="set-sec">
+        <span class="set-head">Home</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-home-name" placeholder="Home" /></label>
+          <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-home-abbr" placeholder="HOME" maxlength="6" /></label>
+          <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-home-logo" placeholder="optional" /></label>
+          <label class="set-row"><span class="set-lab">Colour</span><input id="su-home-color" type="color" /></label>
+        </div>
+        <p class="set-note">Saved teams carry their own name, colour, logo and roster — load one from the Lineup screen.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="game" hidden>
+      <div class="set-sec">
+        <span class="set-head">Sport &amp; scorebug</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Sport</span>
+            <select class="set-input" id="su-sport">
+              <option value="baseball">Baseball</option>
+              <option value="football">Football</option>
+              <option value="soccer">Soccer</option>
+              <option value="volleyball">Volleyball</option>
+              <option value="basketball">Basketball</option>
+            </select>
+          </label>
+          <label class="set-row field"><span class="set-lab">Scorebug</span>
+            <select class="set-input" id="su-style">
+              <option value="scorebox">Scorebox (full broadcast)</option>
+              <option value="bar">Bar (wide strip)</option>
+              <option value="bug">Bug (stacked)</option>
+              <option value="minimal">Minimal (slim)</option>
+              <option value="lowerthird">Lower-third</option>
+            </select>
+          </label>
+        </div>
+        <p class="set-note">Changing sport keeps the score and swaps the pad and the overlay to that sport's controls.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="times" hidden>
+      <div class="set-sec">
+        <span class="set-head">Times &amp; rules</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Start time</span><input class="set-input" id="su-startsat" type="datetime-local" /></label>
+          <label class="set-row field"><span class="set-lab" id="su-time-label">Time limit</span><input class="set-input" id="su-time" type="number" min="0" step="1" inputmode="numeric" placeholder="minutes (0 = none)" /></label>
+          <label class="set-row field"><span class="set-lab">Regulation</span><input class="set-input" id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" placeholder="innings (0 = off)" /></label>
+        </div>
+        <p class="set-note">Start time sorts your games list and runs the Starting Soon countdown. Regulation innings arms the automatic walk-off.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="overlay" hidden>
+      <div class="set-sec">
+        <span class="set-head">Show on overlay</span>
+        <div class="set-card">
+          <div class="set-row"><span class="set-lab">Clock</span><label class="set-switch"><input type="checkbox" id="su-show-clock" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Batter</span><label class="set-switch"><input type="checkbox" id="su-show-batter" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Pitcher</span><label class="set-switch"><input type="checkbox" id="su-show-pitcher" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Pitch count</span><label class="set-switch"><input type="checkbox" id="su-show-pitchcount" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">R-H-E on the bug</span><label class="set-switch"><input type="checkbox" id="su-show-rhe" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Run-rule watch</span><label class="set-switch"><input type="checkbox" id="su-show-runrule" /><i></i></label></div>
+        </div>
+        <p class="set-note">Batter, pitcher and pitch count come from the lineup. These only decide whether the overlay shows those lines.</p>
+      </div>
+    </section>
   </div>
 
   <!-- NEW GAME SHEET -->

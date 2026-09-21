@@ -961,6 +961,19 @@ body.field-open { overflow: hidden; }
 .full-top .sit-sub { flex-basis: 100%; margin-top: -4px; }
 @media (min-width: 700px) { .sheet.full { padding: 0; align-items: stretch; } .full-top .sit-sub { flex-basis: auto; margin-top: 0; } }
 
+/* The Setup screen itself: the same full-screen shell as the Field screen,
+   with panes that push in place of a drawer and a modal sheet. */
+.setup-view { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; }
+.setup-view[hidden] { display: none; }
+body.setup-open { overflow: hidden; }
+.setup-view .full-top { margin: 0 -16px 14px; }
+.sv-pane[hidden] { display: none; }
+.sv-pane > .set-sec:last-child { margin-bottom: 6px; }
+.set-row input[type="color"] { flex: 0 0 auto; width: 54px; height: 34px; padding: 0; border-radius: 9px; border: 1px solid var(--line-2); background: var(--sunken); }
+.set-row select.set-input { appearance: none; -webkit-appearance: none; background-image: none; }
+@media (min-width: 700px) { .setup-view { padding-inline: calc(50% - 344px); } .setup-view .full-top { margin-inline: 0; } }
+
 /* ---- Settings rows -------------------------------------------------------
    Five row types, and nothing else. The drawer grew three ways to group a
    setting (details accordions, caps headers with no box, bare rows on the

@@ -1734,7 +1734,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'runners-sheet', 'hr-sheet', 'setup-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -1754,25 +1754,77 @@ document.addEventListener('keydown', (e) => {
 
 // ---- Game setup sheet -----------------------------------------------------
 const suVal = (id) => $(id).value.trim();
-$('setup-btn').onclick = () => { fillSetup(); setupDirty = false; openSheet('setup-sheet'); };
-// Cancel after typing a full team card used to bin the lot without a word.
-let setupDirty = false;
-$('setup-sheet').addEventListener('input', () => { setupDirty = true; });
-// Registered as the sheet's guard too, so Escape and the scrim ask the same
-// question Cancel does rather than binning a typed-out team card silently.
-const setupCloseGuard = () => {
-  if (setupDirty && !confirm('Discard your changes to this game?')) return false;
-  setupDirty = false;
-  return true;
-};
-sheetGuard.set('setup-sheet', setupCloseGuard);
-$('setup-cancel').onclick = () => requestCloseSheet('setup-sheet');
+
+// ---- The Setup screen -----------------------------------------------------
+// A screen that pushes panes, not a drawer holding a sheet. Back goes up one
+// pane and then out, so there is one way through and one way home.
+//
+// There is no Save. Every field writes when you leave it, the way the lineup
+// screen does — the old sheet's Save button, its Cancel, and the "discard your
+// changes?" guard all existed because this one corner of the app batched its
+// writes while everything else committed immediately. One contract is worth
+// more than the batch was.
+let svPane = 'home';
+function openSetup() {
+  if (!game) return;
+  fillSetup();
+  svGo('home');
+  $('setup-view').hidden = false;
+  document.body.classList.add('setup-open');
+  $('setup-back').focus({ preventScroll: true });
+}
+function closeSetup() {
+  $('setup-view').hidden = true;
+  document.body.classList.remove('setup-open');
+}
+const SV_TITLE = { home: 'Setup', teams: 'Teams', game: 'Sport & scorebug', times: 'Times & rules', overlay: 'Show on overlay' };
+function svGo(pane) {
+  svPane = pane;
+  document.querySelectorAll('#setup-view .sv-pane').forEach((p) => { p.hidden = p.dataset.pane !== pane; });
+  $('setup-title').textContent = SV_TITLE[pane] || 'Setup';
+  $('setup-view').scrollTop = 0;
+  if (pane === 'home') renderSetupRows();
+}
+$('setup-btn').onclick = openSetup;
+$('setup-back').onclick = () => (svPane === 'home' ? closeSetup() : svGo('home'));
+$('setup-view').addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]');
+  if (go) svGo(go.dataset.go);
+});
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || $('setup-view').hidden) return;
+  e.preventDefault();
+  if (svPane === 'home') closeSetup(); else svGo('home');
+});
+// The rows on the first pane answer their own question, so the screen is worth
+// reading before anything is opened.
+function renderSetupRows() {
+  if (!game) return;
+  const sport = game.sport || 'baseball';
+  $('sv-teams-sub').textContent = `${game.away_abbr || game.away_name || 'Away'} · ${game.home_abbr || game.home_name || 'Home'}`;
+  $('sv-sport-val').textContent = sport.charAt(0).toUpperCase() + sport.slice(1);
+  const mins = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) + ' min' : '';
+  const reg = (game.regulation_innings | 0) ? `${game.regulation_innings} innings` : '';
+  $('sv-times-val').textContent = [mins, reg].filter(Boolean).join(' · ') || 'Not set';
+  const on = ['show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule'].filter((k) => game[k]).length;
+  $('sv-show-val').textContent = on ? `${on} on` : 'Nothing extra';
+  // The theme's own name, as its option reads it — no second list to drift.
+  const opt = $('theme-sel').querySelector(`option[value="${game.theme || 'nightgame'}"]`);
+  $('sv-look-val').textContent = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
+  const lvl = obsLevel();
+  $('sv-obs-tag').textContent = lvl === null ? 'not connected' : (OBS_TIER[lvl] || 'no access');
+}
+// Look and OBS still live in the drawer until their panes are built; the row
+// opens the drawer on that tab rather than pretending the section is missing.
+$('sv-look').onclick = () => { closeSetup(); openDrawer('look'); };
+$('sv-obs').onclick = () => { closeSetup(); openDrawer('obs'); };
+$('sv-lineups').onclick = () => { closeSetup(); openLineupSheet(); };
 
 $('delete-game').onclick = async () => {
   if (!game) return;
   if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
   const id = game.id;
-  setupDirty = false; closeSheet('setup-sheet');
+  closeSetup();
   stopDemo(); keepAwake(false); stopClockTick();
   queue.dropFor(id); // otherwise the queue retries forever against a row that is gone
   await teardownChannel();
@@ -1802,7 +1854,7 @@ $('reset-game').onclick = async () => {
   else if (sport === 'basketball') patch.state = B.bkState({});
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
   await db.from('plays').delete().eq('game_id', game.id);  // and the recap's play-by-play
-  setupDirty = false; closeSheet('setup-sheet');
+  closeSetup();
   await writeField(patch);
   showToast('↺ Game reset');
 };
@@ -1842,34 +1894,64 @@ function fillSetup() {
   $('su-show-runrule').checked = !!game.show_runrule;
   $('su-show-rhe').checked = !!game.show_rhe;
 }
-$('setup-save').onclick = async () => {
+// Each field writes itself. `change` rather than `input`, so a name is one
+// write when you leave the field and not one per letter; the colour pickers
+// fire `change` on release for the same reason.
+//
+// The sport field carries the old Save button's one piece of real work: a game
+// switching sport for the first time needs that sport's situation initialised,
+// or its pad opens onto a state that has no quarter, half, set or period.
+const SU_TEXT = {
+  'su-away-name': (v) => ({ away_name: v || 'Visitor' }),
+  'su-home-name': (v) => ({ home_name: v || 'Home' }),
+  'su-away-abbr': (v) => ({ away_abbr: (v || 'VIS').toUpperCase() }),
+  'su-home-abbr': (v) => ({ home_abbr: (v || 'HOME').toUpperCase() }),
+  'su-away-logo': (v) => ({ away_logo_url: v || null }),
+  'su-home-logo': (v) => ({ home_logo_url: v || null }),
+};
+for (const id of Object.keys(SU_TEXT)) {
+  $(id).addEventListener('change', () => {
+    const patch = SU_TEXT[id](suVal(id));
+    writeField(patch);
+    // Show what was actually stored: an abbreviation is upper-cased and an
+    // empty name becomes "Visitor", and a field that kept saying otherwise
+    // would be the screen disagreeing with the bug again.
+    const stored = Object.values(patch)[0];
+    if (typeof stored === 'string') $(id).value = stored;
+    renderSetupRows();
+  });
+}
+$('su-away-color').addEventListener('change', (e) => writeField({ away_color: e.target.value }));
+$('su-home-color').addEventListener('change', (e) => writeField({ home_color: e.target.value }));
+$('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
+$('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
+$('su-regulation').addEventListener('change', () => { writeField({ regulation_innings: parseInt($('su-regulation').value, 10) || 0 }); renderSetupRows(); });
+$('su-time').addEventListener('change', () => {
   const mins = parseInt($('su-time').value, 10);
   const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
-  const sport = $('su-sport').value;
-  const patch = {
-    sport, style: $('su-style').value,
-    away_name: suVal('su-away-name') || 'Visitor', away_abbr: (suVal('su-away-abbr') || 'VIS').toUpperCase(),
-    away_logo_url: suVal('su-away-logo') || null, away_color: $('su-away-color').value,
-    home_name: suVal('su-home-name') || 'Home', home_abbr: (suVal('su-home-abbr') || 'HOME').toUpperCase(),
-    home_logo_url: suVal('su-home-logo') || null, home_color: $('su-home-color').value,
-    time_limit_seconds,
-    starts_at: fromLocalInput($('su-startsat').value),
-    show_clock: $('su-show-clock').checked, show_batter: $('su-show-batter').checked,
-    show_pitcher: $('su-show-pitcher').checked, show_pitchcount: $('su-show-pitchcount').checked,
-    show_runrule: $('su-show-runrule').checked, show_rhe: $('su-show-rhe').checked,
-    regulation_innings: parseInt($('su-regulation').value, 10) || 0,
-  };
-  // Reset the clock's remaining time if the limit changed and it isn't running.
+  const patch = { time_limit_seconds };
+  // A limit changed while the clock is stopped resets what is left on it.
   if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
-  // Initialize sport-specific situation the first time a game switches sport.
+  writeField(patch);
+  renderSetupRows();
+});
+$('su-sport').addEventListener('change', () => {
+  const sport = $('su-sport').value;
+  const patch = { sport };
   if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
   if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
   if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
   if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
-  setupDirty = false;
-  closeSheet('setup-sheet');
-  await writeField(patch);
-};
+  writeField(patch);
+  renderSetupTimeLabel();
+  renderSetupRows();
+});
+for (const id of ['su-show-clock', 'su-show-batter', 'su-show-pitcher', 'su-show-pitchcount', 'su-show-rhe', 'su-show-runrule']) {
+  $(id).addEventListener('change', (e) => {
+    writeField({ [id.replace('su-show-', 'show_').replace('rhe', 'rhe')]: e.target.checked });
+    renderSetupRows();
+  });
+}
 
 // <input type="datetime-local"> speaks local wall time; the column is timestamptz.
 function toLocalInput(iso) {
@@ -2952,7 +3034,7 @@ document.addEventListener('toggle', (e) => {
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
-  if (go === 'teams') { fillSetup(); setupDirty = false; openSheet('setup-sheet'); }
+  if (go === 'teams') { openSetup(); svGo('teams'); }
   else if (go === 'lineups' || go === 'defense') openLineupSheet(L.battingSide(game));
   else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
 });

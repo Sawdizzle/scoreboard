@@ -27,7 +27,7 @@ const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.
 const REQUIRED_HANDLERS = [
-  'setup-btn', 'setup-save', 'setup-cancel', 'delete-game', 'reset-game',
+  'setup-btn', 'setup-back', 'delete-game', 'reset-game',
   'new-game-btn', 'back-btn', 'logout-btn', 'undo-btn', 'signup-btn',
   'btn-ball', 'btn-strike', 'btn-foul', 'btn-out', 'btn-run', 'btn-batter', 'btn-runners', 'runners-done', 'field-open', 'field-back', 'fv-tab-away', 'fv-tab-home', 'btn-endhalf',
   'onair-open', 'onair-done', 'air-clear', 'play-just-out', 'k3-swing', 'k3-look', 'k3-dropped', 'k3-cancel', 'hit-hbp', 'hit-e', 'play-cancel', 'rs-record', 'rs-back', 'hit-1b', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
