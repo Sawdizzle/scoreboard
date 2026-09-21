@@ -1076,3 +1076,31 @@ test('a half that ends a regulation game is not a mid-inning', () => {
   assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'top', inning: 4, home_score: 0, away_score: 9 }), false);
   assert.equal(L.halfEndsGame({ regulation_innings: 0, half: 'top', inning: 9, home_score: 0, away_score: 9 }), false);
 });
+
+test('catcher’s interference awards first like a hit by pitch, with its own note', () => {
+  const g = G({ strikes: 1, bases: bases(1, 1, 1), lineups: { away: order([1, 1, 1]) } });
+  const r = L.onCatcherInterference(g);
+  assert.equal(r.type, 'ci');
+  assert.deepEqual(r.patch, L.onHitByPitch(g).patch, 'the game moves the same as HBP');
+  assert.equal(r.payload.play.kind, 'CI');
+  assert.equal(L.subjectOf(r), 'batter');
+});
+
+test('intentional walk forces runners, moves the order, and throws no pitch', () => {
+  const r = L.onIntentionalWalk(G({ balls: 2, bases: bases(1, 1, 1), lineups: { away: order([1, 1, 1]) } }));
+  assert.equal(r.type, 'ibb');
+  assert.deepEqual(r.patch.bases, bases(1, 1, 1));
+  assert.equal(r.patch.away_score, 1, 'bases loaded forces a run in');
+  assert.equal(r.patch.balls, 0);
+  assert.equal(r.patch.state.batIdx.away, 1, 'next batter up');
+  assert.equal(r.patch.state.pitches, undefined, 'no pitch counted');
+  assert.equal(r.payload.play.kind, 'IBB');
+  assert.equal(r.anim, 'webgem', 'same stinger as a walk');
+});
+
+test('intentional walk with no lineup still clears the count', () => {
+  const r = L.onIntentionalWalk(G({ strikes: 2, bases: bases(0, 1, 0) }));
+  assert.deepEqual(r.patch.bases, bases(1, 1, 0));
+  assert.equal(r.patch.strikes, 0);
+  assert.equal(r.patch.state, undefined);
+});

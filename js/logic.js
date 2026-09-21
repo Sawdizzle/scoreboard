@@ -136,6 +136,25 @@ export function onHitByPitch(g) {
     payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
 }
 
+// Catcher's interference: the batter is awarded first and forced runners move
+// up, like a hit by pitch. The pitch counts. Its own line in the play-by-play.
+export function onCatcherInterference(g) {
+  const w = computeWalk(g.bases);
+  return { type: 'ci', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
+    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) } };
+}
+
+// Intentional walk: awarded without a pitch, so the pitch count stays and the
+// order moves on. Forced advance only — nobody runs on an intentional walk, so
+// there is no sheet to confirm. Fires the same WALK stinger as a four-ball walk.
+export function onIntentionalWalk(g) {
+  const w = computeWalk(g.bases);
+  const patch = { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) };
+  const bi = advanceBatterState(g);
+  if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
+  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, anim: 'webgem' };
+}
+
 // Runner plays between pitches: a steal, caught stealing, a pickoff, or a runner
 // moving up on a wild pitch / passed ball / balk. `from` is the base the runner
 // started on ('first' | 'second' | 'third'). None of them end the at-bat: the
@@ -413,7 +432,7 @@ export function halfEndsGame(after) {
   return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
 }
 // A play that belongs to the new half takes Mid-Inning down.
-export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'hbp', 'hit', 'play', 'homerun', 'runner', 'run', 'error']);
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'run', 'error']);
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
@@ -632,7 +651,7 @@ export const PLAY_LABEL = {
   FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
-  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', HBP: 'Hit by pitch',
+  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
   SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', HR: 'Home run', OUT: 'Out',
 };
 
@@ -774,7 +793,7 @@ export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@thir
 
 // Events named by the thing they happen to. Anything not here is a correction
 // or a clock/inning move and belongs to the game, not to a person.
-const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'hbp', 'hit',
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'hit',
   'homerun', 'play', 'error', 'batter', 'batidx']);
 
 export function subjectOf(res, g) {
@@ -865,6 +884,8 @@ const REBUILD = {
   strikeout: (g, p) => onStrike(g, { looking: !!(p.inputs && p.inputs.looking) }),
   out:       (g) => onOut(g),
   hbp:       (g) => onHitByPitch(g),
+  ci:        (g) => onCatcherInterference(g),
+  ibb:       (g) => onIntentionalWalk(g),
   hit:       (g, p) => (p.reached ? onHit(g, p.reached) : null),
   error:     (g) => onError(g),
   run:       (g) => onRun(g),

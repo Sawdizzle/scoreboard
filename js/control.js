@@ -994,11 +994,15 @@ $('fv-numbers').onclick = (e) => {
 };
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('field-view').hidden) { e.preventDefault(); closeField(); } });
 
-$('hit-hbp').onclick     = () => commit(L.onHitByPitch(game));
+$('btn-more').onclick    = () => { if (game) openSheet('more-sheet'); };
+$('more-hbp').onclick    = () => { closeSheet('more-sheet'); commit(L.onHitByPitch(game)); };
+$('more-ci').onclick     = () => { closeSheet('more-sheet'); commit(L.onCatcherInterference(game)); };
+$('more-ibb').onclick    = () => { closeSheet('more-sheet'); commit(L.onIntentionalWalk(game)); };
+$('more-cancel').onclick = () => closeSheet('more-sheet');
 $('hit-e').onclick       = () => openPlaySheet('E');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-out').onclick     = () => openPlaySheet();
-$('btn-run').onclick     = () => commit(L.onRun(game));
+$('btn-run').onclick     = () => { commit(L.onRun(game)); showToast('+1 run', 1500); };
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
 // The repair for an order pushed on by a tap that should not have ended the
 // at-bat — an out recorded on a runner, before RUNNERS was the way to do it.
@@ -1817,7 +1821,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -3246,7 +3250,7 @@ document.addEventListener('keydown', (e) => {
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
     const map = {
-      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-runners',
+      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', m: 'btn-more', n: 'btn-runners',
       1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', a: 'btn-advance', c: 'btn-clear',
     };
     if (k === 'e') { e.preventDefault(); return openPlaySheet('E'); }
