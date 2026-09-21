@@ -389,6 +389,18 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .undo:active { filter: brightness(1.15); }
 
 .key.foul { background: var(--foul); } .key.batter { background: var(--batter); }
+/* The pad diamond: a key-sized cell holding three bases. Each base is a thumb
+   target; the cell itself does nothing. */
+.key.pad-dia { position: relative; background: var(--card); border: 1px solid var(--line); padding: 0; min-height: 84px; }
+.pd { position: absolute; width: 30%; height: 44%; min-width: 44px; min-height: 40px; transform: translate(-50%, -50%);
+  display: grid; place-items: center; background: none; border: none; padding: 0; }
+.pd i { display: block; width: 26px; height: 26px; border-radius: 5px; transform: rotate(45deg);
+  background: var(--sunken); border: 1px solid var(--line-2); transition: background 0.12s ease; }
+.pd.on i { background: var(--out-ui); border-color: var(--out-ui); }
+.pd:active i { filter: brightness(1.25); }
+.pd.b1 { left: 72%; top: 52%; } .pd.b2 { left: 50%; top: 27%; } .pd.b3 { left: 28%; top: 52%; }
+.pd-home { position: absolute; left: 50%; top: 80%; width: 14px; height: 14px; transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--line); border-radius: 3px; }
 
 .bases-label { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
 .bases-row { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -874,9 +874,12 @@ $('k3-cancel').onclick = () => closeSheet('k3-sheet');
 // Runners: one row per runner, lead runner first. Each button is one undoable play.
 const RN_BASE = { first: '1st', second: '2nd', third: '3rd' };
 const RN_NEXT = { first: '2nd', second: '3rd', third: 'home' };
-function paintRunnerSheet() {
+// `only`: the one runner tapped on the pad diamond. Unset: everyone on base.
+let runnerOnly = null;
+function paintRunnerSheet(only = runnerOnly) {
+  runnerOnly = only;
   const b = L.safeBases(game.bases);
-  const on = ['third', 'second', 'first'].filter((k) => b[k]);
+  const on = ['third', 'second', 'first'].filter((k) => b[k] && (!only || k === only));
   const list = $('rn-list');
   if (!on.length) { list.innerHTML = '<p class="confirm-copy">Nobody on base.</p>'; return; }
   list.innerHTML = on.map((k) => {
@@ -889,7 +892,13 @@ function paintRunnerSheet() {
       btn('ADV', `To ${RN_NEXT[k]} · WP/PB`) + `</div>`;
   }).join('');
 }
-$('btn-runners').onclick = () => { if (!game) return; paintRunnerSheet(); openSheet('runners-sheet'); };
+function openRunners(only = null) { if (!game) return; paintRunnerSheet(only); openSheet('runners-sheet'); }
+$('pad-dia').onclick = (e) => {
+  const p = e.target.closest('.pd'); if (!p || !game) return;
+  const k = p.dataset.base;
+  if (!L.safeBases(game.bases)[k]) return showToast(`Nobody on ${RN_BASE[k]}`, 1500);
+  openRunners(k);
+};
 $('runners-done').onclick = () => closeSheet('runners-sheet');
 $('rn-list').onclick = (e) => {
   const o = e.target.closest('.rn-b'); if (!o) return;
@@ -899,7 +908,8 @@ $('rn-list').onclick = (e) => {
   commit(r);
   showToast(r.text, 1800);
   // Stay open while anyone is left on base: a double steal is two taps.
-  if (basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
+  // One runner tapped on the diamond: that runner has moved, so close.
+  if (runnerOnly || basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
 };
 // ---- Field screen ----------------------------------------------------------
 // Positions by jersey number, the way you see them from the dugout fence. A
@@ -2455,8 +2465,7 @@ $('play-just-out').onclick = () => { closeSheet('play-sheet'); commit(L.onOut(ga
 $('play-to-runners').onclick = () => {
   closeSheet('play-sheet');
   if (!game) return;
-  paintRunnerSheet();
-  openSheet('runners-sheet');
+  openRunners();
 };
 $('play-cancel').onclick = () => closeSheet('play-sheet');
 
@@ -3118,6 +3127,11 @@ const countDots = (n, of, cls) => {
 };
 function renderBaseballControl() {
   const b = L.safeBases(game.bases);
+  for (const [n, k] of [[1, 'first'], [2, 'second'], [3, 'third']]) {
+    const pd = $('pd-' + n);
+    pd.classList.toggle('on', b[k]);
+    pd.querySelector('.vh').textContent = b[k] ? `Runner on ${RN_BASE[k]}` : `${RN_BASE[k]} base, empty`;
+  }
   $('sc-mid').innerHTML =
     `<span class="gm-inning">${game.half === 'top' ? '▲' : '▼'} ${ordinal(game.inning).toUpperCase()}</span>` +
     '<span class="gm-div"></span>' +
@@ -3261,11 +3275,12 @@ document.addEventListener('keydown', (e) => {
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
     const map = {
-      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', i: 'btn-inplay', o: 'btn-inplay', m: 'btn-more', n: 'btn-runners',
+      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', i: 'btn-inplay', o: 'btn-inplay', m: 'btn-more',
       a: 'btn-advance', c: 'btn-clear',
     };
     const direct = { 1: 'H1', 2: 'H2', 3: 'H3', h: 'HR', e: 'E' }[k];
     if (direct) { e.preventDefault(); return pickResult(direct); }
+    if (k === 'n') { e.preventDefault(); return openRunners(); }
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });
