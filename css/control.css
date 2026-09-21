@@ -101,12 +101,22 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
    whatever height is left, so a taller phone gets bigger keys, not dead space. */
 .gm-head { display: flex; align-items: center; gap: 12px; padding: 6px 16px 12px; }
 .gm-head .ghost.small { padding: 9px 12px; font-size: 14px; font-weight: 600; border-radius: 12px; color: #c8d4e8; }
-.gm-score { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+/* The score owns this row. It was flex:1 against an air chip allowed 42% of
+   it, so a team called "Blue Steel" rather than "BLSTL" got squeezed to a
+   letter and an ellipsis. The score takes what it needs first and the chip
+   truncates instead. */
+.gm-score { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 9px; }
 .gm-score b { font-family: var(--num); font-size: 40px; font-weight: 600; line-height: 1; }
+/* Two 40px numbers, a back button, an on-air chip and two dots leave about
+   three characters for each name. A team called "Blue Steel" is worth more
+   than four points of score digit, so the digits give way when the names are
+   long — set from renderGame, which knows how long they are. */
+.gm-head.longnames .gm-score b { font-size: 31px; }
+.gm-head.longnames .gm-abbr { max-width: 13ch; font-size: 11px; letter-spacing: 0; }
 .gm-score b.pop { animation: sc-pop 0.7s cubic-bezier(.2, .8, .2, 1); }
 .gm-score #g-home-runs { margin-left: auto; }
-.gm-abbr { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted);
-  max-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-abbr { flex: 0 1 auto; min-width: 3ch; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--muted); max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The dot marks who is batting — the same convention the overlay uses. */
 .gm-abbr.bat { color: var(--chalk); }
 .gm-abbr.bat::after { content: ' ●'; }
@@ -165,7 +175,7 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 .gm-b.onair { background: var(--take-bg); border-color: var(--take-line); }
 
 /* What is on air, and the ✕ that takes it down. Red because it is live. */
-.air-chip { flex: 0 1 auto; min-width: 0; max-width: 42%; display: flex; align-items: center; gap: 6px;
+.air-chip { flex: 0 1 auto; min-width: 0; max-width: 34%; display: flex; align-items: center; gap: 6px;
   padding: 3px 3px 3px 10px; border-radius: 999px; background: var(--danger-bg);
   border: 1px solid var(--danger-line); color: var(--danger-text); font-size: 12px; font-weight: 700; }
 .air-chip[hidden] { display: none; }
@@ -177,7 +187,11 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 
 /* "Phone" is short OR narrow — a landscape phone is 844 wide and 390 tall. */
 @media (max-width: 699px), (max-height: 500px) {
-  body.in-game { height: 100dvh; overflow: hidden; }
+  /* --app-h is set from visualViewport in control.js. 100dvh is the fallback,
+     and was the whole story until a number pad closing on iOS left dvh at the
+     shrunken value: the shell stayed short and the bottom bar sat in the middle
+     of the screen until something else forced a relayout. */
+  body.in-game { height: var(--app-h, 100dvh); overflow: hidden; }
   body.in-game #game-view { max-width: none; margin: 0; padding: 0; height: 100%;
     display: flex; flex-direction: column; min-height: 0; }
   body.in-game .setup-guide { margin: 0 16px 10px; }
