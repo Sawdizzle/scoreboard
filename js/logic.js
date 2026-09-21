@@ -298,13 +298,16 @@ export const normalizeRoster = (lineups) => {
   for (const [side, team] of Object.entries(lineups || {})) out[side] = normalizeTeam(team);
   return out;
 };
-// Is there anyone in this side's roster at all?
+// Is there anyone in this side's roster at all? Positions are deliberately not
+// consulted: they point AT players, so with nobody in the order there is nobody
+// in the field either. Counting them made the wipe guard useless — one stale
+// spot left over from a cleared row kept a team "not empty" forever, and the
+// tap that blanked the last name went straight through.
 export function teamIsEmpty(team) {
   const t = team || {};
   const bs = Array.isArray(t.batters) ? t.batters : [];
   if (bs.some(filled)) return false;
-  if (filled(t.pitcher)) return false;
-  return !Object.keys(t.positions || {}).length;
+  return !filled(t.pitcher);
 }
 // The sides a write would empty out. Nothing in the pad blanks a whole team by
 // itself — a lineup is typed in once and edited a row at a time — so a write
@@ -436,7 +439,17 @@ export function setBatterField(stored, idx, field, value) {
   const batters = t.batters.slice();
   while (batters.length <= idx) batters.push({ num: '', name: '', bid: newBid() });
   batters[idx] = { ...batters[idx], [field]: value };
-  return withPitcherMirror({ ...t, batters });
+  // A row with no number and no name is nobody, so it gives its spot on the
+  // diamond back rather than leaving the Field screen pointing at a blank row.
+  const positions = { ...t.positions };
+  const emptied = !filled(batters[idx]);
+  const wasPitcher = positions.P === batters[idx].bid;
+  if (emptied) {
+    for (const k of Object.keys(positions)) if (positions[k] === batters[idx].bid) delete positions[k];
+  }
+  // Only the pitcher's own row leaving empties the mound; an edit elsewhere must
+  // not disturb a pitcher typed in without a row in the order.
+  return withPitcherMirror({ ...t, batters, positions }, emptied && wasPitcher);
 }
 
 // Ordered batting lineup for a side, each row tagged with its fielding position

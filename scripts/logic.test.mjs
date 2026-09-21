@@ -854,6 +854,35 @@ test('an empty side that stays empty is not a wipe', () => {
   assert.deepEqual(L.rosterWipes({}, {}), []);
 });
 
+test('blanking a row gives up its spot on the field', () => {
+  const t = L.setBatterField(L.setBatterField(roster(), 1, 'name', ''), 1, 'num', '');
+  assert.equal(L.slotAt(t, 'SS'), -1, 'SS is nobody now');
+  assert.deepEqual(L.missingPositions(t).includes('SS'), true);
+  assert.equal(L.slotAt(t, '2B'), 2, 'the other spots are untouched');
+});
+
+test('blanking the pitcher’s row empties the mound, and other edits do not', () => {
+  const cleared = L.setBatterField(L.setBatterField(roster(), 3, 'name', ''), 3, 'num', '');
+  assert.deepEqual(cleared.pitcher, { num: '', name: '' });
+  const typedOnly = L.normalizeTeam({ batters: [{ num: '3', name: 'Morales' }], pitcher: { num: '40', name: 'Ruiz' } });
+  const edited = L.setBatterField(typedOnly, 0, 'name', 'Morales Jr');
+  assert.deepEqual(edited.pitcher, { num: '40', name: 'Ruiz' }, 'a pitcher with no row in the order stays');
+});
+
+test('a roster whose rows are all blank is empty, whatever the defense still says', () => {
+  assert.equal(L.teamIsEmpty({ batters: [{ num: '', name: '', bid: 'b1' }], positions: { SS: 'b1' } }), true,
+    'a spot pointing at a blank row is not a person');
+});
+
+// The live failure: clearing the sheet row by row emptied a team with the guard
+// watching, because one stale position kept the team looking occupied.
+test('blanking the last filled row is a wipe, and is caught', () => {
+  let t = roster();
+  for (const i of [0, 1, 2, 3]) t = L.setBatterField(L.setBatterField(t, i, 'name', ''), i, 'num', '');
+  assert.equal(L.teamIsEmpty(t), true);
+  assert.deepEqual(L.rosterWipes({ away: roster() }, { away: t }), ['away']);
+});
+
 test('a team is empty only when there is nobody in it', () => {
   assert.equal(L.teamIsEmpty({}), true);
   assert.equal(L.teamIsEmpty({ batters: [{ num: '', name: '' }] }), true);
