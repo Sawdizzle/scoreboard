@@ -989,6 +989,32 @@ export function isWalkoff(before, after) {
     (before.home_score | 0) <= (before.away_score | 0);
 }
 
+// ---- How it ended (the Final card) -----------------------------------------
+// The full-frame Final used to be the Mid-Inning slab with a different word at
+// the top. It now says who won and, when it is true, how: a walk-off, or a game
+// the run rule ended early. Worked out from the row alone, so the overlay needs
+// nothing it does not already have.
+//
+// A walk-off: the home team won in the bottom half and was not ahead before
+// that half's runs — the game ended the moment they took the lead. Regulation
+// innings, when set, have to have been reached; a lead taken in the bottom of
+// the 2nd of a game called for weather is not a walk-off. The run rule: a
+// margin at or past the game's run-rule setting, before regulation was done.
+export function finalStory(g) {
+  const a = g.away_score | 0, h = g.home_score | 0;
+  const winner = a === h ? null : (a > h ? 'away' : 'home');
+  const inn = g.inning | 0;
+  const reg = g.regulation_innings | 0;
+  const ls = Array.isArray(g.line_score) ? g.line_score : [];
+  const lastBottom = (ls[inn - 1] && ls[inn - 1].bottom) | 0;
+  const baseball = (g.sport || 'baseball') === 'baseball';
+  const walkoff = baseball && winner === 'home' && g.half === 'bottom' && lastBottom > 0 &&
+    (h - lastBottom) <= a && (!reg || inn >= reg);
+  const diff = g.run_rule_diff | 0;
+  const runRule = baseball && !walkoff && !!winner && diff > 0 && Math.abs(a - h) >= diff && (!reg || inn < reg);
+  return { winner, walkoff, runRule, innings: inn };
+}
+
 // ---- The situation, in words ----------------------------------------------
 // The situation bar is dots and a diamond — shape, not text — so the button
 // around it carries this instead. Pure, because the fiddly parts (one out vs

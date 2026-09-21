@@ -111,3 +111,52 @@ test('no plays for the half is an empty strip, not an error', () => {
   assert.equal(r.oneTwoThree, false);
   assert.deepEqual(L.halfRecap(null, game).rows, []);
 });
+
+// ---------------------------------------------------------------------------
+// How it ended — js/logic.js `finalStory`, for the Final card
+// ---------------------------------------------------------------------------
+const fin = (over = {}) => ({ sport: 'baseball', inning: 6, half: 'bottom', away_score: 3, home_score: 2,
+  regulation_innings: 6, run_rule_diff: 0, line_score: [], ...over });
+const ls = (bottomLast) => [...Array(5).fill({ top: 0, bottom: 0 }), { top: 0, bottom: bottomLast }];
+
+test('the side with more runs won, and a tie has no winner', () => {
+  assert.equal(L.finalStory(fin()).winner, 'away');
+  assert.equal(L.finalStory(fin({ away_score: 1, home_score: 4 })).winner, 'home');
+  assert.equal(L.finalStory(fin({ away_score: 4, home_score: 4 })).winner, null);
+});
+
+test('home taking the lead in the last bottom half is a walk-off', () => {
+  const s = L.finalStory(fin({ away_score: 3, home_score: 4, line_score: ls(2) }));   // 2-3 going in, won it 4-3
+  assert.equal(s.walkoff, true);
+});
+
+test('home already ahead before its last bottom half is not a walk-off', () => {
+  const s = L.finalStory(fin({ away_score: 3, home_score: 6, line_score: ls(1) }));   // 5-3 going in
+  assert.equal(s.walkoff, false);
+});
+
+test('home winning without batting in the last inning is not a walk-off', () => {
+  const s = L.finalStory(fin({ away_score: 2, home_score: 5, line_score: ls(0) }));
+  assert.equal(s.walkoff, false);
+});
+
+test('a lead taken before regulation is not a walk-off', () => {
+  const s = L.finalStory(fin({ inning: 3, away_score: 3, home_score: 4, regulation_innings: 6,
+    line_score: [{ top: 0, bottom: 0 }, { top: 3, bottom: 0 }, { top: 0, bottom: 4 }] }));
+  assert.equal(s.walkoff, false);
+});
+
+test('an early finish on the run-rule margin says so', () => {
+  const s = L.finalStory(fin({ inning: 4, half: 'top', away_score: 12, home_score: 1, run_rule_diff: 10 }));
+  assert.equal(s.runRule, true);
+  assert.equal(s.walkoff, false);
+});
+
+test('a big margin that went the distance is not a run-rule game', () => {
+  const s = L.finalStory(fin({ inning: 6, away_score: 12, home_score: 1, run_rule_diff: 10 }));
+  assert.equal(s.runRule, false, 'regulation was played out');
+});
+
+test('no run-rule setting means no run-rule tag, however lopsided', () => {
+  assert.equal(L.finalStory(fin({ inning: 3, away_score: 15, home_score: 0 })).runRule, false);
+});

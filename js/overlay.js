@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames } from './starting.js';
@@ -447,6 +447,7 @@ let recapPlays = null;        // the rows for the game, as last fetched
 let recapFor = null;          // the card key they were fetched for
 let recapPlayed = null;       // the card key whose strip has already animated
 let recapRetry = null;
+let finalPlayed = null;       // the Final card key that has already run its entrance
 async function loadRecap(key, again = true) {
   const { data, error } = await db.rpc('get_plays', { p_game: gameId });
   if (key !== lastCardKey) return;                    // the card came down meanwhile
@@ -506,6 +507,13 @@ function cardSig(c, s) {
   if (c.type === 'midinning') {
     return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}`;
   }
+  // Final stays live too. It used to be a snapshot, so a score fixed after the
+  // card went up — the most likely moment to notice one is wrong — never reached
+  // the screen. It refreshes in place and does not replay its entrance; if the
+  // fix hands the game to the other side, the winner treatment follows.
+  if (c.type === 'finalfull') {
+    return `${s.away_score}:${s.home_score}:${s.away_hits}:${s.home_hits}:${s.away_errors}:${s.home_errors}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}`;
+  }
   return null; // other cards are pure snapshots
 }
 function renderCard(s) {
@@ -539,10 +547,45 @@ function renderCard(s) {
   } else {
     const tmp = document.createElement('div'); tmp.innerHTML = html;
     const next = tmp.firstElementChild;
-    if (next) cur.replaceChildren(...next.childNodes); // live refresh, no re-animation
-    else layer.innerHTML = html;
+    if (next) {
+      // The card's own class and style can change with the game too — Final's
+      // winner is a class and its colour a property on the card itself, and a
+      // score fixed behind it can hand the game to the other side. Carry them
+      // across; keep the entrance class if it is still running.
+      const entering = cur.classList.contains('enter');
+      cur.className = next.className;
+      if (entering) cur.classList.add('enter');
+      const st = next.getAttribute('style');
+      if (st) cur.setAttribute('style', st); else cur.removeAttribute('style');
+      cur.replaceChildren(...next.childNodes); // live refresh, no re-animation
+    } else layer.innerHTML = html;
   }
   layer.hidden = false;
+  // Final's winner treatment is on the whole frame, not inside the card: the
+  // winner's side of the backdrop glows in their colour and the other side goes
+  // dark. The card itself is centred, so a wash drawn inside it was clipped to a
+  // box and left the loser's half still tinted in their colour.
+  const finCard = c.type === 'finalfull' ? layer.querySelector('.slab.fin.has-win') : null;
+  let wash = layer.querySelector(':scope > .fin-wash');
+  if (finCard) {
+    const side = finCard.classList.contains('win-home') ? 'home' : 'away';
+    if (!wash) { wash = document.createElement('div'); wash.setAttribute('aria-hidden', 'true'); layer.prepend(wash); }
+    wash.className = `fin-wash wash-${side}`;
+    wash.style.setProperty('--win', finCard.dataset.winColor || '#e0a92a');
+  } else if (wash) wash.remove();
+  if (c.type === 'finalfull' && finalPlayed !== key) {
+    // Once per card, for the same reason as the Mid-Inning strip: a score fixed
+    // behind it rebuilds these elements without the class and does not replay.
+    finalPlayed = key;
+    const card = layer.querySelector('.slab.fin');
+    if (card) {
+      const cells = card.querySelectorAll('.linescore td').length;
+      card.style.setProperty('--cells', cells);
+      card.querySelectorAll('.linescore, .slab-line .r, .fin-tag').forEach((e) => e.classList.add('fin-go'));
+      const w2 = layer.querySelector(':scope > .fin-wash');
+      if (w2) w2.classList.add('fin-go');
+    }
+  }
   if (c.type === 'midinning') {
     if (remount && recapFor !== key) { recapPlays = null; loadRecap(key); }
     // The replay runs once, the first time the strip has something in it. A live
@@ -602,14 +645,19 @@ function breakLabel(s) {
   if (sport === 'volleyball') return `Set ${st.set || 1}`;
   return 'Scoreboard';
 }
-function lineScoreHtml(s, fresh = null) {
+function lineScoreHtml(s, fresh = null, replay = false) {
   if ((s.sport || 'baseball') !== 'baseball' || !Array.isArray(s.line_score) || !s.line_score.length) return '';
   const aAbbr = escapeHtml(s.away_abbr || s.away_name || 'AWAY');
   const hAbbr = escapeHtml(s.home_abbr || s.home_name || 'HOME');
   // `fresh`, on Mid-Inning: the cell of the half that just ended, which pulses
   // last so the eye ends on what changed.
-  const cells = (side) => s.line_score.map((x, i) =>
-    `<td${fresh && fresh.half === side && fresh.inning === i + 1 ? ' class="ls-new"' : ''}>${x?.[side] ?? 0}</td>`).join('');
+  // `replay`, on Final: every cell carries its place in the game, so the whole
+  // line score can fill in inning by inning, top then bottom, and land on R/H/E.
+  const cells = (side) => s.line_score.map((x, i) => {
+    const cls = fresh && fresh.half === side && fresh.inning === i + 1 ? ' class="ls-new"' : '';
+    const order = replay ? ` style="--c:${i * 2 + (side === 'bottom' ? 1 : 0)}"` : '';
+    return `<td${cls}${order}>${x?.[side] ?? 0}</td>`;
+  }).join('');
   const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
   return `<table class="linescore"><tr><th></th>${heads}<th class="rhe">R</th><th class="rhe">H</th><th class="rhe">E</th></tr>
     <tr><th>${aAbbr}</th>${cells('top')}<td class="rhe">${s.away_score | 0}</td><td class="rhe">${s.away_hits | 0}</td><td class="rhe">${s.away_errors | 0}</td></tr>
@@ -632,17 +680,25 @@ function buildCard(c, s) {
   if (c.type === 'starting') return startingCard(meta, s);
   if (c.type === 'midinning' || c.type === 'finalfull') {
     const fin = c.type === 'finalfull';
-    return `<div class="card takeover-card slab">
-      <div class="card-sub">${escapeHtml(meta.text || (fin ? 'Final' : breakLabel(s)))}</div>
+    // Final says who won: the winner's colour washes in from their side, their
+    // score grows a touch, the other side steps back. A tie gets neither. No
+    // confetti — both dugouts are children.
+    const story = fin ? finalStory(s) : null;
+    const w = story && story.winner;
+    const sideCls = (side) => (w ? (w === side ? ' win' : ' lose') : '');
+    const winColor = w ? (s[w + '_color'] || (w === 'home' ? '#1b2a41' : '#7a8794')) : '';
+    const tag = story && (story.walkoff ? 'Walk-off' : story.runRule ? `Run rule · ${story.innings} inn` : '');
+    return `<div class="card takeover-card slab${fin ? ' fin' : ''}${w ? ' has-win win-' + w : ''}"${w ? ` data-win-color="${escapeAttr(winColor)}"` : ''}>
+      <div class="card-sub">${escapeHtml(meta.text || (fin ? 'Final' : breakLabel(s)))}${tag ? `<span class="fin-tag">${escapeHtml(tag)}</span>` : ''}</div>
       <div class="slab-line">
-        <div class="side">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
-        <div class="r">${s.away_score | 0}</div>
+        <div class="side${sideCls('away')}">${logoHtml(s.away_logo_url)}<div class="cname">${escapeHtml(s.away_name || 'Visitor')}</div></div>
+        <div class="r${sideCls('away')}">${s.away_score | 0}</div>
         <div class="dash">–</div>
-        <div class="r">${s.home_score | 0}</div>
-        <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
+        <div class="r${sideCls('home')}">${s.home_score | 0}</div>
+        <div class="side${sideCls('home')}">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
       </div>
       ${!fin && (s.sport || 'baseball') === 'baseball' ? recapStripHtml(s) : ''}
-      ${lineScoreHtml(s, !fin ? finishedHalf(s) : null)}</div>`;
+      ${lineScoreHtml(s, !fin ? finishedHalf(s) : null, fin)}</div>`;
   }
   if (c.type === 'final') {
     const ls = lineScoreHtml(s);

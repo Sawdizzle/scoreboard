@@ -291,3 +291,43 @@ body.takeover #sponsor-bug { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .card.slab .rp-strip.rp-go .rp-sum, .card.slab .rp-strip.rp-go .rp-chip, .card.slab .linescore td.ls-new.rp-go { animation: none; }
 }
+
+/* ---- Final: who won, and how ------------------------------------------------
+   The winner's colour washes in from their side, their score grows a touch and
+   the other side steps back; a tie gets none of it. The line score fills in
+   inning by inning, top then bottom, and lands on R/H/E. A walk-off or a
+   run-rule finish is named beside "Final". Everything animated hangs off
+   .fin-go, added once per card, so a live refresh does not replay it. */
+/* On the full-frame layer, under the card: the winner's side lifts into their
+   colour (lightened a little, so a navy team still reads), and the loser's
+   side is pressed back toward the dark base instead of keeping its own tint. */
+#card.takeover > .fin-wash { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(78% 125% at var(--wx) 50%, color-mix(in srgb, color-mix(in srgb, var(--win) 78%, #ffffff) 62%, transparent) 0%, transparent 66%),
+    radial-gradient(72% 115% at var(--lx) 50%, rgba(6, 9, 14, 0.88) 0%, rgba(6, 9, 14, 0.55) 40%, transparent 66%); }
+#card.takeover > .fin-wash.wash-home { --wx: 100%; --lx: 0%; }
+#card.takeover > .fin-wash.wash-away { --wx: 0%; --lx: 100%; }
+#card.takeover > .fin-wash.fin-go { animation: fin-wash 1.8s ease-out both; }
+#card.takeover > .card { position: relative; z-index: 1; }
+@keyframes fin-wash { from { opacity: 0; } to { opacity: 1; } }
+
+.card.slab.has-win .r { transition: none; }
+.card.slab .r.win { transform: scale(1.08); text-shadow: 0 0 40px rgba(255, 255, 255, 0.18); }
+.card.slab .r.lose, .card.slab .side.lose { opacity: 0.55; }
+.card.slab .r.win.fin-go { animation: fin-win 0.9s cubic-bezier(.2, .8, .2, 1) 0.5s both; }
+.card.slab .r.lose.fin-go { animation: fin-lose 0.9s ease 0.5s both; }
+@keyframes fin-win { from { transform: scale(1); } 60% { transform: scale(1.14); } to { transform: scale(1.08); } }
+@keyframes fin-lose { from { opacity: 1; } to { opacity: 0.55; } }
+
+.card.slab .fin-tag { display: inline-block; margin-left: 18px; padding: 5px 16px; border-radius: 999px; vertical-align: middle;
+  background: #e0a92a; color: #1a1206; font-size: 22px; letter-spacing: 0.14em; opacity: 1; }
+.card.slab .fin-tag.fin-go { animation: rp-in 0.5s cubic-bezier(.2, .8, .2, 1) 1.1s both; }
+
+/* The line score, replayed: each cell fades up in game order, then R/H/E. */
+.card.slab .linescore.fin-go td { animation: fin-cell 0.28s ease both; animation-delay: calc(1.2s + var(--c, 0) * 0.09s); }
+.card.slab .linescore.fin-go td.rhe { animation-delay: calc(1.35s + var(--cells, 12) * 0.045s); }
+@keyframes fin-cell { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card.slab .fin-go, .card.slab .linescore.fin-go td { animation: none !important; }
+}
