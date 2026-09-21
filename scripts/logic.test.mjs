@@ -738,12 +738,28 @@ test('the field check lists the empty spots in field order', () => {
 
 test('renaming the pitcher’s row carries the pitcher with it, and keeps the defense', () => {
   const r = roster();
-  const batters = r.batters.map((b) => ({ ...b }));
-  batters[3] = { num: '17', name: 'Jensen Jr' };
-  const out = L.mergeLineupEdits(r, batters);
+  const out = L.setBatterField(L.setBatterField(r, 3, 'name', 'Jensen Jr'), 3, 'num', '17');
   assert.deepEqual(out.pitcher, { num: '17', name: 'Jensen Jr' });
   assert.deepEqual(out.positions, r.positions);
   assert.equal(L.currentPitcher({ half: 'bottom', lineups: { away: out } }).name, 'Jensen Jr');
+});
+
+test('one typed field touches one row and nothing else', () => {
+  const r = roster();
+  const out = L.setBatterField(r, 1, 'name', 'Carter Jr');
+  assert.equal(out.batters[1].name, 'Carter Jr');
+  assert.equal(out.batters[1].num, '11', 'the number on that row is left alone');
+  assert.deepEqual(out.batters.filter((_, i) => i !== 1), r.batters.filter((_, i) => i !== 1));
+  assert.deepEqual(out.positions, r.positions);
+  assert.deepEqual(r.batters[1], { num: '11', name: 'Carter' }, 'the stored roster is not mutated');
+});
+
+test('typing into an empty slot past the end of the order fills only that slot', () => {
+  const out = L.setBatterField(roster(), 6, 'num', '22');
+  assert.equal(out.batters.length, 7);
+  assert.deepEqual(out.batters[6], { num: '22', name: '' });
+  assert.deepEqual(out.batters[4], { num: '', name: '' });
+  assert.equal(L.positionOf(out, 1), 'SS', 'the defense still points at the same players');
 });
 
 test('a position set from the sheet is what the fielder tray and defense card read', () => {

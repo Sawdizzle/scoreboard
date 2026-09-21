@@ -452,6 +452,7 @@ async function openGame(id) {
 // this game's writes, and that has to be a choice you make on purpose.
 async function closeGame() {
   const id = game && game.id;
+  if (luFlush) { clearTimeout(luFlush); luFlush = null; await saveRoster(game.lineups); }   // a name typed a half-second ago still lands
   if (queue.pendingFor(id)) {
     const n = queue.entriesFor(id).length;
     if (!confirm(`${n} change${n > 1 ? 's have' : ' has'} not saved yet — still waiting on the network.\n\nLeave this game and lose ${n > 1 ? 'them' : 'it'}?`)) return;
@@ -2336,13 +2337,19 @@ function buildLineup(side) {
   }
   $('lineup-' + side).innerHTML = html;
 }
+// The roster in memory is the truth; these inputs are a view of it. The one
+// input under the operator's finger is left alone — filling it would move the
+// caret or drop a half-typed name — and nothing else on the screen is ever
+// allowed to hold an older roster than the model does.
 function fillLineup(side) {
   const raw = (game.lineups || {})[side] || {};
   const t = teamOf(side);
+  const focused = document.activeElement;
+  const set = (el, v) => { if (el !== focused) el.value = v; };
   $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row, i) => {
     const b = t.batters[i] || {};
-    row.querySelector('.b-num').value = b.num || '';
-    row.querySelector('.b-name').value = b.name || '';
+    set(row.querySelector('.b-num'), b.num || '');
+    set(row.querySelector('.b-name'), b.name || '');
     // Read-only here: positions have one home, the Field screen. Tapping goes there.
     const pos = L.positionOf(raw, i);
     const chip = row.querySelector('.b-pos');
@@ -2371,19 +2378,25 @@ function renderCurrentHitter(side) {
     row.querySelector('.cur-dot').textContent = on ? '◉' : '◎';
   });
 }
-function readLineup(side) {
-  const batters = [];
-  $('lineup-' + side).querySelectorAll('.lineup-row').forEach((row) => {
-    batters.push({ num: row.querySelector('.b-num').value.trim(), name: row.querySelector('.b-name').value.trim() });
-  });
-  return { batters };
-}
-// Merge over the stored blob: readLineup() only knows names and numbers, and
-// replacing the whole side dropped `positions` — every name edit cleared the
-// defense. mergeLineupEdits also carries the pitcher along with their row.
-async function saveLineup(side) {
+// One typed field, straight into the model. Typing patches the roster on every
+// keystroke — so the model is never behind what is on screen — and the write
+// itself waits for a short pause, or for the blur, so a name is one save and
+// not one per letter. `lineupEdit` is the only path from an input to the
+// roster; the sheet's DOM is never read back as a roster again.
+let luFlush = null;
+function lineupEdit(side, idx, field, value, now) {
+  if (!game) return;
   const lineups = game.lineups || {};
-  await saveRoster({ ...lineups, [side]: L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters) });
+  const team = L.setBatterField(lineups[side] || {}, idx, field, value);
+  const next = { ...lineups, [side]: team };
+  clearTimeout(luFlush); luFlush = null;
+  if (now) { saveRoster(next); }
+  else {
+    game = { ...game, lineups: next };   // the model moves now; the write follows
+    luStatus('saving');
+    luFlush = setTimeout(() => { luFlush = null; saveRoster(game.lineups); }, 600);
+  }
+  fillLineup(side);   // position chips and the field check follow the edit
 }
 function setCurrentHitter(side, i) {
   const batIdx = { ...((game.state && game.state.batIdx) || {}), [side]: i };
@@ -2393,8 +2406,18 @@ function setCurrentHitter(side, i) {
 ['away', 'home'].forEach((side) => {
   $('fieldcheck-' + side).onclick = () => openField(side);
   const list = $('lineup-' + side);
+  const fieldOf = (e) => {
+    const el = e.target.closest('.b-num, .b-name');
+    const row = el && el.closest('.lineup-row[data-i]');
+    return row ? { el, idx: +row.dataset.i, field: el.classList.contains('b-num') ? 'num' : 'name' } : null;
+  };
+  list.addEventListener('input', (e) => {
+    const f = fieldOf(e); if (!f) return;
+    lineupEdit(side, f.idx, f.field, f.el.value.trim(), false);
+  });
   list.addEventListener('change', (e) => {
-    saveLineup(side);
+    const f = fieldOf(e); if (!f) return;
+    lineupEdit(side, f.idx, f.field, f.el.value.trim(), true);
   });
   list.addEventListener('click', (e) => {
     if (e.target.closest('.b-pos')) return openField(side);
@@ -2472,10 +2495,11 @@ function lineupDragEnd(e) {
   window.removeEventListener('pointerup', lineupDragEnd);
   window.removeEventListener('pointercancel', lineupDragEnd);
   if (!row || +row.dataset.i === from) return;
-  // Start from what's on screen, so a name typed but not yet blurred isn't lost.
+  // The model already holds every keystroke (lineupEdit patches on input), so
+  // the swap starts from it rather than from the rows on screen.
   const lineups = game.lineups || {};
-  const cur = L.mergeLineupEdits(lineups[side] || {}, readLineup(side).batters);
-  saveRoster({ ...lineups, [side]: L.swapBatters(cur, from, +row.dataset.i) });
+  clearTimeout(luFlush); luFlush = null;
+  saveRoster({ ...lineups, [side]: L.swapBatters(lineups[side] || {}, from, +row.dataset.i) });
   fillLineup(side);
 }
 function lineupDragStart(side, e) {
@@ -2497,12 +2521,11 @@ function lineupDragStart(side, e) {
 }
 function renderLineups() {
   if (lineupBuiltFor !== game.id) { buildLineup('away'); buildLineup('home'); lineupBuiltFor = game.id; }
-  // Don't overwrite inputs the user is actively typing into; always refresh the marker.
-  const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.lu-side');
-  if (!editing) { fillLineup('away'); fillLineup('home'); }
-  // Skipped while typing: forget the paint so the next render fills it in,
-  // instead of the sheet holding an old lineup until the roster changes again.
-  else delete panelPainted.lineups;
+  // Always fill. This used to skip both sides whenever any lineup input had
+  // focus, which let fourteen other rows sit on a roster older than the model —
+  // the stale text a blur then wrote back. fillLineup now protects the one
+  // focused input by itself, so there is nothing left to skip.
+  fillLineup('away'); fillLineup('home');
   renderCurrentHitter('away'); renderCurrentHitter('home');
   showLineupSide();
   paintField();   // a roster saved elsewhere repaints an open Field screen too

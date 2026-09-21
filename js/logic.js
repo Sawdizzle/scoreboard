@@ -342,14 +342,27 @@ export function missingPositions(team) {
     return i == null || !filled(batters[i]);
   });
 }
-// Names and numbers typed into the sheet, merged over the stored roster. The
-// pitcher is a copy of a row's name and number, so an edit to that row carries
-// the pitcher with it instead of orphaning the mound.
-export function mergeLineupEdits(stored, batters) {
+// One typed field on one row, written over the stored roster.
+//
+// This replaced mergeLineupEdits, which took all fifteen rows as they stood in
+// the DOM. The sheet skipped refilling its inputs while one of them had focus,
+// so a roster changed underneath (a position trade, a drag, a pull from the
+// server) left the other fourteen rows holding pre-change text — and the next
+// blur wrote that whole stale side back. Names vanished and the order reverted
+// mid-game with nobody editing. A single field can only ever carry the edit the
+// operator actually made.
+//
+// The pitcher is a copy of a row's name and number, so an edit to that row
+// carries the pitcher with it instead of orphaning the mound.
+export function setBatterField(stored, idx, field, value) {
   const t = stored || {};
+  if (idx < 0 || (field !== 'num' && field !== 'name')) return t;
+  const batters = Array.isArray(t.batters) ? t.batters.slice() : [];
+  while (batters.length <= idx) batters.push({ num: '', name: '' });
   const pi = pitcherIdx(t);
+  batters[idx] = { ...(batters[idx] || {}), [field]: value };
   const out = { ...t, batters };
-  if (pi >= 0) { const b = batters[pi] || {}; out.pitcher = { num: b.num || '', name: b.name || '' }; }
+  if (pi === idx) { const b = batters[idx]; out.pitcher = { num: b.num || '', name: b.name || '' }; }
   return out;
 }
 
