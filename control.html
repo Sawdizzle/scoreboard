@@ -254,10 +254,12 @@
         <summary>⚾ Running the game</summary>
         <div class="panel-body help-body">
           <ul>
-            <li>The main pad is game flow — balls, strikes, fouls, outs, runs, hits. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End half-inning</b> is in the Situation sheet for the rare one that ends another way.</li>
-            <li><b>OUT</b> asks who fielded it — tap SS and it records <b>Groundout 6-3</b>, tap CF for <b>Flyout F8</b>. Pick a type first for an error, fielder's choice, double play, sac fly or dropped 3rd strike. With runners on, the next step asks where everyone ended up, already filled in with the likely result. <b>Just an out</b> skips all of it.</li>
-            <li><b>1B / 2B / 3B</b> with runners on open the same runner step; with nobody on they're still one tap.</li>
+            <li>The main pad is game flow — balls, strikes, fouls, outs, hits. Runs come from the plays that score them. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End half-inning</b> is in the Situation sheet for the rare one that ends another way.</li>
+            <li><b>IN PLAY</b> asks what happened: a hit, an error or fielder's choice, or the kind of out. For outs and errors, tap who fielded it — SS on a ground out records <b>Groundout 6-3</b>, CF on a fly out <b>Flyout F8</b>. With runners on, the last step asks where everyone ended up, already filled in with the likely result. With nobody on, it skips that step. <b>Just an out</b> skips all of it.</li>
             <li>Missed that the catcher dropped strike three? The strikeout message has <b>Dropped 3rd?</b> for a few seconds.</li>
+            <li>The <b>diamond</b> on the pad shows who's on. Tap a runner for a steal, caught stealing, pickoff, or a wild pitch / passed ball. The count and the batter stay.</li>
+            <li><b>MORE</b> holds the rare ways to first base: hit by pitch, catcher’s interference, intentional walk — and <b>Balk</b>, which moves every runner up (with nobody on, it counts as a ball).</li>
+            <li>A run with no play behind it goes in with <b>+1 run</b> in the Situation sheet.</li>
             <li><b>↶ Undo</b> reverses the last action.</li>
             <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
             <li><b>Moments</b> in <b>🎬 On Air</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
@@ -367,18 +369,19 @@
         <button id="btn-ball"   class="key ball">BALL</button>
         <button id="btn-strike" class="key strike">STRIKE</button>
         <button id="btn-foul"   class="key foul">FOUL</button>
-        <button id="btn-out"    class="key out">OUT</button>
-        <button id="btn-run"    class="key run">RUN</button>
-        <button id="btn-runners" class="key batter">RUNNERS</button>
-        <!-- One bar, four hit targets: the at-bat result, which auto-advances
-             runners and the order. HR confirms the run count first. -->
-        <div class="hitbar" role="group" aria-label="At-bat result">
-          <button id="hit-1b">1B</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="hit-2b">2B</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="hit-3b">3B</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="fx-homerun">HR</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="hit-hbp" aria-label="Hit by pitch">HBP</button><span class="hb-sep" aria-hidden="true">|</span>
-          <button id="hit-e" aria-label="Reached on error">E</button>
+        <!-- IN PLAY: pick the result, tap who fielded it (outs and errors),
+             then say where the runners finished. Replaces OUT and the hit bar. -->
+        <button id="btn-inplay" class="key inplay">IN PLAY</button>
+        <!-- MORE: the rare ways a batter reaches without a hit. A run with no
+             play behind it is a correction, so it lives in the Situation sheet. -->
+        <button id="btn-more"   class="key util">MORE ▾</button>
+        <!-- The runners, where they stand. Tap one for a steal, a pickoff, or a
+             wild pitch; the count and the batter stay. Replaces RUNNERS. -->
+        <div id="pad-dia" class="key pad-dia" role="group" aria-label="Runners">
+          <button id="pd-2" class="pd b2" type="button" data-base="second"><i></i><span class="vh">Runner on 2nd</span></button>
+          <button id="pd-3" class="pd b3" type="button" data-base="third"><i></i><span class="vh">Runner on 3rd</span></button>
+          <button id="pd-1" class="pd b1" type="button" data-base="first"><i></i><span class="vh">Runner on 1st</span></button>
+          <span class="pd-home" aria-hidden="true"></span>
         </div>
       </div>
     </div>
@@ -594,6 +597,9 @@
           <summary>Runs · hits · errors</summary>
           <div class="sit-more-body">
             <p class="hint">Direct edits for corrections — each is undoable. Runs, hits and errors change the total only.</p>
+            <!-- A run with no play behind it (a missed tag-up, a run the pad missed).
+                 Unlike the steppers it goes in this half's line-score cell too. -->
+            <button id="btn-run" class="base-btn">+1 run for the team at bat (line score too)</button>
             <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" runs">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
             <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" runs">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
             <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" hits">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>
@@ -764,19 +770,40 @@
       <span class="grab"></span>
       <div class="sit-head"><h3 id="play-title">Ball in play</h3><span class="sit-sub" id="play-sub"></span></div>
 
-      <div id="play-pick">
+      <div id="play-result">
         <!-- The out that is not the batter's. A runner thrown out stealing was
              being recorded here, which ends the at-bat and pushes the order on;
              RUNNERS is where it belongs, so the sheet says so and goes there. -->
         <button id="play-to-runners" class="base-btn play-runner-note" type="button" hidden>
           🏃 Runner out on the bases? <span>Steal, pickoff — the batter stays up</span>
         </button>
-        <div class="play-chips" id="play-chips" role="group" aria-label="Type of play"></div>
-        <p class="play-will" id="play-will"></p>
-        <div class="play-field" id="play-field"><span class="pf-arc"></span><span class="pf-dirt"></span></div>
+        <p class="pr-grp">Hit</p>
+        <div class="pr-grid" id="pr-hits">
+          <button class="pr-b hit" data-kind="H1">1B</button><button class="pr-b hit" data-kind="H2">2B</button>
+          <button class="pr-b hit" data-kind="H3">3B</button><button class="pr-b hit" data-kind="HR">HR</button>
+        </div>
+        <p class="pr-grp">Reached</p>
+        <div class="pr-grid" id="pr-reach">
+          <button class="pr-b" data-kind="E">Error</button><button class="pr-b" data-kind="FC">Fielder’s choice</button>
+        </div>
+        <p class="pr-grp">Out</p>
+        <div class="pr-grid" id="pr-outs">
+          <button class="pr-b out" data-kind="GB">Ground out</button><button class="pr-b out" data-kind="FB">Fly out</button>
+          <button class="pr-b out" data-kind="LD">Line out</button><button class="pr-b out" data-kind="PU">Pop out</button>
+          <button class="pr-b out" data-kind="SF">Sac fly</button><button class="pr-b out" data-kind="SAC">Sac bunt</button>
+          <button class="pr-b out" data-kind="DP">Double play</button>
+        </div>
         <div class="sheet-actions">
           <button id="play-cancel" class="ghost">Cancel</button>
           <button id="play-just-out" class="primary play-out">Just an out (batter)</button>
+        </div>
+      </div>
+
+      <div id="play-pick" hidden>
+        <p class="play-will" id="play-will"></p>
+        <div class="play-field" id="play-field"><span class="pf-arc"></span><span class="pf-dirt"></span></div>
+        <div class="sheet-actions">
+          <button id="pick-back" class="ghost">‹ Back</button>
         </div>
       </div>
 
@@ -802,6 +829,24 @@
       <p class="confirm-copy">Count and batter stay. For a wild pitch or passed ball, tap Ball or Strike too.</p>
       <div id="rn-list" class="rn-list"></div>
       <button id="runners-done" class="ghost">Done</button>
+    </div>
+  </div>
+
+  <!-- MORE SHEET: the batter reaches without a hit or a four-ball walk.
+       Dropped 3rd strike is not here: it is picked on the Strike three sheet. -->
+  <div id="more-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="more-title" tabindex="-1" hidden>
+    <div class="sheet-card confirm-card">
+      <span class="grab"></span>
+      <h3 id="more-title">More</h3>
+      <p class="confirm-copy">Batter awarded first: forced runners move up and the next batter is up.</p>
+      <div class="k3-opts">
+        <button id="more-hbp" class="base-btn">Hit by pitch</button>
+        <button id="more-ci" class="base-btn">Catcher’s interference</button>
+        <button id="more-ibb" class="base-btn">Intentional walk</button>
+        <!-- Every runner at once; with nobody on, the rulebook makes it a ball. -->
+        <button id="more-balk" class="base-btn">Balk · every runner up one</button>
+      </div>
+      <button id="more-cancel" class="ghost">Cancel</button>
     </div>
   </div>
 

@@ -136,6 +136,25 @@ export function onHitByPitch(g) {
     payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
 }
 
+// Catcher's interference: the batter is awarded first and forced runners move
+// up, like a hit by pitch. The pitch counts. Its own line in the play-by-play.
+export function onCatcherInterference(g) {
+  const w = computeWalk(g.bases);
+  return { type: 'ci', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
+    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) } };
+}
+
+// Intentional walk: awarded without a pitch, so the pitch count stays and the
+// order moves on. Forced advance only — nobody runs on an intentional walk, so
+// there is no sheet to confirm. Fires the same WALK stinger as a four-ball walk.
+export function onIntentionalWalk(g) {
+  const w = computeWalk(g.bases);
+  const patch = { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) };
+  const bi = advanceBatterState(g);
+  if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
+  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, anim: 'webgem' };
+}
+
 // Runner plays between pitches: a steal, caught stealing, a pickoff, or a runner
 // moving up on a wild pitch / passed ball / balk. `from` is the base the runner
 // started on ('first' | 'second' | 'third'). None of them end the at-bat: the
@@ -152,6 +171,18 @@ export function runnerBlocked(g, from, kind) {
   }
   return '';
 }
+// Balk: every runner moves up one base and a runner on 3rd scores. No pitch,
+// the count stays, the same batter is still up. Null with nobody on (with the
+// bases empty a balk is a ball, and BALL is the key for that).
+export function onBalk(g) {
+  const b = safeBases(g.bases);
+  if (!b.first && !b.second && !b.third) return null;
+  const runs = b.third ? 1 : 0;
+  const bases = { first: false, second: b.first, third: b.second };
+  return { type: 'balk', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, 'BK', { runs }) },
+    anim: runs ? 'run' : null, animMeta: {}, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
+}
+
 export function onRunnerPlay(g, from, kind) {
   if (!RUNNER_LABEL[kind] || runnerBlocked(g, from, kind)) return null;
   const b = safeBases(g.bases);
@@ -413,7 +444,7 @@ export function halfEndsGame(after) {
   return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
 }
 // A play that belongs to the new half takes Mid-Inning down.
-export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'hbp', 'hit', 'play', 'homerun', 'runner', 'run', 'error']);
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'run', 'error']);
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
@@ -629,11 +660,11 @@ const BASE_KEY = { 1: 'first', 2: 'second', 3: 'third' };
 const HIT_BASES = { H1: 1, H2: 2, H3: 3 };
 export const PLAY_LABEL = {
   GB: 'Groundout', FB: 'Flyout', LD: 'Lineout', PU: 'Pop-up', E: 'Reached on error',
-  FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', K3: 'Dropped 3rd strike',
+  FC: 'Fielder’s choice', DP: 'Double play', SF: 'Sac fly', SAC: 'Sac bunt', K3: 'Dropped 3rd strike',
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
-  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', HBP: 'Hit by pitch',
-  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', HR: 'Home run', OUT: 'Out',
+  K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
+  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event
@@ -662,6 +693,7 @@ export function playCode(kind, pos) {
     case 'FC': return `${n}-${n === 4 ? 6 : 4}`;
     case 'DP': return DP_PATH[n] || `${n}-2`;
     case 'SF': return `SF${n}`;
+    case 'SAC': return n === 3 ? '3U' : `${n}-3`;
   }
   return '';
 }
@@ -675,6 +707,7 @@ export function playBlocked(g, kind) {
     case 'FC': return anyone ? '' : 'A fielder’s choice needs a runner on base';
     case 'DP': return !anyone ? 'A double play needs a runner on base' : outs >= 2 ? 'A double play needs fewer than 2 outs' : '';
     case 'SF': return !b.third ? 'A sac fly needs a runner on 3rd' : outs >= 2 ? 'A sac fly needs fewer than 2 outs' : '';
+    case 'SAC': return !anyone ? 'A sac bunt needs a runner on base' : outs >= 2 ? 'A sac bunt needs fewer than 2 outs' : '';
     case 'K3':
       if ((g.strikes | 0) < 2) return 'A dropped 3rd strike needs 2 strikes on the batter — Undo the strikeout first';
       return b.first && outs < 2 ? 'The batter can’t run: 1st base is taken with fewer than 2 outs' : '';
@@ -697,6 +730,7 @@ export function playDefaults(g, kind) {
     case 'GB': dest.batter = 'out'; each((k, s) => (forcedFrom(b, k) ? s + 1 : s)); break;
     case 'FB': case 'LD': case 'PU': dest.batter = 'out'; each((k, s) => s); break;
     case 'SF': dest.batter = 'out'; each((k, s) => (k === 'third' ? 4 : s)); break;
+    case 'SAC': dest.batter = 'out'; each(up(1)); break;
     case 'FC': { dest.batter = 1; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : forcedFrom(b, k) ? s + 1 : s)); break; }
     case 'DP': { dest.batter = 'out'; const gone = b.first ? 'first' : lead; each((k, s) => (k === gone ? 'out' : s)); break; }
     case 'E': case 'K3': dest.batter = 1; each(up(1)); break;
@@ -774,7 +808,7 @@ export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@thir
 
 // Events named by the thing they happen to. Anything not here is a correction
 // or a clock/inning move and belongs to the game, not to a person.
-const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'hbp', 'hit',
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'hit',
   'homerun', 'play', 'error', 'batter', 'batidx']);
 
 export function subjectOf(res, g) {
@@ -785,7 +819,7 @@ export function subjectOf(res, g) {
     const from = res.payload && res.payload.from;
     return from ? `runner@${from}` : 'runners';
   }
-  if (res.type === 'advance' || res.type === 'clearbases') return 'runners';
+  if (res.type === 'advance' || res.type === 'clearbases' || res.type === 'balk') return 'runners';
   if (BATTER_EVENTS.has(res.type)) return 'batter';
   return 'game';
 }
@@ -865,6 +899,8 @@ const REBUILD = {
   strikeout: (g, p) => onStrike(g, { looking: !!(p.inputs && p.inputs.looking) }),
   out:       (g) => onOut(g),
   hbp:       (g) => onHitByPitch(g),
+  ci:        (g) => onCatcherInterference(g),
+  ibb:       (g) => onIntentionalWalk(g),
   hit:       (g, p) => (p.reached ? onHit(g, p.reached) : null),
   error:     (g) => onError(g),
   run:       (g) => onRun(g),
@@ -875,6 +911,7 @@ const REBUILD = {
   batter:    (g) => onNextBatter(g),
   half:      (g) => onToggleHalf(g),
   inning:    (g, p) => (p.inputs ? onNudgeInning(g, p.inputs.d) : null),
+  balk:      (g) => onBalk(g),
   runner:    (g, p) => (p.from && p.kind ? onRunnerPlay(g, p.from, p.kind) : null),
   base:      (g, p) => (p.inputs && p.inputs.key ? toggleBase(g, p.inputs.key) : null),
   // Built on the pad from their own sheets, so the fold rebuilds them from the

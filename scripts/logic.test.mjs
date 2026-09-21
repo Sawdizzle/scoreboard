@@ -1076,3 +1076,63 @@ test('a half that ends a regulation game is not a mid-inning', () => {
   assert.equal(L.halfEndsGame({ regulation_innings: 6, half: 'top', inning: 4, home_score: 0, away_score: 9 }), false);
   assert.equal(L.halfEndsGame({ regulation_innings: 0, half: 'top', inning: 9, home_score: 0, away_score: 9 }), false);
 });
+
+test('catcher’s interference awards first like a hit by pitch, with its own note', () => {
+  const g = G({ strikes: 1, bases: bases(1, 1, 1), lineups: { away: order([1, 1, 1]) } });
+  const r = L.onCatcherInterference(g);
+  assert.equal(r.type, 'ci');
+  assert.deepEqual(r.patch, L.onHitByPitch(g).patch, 'the game moves the same as HBP');
+  assert.equal(r.payload.play.kind, 'CI');
+  assert.equal(L.subjectOf(r), 'batter');
+});
+
+test('intentional walk forces runners, moves the order, and throws no pitch', () => {
+  const r = L.onIntentionalWalk(G({ balls: 2, bases: bases(1, 1, 1), lineups: { away: order([1, 1, 1]) } }));
+  assert.equal(r.type, 'ibb');
+  assert.deepEqual(r.patch.bases, bases(1, 1, 1));
+  assert.equal(r.patch.away_score, 1, 'bases loaded forces a run in');
+  assert.equal(r.patch.balls, 0);
+  assert.equal(r.patch.state.batIdx.away, 1, 'next batter up');
+  assert.equal(r.patch.state.pitches, undefined, 'no pitch counted');
+  assert.equal(r.payload.play.kind, 'IBB');
+  assert.equal(r.anim, 'webgem', 'same stinger as a walk');
+});
+
+test('intentional walk with no lineup still clears the count', () => {
+  const r = L.onIntentionalWalk(G({ strikes: 2, bases: bases(0, 1, 0) }));
+  assert.deepEqual(r.patch.bases, bases(1, 1, 0));
+  assert.equal(r.patch.strikes, 0);
+  assert.equal(r.patch.state, undefined);
+});
+
+test('sac bunt: batter out, every runner up one, its own label and code', () => {
+  const g = G({ bases: bases(1, 1, 0) });
+  assert.equal(L.playBlocked(g, 'SAC'), '');
+  const dest = L.playDefaults(g, 'SAC');
+  assert.deepEqual(dest, { batter: 'out', first: 2, second: 3 });
+  const r = L.onPlay(g, { kind: 'SAC', pos: 'P', dest });
+  assert.equal(r.patch.outs, 1);
+  assert.deepEqual(r.patch.bases, bases(0, 1, 1));
+  assert.equal(r.text, 'Sac bunt 1-3');
+});
+
+test('sac bunt needs a runner and fewer than 2 outs', () => {
+  assert.match(L.playBlocked(G(), 'SAC'), /runner/);
+  assert.match(L.playBlocked(G({ outs: 2, bases: bases(1, 0, 0) }), 'SAC'), /2 outs/);
+});
+
+test('balk moves every runner up one, scores from 3rd, leaves the count and batter', () => {
+  const g = G({ balls: 2, strikes: 1, bases: bases(1, 0, 1), state: { batIdx: { away: 4 } } });
+  const r = L.onBalk(g);
+  assert.equal(r.type, 'balk');
+  assert.deepEqual(r.patch.bases, bases(0, 1, 0));
+  assert.equal(r.patch.away_score, 1);
+  assert.equal(r.patch.balls, undefined, 'count untouched');
+  assert.equal(r.patch.state, undefined, 'no pitch, same batter');
+  assert.equal(r.payload.play.kind, 'BK');
+  assert.equal(L.subjectOf(r), 'runners');
+});
+
+test('balk with the bases empty is not a play', () => {
+  assert.equal(L.onBalk(G()), null);
+});

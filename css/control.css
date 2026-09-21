@@ -207,7 +207,7 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   body.in-game.bb.guide-open .col-live { overflow-y: auto; }
   body.in-game.bb.guide-open .col-live > .sport-only[data-sport="baseball"] { flex: 0 0 auto; min-height: 380px; }
   body.in-game.bb .col-live > .sport-only[data-sport="baseball"] { flex: 1; min-height: 0; display: flex; }
-  body.in-game.bb .pad { flex: 1; min-height: 0; grid-template-rows: 1.35fr 1fr 1fr 0.8fr; }
+  body.in-game.bb .pad { flex: 1; min-height: 0; grid-template-rows: 1.35fr 1fr 0.8fr; }
   /* The other sports: the same fixed shell. Their pads hold game flow only
      (corrections are in the Situation sheet), so the big keys take what is left. */
   body.in-game:not(.bb) .col-live > .sp-pad:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -224,7 +224,6 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
   body.in-game.bb .pad { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
   body.in-game.bb .key.batter { font-size: 15px; }
   body.in-game.bb .key.ball, body.in-game.bb .key.strike { font-size: 20px; }
-  body.in-game.bb .hitbar { grid-column: 1 / -1; }
   .gm-batter { padding-top: 4px; padding-bottom: 0; }
 }
 
@@ -321,12 +320,16 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 
 /* ---- Ball in play ------------------------------------------------------- */
 .play-card .sit-head { margin-bottom: 12px; }
-.play-chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 -18px; padding: 0 18px 4px; scrollbar-width: none; }
-.play-chips::-webkit-scrollbar { display: none; }
-.play-chip { flex: 0 0 auto; padding: 10px 13px; border-radius: 999px; background: var(--card);
-  border: 1px solid var(--line-2); color: var(--chalk); font-size: 13px; font-weight: 700; }
-.play-chip.on { background: var(--steel); border-color: var(--steel); color: #06090f; }
-.play-chip.blocked { opacity: 0.4; }
+/* IN PLAY, step 1: the result, grouped the way a scorer thinks of it. */
+.pr-grp { margin: 10px 2px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+#pr-hits { grid-template-columns: repeat(4, 1fr); }
+.pr-b { padding: 14px 6px; border-radius: 12px; background: var(--card); border: 1px solid var(--line);
+  color: var(--chalk); font-size: 15px; font-weight: 700; }
+.pr-b.hit { background: var(--hit-bg); border-color: var(--hit-line); color: var(--hit-text); font-size: 17px; font-weight: 800; }
+.pr-b.out { background: var(--undo-bg); border-color: var(--undo-line); color: var(--undo-text); }
+.pr-b.blocked { opacity: 0.4; }
+.pr-b:active { filter: brightness(1.2); }
 .play-will { margin: 10px 2px 12px; font-size: 13px; line-height: 1.45; color: var(--body); text-wrap: pretty; }
 /* A ballfield, because the tap is "who fielded it", and people find SS by where it stands. */
 .play-field { position: relative; width: 100%; aspect-ratio: 1 / 0.9; max-height: 46dvh; border-radius: 18px; overflow: hidden;
@@ -374,16 +377,11 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .key { padding: 26px 10px; font-size: 22px; letter-spacing: 0.04em; color: #fff; border-radius: 18px; }
 /* No transition on the way in — a key has to look pressed before the finger
    lifts — and a short one on the way out. */
-.key:active, .hitbar button:active { transform: translateY(2px); filter: brightness(1.12); }
-.key, .hitbar button { transition: transform 90ms ease, filter 90ms ease; }
+.key:active { transform: translateY(2px); filter: brightness(1.12); }
+.key { transition: transform 90ms ease, filter 90ms ease; }
 
-.hitbar { grid-column: 1 / -1; display: flex; align-items: center;
-  background: var(--hit-bg); border: 1px solid var(--hit-line); border-radius: 18px; }
-.hitbar button { flex: 1; align-self: stretch; padding: 16px 6px; background: none; border: none;
-  color: var(--hit-text); font-size: 17px; font-weight: 800; border-radius: 18px; }
-.hb-sep { color: var(--hit-text); opacity: 0.35; }
 .key.ball { background: var(--ball); } .key.strike { background: var(--strike); }
-.key.out { background: var(--out); } .key.run { background: var(--run); }
+.key.inplay { background: var(--steel); color: #06090f; }
 .key.util { background: var(--util); font-size: 16px; padding: 18px 10px; }
 
 /* Undo + bases + util + walk sheet */
@@ -391,6 +389,18 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .undo:active { filter: brightness(1.15); }
 
 .key.foul { background: var(--foul); } .key.batter { background: var(--batter); }
+/* The pad diamond: a key-sized cell holding three bases. Each base is a thumb
+   target; the cell itself does nothing. */
+.key.pad-dia { position: relative; background: var(--card); border: 1px solid var(--line); padding: 0; min-height: 84px; }
+.pd { position: absolute; width: 30%; height: 44%; min-width: 44px; min-height: 40px; transform: translate(-50%, -50%);
+  display: grid; place-items: center; background: none; border: none; padding: 0; }
+.pd i { display: block; width: 26px; height: 26px; border-radius: 5px; transform: rotate(45deg);
+  background: var(--sunken); border: 1px solid var(--line-2); transition: background 0.12s ease; }
+.pd.on i { background: var(--out-ui); border-color: var(--out-ui); }
+.pd:active i { filter: brightness(1.25); }
+.pd.b1 { left: 72%; top: 52%; } .pd.b2 { left: 50%; top: 27%; } .pd.b3 { left: 28%; top: 52%; }
+.pd-home { position: absolute; left: 50%; top: 80%; width: 14px; height: 14px; transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--line); border-radius: 3px; }
 
 .bases-label { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
 .bases-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -444,7 +454,7 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .sheet-card { animation: fade-in 0.18s linear; }
-  .key:active, .hitbar button:active, .base-btn:active, .fxbtn:active, .gm-b:active { transform: none; }
+  .key:active, .base-btn:active, .fxbtn:active, .gm-b:active { transform: none; }
   .gm-score b.pop { animation: none; }
 }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

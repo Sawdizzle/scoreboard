@@ -874,9 +874,12 @@ $('k3-cancel').onclick = () => closeSheet('k3-sheet');
 // Runners: one row per runner, lead runner first. Each button is one undoable play.
 const RN_BASE = { first: '1st', second: '2nd', third: '3rd' };
 const RN_NEXT = { first: '2nd', second: '3rd', third: 'home' };
-function paintRunnerSheet() {
+// `only`: the one runner tapped on the pad diamond. Unset: everyone on base.
+let runnerOnly = null;
+function paintRunnerSheet(only = runnerOnly) {
+  runnerOnly = only;
   const b = L.safeBases(game.bases);
-  const on = ['third', 'second', 'first'].filter((k) => b[k]);
+  const on = ['third', 'second', 'first'].filter((k) => b[k] && (!only || k === only));
   const list = $('rn-list');
   if (!on.length) { list.innerHTML = '<p class="confirm-copy">Nobody on base.</p>'; return; }
   list.innerHTML = on.map((k) => {
@@ -889,8 +892,15 @@ function paintRunnerSheet() {
       btn('ADV', `To ${RN_NEXT[k]} · WP/PB`) + `</div>`;
   }).join('');
 }
-$('btn-runners').onclick = () => { if (!game) return; paintRunnerSheet(); openSheet('runners-sheet'); };
+function openRunners(only = null) { if (!game) return; paintRunnerSheet(only); openSheet('runners-sheet'); }
+$('pad-dia').onclick = (e) => {
+  const p = e.target.closest('.pd'); if (!p || !game) return;
+  const k = p.dataset.base;
+  if (!L.safeBases(game.bases)[k]) return showToast(`Nobody on ${RN_BASE[k]}`, 1500);
+  openRunners(k);
+};
 $('runners-done').onclick = () => closeSheet('runners-sheet');
+
 $('rn-list').onclick = (e) => {
   const o = e.target.closest('.rn-b'); if (!o) return;
   if (o.dataset.why) return showToast(o.dataset.why, 3000);
@@ -899,7 +909,8 @@ $('rn-list').onclick = (e) => {
   commit(r);
   showToast(r.text, 1800);
   // Stay open while anyone is left on base: a double steal is two taps.
-  if (basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
+  // One runner tapped on the diamond: that runner has moved, so close.
+  if (runnerOnly || basesEmpty() || r.patch.half) closeSheet('runners-sheet'); else paintRunnerSheet();
 };
 // ---- Field screen ----------------------------------------------------------
 // Positions by jersey number, the way you see them from the dugout fence. A
@@ -994,11 +1005,21 @@ $('fv-numbers').onclick = (e) => {
 };
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('field-view').hidden) { e.preventDefault(); closeField(); } });
 
-$('hit-hbp').onclick     = () => commit(L.onHitByPitch(game));
-$('hit-e').onclick       = () => openPlaySheet('E');
+$('btn-more').onclick    = () => { if (game) openSheet('more-sheet'); };
+$('more-hbp').onclick    = () => { closeSheet('more-sheet'); commit(L.onHitByPitch(game)); };
+$('more-ci').onclick     = () => { closeSheet('more-sheet'); commit(L.onCatcherInterference(game)); };
+$('more-ibb').onclick    = () => { closeSheet('more-sheet'); commit(L.onIntentionalWalk(game)); };
+// A balk with the bases empty is a ball on the batter, so it goes the way BALL does.
+$('more-balk').onclick   = () => {
+  closeSheet('more-sheet');
+  const r = L.onBalk(game);
+  if (!r) { showToast('Bases empty — balk counts as a ball', 2200); return $('btn-ball').click(); }
+  commit(r); showToast(r.text, 1800);
+};
+$('more-cancel').onclick = () => closeSheet('more-sheet');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
-$('btn-out').onclick     = () => openPlaySheet();
-$('btn-run').onclick     = () => commit(L.onRun(game));
+$('btn-inplay').onclick  = () => openPlaySheet();
+$('btn-run').onclick     = () => { commit(L.onRun(game)); showToast('+1 run', 1500); };
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
 // The repair for an order pushed on by a tap that should not have ended the
 // at-bat — an out recorded on a runner, before RUNNERS was the way to do it.
@@ -1009,9 +1030,6 @@ $('btn-prev-batter').onclick = () => {
   const b = L.currentBatter({ ...game, state: r.patch.state });
   showToast(b ? `◂ ${shortName(b)} is up` : '◂ Previous batter');
 };
-$('hit-1b').onclick      = () => startPlay('H1', null, 'hit');
-$('hit-2b').onclick      = () => startPlay('H2', null, 'hit');
-$('hit-3b').onclick      = () => startPlay('H3', null, 'hit');
 $('btn-endhalf').onclick = () => commit(L.onEndHalf(game));
 $('btn-advance').onclick = () => commit(L.onAdvance(game));
 $('btn-clear').onclick   = () => commit(L.onClearBases(game));
@@ -1438,7 +1456,6 @@ function renderOnAir() {
 }
 
 // Moments / FX
-$('fx-homerun').onclick = () => openHrSheet();
 $('fx-k').onclick       = () => fireAnim('strikeout');
 $('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
 $('fx-dp').onclick      = () => fireAnim('doubleplay');
@@ -1817,7 +1834,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2350,21 +2367,21 @@ function renderAudio() {
 }
 
 // Ball in play ---------------------------------------------------------------
-// OUT opens this on the fielder pick: tap who fielded it and the play records.
-// With runners on, a second step asks where everyone finished, pre-filled with
-// the likely answer (L.playDefaults), so the usual play is one more tap on
-// Record. Hits with runners on and a dropped third strike start on that step.
-// Nobody on and an out, or a hit: no second step at all.
-const PLAY_CHIPS = [['auto', 'Auto'], ['GB', 'Ground ball'], ['FB', 'Fly ball'], ['LD', 'Line drive'], ['PU', 'Pop-up'],
-  ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['SF', 'Sac fly']];
+// IN PLAY opens on the result: a hit, reached on an error or fielder's choice,
+// or the kind of out. Outs, errors and fielder's choices then ask who fielded it
+// (SS on a ground out records 6-3). With runners on, the last step asks where
+// everyone finished, pre-filled with the likely answer (L.playDefaults), so the
+// usual play is one more tap on Record. Nobody on: no runner step at all.
+// A dropped third strike starts on the runner step from the Strike three sheet.
+const NEEDS_FIELDER = new Set(['GB', 'FB', 'LD', 'PU', 'SF', 'SAC', 'DP', 'FC', 'E']);
 // Where each fielder stands on the drawn field, as % of its box.
 const FIELD_SPOT = { LF: [18, 24], CF: [50, 11], RF: [82, 24], SS: [33, 45], '2B': [67, 43],
   '3B': [15, 64], '1B': [85, 64], P: [50, 63], C: [50, 90] };
 const RS_COLS = [['out', 'Out'], [1, '1st'], [2, '2nd'], [3, '3rd'], [4, 'Home']];
 const RS_START = { third: 3, second: 2, first: 1, batter: 0 };
 const BASE_NAME = { first: '1st', second: '2nd', third: '3rd' };
-let playType = 'auto';
-let play = null;   // { kind, pos, dest, from: 'pick' | 'hit' }
+let playType = null;
+let play = null;   // { kind, pos, dest, from: 'result' | 'pick' | 'hit' }
 
 const basesEmpty = () => { const b = L.safeBases(game.bases); return !b.first && !b.second && !b.third; };
 // "M. Reyes" fits a fielder tile; a player with only a number reads as "#12".
@@ -2376,38 +2393,59 @@ const shortName = (p) => {
 };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-function openPlaySheet(type = 'auto') {
+function showPlayStep(step) {
+  $('play-result').hidden = step !== 'result';
+  $('play-pick').hidden = step !== 'pick';
+  $('play-runners').hidden = step !== 'runners';
+}
+function openPlaySheet() {
   if (!game) return;
-  playType = type; play = null;
-  $('play-pick').hidden = false; $('play-runners').hidden = true;
-  paintPlayPick();
+  playType = null; play = null;
+  paintPlayResult();
+  showPlayStep('result');
   openSheet('play-sheet');
 }
+function paintPlayResult() {
+  const batter = L.currentBatter(game);
+  $('play-sub').textContent = batter ? `${shortName(batter)} · what happened?` : 'what happened?';
+  // Only with somebody on: with the bases empty there is no runner to be out.
+  $('play-to-runners').hidden = basesEmpty();
+  // Not `disabled`: a disabled button swallows the tap, and the tap is when you
+  // want to hear why a double play isn't possible with nobody on.
+  $('play-result').querySelectorAll('.pr-b').forEach((btn) => {
+    const why = L.playBlocked(game, btn.dataset.kind);
+    btn.classList.toggle('blocked', !!why);
+    btn.setAttribute('aria-disabled', String(!!why));
+  });
+}
+// The result is picked. Hits go straight on; everything else asks the fielder.
+function pickResult(kind) {
+  if (!game) return;
+  const why = L.playBlocked(game, kind);
+  if (why) return showToast(why, 3200);
+  if (kind === 'HR') {
+    if (!$('play-sheet').hidden) closeSheet('play-sheet');
+    // Solo shot: nothing to confirm. With runners on, confirm the run count.
+    if (basesEmpty()) return commit({ type: 'homerun', patch: L.homeRunPatch(game, 1),
+      payload: { runs: 1, play: L.playNote(game, 'HR', { runs: 1 }) }, anim: 'homerun' });
+    return openHrSheet();
+  }
+  if (!NEEDS_FIELDER.has(kind)) return startPlay(kind, null, 'result');
+  playType = kind;
+  paintPlayPick();
+  showPlayStep('pick');
+  if ($('play-sheet').hidden) openSheet('play-sheet');
+}
+$('play-result').onclick = (e) => {
+  const b = e.target.closest('.pr-b'); if (b) pickResult(b.dataset.kind);
+};
 function paintPlayPick() {
   const batter = L.currentBatter(game);
-  $('play-sub').textContent = batter ? `${shortName(batter)} · who fielded it?` : 'who fielded it?';
-  $('play-chips').replaceChildren(...PLAY_CHIPS.map(([kind, label]) => {
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'play-chip'; btn.dataset.kind = kind; btn.textContent = label;
-    btn.classList.toggle('on', playType === kind);
-    btn.setAttribute('aria-pressed', String(playType === kind));
-    // Not `disabled`: a disabled button swallows the tap, and the tap is when you
-    // want to hear why a double play isn't possible with nobody on.
-    if (kind !== 'auto' && L.playBlocked(game, kind)) { btn.classList.add('blocked'); btn.setAttribute('aria-disabled', 'true'); }
-    return btn;
-  }));
-  // Only with somebody on: with the bases empty there is no runner to be out.
-  const onBase = L.safeBases(game.bases);
-  $('play-to-runners').hidden = !(onBase.first || onBase.second || onBase.third);
-  const chosen = PLAY_CHIPS.find(([k]) => k === playType);
-  // Error comes from its own E key on the hit bar, not a chip: charge it to a fielder.
-  $('play-chips').hidden = playType === 'E';
-  $('play-just-out').style.display = playType === 'E' ? 'none' : '';
-  if (playType === 'E') $('play-sub').textContent = batter ? `${shortName(batter)} reached · who made the error?` : 'Who made the error?';
-  $('play-will').textContent = playType === 'auto'
-    ? 'Tap who fielded it. Infield records a groundout (SS → 6-3), outfield a flyout (CF → F8). For anything else, pick the type first.'
-    : playType === 'E' ? 'Tap the fielder charged with the error (SS → E6). Then set where the runners ended up.'
-    : `Tap who fielded the ${chosen[1].toLowerCase()}.`;
+  const label = L.PLAY_LABEL[playType];
+  $('play-sub').textContent = batter ? `${shortName(batter)} · ${label.toLowerCase()}` : label;
+  $('play-will').textContent = playType === 'E'
+    ? 'Tap the fielder charged with the error (SS → E6).'
+    : `Tap who fielded it${playType === 'GB' ? ' (SS → 6-3)' : playType === 'FB' ? ' (CF → F8)' : ''}.`;
   const side = L.fieldingSide(game);
   const field = $('play-field');
   field.querySelectorAll('.fielder').forEach((x) => x.remove());
@@ -2424,25 +2462,18 @@ function paintPlayPick() {
     field.appendChild(btn);
   }
 }
-$('play-chips').onclick = (e) => {
-  const c = e.target.closest('.play-chip'); if (!c) return;
-  const kind = c.dataset.kind;
-  if (c.classList.contains('blocked')) return showToast(L.playBlocked(game, kind), 3200);
-  playType = playType === kind ? 'auto' : kind;
-  paintPlayPick();
-};
 $('play-field').onclick = (e) => {
-  const f = e.target.closest('.fielder'); if (!f) return;
-  startPlay(playType === 'auto' ? L.autoKind(f.dataset.pos) : playType, f.dataset.pos, 'pick');
+  const f = e.target.closest('.fielder'); if (!f || !playType) return;
+  startPlay(playType, f.dataset.pos, 'pick');
 };
+$('pick-back').onclick = () => { playType = null; paintPlayResult(); showPlayStep('result'); };
 $('play-just-out').onclick = () => { closeSheet('play-sheet'); commit(L.onOut(game)); };
 // Straight across to the runner plays: an out on the bases leaves the count and
 // the batter alone, which is exactly what recording it here would not do.
 $('play-to-runners').onclick = () => {
   closeSheet('play-sheet');
   if (!game) return;
-  paintRunnerSheet();
-  openSheet('runners-sheet');
+  openRunners();
 };
 $('play-cancel').onclick = () => closeSheet('play-sheet');
 
@@ -2452,7 +2483,7 @@ function startPlay(kind, pos, from) {
   // Nobody on base: nothing to ask. An error or a dropped third still asks,
   // because the batter may not have stopped at first.
   if (basesEmpty() && kind !== 'E' && kind !== 'K3') return recordPlay();
-  $('play-pick').hidden = true; $('play-runners').hidden = false;
+  showPlayStep('runners');
   paintRunners();
   if ($('play-sheet').hidden) openSheet('play-sheet');
   else (focusablesIn($('play-sheet'))[0] || $('play-sheet')).focus({ preventScroll: true });
@@ -2525,14 +2556,15 @@ $('rs-grid').onclick = (e) => {
   paintRunners();
 };
 $('rs-back').onclick = () => {
-  if (play && play.from === 'pick') { play = null; $('play-runners').hidden = true; $('play-pick').hidden = false; paintPlayPick(); return; }
+  if (play && play.from === 'pick') { play = null; paintPlayPick(); showPlayStep('pick'); return; }
+  if (play && play.from === 'result') { play = null; paintPlayResult(); showPlayStep('result'); return; }
   play = null; closeSheet('play-sheet');
 };
 $('rs-record').onclick = () => recordPlay();
 function recordPlay() {
   const r = play && L.onPlay(game, play);
   if (!r) return;
-  play = null; playType = 'auto';
+  play = null; playType = null;
   closeSheet('play-sheet');
   commit(r);
   showToast(r.payload.runs ? `${r.text} · ${plural(r.payload.runs, 'run scores', 'runs score')}` : r.text);
@@ -3103,6 +3135,11 @@ const countDots = (n, of, cls) => {
 };
 function renderBaseballControl() {
   const b = L.safeBases(game.bases);
+  for (const [n, k] of [[1, 'first'], [2, 'second'], [3, 'third']]) {
+    const pd = $('pd-' + n);
+    pd.classList.toggle('on', b[k]);
+    pd.querySelector('.vh').textContent = b[k] ? `Runner on ${RN_BASE[k]}` : `${RN_BASE[k]} base, empty`;
+  }
   $('sc-mid').innerHTML =
     `<span class="gm-inning">${game.half === 'top' ? '▲' : '▼'} ${ordinal(game.inning).toUpperCase()}</span>` +
     '<span class="gm-div"></span>' +
@@ -3246,10 +3283,12 @@ document.addEventListener('keydown', (e) => {
   if (k === 'u') { e.preventDefault(); return doUndo(); }
   if ((game.sport || 'baseball') === 'baseball') {
     const map = {
-      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', o: 'btn-out', r: 'btn-run', n: 'btn-runners',
-      1: 'hit-1b', 2: 'hit-2b', 3: 'hit-3b', h: 'fx-homerun', a: 'btn-advance', c: 'btn-clear',
+      b: 'btn-ball', s: 'btn-strike', f: 'btn-foul', i: 'btn-inplay', o: 'btn-inplay', m: 'btn-more',
+      a: 'btn-advance', c: 'btn-clear',
     };
-    if (k === 'e') { e.preventDefault(); return openPlaySheet('E'); }
+    const direct = { 1: 'H1', 2: 'H2', 3: 'H3', h: 'HR', e: 'E' }[k];
+    if (direct) { e.preventDefault(); return pickResult(direct); }
+    if (k === 'n') { e.preventDefault(); return openRunners(); }
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });
