@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames } from './starting.js';
@@ -439,6 +439,51 @@ const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '
 // live "signature" (batting side + current hitter + roster) so the on-air
 // highlight and fielders track the game while the card stays up — refreshed in
 // place so the entrance animation doesn't replay each update.
+// ---- The half, replayed ------------------------------------------------------
+// Mid-Inning fetches the public play-by-play when it goes up and replays the
+// half that just ended under the score. The same name-free rows the recap page
+// reads, through the same get_plays() — nothing here needs the roster token.
+let recapPlays = null;        // the rows for the game, as last fetched
+let recapFor = null;          // the card key they were fetched for
+let recapPlayed = null;       // the card key whose strip has already animated
+let recapRetry = null;
+async function loadRecap(key, again = true) {
+  const { data, error } = await db.rpc('get_plays', { p_game: gameId });
+  if (key !== lastCardKey) return;                    // the card came down meanwhile
+  if (!error && Array.isArray(data)) { recapPlays = data; recapFor = key; }
+  lastCardSig = null;                                 // repaint with them
+  if (last) render(last);
+  // The card can go up in the same breath as the third out's row is written.
+  // If the half that just ended does not add up to three outs yet, look once
+  // more — never in a loop.
+  if (again && last && halfRecap(recapPlays, last).outs < 3) {
+    clearTimeout(recapRetry);
+    recapRetry = setTimeout(() => loadRecap(key, false), 1600);
+  }
+}
+function recapStripHtml(s) {
+  const r = halfRecap(recapPlays, s);
+  if (!r.rows.length) return '';
+  const who = r.half === 'bottom' ? (s.home_name || 'Home') : (s.away_name || 'Visitor');
+  const ord = (n) => n + (['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : (n % 10 < 4 ? n % 10 : 0)]);
+  const bits = r.oneTwoThree
+    ? '<span class="rp-tag">1-2-3 inning</span>'
+    : [r.runs ? `<span class="rp-runs">${r.runs} run${r.runs > 1 ? 's' : ''}</span>` : '<span>No runs</span>',
+       `<span>${r.hits} hit${r.hits === 1 ? '' : 's'}</span>`,
+       r.walks ? `<span>${r.walks} walk${r.walks > 1 ? 's' : ''}</span>` : ''].join('');
+  const chips = r.rows.map((p, i) =>
+    `<span class="rp-chip${p.runs ? ' scored' : ''}" style="--i:${i}">` +
+      (p.k ? `<i class="rp-k${p.backwards ? ' back' : ''}" aria-hidden="true">K</i>` : '') +
+      `<b>${escapeHtml(p.label)}</b>` +
+      (p.code ? `<em>${escapeHtml(p.code)}</em>` : '') +
+      (p.runs ? `<span class="rp-plus">+${p.runs} run${p.runs > 1 ? 's' : ''}</span>` : '') +
+      (p.outs ? '<span class="rp-outs">' + '<i></i>'.repeat(Math.min(3, p.outs)) + '</span>' : '') +
+    '</span>').join('');
+  return `<div class="rp-strip" style="--n:${r.rows.length}">
+    <div class="rp-sum"><span class="rp-who">${r.half === 'bottom' ? 'Bottom' : 'Top'} ${ord(r.inning)} · ${escapeHtml(who)}</span><span class="rp-dot"></span>${bits}</div>
+    <div class="rp-chips">${chips}</div></div>`;
+}
+
 let lastCardKey = null, lastCardSig = null;
 function cardSig(c, s) {
   if (c.type === 'lineup') {
@@ -459,7 +504,7 @@ function cardSig(c, s) {
   }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {
-    return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}`;
+    return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}`;
   }
   return null; // other cards are pure snapshots
 }
@@ -498,6 +543,21 @@ function renderCard(s) {
     else layer.innerHTML = html;
   }
   layer.hidden = false;
+  if (c.type === 'midinning') {
+    if (remount && recapFor !== key) { recapPlays = null; loadRecap(key); }
+    // The replay runs once, the first time the strip has something in it. A live
+    // refresh rebuilds these elements without the class, so fixing a score
+    // behind the card updates it in place instead of replaying the half.
+    const strip = layer.querySelector('.rp-strip');
+    if (strip && recapPlayed !== key) {
+      recapPlayed = key;
+      strip.classList.add('rp-go');
+      const cell = layer.querySelector('.ls-new');
+      const n = layer.querySelectorAll('.rp-chip').length;
+      // After the last play has landed, so the eye ends on what changed.
+      if (cell) { cell.style.animationDelay = `${(0.5 + n * 0.32 + 0.25).toFixed(2)}s`; cell.classList.add('rp-go'); }
+    }
+  }
 }
 // Cards that cover the whole 1920×1080 frame instead of floating over the video.
 const TAKEOVER = new Set(['starting', 'midinning', 'finalfull']);
@@ -542,11 +602,14 @@ function breakLabel(s) {
   if (sport === 'volleyball') return `Set ${st.set || 1}`;
   return 'Scoreboard';
 }
-function lineScoreHtml(s) {
+function lineScoreHtml(s, fresh = null) {
   if ((s.sport || 'baseball') !== 'baseball' || !Array.isArray(s.line_score) || !s.line_score.length) return '';
   const aAbbr = escapeHtml(s.away_abbr || s.away_name || 'AWAY');
   const hAbbr = escapeHtml(s.home_abbr || s.home_name || 'HOME');
-  const cells = (side) => s.line_score.map((x) => `<td>${x?.[side] ?? 0}</td>`).join('');
+  // `fresh`, on Mid-Inning: the cell of the half that just ended, which pulses
+  // last so the eye ends on what changed.
+  const cells = (side) => s.line_score.map((x, i) =>
+    `<td${fresh && fresh.half === side && fresh.inning === i + 1 ? ' class="ls-new"' : ''}>${x?.[side] ?? 0}</td>`).join('');
   const heads = s.line_score.map((_, i) => `<th>${i + 1}</th>`).join('');
   return `<table class="linescore"><tr><th></th>${heads}<th class="rhe">R</th><th class="rhe">H</th><th class="rhe">E</th></tr>
     <tr><th>${aAbbr}</th>${cells('top')}<td class="rhe">${s.away_score | 0}</td><td class="rhe">${s.away_hits | 0}</td><td class="rhe">${s.away_errors | 0}</td></tr>
@@ -578,7 +641,8 @@ function buildCard(c, s) {
         <div class="r">${s.home_score | 0}</div>
         <div class="side">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
       </div>
-      ${lineScoreHtml(s)}</div>`;
+      ${!fin && (s.sport || 'baseball') === 'baseball' ? recapStripHtml(s) : ''}
+      ${lineScoreHtml(s, !fin ? finishedHalf(s) : null)}</div>`;
   }
   if (c.type === 'final') {
     const ls = lineScoreHtml(s);

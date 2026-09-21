@@ -796,6 +796,49 @@ export function stamp(res, g) {
   return { ...res, payload: { ...(res.payload || {}), subject: subjectOf(res, g) } };
 }
 
+// ---- The half, replayed (Mid-Inning) ---------------------------------------
+// Mid-Inning sits on air for a minute or more between every half. It used to
+// hold the score and the line score and nothing else; now it replays the half
+// that just ended from the public play-by-play — the same name-free rows the
+// recap page reads — so the break tells the viewer what happened in it.
+
+// The half that has just finished, judged from where the game now stands. The
+// third out has already rolled the row: bottom of the 3rd means the top of the
+// 3rd just ended; top of the 4th means the bottom of the 3rd did.
+export function finishedHalf(g) {
+  const inn = g.inning | 0;
+  return g.half === 'bottom' ? { inning: inn, half: 'top' } : { inning: Math.max(1, inn - 1), half: 'bottom' };
+}
+const HIT_KINDS = new Set(['H1', 'H2', 'H3', 'HR']);
+// IBB and CI are named here ahead of their keys, so a half with one in it is
+// never mistaken for three up, three down.
+const ON_BASE_KINDS = new Set(['H1', 'H2', 'H3', 'HR', 'BB', 'IBB', 'HBP', 'CI', 'E', 'FC', 'K3']);
+// Chip text. The strikeouts drop "swinging", because the K in front says
+// strikeout and a reversed K says looking — the way the scorebook writes them.
+const CHIP_LABEL = { ...PLAY_LABEL, K: 'Strikeout', KL: 'Strikeout looking' };
+
+// The rows for one half, ready to draw: what happened, the scorebook code, the
+// outs and runs on each, and a one-line summary. A half with three plays, three
+// outs and nobody on is a 1-2-3 inning, and says so rather than showing nothing.
+export function halfRecap(plays, g) {
+  const { inning, half } = finishedHalf(g);
+  const rows = (plays || []).filter((p) => (p.inning | 0) === inning && p.half === half).map((p) => ({
+    kind: p.kind,
+    label: CHIP_LABEL[p.kind] || p.kind,
+    code: p.code && p.kind !== 'K3' && p.kind !== 'K' && p.kind !== 'KL' ? p.code : '',
+    outs: p.outs | 0,
+    runs: p.runs | 0,
+    k: p.kind === 'K' || p.kind === 'KL',
+    backwards: p.kind === 'KL',
+  }));
+  const runs = rows.reduce((n, r) => n + r.runs, 0);
+  const hits = rows.filter((r) => HIT_KINDS.has(r.kind)).length;
+  const walks = rows.filter((r) => r.kind === 'BB' || r.kind === 'IBB').length;
+  const outs = rows.reduce((n, r) => n + r.outs, 0);
+  const oneTwoThree = rows.length === 3 && outs === 3 && !runs && !rows.some((r) => ON_BASE_KINDS.has(r.kind));
+  return { inning, half, rows, runs, hits, walks, outs, oneTwoThree };
+}
+
 // ---- The fold: a game rebuilt from its own events --------------------------
 // Stage 2 of moving the game onto its log. This runs in the SHADOW: the pad
 // folds the log, compares the answer to the live row and says whether the two
