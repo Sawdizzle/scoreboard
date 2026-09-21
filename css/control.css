@@ -545,6 +545,11 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .sit-card .sit-end.over { background: var(--bg-2); border-color: var(--line-2); color: #c8d4e8; }
 .sit-pair { display: flex; gap: 9px; margin-top: 9px; }
 .sit-pair .base-btn { flex: 1; padding: 13px 8px; font-size: 14px; background: var(--bg-2); border: 1px solid var(--line-2); color: #c8d4e8; }
+/* The route out of the play sheet to the runner plays. It reads as a note with
+   a tap on it, not as another way to record an out. */
+.play-runner-note { display: block; width: 100%; text-align: left; padding: 11px 13px; margin-bottom: 11px;
+  font-size: 14px; font-weight: 700; background: var(--bg-2); border: 1px dashed var(--line-2); color: #c8d4e8; }
+.play-runner-note span { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
 /* The two Clear lineup buttons sit in a pair, so they take the row's spacing
    rather than End game's standalone gap, and grey out with nothing to clear. */
 .sit-card .sit-pair .sit-end { margin-top: 0; background: var(--bg-2); border-color: var(--danger-line); color: var(--danger-text); }

@@ -865,7 +865,14 @@
           <button id="btn-endhalf" class="base-btn">End half-inning</button>
         </div>
         <!-- Every at-bat result already moves the order on; this is the fix for when it didn't. -->
-        <button id="btn-batter" class="base-btn sit-wide">Next batter ▸ (skip without a result)</button>
+        <!-- The order is pushed on by every result; these are for when it moved
+             and should not have (an out recorded on a runner), or did not and
+             should have. -->
+        <div class="sit-pair">
+          <button id="btn-prev-batter" class="base-btn">◂ Previous batter</button>
+          <button id="btn-batter" class="base-btn">Next batter ▸</button>
+        </div>
+        <p class="hint">Moves the at-bat marker only — no result is recorded.</p>
         <div class="adj-row"><span class="adj-lab">Pitch count (current P)</span><button id="pc-dn" class="step">–</button><b id="pc-val">0</b><button id="pc-up" class="step">+</button></div>
 
         <details class="sit-more" open>
@@ -1054,12 +1061,18 @@
       <div class="sit-head"><h3 id="play-title">Ball in play</h3><span class="sit-sub" id="play-sub"></span></div>
 
       <div id="play-pick">
+        <!-- The out that is not the batter's. A runner thrown out stealing was
+             being recorded here, which ends the at-bat and pushes the order on;
+             RUNNERS is where it belongs, so the sheet says so and goes there. -->
+        <button id="play-to-runners" class="base-btn play-runner-note" type="button" hidden>
+          🏃 Runner out on the bases? <span>Steal, pickoff — the batter stays up</span>
+        </button>
         <div class="play-chips" id="play-chips" role="group" aria-label="Type of play"></div>
         <p class="play-will" id="play-will"></p>
         <div class="play-field" id="play-field"><span class="pf-arc"></span><span class="pf-dirt"></span></div>
         <div class="sheet-actions">
           <button id="play-cancel" class="ghost">Cancel</button>
-          <button id="play-just-out" class="primary play-out">Just an out</button>
+          <button id="play-just-out" class="primary play-out">Just an out (batter)</button>
         </div>
       </div>
 

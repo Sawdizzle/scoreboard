@@ -184,6 +184,46 @@ test('a terminal play advances the order and counts the pitch', () => {
   assert.deepEqual(r.patch.state.pitches, { home: 1 });
 });
 
+test('caught stealing leaves the batter and the count exactly where they were', () => {
+  const g = G({ balls: 2, strikes: 1, bases: bases(1, 0, 0), lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  const r = L.onRunnerPlay(g, 'first', 'CS');
+  assert.equal(r.patch.outs, 1);
+  assert.equal(r.patch.balls, undefined, 'the count is untouched');
+  assert.equal(r.patch.strikes, undefined);
+  assert.equal(r.patch.state, undefined, 'and so is the order');
+  assert.deepEqual(r.patch.bases, bases(0, 0, 0));
+});
+
+test('an out on the batter does move the order — the two are not the same tap', () => {
+  const g = G({ bases: bases(1, 0, 0), lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  assert.equal(L.onOut(g).patch.state.batIdx.away, 2);
+});
+
+test('previous batter steps the order back over the empty slots', () => {
+  const g = G({ lineups: { away: order([1, 0, 0, 1]) }, state: { batIdx: { away: 3 } } });
+  assert.equal(L.onPrevBatter(g).patch.state.batIdx.away, 0);
+});
+
+test('previous batter wraps to the bottom of the order, and leaves the count alone', () => {
+  const g = G({ balls: 1, strikes: 2, lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 0 } } });
+  const r = L.onPrevBatter(g);
+  assert.equal(r.patch.state.batIdx.away, 2);
+  assert.equal(r.patch.balls, undefined);
+  assert.equal(r.patch.strikes, undefined);
+});
+
+test('previous batter after an out put the wrong hitter up puts the right one back', () => {
+  const g = G({ bases: bases(1, 0, 0), lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  const afterOut = { ...g, ...L.onOut(g).patch };
+  assert.equal(L.currentBatter(afterOut).name, 'B2');
+  const fixed = { ...afterOut, ...L.onPrevBatter(afterOut).patch };
+  assert.equal(L.currentBatter(fixed).name, 'B1', 'the hitter who was up when the runner was thrown out');
+});
+
+test('with no lineup there is no previous batter to step to', () => {
+  assert.equal(L.onPrevBatter(G()), null);
+});
+
 test('the order wraps at the bottom of the lineup', () => {
   const g = G({ lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 2 } } });
   assert.equal(L.onOut(g).patch.state.batIdx.away, 0);

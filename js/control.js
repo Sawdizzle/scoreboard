@@ -906,6 +906,15 @@ $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-out').onclick     = () => openPlaySheet();
 $('btn-run').onclick     = () => commit(L.onRun(game));
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
+// The repair for an order pushed on by a tap that should not have ended the
+// at-bat — an out recorded on a runner, before RUNNERS was the way to do it.
+$('btn-prev-batter').onclick = () => {
+  const r = L.onPrevBatter(game);
+  if (!r) return showToast('No lineup entered for the team at bat');
+  commit(r);
+  const b = L.currentBatter({ ...game, state: r.patch.state });
+  showToast(b ? `◂ ${shortName(b)} is up` : '◂ Previous batter');
+};
 $('hit-1b').onclick      = () => startPlay('H1', null, 'hit');
 $('hit-2b').onclick      = () => startPlay('H2', null, 'hit');
 $('hit-3b').onclick      = () => startPlay('H3', null, 'hit');
@@ -2125,6 +2134,9 @@ function paintPlayPick() {
     if (kind !== 'auto' && L.playBlocked(game, kind)) { btn.classList.add('blocked'); btn.setAttribute('aria-disabled', 'true'); }
     return btn;
   }));
+  // Only with somebody on: with the bases empty there is no runner to be out.
+  const onBase = L.safeBases(game.bases);
+  $('play-to-runners').hidden = !(onBase.first || onBase.second || onBase.third);
   const chosen = PLAY_CHIPS.find(([k]) => k === playType);
   // Error comes from its own E key on the hit bar, not a chip: charge it to a fielder.
   $('play-chips').hidden = playType === 'E';
@@ -2162,6 +2174,14 @@ $('play-field').onclick = (e) => {
   startPlay(playType === 'auto' ? L.autoKind(f.dataset.pos) : playType, f.dataset.pos, 'pick');
 };
 $('play-just-out').onclick = () => { closeSheet('play-sheet'); commit(L.onOut(game)); };
+// Straight across to the runner plays: an out on the bases leaves the count and
+// the batter alone, which is exactly what recording it here would not do.
+$('play-to-runners').onclick = () => {
+  closeSheet('play-sheet');
+  if (!game) return;
+  paintRunnerSheet();
+  openSheet('runners-sheet');
+};
 $('play-cancel').onclick = () => closeSheet('play-sheet');
 
 function startPlay(kind, pos, from) {

@@ -513,16 +513,29 @@ function nextFilledIdx(batters, cur) {
   return cur;
 }
 
-// Advance the batting team's lineup index to the next filled slot. Returns the
-// new batIdx map, or null if that team has no lineup entered.
-function advanceBatterState(g) {
+// Index of the previous non-empty batter before `cur`, wrapping. Returns cur if none.
+function prevFilledIdx(batters, cur) {
+  const n = batters.length;
+  for (let step = 1; step <= n; step++) {
+    const j = ((cur - step) % n + n) % n;
+    const b = batters[j];
+    if (b && (b.name || b.num)) return j;
+  }
+  return cur;
+}
+
+// Move the batting team's lineup index one filled slot, forward or back.
+// Returns the new batIdx map, or null if that team has no lineup entered.
+function stepBatterState(g, d) {
   const side = battingSide(g);
   const t = (g.lineups || {})[side] || {};
   const batters = Array.isArray(t.batters) ? t.batters : [];
   if (!batters.some((b) => b && (b.name || b.num))) return null;
   const bi = (g.state && g.state.batIdx) || {};
-  return { ...bi, [side]: nextFilledIdx(batters, bi[side] | 0) };
+  const cur = bi[side] | 0;
+  return { ...bi, [side]: d < 0 ? prevFilledIdx(batters, cur) : nextFilledIdx(batters, cur) };
 }
+const advanceBatterState = (g) => stepBatterState(g, 1);
 
 // End a plate appearance: count the pitch for the fielding pitcher AND advance
 // the batting order to the next hitter. Used by every terminal outcome
@@ -539,6 +552,14 @@ export function onNextBatter(g) {
   const patch = { balls: 0, strikes: 0 };
   if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
   return { type: 'batter', patch };
+}
+
+// Previous batter (manual): the repair for an order that got pushed on by a tap
+// that should not have ended the at-bat — an out recorded on a runner, say. The
+// count is left where it is, because this is a correction and not a new hitter.
+export function onPrevBatter(g) {
+  const bi = stepBatterState(g, -1);
+  return bi ? { type: 'batter', patch: { state: { ...(g.state || {}), batIdx: bi } } } : null;
 }
 
 export function onResetCount(g) { return { type: 'count', patch: { balls: 0, strikes: 0 } }; }
