@@ -133,7 +133,7 @@ export function onOut(g) {
 export function onHitByPitch(g) {
   const w = computeWalk(g.bases);
   return { type: 'hbp', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
-    payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) } };
+    payload: { runs: w.runs, play: playNote(g, 'HBP', { runs: w.runs }) }, ...reachAnim(g, 'Hit by pitch', w.runs) };
 }
 
 // Catcher's interference: the batter is awarded first and forced runners move
@@ -141,18 +141,18 @@ export function onHitByPitch(g) {
 export function onCatcherInterference(g) {
   const w = computeWalk(g.bases);
   return { type: 'ci', patch: endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) }),
-    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) } };
+    payload: { runs: w.runs, play: playNote(g, 'CI', { runs: w.runs }) }, ...reachAnim(g, 'Catcher’s interference', w.runs) };
 }
 
 // Intentional walk: awarded without a pitch, so the pitch count stays and the
 // order moves on. Forced advance only — nobody runs on an intentional walk, so
-// there is no sheet to confirm. Fires the same WALK stinger as a four-ball walk.
+// there is no sheet to confirm. Its own slide-out, so it doesn't read as ball four.
 export function onIntentionalWalk(g) {
   const w = computeWalk(g.bases);
   const patch = { balls: 0, strikes: 0, bases: w.bases, ...runsPatch(g, w.runs) };
   const bi = advanceBatterState(g);
   if (bi) patch.state = { ...(g.state || {}), batIdx: bi };
-  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, anim: 'webgem' };
+  return { type: 'ibb', patch, payload: { runs: w.runs, play: playNote(g, 'IBB', { runs: w.runs }) }, ...reachAnim(g, 'Intentional walk', w.runs) };
 }
 
 // Runner plays between pitches: a steal, caught stealing, a pickoff, or a runner
@@ -180,7 +180,30 @@ export function onBalk(g) {
   const runs = b.third ? 1 : 0;
   const bases = { first: false, second: b.first, third: b.second };
   return { type: 'balk', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, 'BK', { runs }) },
-    anim: runs ? 'run' : null, animMeta: {}, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
+    anim: 'play', animMeta: { text: 'Balk', runs }, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
+}
+
+// Batter's interference on a play at a base (the catcher's throw on a steal).
+// The batter is out, the pitch counts, and every runner goes back to the base
+// he held: nobody advances. One exception, from the rulebook: with fewer than
+// 2 outs and the play on a runner trying to score from 3rd, THAT runner is out
+// instead, and the batter stays up with the count as it was.
+// (If the catcher throws the runner out anyway, the interference is ignored:
+// record Caught stealing instead.)
+export function onBatterInterference(g, from) {
+  const b = safeBases(g.bases);
+  if (!b[from]) return null;
+  const side = battingSide(g);
+  const text = 'Batter’s interference';
+  if (from === 'third' && (g.outs | 0) < 2) {
+    const bases = { ...b, third: false };
+    const patch = withPitch(g, { outs: (g.outs | 0) + 1, bases });
+    return { type: 'bint', patch, payload: { from, inputs: { from }, subject: 'runner@third', play: playNote(g, 'BI', { outs: 1 }) },
+      anim: 'play', animMeta: { text: 'Runner out · batter’s interference' }, text: 'Batter’s interference · runner out at home' };
+  }
+  const res = outResult({ ...g, bases: b }, 'bint');
+  return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), from, inputs: { from }, play: playNote(g, 'BI', { outs: 1 }) },
+    anim: 'play', animMeta: { text, side, idx: currentBatterIdx(g, side) }, text: `${text} · batter out` };
 }
 
 export function onRunnerPlay(g, from, kind) {
@@ -198,7 +221,9 @@ export function onRunnerPlay(g, from, kind) {
   if (to) bases[to] = true;
   const text = kind === 'SB' ? (to ? `Stole ${to === 'second' ? '2nd' : '3rd'}` : 'Stole home') : RUNNER_LABEL[kind];
   return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { from, kind, runs, play: playNote(g, kind, { runs }) },
-    anim: kind === 'SB' ? 'stolenbase' : runs ? 'run' : null, animMeta: {}, text };
+    // SB has its own stinger; a runner moving up on a wild pitch or passed ball
+    // slides out like any other play, and flashes the run if he scored.
+    anim: kind === 'SB' ? 'stolenbase' : 'play', animMeta: kind === 'SB' ? {} : { text: runs ? 'Runner scores' : 'Runner advances', runs }, text };
 }
 
 export function onRun(g) { return { type: 'run', patch: runsPatch(g, 1) }; }
@@ -444,7 +469,7 @@ export function halfEndsGame(after) {
   return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
 }
 // A play that belongs to the new half takes Mid-Inning down.
-export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'run', 'error']);
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'bint', 'run', 'error']);
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
@@ -664,7 +689,7 @@ export const PLAY_LABEL = {
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
   K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
-  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', HR: 'Home run', OUT: 'Out',
+  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', BI: 'Batter’s interference', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event
@@ -673,6 +698,13 @@ export const PLAY_LABEL = {
 export function playNote(g, kind, { pos = null, code = '', outs = 0, runs = 0 } = {}) {
   return { kind, pos, code, outs, runs, inning: g.inning | 0, half: g.half };
 }
+
+// The slide-out a batter-reaching play earns: its name, with the hitter's name
+// under it (the overlay looks the slot up in its roster; no name rides here).
+const reachAnim = (g, text, runs) => {
+  const side = battingSide(g);
+  return { anim: 'play', animMeta: { text, side, idx: currentBatterIdx(g, side), runs } };
+};
 
 // A fielder tapped with no type picked: infielders make groundouts, outfielders flyouts.
 export const autoKind = (pos) => ((POS_NUM[pos] || 0) >= 7 ? 'FB' : 'GB');
@@ -808,7 +840,7 @@ export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@thir
 
 // Events named by the thing they happen to. Anything not here is a correction
 // or a clock/inning move and belongs to the game, not to a person.
-const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'hit',
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'bint', 'hit',
   'homerun', 'play', 'error', 'batter', 'batidx']);
 
 export function subjectOf(res, g) {
@@ -912,6 +944,7 @@ const REBUILD = {
   half:      (g) => onToggleHalf(g),
   inning:    (g, p) => (p.inputs ? onNudgeInning(g, p.inputs.d) : null),
   balk:      (g) => onBalk(g),
+  bint:      (g, p) => (p.from ? onBatterInterference(g, p.from) : null),
   runner:    (g, p) => (p.from && p.kind ? onRunnerPlay(g, p.from, p.kind) : null),
   base:      (g, p) => (p.inputs && p.inputs.key ? toggleBase(g, p.inputs.key) : null),
   // Built on the pad from their own sheets, so the fold rebuilds them from the

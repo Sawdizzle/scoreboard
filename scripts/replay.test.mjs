@@ -69,6 +69,7 @@ test('a full inning with a play, an error and a rolled half agrees too', () => {
     (g) => L.onCatcherInterference(g),
     (g) => L.onIntentionalWalk(g),
     (g) => L.onBalk(g),
+    (g) => L.onBatterInterference(g, 'second'),
     (g) => L.onPlay(g, { kind: 'DP', pos: '6', dest: { batter: 'out', first: 'out' } }),
     (g) => L.onOut(g),
     (g) => L.onBall(g),
