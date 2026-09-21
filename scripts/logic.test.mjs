@@ -483,10 +483,13 @@ test('swapping two slots trades the players', () => {
 });
 
 test('a fielder keeps their position when they move in the order', () => {
-  const team = { ...order([1, 1, 1, 1]), positions: { SS: 0, CF: 3, C: 1 } };
+  const team = L.normalizeTeam({ ...order([1, 1, 1, 1]), positions: { SS: 0, CF: 3, C: 1 } });
   const t = L.swapBatters(team, 0, 3);
-  assert.deepEqual(t.positions, { SS: 3, CF: 0, C: 1 });
-  assert.equal(t.batters[t.positions.SS].name, 'B0');
+  assert.equal(L.slotAt(t, 'SS'), 3, 'B0 took the fourth spot in the order');
+  assert.equal(L.slotAt(t, 'CF'), 0);
+  assert.equal(L.slotAt(t, 'C'), 1, 'the row nobody dragged is untouched');
+  assert.equal(t.batters[L.slotAt(t, 'SS')].name, 'B0');
+  assert.deepEqual(t.positions, team.positions, 'the defense needed no re-pointing at all');
 });
 
 test('dropping onto an empty bench slot past the list pads it', () => {
@@ -696,15 +699,20 @@ test('a ball in play leaves its code and fielder, and nothing about who batted',
 // ---------------------------------------------------------------------------
 // Positions from the lineup sheet's dropdowns
 // ---------------------------------------------------------------------------
-const roster = () => ({
+// A roster as an older pad wrote it: the defense in batting-order slots, the
+// pitcher named only by number and name.
+const legacyRoster = () => ({
   batters: [{ num: '3', name: 'Morales' }, { num: '11', name: 'Carter' }, { num: '12', name: 'Reyes' }, { num: '7', name: 'Jensen' }],
   positions: { SS: 1, '2B': 2 },
   pitcher: { num: '7', name: 'Jensen' },
 });
+const roster = () => L.normalizeTeam(legacyRoster());
+// Compare rows without the bid, which is minted and so never a fixed value.
+const plain = (b) => ({ num: b.num || '', name: b.name || '' });
 
 test('picking a position someone holds sends them to the bench, not into a swap', () => {
   const { team, benched } = L.setPosition(roster(), 2, 'SS');
-  assert.equal(team.positions.SS, 2);
+  assert.equal(L.slotAt(team, 'SS'), 2);
   assert.equal(team.positions['2B'], undefined, 'Reyes left second base');
   assert.equal(benched, 1);
   assert.equal(L.positionOf(team, 1), '', 'Carter is off the field');
@@ -721,7 +729,7 @@ test('P makes that row the pitcher, and benches the old one', () => {
 test('moving the pitcher to a field spot clears the mound', () => {
   const { team } = L.setPosition(roster(), 3, 'CF');
   assert.deepEqual(team.pitcher, { num: '', name: '' });
-  assert.equal(team.positions.CF, 3);
+  assert.equal(L.slotAt(team, 'CF'), 3);
   assert.ok(L.missingPositions(team).includes('P'));
 });
 
@@ -729,6 +737,52 @@ test('taking a player out of the field benches nobody else', () => {
   const { team, benched } = L.setPosition(roster(), 1, '');
   assert.equal(team.positions.SS, undefined);
   assert.equal(benched, -1);
+});
+
+// ---------------------------------------------------------------------------
+// Player identity: the defense points at players, not at batting-order slots
+// ---------------------------------------------------------------------------
+test('a roster from an older pad is re-pointed onto player ids', () => {
+  const t = L.normalizeTeam(legacyRoster());
+  assert.ok(t.batters.every((b) => b.bid), 'every row has an id');
+  assert.equal(new Set(t.batters.map((b) => b.bid)).size, 4, 'and the ids differ');
+  assert.equal(t.positions.SS, t.batters[1].bid, 'the slot number became a player');
+  assert.equal(t.positions.P, t.batters[3].bid, 'the pitcher took a spot on the diamond like anyone else');
+  assert.deepEqual(t.pitcher, { num: '7', name: 'Jensen' }, 'and the copy the cards read is unchanged');
+});
+
+test('normalizing an already-normalized roster changes nothing', () => {
+  const once = L.normalizeTeam(legacyRoster());
+  assert.deepEqual(L.normalizeTeam(once), once);
+});
+
+test('a defense pointing at a row that is gone is dropped, not left pointing at a stranger', () => {
+  const t = L.normalizeTeam({ batters: [{ num: '3', name: 'Morales' }], positions: { SS: 0, CF: 6 } });
+  assert.equal(L.slotAt(t, 'SS'), 0);
+  assert.equal(t.positions.CF, undefined);
+});
+
+test('a pitcher typed in with no row in the order keeps the mound', () => {
+  const t = L.normalizeTeam({ batters: [{ num: '3', name: 'Morales' }], pitcher: { num: '40', name: 'Ruiz' } });
+  assert.equal(t.positions.P, undefined);
+  assert.deepEqual(t.pitcher, { num: '40', name: 'Ruiz' });
+  assert.equal(L.fielderAt({ half: 'top', lineups: { home: t } }, 'home', 'P').name, 'Ruiz');
+});
+
+test('reordering the batting order moves nobody on the field', () => {
+  const t = roster();
+  const before = L.FIELD_POSITIONS.map((p) => [p, (L.fielderAt({ half: 'top', lineups: { home: t } }, 'home', p) || {}).name]);
+  const after = L.swapBatters(t, 0, 3);
+  assert.deepEqual(
+    L.FIELD_POSITIONS.map((p) => [p, (L.fielderAt({ half: 'top', lineups: { home: after } }, 'home', p) || {}).name]),
+    before, 'the same players are at the same spots');
+  assert.equal(after.batters[0].name, 'Jensen', 'even though the order changed');
+  assert.equal(L.positionOf(after, 0), 'P');
+});
+
+test('renaming a row does not move the defense', () => {
+  const t = L.setBatterField(roster(), 1, 'name', 'Carter Jr');
+  assert.equal(L.fielderAt({ half: 'top', lineups: { home: t } }, 'home', 'SS').name, 'Carter Jr');
 });
 
 test('the field check lists the empty spots in field order', () => {
@@ -740,7 +794,7 @@ test('renaming the pitcher’s row carries the pitcher with it, and keeps the de
   const r = roster();
   const out = L.setBatterField(L.setBatterField(r, 3, 'name', 'Jensen Jr'), 3, 'num', '17');
   assert.deepEqual(out.pitcher, { num: '17', name: 'Jensen Jr' });
-  assert.deepEqual(out.positions, r.positions);
+  assert.deepEqual(out.positions, r.positions, 'and the defense is where it was');
   assert.equal(L.currentPitcher({ half: 'bottom', lineups: { away: out } }).name, 'Jensen Jr');
 });
 
@@ -749,16 +803,16 @@ test('one typed field touches one row and nothing else', () => {
   const out = L.setBatterField(r, 1, 'name', 'Carter Jr');
   assert.equal(out.batters[1].name, 'Carter Jr');
   assert.equal(out.batters[1].num, '11', 'the number on that row is left alone');
-  assert.deepEqual(out.batters.filter((_, i) => i !== 1), r.batters.filter((_, i) => i !== 1));
+  assert.deepEqual(out.batters.filter((_, i) => i !== 1).map(plain), r.batters.filter((_, i) => i !== 1).map(plain));
   assert.deepEqual(out.positions, r.positions);
-  assert.deepEqual(r.batters[1], { num: '11', name: 'Carter' }, 'the stored roster is not mutated');
+  assert.deepEqual(plain(r.batters[1]), { num: '11', name: 'Carter' }, 'the stored roster is not mutated');
 });
 
 test('typing into an empty slot past the end of the order fills only that slot', () => {
   const out = L.setBatterField(roster(), 6, 'num', '22');
   assert.equal(out.batters.length, 7);
-  assert.deepEqual(out.batters[6], { num: '22', name: '' });
-  assert.deepEqual(out.batters[4], { num: '', name: '' });
+  assert.deepEqual(plain(out.batters[6]), { num: '22', name: '' });
+  assert.deepEqual(plain(out.batters[4]), { num: '', name: '' });
   assert.equal(L.positionOf(out, 1), 'SS', 'the defense still points at the same players');
 });
 

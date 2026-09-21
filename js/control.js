@@ -350,8 +350,9 @@ let overlayToken = null;
 async function loadRoster(id) {
   const { data: token } = await db.rpc('overlay_token', { p_game: id }); // creates the row if new
   overlayToken = token || null;
-  const { data } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
-  return (data && data.data) || {};
+  // Normalize on the way in: a roster written by an older pad points its defense
+  // at batting-order slots, and everything above this line works in player ids.
+  return L.normalizeRoster((data && data.data) || {});
 }
 // roster_rev rides Realtime so the overlay knows to re-pull what it can't
 // subscribe to. Both writes go through one RPC, in one transaction, with the
@@ -411,7 +412,7 @@ async function syncRoster(id, rev) {
   const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   if (error) { rosterHave = 0; return; }   // try again on the next row
   if (!game || game.id !== id || rosterSending || rosterNext) return;
-  game = { ...game, lineups: (data && data.data) || {} };
+  game = { ...game, lineups: L.normalizeRoster((data && data.data) || {}) };
   delete panelPainted.lineups;
   renderGame();
 }
@@ -1069,7 +1070,7 @@ async function loadTeamInto(side, id) {
   if (!t) return;
   const has = teamOf(side).batters.some((b) => b && (b.name || b.num));
   if (has && !confirm(`Replace this game's ${side} lineup with the saved "${t.name}" lineup?`)) return;
-  await saveRoster({ ...(game.lineups || {}), [side]: t.roster || {} });
+  await saveRoster({ ...(game.lineups || {}), [side]: L.normalizeTeam(t.roster || {}) });
   const patch = {};
   patch[side + '_name'] = t.name;
   if (t.abbr) patch[side + '_abbr'] = t.abbr;

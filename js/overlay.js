@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames } from './starting.js';
@@ -67,7 +67,8 @@ async function pullRoster(rev) {
   const bad = data === null;
   if (bad && !rosterBad) console.warn('Scoreboard: this overlay link\'s &t= token is not this game\'s. ' + LINK_STALE + '.');
   rosterBad = bad;
-  roster = data || {};
+  // Older pads wrote the defense as batting-order slots; the cards read player ids.
+  roster = normalizeRoster(data || {});
   rosterGen++;
   if (last) render(last);
 }
@@ -152,7 +153,7 @@ function renderSoccer(s) {
 function render(s) {
   if (!s) return;
   if (rosterToken && (s.roster_rev | 0) !== rosterRev) pullRoster(s.roster_rev | 0);
-  s = { ...s, lineups: roster }; // the roster arrives by RPC, not on the row
+  s = { ...s, lineups: roster }; // the roster arrives by RPC, not on the row (normalized in pullRoster)
   last = s;
   const sport = s.sport || 'baseball';
   el.awayAbbr.textContent = s.away_abbr || s.away_name;

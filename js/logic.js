@@ -227,74 +227,137 @@ export const FIELD_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'R
 export function teamPositions(g, side) {
   return (g.lineups && g.lineups[side] && g.lineups[side].positions) || {};
 }
-// Resolve a position to its {num,name}, or null if unset. P = the pitcher box.
+// Resolve a position to its {num,name}, or null if unset.
 export function fielderAt(g, side, pos) {
-  if (pos === 'P') { const p = teamLineup(g, side).pitcher; return filled(p) ? p : null; }
-  const idx = teamPositions(g, side)[pos];
-  if (idx == null) return null;
-  const b = teamLineup(g, side).batters[idx];
-  return filled(b) ? b : null;
+  const t = normalizeTeam((g.lineups || {})[side] || {});
+  const b = t.batters[slotOfBid(t, t.positions[pos])];
+  if (filled(b)) return b;
+  // A pitcher typed in before the order existed still belongs on the mound.
+  if (pos === 'P' && filled(t.pitcher)) return t.pitcher;
+  return null;
 }
 
-// Swap two batting-order slots in a team's roster blob (lineups[side]). Field
-// positions point at batting-order indices, so they are re-pointed to follow the
-// player — a fielder moved from 7th to 2nd keeps their spot on the diamond. The
-// pitcher is matched by num+name, not index, so it needs nothing. Returns a new
-// blob; the at-bat pointer (state.batIdx) is a slot, not a player, and is untouched.
-export function swapBatters(team, a, b) {
+// ---- Player identity -------------------------------------------------------
+// Every batter carries a `bid`, minted once and then kept for the life of the
+// roster. The defense points at bids, not at batting-order slots.
+//
+// Positions used to be slot numbers, so every reorder had to re-point them by
+// hand and any write that got the order wrong silently moved the defense with
+// it — a second-hand scramble on top of the first. A bid travels in the row it
+// belongs to, so dragging 7th up to 2nd needs no bookkeeping at all.
+//
+// The at-bat pointer (state.batIdx) stays a slot on purpose: in baseball the
+// order is the thing that persists, and a substitute bats where the player he
+// replaced batted.
+let bidSeq = 0;
+export function newBid() {
+  bidSeq = (bidSeq + 1) % 0xffff;
+  return `b${Date.now().toString(36)}${bidSeq.toString(36)}${Math.floor(Math.random() * 46656).toString(36)}`;
+}
+export function slotOfBid(team, bid) {
+  if (!bid) return -1;
+  const bs = (team && Array.isArray(team.batters)) ? team.batters : [];
+  return bs.findIndex((b) => b && b.bid === bid);
+}
+// Give every row a bid and re-point a legacy defense onto those bids. Safe to
+// run on an already-normalized roster (it mints nothing and changes nothing),
+// so it guards the boundary where a roster arrives AND the top of every
+// mutation — a blob written by an older pad still lands here first.
+export function normalizeTeam(team) {
   const t = team || {};
-  const batters = Array.isArray(t.batters) ? t.batters.slice() : [];
-  if (a === b || a < 0 || b < 0) return { ...t, batters };
-  while (batters.length <= Math.max(a, b)) batters.push({ num: '', name: '' });
-  [batters[a], batters[b]] = [batters[b], batters[a]];
-  const out = { ...t, batters };
-  if (t.positions) {
-    out.positions = {};
-    for (const [pos, idx] of Object.entries(t.positions)) out.positions[pos] = idx === a ? b : idx === b ? a : idx;
+  const src = Array.isArray(t.batters) ? t.batters : [];
+  const batters = src.map((b) => {
+    const row = b || { num: '', name: '' };
+    return row.bid ? row : { ...row, bid: newBid() };
+  });
+  const has = (bid) => batters.some((b) => b.bid === bid);
+  const positions = {};
+  for (const [pos, v] of Object.entries(t.positions || {})) {
+    if (!FIELD_POSITIONS.includes(pos)) continue;
+    // A number is the old slot-based form; a bid nobody holds points at a row
+    // that is gone, and is dropped rather than left pointing at a stranger.
+    if (typeof v === 'number') { const b = batters[v]; if (b) positions[pos] = b.bid; }
+    else if (has(v)) positions[pos] = v;
   }
+  const out = { ...t, batters, positions };
+  // Older rosters named the pitcher only by number and name. Give P a bid like
+  // every other spot; if the mound was never a row in the order, leave the
+  // typed pitcher alone rather than erasing it.
+  if (!positions.P) {
+    const p = t.pitcher || { num: '', name: '' };
+    const i = (p.num || p.name)
+      ? batters.findIndex((b) => (b.num || '') === (p.num || '') && (b.name || '') === (p.name || ''))
+      : -1;
+    if (i >= 0) positions.P = batters[i].bid;
+    else return { ...out, pitcher: { num: p.num || '', name: p.name || '' } };
+  }
+  return withPitcherMirror(out);
+}
+export const normalizeRoster = (lineups) => {
+  const out = {};
+  for (const [side, team] of Object.entries(lineups || {})) out[side] = normalizeTeam(team);
   return out;
+};
+// `pitcher` stays a plain {num, name} copy, because that is what the overlay's
+// cards and the pad's "vs P" line read. positions.P is the truth; this keeps the
+// copy in step after any edit.
+// `clearIfUnset` is for the move that takes the pitcher off the mound: an empty
+// P then means empty, rather than falling back to the typed pitcher it just left.
+function withPitcherMirror(t, clearIfUnset) {
+  // No P on the diamond: a pitcher typed in without a row in the order is all
+  // there is, and it stays.
+  if (!(t.positions || {}).P) return { ...t, pitcher: clearIfUnset ? { num: '', name: '' } : (t.pitcher || { num: '', name: '' }) };
+  const i = slotOfBid(t, t.positions.P);
+  const b = i >= 0 ? t.batters[i] : null;
+  return { ...t, pitcher: b && (b.num || b.name) ? { num: b.num || '', name: b.name || '' } : { num: '', name: '' } };
 }
 
-// ---- Positions from the lineup sheet ---------------------------------------
-// Every row in the lineup sheet has a position dropdown. The pitcher is stored
-// as {num, name} — the convention the overlay's cards and the pad's "vs P" line
-// already read — and the other eight point at batting-order indices. These keep
-// the two in step, so picking P from a row makes that player the pitcher.
+// Swap two batting-order slots in a team's roster blob (lineups[side]). The
+// defense follows the players for free — it points at their bids. Returns a new
+// blob; the at-bat pointer is a slot, not a player, and is untouched.
+export function swapBatters(team, a, b) {
+  const t = normalizeTeam(team);
+  const batters = t.batters.slice();
+  if (a === b || a < 0 || b < 0) return { ...t, batters };
+  while (batters.length <= Math.max(a, b)) batters.push({ num: '', name: '', bid: newBid() });
+  [batters[a], batters[b]] = [batters[b], batters[a]];
+  return { ...t, batters };
+}
+
+// ---- Positions from the field screen ---------------------------------------
+// Every spot on the diamond, P included, is positions[pos] = the bid of the
+// player standing there.
 export function pitcherIdx(team) {
-  const t = team || {};
-  const p = t.pitcher || {};
-  if (!(p.num || p.name)) return -1;
-  const bs = Array.isArray(t.batters) ? t.batters : [];
-  return bs.findIndex((b) => b && (b.num || '') === (p.num || '') && (b.name || '') === (p.name || ''));
+  const t = normalizeTeam(team);
+  return slotOfBid(t, t.positions.P);
 }
 // What a batting-order slot plays: 'P', a field spot, or '' (not in the field).
 export function positionOf(team, idx) {
-  if (pitcherIdx(team) === idx) return 'P';
-  const hit = Object.entries((team && team.positions) || {}).find(([, i]) => i === idx);
+  const t = normalizeTeam(team);
+  const b = t.batters[idx];
+  if (!b) return '';
+  const hit = Object.entries(t.positions || {}).find(([, bid]) => bid === b.bid);
   return hit ? hit[0] : '';
 }
 // Put slot `idx` at `pos` ('' = not in the field). Whoever held that spot goes
-// to the bench rather than trading places: the dropdown says where THIS player
+// to the bench rather than trading places: the tap says where THIS player
 // plays, and quietly moving someone else to a new spot would be a surprise.
 // Returns the new roster blob and the benched slot, or -1.
 export function setPosition(team, idx, pos) {
-  const t = team || {};
-  const batters = Array.isArray(t.batters) ? t.batters : [];
-  const positions = { ...(t.positions || {}) };
-  let pitcher = t.pitcher || { num: '', name: '' };
+  const t = normalizeTeam(team);
+  const batters = t.batters;
+  const positions = { ...t.positions };
+  const me = batters[idx] ? batters[idx].bid : null;
   let benched = -1;
-  const pi = pitcherIdx(t);
-  for (const k of Object.keys(positions)) if (positions[k] === idx) delete positions[k];
-  if (pi === idx) pitcher = { num: '', name: '' };
-  if (pos === 'P') {
-    if (pi >= 0 && pi !== idx) benched = pi;
-    const b = batters[idx] || {};
-    pitcher = { num: b.num || '', name: b.name || '' };
-  } else if (FIELD_POSITIONS.includes(pos)) {
-    if (positions[pos] != null && positions[pos] !== idx) benched = positions[pos];
-    positions[pos] = idx;
+  if (!me) return { team: t, benched };
+  const wasPitcher = positions.P === me;
+  for (const k of Object.keys(positions)) if (positions[k] === me) delete positions[k];
+  if (FIELD_POSITIONS.includes(pos)) {
+    const held = positions[pos];
+    if (held && held !== me) benched = slotOfBid(t, held);
+    positions[pos] = me;
   }
-  return { team: { ...t, positions, pitcher }, benched };
+  return { team: withPitcherMirror({ ...t, positions }, wasPitcher), benched };
 }
 // The Field screen: put lineup slot `idx` at `pos`, and the kid who had `pos`
 // TRADES into idx's old spot. Kids rotate far more often than they sit, so this
@@ -310,10 +373,8 @@ export function assignSpot(team, pos, idx) {
 }
 // Which lineup slot plays `pos`, or -1.
 export function slotAt(team, pos) {
-  const t = team || {};
-  if (pos === 'P') return pitcherIdx(t);
-  const i = (t.positions || {})[pos];
-  return i == null ? -1 : i;
+  const t = normalizeTeam(team);
+  return slotOfBid(t, t.positions[pos]);
 }
 
 // ---- Mid-Inning, on its own -----------------------------------------------
@@ -333,13 +394,10 @@ export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'wa
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
-  const t = team || {};
-  const batters = Array.isArray(t.batters) ? t.batters : [];
-  const p = t.pitcher || {};
+  const t = normalizeTeam(team);
   return FIELD_POSITIONS.filter((pos) => {
-    if (pos === 'P') return !(p.num || p.name);
-    const i = (t.positions || {})[pos];
-    return i == null || !filled(batters[i]);
+    if (pos === 'P' && filled(t.pitcher)) return false;
+    return !filled(t.batters[slotOfBid(t, t.positions[pos])]);
   });
 }
 // One typed field on one row, written over the stored roster.
@@ -355,25 +413,25 @@ export function missingPositions(team) {
 // The pitcher is a copy of a row's name and number, so an edit to that row
 // carries the pitcher with it instead of orphaning the mound.
 export function setBatterField(stored, idx, field, value) {
-  const t = stored || {};
+  const t = normalizeTeam(stored);
   if (idx < 0 || (field !== 'num' && field !== 'name')) return t;
-  const batters = Array.isArray(t.batters) ? t.batters.slice() : [];
-  while (batters.length <= idx) batters.push({ num: '', name: '' });
-  const pi = pitcherIdx(t);
-  batters[idx] = { ...(batters[idx] || {}), [field]: value };
-  const out = { ...t, batters };
-  if (pi === idx) { const b = batters[idx]; out.pitcher = { num: b.num || '', name: b.name || '' }; }
-  return out;
+  const batters = t.batters.slice();
+  while (batters.length <= idx) batters.push({ num: '', name: '', bid: newBid() });
+  batters[idx] = { ...batters[idx], [field]: value };
+  return withPitcherMirror({ ...t, batters });
 }
 
 // Ordered batting lineup for a side, each row tagged with its fielding position
 // (P for the pitcher, the assigned spot, or '' for DH/unset) and whether it's the
 // hitter at bat — for the lineup broadcast card.
 export function battingOrderCard(g, side) {
-  const t = teamLineup(g, side);
-  const positions = teamPositions(g, side);
+  const t = normalizeTeam((g.lineups || {})[side] || {});
+  const positions = t.positions;
   const posByIdx = {};
-  for (const [pos, idx] of Object.entries(positions)) posByIdx[idx] = pos;
+  for (const [pos, bid] of Object.entries(positions)) {
+    const i = slotOfBid(t, bid);
+    if (i >= 0) posByIdx[i] = pos;
+  }
   const p = t.pitcher || {};
   const hasP = p.num || p.name;
   // Only fill "DH" once a defense actually exists; otherwise leave it blank so a
