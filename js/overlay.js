@@ -462,6 +462,19 @@ async function loadRecap(key, again = true) {
     recapRetry = setTimeout(() => loadRecap(key, false), 1600);
   }
 }
+// Due Up, on Mid-Inning: the team coming to bat, leadoff first. Built here from
+// the roster this overlay holds privately, exactly as the Due Up card is since
+// v3.93 — the break is when a viewer wants to know who is up, and until now the
+// operator had to raise a second card to say so.
+function midDueUpHtml(s) {
+  if (rosterBad) return '';
+  const side = battingSide(s);
+  const up = dueUpCard(s, side, 3);
+  if (!up.length) return '';
+  const team = escapeHtml(side === 'home' ? (s.home_abbr || s.home_name || 'Home') : (s.away_abbr || s.away_name || 'Visitor'));
+  return `<div class="md-due"><span class="md-lab">Due up · ${team}</span>${up.map((b) =>
+    `<span class="md-who${b.current ? ' lead' : ''}">${b.num ? `<i>#${escapeHtml(b.num)}</i> ` : ''}${escapeHtml(b.name || '')}</span>`).join('')}</div>`;
+}
 function recapStripHtml(s) {
   const r = halfRecap(recapPlays, s);
   if (!r.rows.length) return '';
@@ -505,7 +518,7 @@ function cardSig(c, s) {
   }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {
-    return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}`;
+    return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}:${rosterGen}`;
   }
   // Final stays live too. It used to be a snapshot, so a score fixed after the
   // card went up — the most likely moment to notice one is wrong — never reached
@@ -587,6 +600,7 @@ function renderCard(s) {
     }
   }
   if (c.type === 'midinning') {
+    if (remount) { const du = layer.querySelector('.md-due'); if (du) du.classList.add('rp-go'); }
     if (remount && recapFor !== key) { recapPlays = null; loadRecap(key); }
     // The replay runs once, the first time the strip has something in it. A live
     // refresh rebuilds these elements without the class, so fixing a score
@@ -698,7 +712,8 @@ function buildCard(c, s) {
         <div class="side${sideCls('home')}">${logoHtml(s.home_logo_url)}<div class="cname">${escapeHtml(s.home_name || 'Home')}</div></div>
       </div>
       ${!fin && (s.sport || 'baseball') === 'baseball' ? recapStripHtml(s) : ''}
-      ${lineScoreHtml(s, !fin ? finishedHalf(s) : null, fin)}</div>`;
+      ${lineScoreHtml(s, !fin ? finishedHalf(s) : null, fin)}
+      ${!fin && (s.sport || 'baseball') === 'baseball' ? midDueUpHtml(s) : ''}</div>`;
   }
   if (c.type === 'final') {
     const ls = lineScoreHtml(s);

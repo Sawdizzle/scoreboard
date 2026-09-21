@@ -331,3 +331,16 @@ body.takeover #sponsor-bug { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .card.slab .fin-go, .card.slab .linescore.fin-go td { animation: none !important; }
 }
+
+/* ---- Mid-Inning: who is up next --------------------------------------------
+   One line under the line score: the team coming to bat, leadoff first and
+   marked. It lands as the break's closing beat, after the half has replayed. */
+.card.slab .md-due { margin-top: 34px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 12px 28px; font-size: 30px; font-weight: 800; }
+.card.slab .md-lab { font-size: 22px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent, #e0a92a); }
+.card.slab .md-who { color: #9aa8c2; }
+.card.slab .md-who i { font-style: normal; font-family: var(--num); opacity: 0.8; }
+.card.slab .md-who.lead { color: var(--chalk, #f2f6fc); }
+.card.slab .md-who.lead::before { content: '\25B8  '; color: var(--accent, #e0a92a); }
+.card.slab .md-due.rp-go { animation: rp-in 0.55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: 2.6s; }
+@media (prefers-reduced-motion: reduce) { .card.slab .md-due.rp-go { animation: none; } }
