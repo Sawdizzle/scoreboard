@@ -157,14 +157,14 @@ export function onRunnerPlay(g, from, kind) {
   if (kind === 'CS' || kind === 'PO') {
     const outs = (g.outs | 0) + 1;
     const patch = outs >= 3 ? endHalfPatch({ ...g, bases }) : { outs, bases };
-    return { type: 'runner', patch, payload: { play: playNote(g, kind, { outs: 1 }) },
+    return { type: 'runner', patch, payload: { from, kind, play: playNote(g, kind, { outs: 1 }) },
       anim: 'play', animMeta: { text: RUNNER_LABEL[kind] }, text: RUNNER_LABEL[kind] };
   }
   const to = NEXT_BASE[from];
   const runs = to ? 0 : 1;
   if (to) bases[to] = true;
   const text = kind === 'SB' ? (to ? `Stole ${to === 'second' ? '2nd' : '3rd'}` : 'Stole home') : RUNNER_LABEL[kind];
-  return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, kind, { runs }) },
+  return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { from, kind, runs, play: playNote(g, kind, { runs }) },
     anim: kind === 'SB' ? 'stolenbase' : runs ? 'run' : null, animMeta: {}, text };
 }
 
@@ -734,6 +734,46 @@ export function onPlay(g, { kind, pos = null, dest }) {
     animMeta: { text, side, idx: currentBatterIdx(g, side), runs },
     text,
   };
+}
+
+// ---- Who the event was about ----------------------------------------------
+// Every event carries a subject. This is the first half of the move to an
+// event-sourced game: today it is metadata on the log, and tomorrow it is what
+// a replay reads to decide whether the batting order moves at all.
+//
+// The rule it encodes is the one a scorer already knows and the pad did not:
+// only a terminal BATTER event ends a plate appearance. An out recorded on a
+// runner — a steal, a pickoff — leaves the count, the hitter and the order
+// exactly where they were. The pad learned that in v3.86 by routing the tap;
+// this records it in the data, where a fold can enforce it.
+//
+// `stamp` is the single place it is attached, so an action added later cannot
+// quietly ship without one. subjectTest in the suite walks every exported
+// action and fails if any of them comes back unstamped.
+export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@third', 'runners', 'game'];
+
+// Events named by the thing they happen to. Anything not here is a correction
+// or a clock/inning move and belongs to the game, not to a person.
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'hbp', 'hit',
+  'homerun', 'play', 'error', 'batter', 'batidx']);
+
+export function subjectOf(res, g) {
+  if (!res || !res.type) return 'game';
+  const given = res.payload && res.payload.subject;
+  if (given && SUBJECTS.includes(given)) return given;      // an action that knows better
+  if (res.type === 'runner') {
+    const from = res.payload && res.payload.from;
+    return from ? `runner@${from}` : 'runners';
+  }
+  if (res.type === 'advance' || res.type === 'clearbases') return 'runners';
+  if (BATTER_EVENTS.has(res.type)) return 'batter';
+  return 'game';
+}
+// Attach the subject to an action's payload. Idempotent, and it never
+// overwrites a subject the action set itself.
+export function stamp(res, g) {
+  if (!res || !res.type) return res;
+  return { ...res, payload: { ...(res.payload || {}), subject: subjectOf(res, g) } };
 }
 
 // ---- Manual adjusters (direct edits; undoable via apply_event) -------------

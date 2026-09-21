@@ -608,6 +608,9 @@ addEventListener('beforeunload', (e) => { if (queue.size()) { e.preventDefault()
 async function commit(res) {
   if (!game) return;
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
+  // Every event says who it was about before it goes anywhere. One place, so a
+  // key added later cannot write an event that belongs to nobody.
+  res = L.stamp(res, game);
   // The first play of the game is what makes it live. Riding the play's own
   // write means undoing that play puts the game back to Not started too.
   if (game.status === 'setup' && !('status' in res.patch)) {
