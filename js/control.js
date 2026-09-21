@@ -1783,7 +1783,7 @@ function svGo(pane) {
 $('setup-open').onclick = openSetup;
 // Back climbs one level: a panel pane (look-2) returns to its section (look),
 // a section returns home, and home leaves.
-const svUp = (pane) => (pane.includes('-') ? pane.split('-')[0] : 'home');
+const svUp = (pane) => (pane.includes('-') ? pane.split('-').slice(0, -1).join('-') : 'home');
 $('setup-back').onclick = () => (svPane === 'home' ? closeSetup() : svGo(svUp(svPane)));
 $('setup-view').addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
@@ -1808,7 +1808,13 @@ function renderSetupRows() {
   $('sv-show-val').textContent = on ? `${on} on` : 'Nothing extra';
   // The theme's own name, as its option reads it — no second list to drift.
   const opt = $('theme-sel').querySelector(`option[value="${game.theme || 'nightgame'}"]`);
-  $('sv-look-val').textContent = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
+  const themeName = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
+  $('sv-look-val').textContent = themeName;
+  $('sv-theme-val').textContent = themeName;
+  const presets = $('preset-sel').options.length - 1;   // minus the "— none saved —" row
+  $('sv-presets-val').textContent = presets > 0 ? `${presets} saved` : 'None saved';
+  const pos = (POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center').replace('-', ' ');
+  $('sv-pos-val').textContent = `${pos} · ${(game.scorebug_scale || 1).toFixed(2)}×`;
   const lvl = obsLevel();
   $('sv-obs-tag').textContent = lvl === null ? 'not connected' : (OBS_TIER[lvl] || 'no access');
 }

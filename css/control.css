@@ -951,7 +951,9 @@ body.setup-open { overflow: hidden; }
   font-family: inherit; font-weight: 500;
   background: none; border: none; border-radius: 0; text-decoration: none; }
 .set-row + .set-row { border-top: 1px solid var(--line); }
-.set-lab { flex: 1 1 auto; min-width: 0; }
+/* block, not inline: the sub-line under a label is a block child, and a
+   block inside an inline parent breaks the row into columns. */
+.set-lab { flex: 1 1 auto; min-width: 0; display: block; }
 .set-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
 /* The current value, right-aligned: a row should answer its question without
    being opened. */
@@ -993,6 +995,9 @@ button.set-row:active, a.set-row:active { background: var(--bg-2); }
 @media (hover: hover) { .set-row.danger:hover { background: var(--danger-bg); } }
 
 /* One line under a card, for the thing a row cannot say in four words. */
+/* A range inside a row takes the space a value would. */
+.set-row input[type="range"] { flex: 1 1 auto; min-width: 0; max-width: 190px; }
+.set-row .fxbtn, .set-row .ghost { flex: 0 0 auto; margin: 0; }
 .set-note { margin: 2px 2px 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 
 /* Batter strip: jersey number first, then name and who follows; pitcher on the right. */

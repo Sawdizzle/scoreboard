@@ -1032,11 +1032,22 @@
     </section>
 
     <section class="sv-pane" data-pane="look-0" data-title="Appearance" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="look-0-0"><span class="set-lab">Saved looks</span><span class="set-val" id="sv-presets-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-1"><span class="set-lab">Theme</span><span class="set-val" id="sv-theme-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-2"><span class="set-lab">Position &amp; size</span><span class="set-val" id="sv-pos-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-3"><span class="set-lab">Custom theme<span class="set-sub">Only shows on the Custom theme</span></span><span class="set-go">›</span></button>
+        </div>
+      </div>
+    </section>
 
-              <div class="panel-body">
-                <span class="sublabel">Saved looks</span>
-                <div class="audio-row">
-                  <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
+    <section class="sv-pane" data-pane="look-0-0" data-title="Saved looks" hidden>
+      <div class="set-sec">
+        <span class="set-head">A whole look, under a name</span>
+
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Preset</span><select class="set-input" id="preset-sel"><option value="">— none saved —</option></select></label>
                   <button id="preset-apply" class="fxbtn">Apply</button>
                 </div>
                 <input id="preset-name" placeholder="Name this look…" />
@@ -1044,10 +1055,14 @@
                   <button id="preset-save" class="fxbtn">💾 Save current</button>
                   <button id="preset-del" class="fxbtn cardclear">Delete</button>
                 </div>
+        <p class="set-note">A look is the theme, style, position, scale, sound and every customization — saved together and applied to any game in one tap.</p>
+      </div>
+    </section>
 
-                <div class="audio-row">
-                  <label class="sel">Theme
-                    <select id="theme-sel">
+    <section class="sv-pane" data-pane="look-0-1" data-title="Theme" hidden>
+      <div class="set-sec">
+<div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Theme</span><select class="set-input" id="theme-sel">
                       <option value="custom">✦ Custom (your colors)</option>
                       <option value="nightgame">Midnight</option>
                       <option value="espn">Broadcast Minimal</option>
@@ -1084,7 +1099,13 @@
                     </select>
                   </label>
                 </div>
-                <span class="sublabel">Position on the 1080p frame</span>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-0-2" data-title="Position &amp; size" hidden>
+      <div class="set-sec">
+        <span class="set-head">Where the bug sits on the 1080p frame</span>
+
                 <div class="pos-row">
                 <div class="pos-grid" id="pos-grid">
                   <button data-pos="top-left" title="Top-left">↖</button>
@@ -1103,14 +1124,16 @@
                   <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
                 </div>
                 </div>
-                <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
+                <label class="set-row"><span class="set-lab">Scale</span><input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b class="set-val" id="scale-val">1.0×</b></label>
+      </div>
+    </section>
 
-                <details class="panel">
-                  <summary>🎛️ Custom theme</summary>
-                  <div class="panel-body">
-                <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
+    <section class="sv-pane" data-pane="look-0-3" data-title="Custom theme" hidden>
 
-                <span class="sublabel">Row fills</span>
+                  
+                <p class="set-note">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
+
+                <span class="set-head">Row fills</span>
                 <div class="fill-row"><span class="fill-label">Away (row 1)</span>
                   <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
                   <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
@@ -1127,20 +1150,19 @@
                   <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
                   <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
                 </div>
-                <label class="slider">Gradient angle <input id="cust-angle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
+                <label class="set-row"><span class="set-lab">Gradient angle</span><input id="cust-angle" type="range" min="0" max="360" step="15" /><b class="set-val" id="cust-angle-val">180°</b></label>
 
-                <span class="sublabel">Text &amp; accents</span>
-                <div class="audio-row">
-                  <label class="sel">Text<input id="cust-text" type="color" /></label>
-                  <label class="sel">Accent<input id="cust-accent" type="color" /></label>
-                  <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
-                  <label class="sel">Border<input id="cust-line" type="color" /></label>
+                <span class="set-head">Text &amp; accents</span>
+                <div class="set-card">
+                  <div class="set-row"><span class="set-lab">Text</span><input id="cust-text" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Accent</span><input id="cust-accent" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Highlight</span><input id="cust-steel" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Border</span><input id="cust-line" type="color" /></div>
                 </div>
 
-                <span class="sublabel">Type &amp; layout</span>
-                <div class="audio-row">
-                  <label class="sel">Font
-                    <select id="cust-font">
+                <span class="set-head">Type &amp; layout</span>
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Font</span><select class="set-input" id="cust-font">
                       <option value="">Default</option>
                       <option value="condensed">Condensed</option>
                       <option value="clean">Clean sans</option>
@@ -1149,8 +1171,7 @@
                       <option value="system">System</option>
                     </select>
                   </label>
-                  <label class="sel">Corners
-                    <select id="cust-radius">
+                  <label class="set-row field"><span class="set-lab">Corners</span><select class="set-input" id="cust-radius">
                       <option value="">Default</option>
                       <option value="16">Round</option>
                       <option value="8">Soft</option>
@@ -1158,16 +1179,14 @@
                     </select>
                   </label>
                 </div>
-                <div class="audio-row">
-                  <label class="sel">Logo size
-                    <select id="cust-logosize">
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Logo size</span><select class="set-input" id="cust-logosize">
                       <option value="">Default</option>
                       <option value="sm">Small</option>
                       <option value="lg">Large</option>
                     </select>
                   </label>
-                  <label class="sel">Border
-                    <select id="cust-border">
+                  <label class="set-row field"><span class="set-lab">Border</span><select class="set-input" id="cust-border">
                       <option value="">Default</option>
                       <option value="0">None</option>
                       <option value="2">Thick</option>
@@ -1176,26 +1195,24 @@
                   </label>
                 </div>
                 <div class="toggles">
-                  <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
-                  <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
-                  <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
-                  <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
-                  <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
-                  <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
+                  <div class="set-row"><span class="set-lab">Team color bars</span><label class="set-switch"><input type="checkbox" id="cust-teambars" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Team-color fill</span><label class="set-switch"><input type="checkbox" id="cust-teamfill" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Hide logos</span><label class="set-switch"><input type="checkbox" id="cust-logos" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Hide detail line</span><label class="set-switch"><input type="checkbox" id="cust-detail" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">No shadow</span><label class="set-switch"><input type="checkbox" id="cust-shadow" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Uppercase</span><label class="set-switch"><input type="checkbox" id="cust-uppercase" /><i></i></label></div>
                 </div>
 
                     <button id="cust-reset" class="fxbtn">Reset customizations</button>
-                  </div>
-                </details>
-              </div>
-    </section>
 
-    <section class="sv-pane" data-pane="look-1" data-title="Sound" hidden>
 
-              <div class="panel-body">
-                <div class="audio-row">
-                  <label class="sel">Pack
-                    <select id="sound-pack">
+        </section>
+
+<section class="sv-pane" data-pane="look-1" data-title="Sound" hidden>
+
+              <div class="set-sec">
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Pack</span><select class="set-input" id="sound-pack">
                       <option value="bigleague">Big League (organ)</option>
                       <option value="modern">Modern (hits/whooshes)</option>
                       <option value="sandlot">Sandlot (playful)</option>
@@ -1208,26 +1225,32 @@
                       <option value="edm">EDM (drops)</option>
                     </select>
                   </label>
-                  <button id="mute-btn" class="fxbtn mute">Mute</button>
                 </div>
-                <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
-                <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
+              </div>
+
+              <div class="set-sec">
+                <span class="set-head">Volume</span>
+                <div class="set-card">
+                  <label class="set-row"><span class="set-lab">Master</span><input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+                  <label class="set-row"><span class="set-lab">Moments</span><input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
+                  <label class="set-row"><span class="set-lab">Organ</span><input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
+                  <div class="set-row"><span class="set-lab">Everything off</span><button id="mute-btn" class="fxbtn mute">Mute</button></div>
+                </div>
+                <p class="set-note">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
               </div>
     </section>
 
     <section class="sv-pane" data-pane="look-2" data-title="Sponsors" hidden>
 
-              <div class="panel-body">
+              <div class="set-sec">
                 <div id="sponsor-list"></div>
                 <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
                 <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
                 <div class="sp-timing">
-                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
-                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
+                  <label class="set-row field"><span class="set-lab">Every (sec)</span><input class="set-input" id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
+                  <label class="set-row field"><span class="set-lab">On screen (sec)</span><input class="set-input" id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
                 </div>
-                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
+                <p class="set-note">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
               </div>
     </section>
 
@@ -1255,8 +1278,8 @@
                 <button id="obs-tier-help" class="ghost small">What this unlocks</button>
               </div>
               <p id="obs-tier-note" class="hint" hidden></p>
-              <span class="sublabel">Instant replay</span>
-              <p class="hint">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
+              <span class="set-head">Instant replay</span>
+              <p class="set-note">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
               <div class="replay-row">
                 <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
                 <p id="replay-hint" class="hint replay-hint" hidden></p>
@@ -1265,12 +1288,12 @@
             
             
             
-            <p class="hint kbd-hint">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
+            <p class="set-note">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
     </section>
 
     <section class="sv-pane" data-pane="obs-0" data-title="Cameras" hidden>
 
-              <div class="panel-body">
+              <div class="set-sec">
                 <div id="scene-list" class="scene-list"></div>
                 <p id="scene-hint" class="hint"></p>
               </div>
@@ -1278,7 +1301,7 @@
 
     <section class="sv-pane" data-pane="obs-1" data-title="Stream &amp; record" hidden>
 
-              <div class="panel-body">
+              <div class="set-sec">
                 <div class="obs-row">
                   <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
                   <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
@@ -1290,21 +1313,21 @@
 
     <section class="sv-pane" data-pane="obs-2" data-title="Overlay link &amp; practice" hidden>
 
-              <div class="panel-body">
+              <div class="set-sec">
                 <div class="urlbar">
                   <input id="overlay-url" readonly />
                   <button id="copy-url-btn" class="ghost small">Copy</button>
                   <button id="open-url-btn" class="ghost small">Open ▸</button>
                 </div>
-                <p class="hint">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <p class="set-note">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
                 <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
 
-                <span class="sublabel">Share the recap</span>
+                <span class="set-head">Share the recap</span>
                 <div class="urlbar">
                   <input id="recap-url" readonly />
                   <button id="copy-recap-btn" class="ghost small">Copy</button>
                 </div>
-                <p class="hint">A public scoreboard page for parents — score and line score only, never lineups.</p>
+                <p class="set-note">A public scoreboard page for parents — score and line score only, never lineups.</p>
                 <div class="practice-row">
                   <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
                   <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
