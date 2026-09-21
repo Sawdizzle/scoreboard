@@ -1,5 +1,5 @@
 import { supabase, db } from './supabase.js';
-import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames } from './starting.js';
@@ -450,6 +450,13 @@ function cardSig(c, s) {
     const side = fieldingSide(s);
     return `${side}:${rosterGen}`;
   }
+  // Due Up follows the order while it is up: a new hitter at bat, the half
+  // rolling to the other team, or the roster being re-pulled all repaint it.
+  if (c.type === 'dueup') {
+    const side = battingSide(s);
+    const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
+    return `${side}:${idx}:${rosterGen}:${s.away_abbr}:${s.home_abbr}`;
+  }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {
     return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}`;
@@ -582,11 +589,23 @@ function buildCard(c, s) {
       </div>${ls}</div>`;
   }
   if (c.type === 'dueup') {
-    // Prefer the auto-snapshot of the next 3 hitters; fall back to typed text.
-    const body = Array.isArray(meta.lines) && meta.lines.length
-      ? `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`
-      : `<span>${escapeHtml(meta.text || '')}</span>`;
-    return `<div class="card lower-card"><b>Due Up</b>${body}</div>`;
+    // Live from the roster: the hitter at bat, then who follows. Typed text still
+    // wins when the operator wrote the card by hand, and an old card that carried
+    // its own snapshot still shows it.
+    let body;
+    if (meta.text) body = `<span>${escapeHtml(meta.text)}</span>`;
+    else if (Array.isArray(meta.lines) && meta.lines.length) {
+      body = `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`;
+    } else if (rosterBad) body = `<span class="du-empty">${LINK_STALE}</span>`;
+    else {
+      const up = dueUpCard(s, battingSide(s), 3);
+      body = up.length
+        ? `<div class="du-list">${up.map((b) =>
+            `<span class="${b.current ? 'du-cur' : ''}">${b.num ? `<i>#${escapeHtml(b.num)}</i> ` : ''}${escapeHtml(b.name || '')}</span>`).join('')}</div>`
+        : '<span class="du-empty">No lineup set</span>';
+    }
+    const team = escapeHtml(battingSide(s) === 'home' ? (s.home_abbr || s.home_name || 'Home') : (s.away_abbr || s.away_name || 'Visitor'));
+    return `<div class="card lower-card"><b>Due Up · ${team}</b>${body}</div>`;
   }
   if (c.type === 'lineup') {
     const side = meta.auto ? battingSide(s) : (meta.side || battingSide(s));

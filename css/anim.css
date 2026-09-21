@@ -58,6 +58,10 @@
 /* Column: a play adds the hitter's name under its title. Uppercase because play
    text arrives as "Groundout 6-3" and every other reveal title is capitals. */
 .rv-title { text-transform: uppercase; }
+.rv-title { display: inline-flex; align-items: center; gap: 12px; }
+/* The scorebook's K, in the stamp's red, in front of the title. */
+.rv-glyph { display: inline-block; font-size: 1.35em; line-height: 1; color: #fff; -webkit-text-stroke: 2px #d1483f; }
+.rv-glyph.backwards { transform: scaleX(-1); }
 .rv-sub { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--steel); margin-top: 3px; }
 .reveal-card { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--panel); color: var(--chalk); font-family: var(--disp); font-weight: 900;

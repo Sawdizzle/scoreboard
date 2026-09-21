@@ -255,6 +255,46 @@ test('Next Batter advances the order without counting a pitch', () => {
   assert.equal(r.patch.balls, 0);
 });
 
+// The card, as opposed to the batter strip: it starts with the hitter at bat.
+// It used to start one past him, so a leadoff hitter never made his own team's
+// Due Up card.
+test('the Due Up card leads with the hitter at bat', () => {
+  const g = G({ lineups: { away: order([1, 1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  const up = L.dueUpCard(g);
+  assert.deepEqual(up.map((b) => b.name), ['B1', 'B2', 'B3']);
+  assert.equal(up[0].current, true);
+  assert.equal(up[1].current, false);
+});
+
+test('the Due Up card wraps the order and skips the empty slots', () => {
+  const g = G({ lineups: { away: order([1, 0, 1, 1]) }, state: { batIdx: { away: 3 } } });
+  assert.deepEqual(L.dueUpCard(g).map((b) => b.name), ['B3', 'B0', 'B2']);
+});
+
+test('the Due Up card for the team coming up after the third out starts with its leadoff', () => {
+  // top of the 3rd just ended: home bats next, and its pointer is on the leadoff
+  const g = G({ half: 'bottom', lineups: { away: order([1, 1, 1]), home: order([1, 1, 1, 1]) },
+    state: { batIdx: { away: 2, home: 2 } } });
+  assert.deepEqual(L.dueUpCard(g).map((b) => b.name), ['B2', 'B3', 'B0']);
+});
+
+test('the Due Up card with no lineup is empty rather than invented', () => {
+  assert.deepEqual(L.dueUpCard(G()), []);
+});
+
+test('the strip still reads who follows — the hitter is already on the line above it', () => {
+  const g = G({ lineups: { away: order([1, 1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  assert.deepEqual(L.dueUp(g, 2).map((b) => b.name), ['B2', 'B3']);
+});
+
+test('a strikeout carries the hitter so the overlay can name him', () => {
+  const g = G({ strikes: 2, lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 1 } } });
+  const r = L.onStrike(g, { looking: true });
+  assert.equal(r.anim, 'strikeoutlooking');
+  assert.deepEqual(r.animMeta, { side: 'away', idx: 1 });
+  assert.ok(!JSON.stringify(r.animMeta).includes('B1'), 'and only the slot, never the name — the row is public');
+});
+
 test('due up lists the next hitters, wrapping and skipping the empties', () => {
   const g = G({ lineups: { away: order([1, 1, 0, 1]) }, state: { batIdx: { away: 2 } } });
   assert.deepEqual(L.dueUp(g, 3).map((b) => b.name), ['B3', 'B0', 'B1']);

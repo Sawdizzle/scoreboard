@@ -108,8 +108,9 @@ export function onStrike(g, { looking = false } = {}) {
   // 3rd strike ends the at-bat (pitch + advance batter); earlier strikes just count the pitch.
   if (strikes >= 3) {
     const res = outResult(g, 'strikeout');
+    const side = battingSide(g);
     return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), inputs, play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
-      anim: looking ? 'strikeoutlooking' : 'strikeout' };
+      anim: looking ? 'strikeoutlooking' : 'strikeout', animMeta: { side, idx: currentBatterIdx(g, side) } };
   }
   return { type: 'strike', patch: withPitch(g, { strikes }), payload: { inputs } };
 }
@@ -512,6 +513,24 @@ export function dueUp(g, n = 3) {
   while (out.length < n && seen < total) {
     j = (j + 1) % total; seen++;
     if (filled(batters[j])) out.push(batters[j]);
+  }
+  return out;
+}
+
+// The Due Up card: who is coming to the plate, starting with the one at bat.
+// dueUp() above is "who follows" — the batter strip wants that, because the
+// hitter is already on the line above it. The card is the list a broadcast
+// shows between innings, and there the first name is the most important one:
+// it skipped him, so a leadoff hitter never appeared on his own team's card.
+// Each entry carries `current` so the card can mark who is up now.
+export function dueUpCard(g, side = battingSide(g), n = 3) {
+  const { batters } = teamLineup(g, side);
+  const total = batters.length;
+  const out = [];
+  const start = currentBatterIdx(g, side);
+  for (let step = 0; step < total && out.length < n; step++) {
+    const j = (start + step) % total;
+    if (filled(batters[j])) out.push({ ...batters[j], current: j === start });
   }
   return out;
 }

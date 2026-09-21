@@ -1364,11 +1364,13 @@ async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
   if (text) meta.text = text;
-  // Due Up auto-fills the batting team's next 3 hitters (unless you typed names).
-  if (type === 'dueup' && !text) {
-    const lines = L.dueUp(game, 3).map((b) => (b.num ? `#${b.num} ` : '') + b.name).filter((s) => s.trim());
-    if (lines.length) meta.lines = lines;
-  }
+  // Due Up builds itself in the overlay, live, from the roster the overlay holds
+  // privately — the hitter at bat and the two behind him, following the order
+  // as it moves. It used to be a snapshot of names written into this card, on
+  // the public games row: frozen the moment it went up, and a list of children's
+  // names readable by anyone with the game id, which is what moving rosters to
+  // their own table was for.
+  if (type === 'dueup' && !text) meta.auto = true;
   // Defense card always tracks the fielding team live (resolved in the overlay);
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;

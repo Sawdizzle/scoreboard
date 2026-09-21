@@ -41,14 +41,18 @@ export function playAnimation(anim) {
   switch (anim && anim.type) {
     case 'run':             return runFlash();
     case 'homerun':         return homerun();          // stays centered
-    case 'strikeout':       return stamp('K', 'fx-k'); // stays centered
-    case 'strikeoutlooking':return stamp('K', 'fx-k backwards'); // backwards K, centered
     case 'touchdown':       return touchdown();        // stays centered
     case 'walkoff':         return walkoff();          // stays centered
     case 'goal':            return goalCelebration();  // stays centered
     // These slide out from behind the bug:
     // A play from the pad: "Groundout 6-3", with the hitter's name under it.
     case 'play':       if (meta.runs) runFlash(); return reveal(meta.text || 'PLAY', meta.sub);
+    // A strikeout is a play like any other, not a full-frame moment: it happens
+    // several times an inning, and a stamp over the whole picture every time was
+    // more than the play is worth. The K rides in front of the title, reversed
+    // for a called third strike, the way the scorebook writes it.
+    case 'strikeout':        return reveal('STRIKEOUT', meta.sub, 'K');
+    case 'strikeoutlooking': return reveal('STRIKEOUT LOOKING', meta.sub, 'K', 'backwards');
     case 'doubleplay': return reveal(meta.text || 'DOUBLE PLAY', meta.sub);
     case 'webgem':     return reveal('WALK');
     case 'stolenbase': return reveal('STOLEN BASE');
@@ -67,12 +71,13 @@ export function playAnimation(anim) {
 
 // A same-size card that slides out from behind the bug — up if the bug sits low,
 // down if it's anchored at the top. Ends hidden behind the bug again.
-function reveal(title, sub) {
+function reveal(title, sub, glyph, glyphCls = '') {
   const layer = document.getElementById('reveal');
   if (!layer) return;
   const down = (document.body.dataset.pos || 'bottom-center').startsWith('top');
   layer.className = down ? 'from-top' : 'from-bottom';
-  layer.innerHTML = `<div class="reveal-card"><span class="rv-title">${esc(title)}</span>${sub ? `<span class="rv-sub">${esc(sub)}</span>` : ''}</div>`;
+  const g = glyph ? `<span class="rv-glyph ${glyphCls}" aria-hidden="true">${esc(glyph)}</span>` : '';
+  layer.innerHTML = `<div class="reveal-card"><span class="rv-title">${g}${esc(title)}</span>${sub ? `<span class="rv-sub">${esc(sub)}</span>` : ''}</div>`;
   const card = layer.querySelector('.reveal-card');
   card.style.animation = `${down ? 'reveal-down' : 'reveal-up'} 2.6s cubic-bezier(.2, .8, .2, 1) both`;
   clearTimeout(layer._t);
