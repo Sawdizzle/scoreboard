@@ -350,6 +350,7 @@ let overlayToken = null;
 async function loadRoster(id) {
   const { data: token } = await db.rpc('overlay_token', { p_game: id }); // creates the row if new
   overlayToken = token || null;
+  const { data } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   // Normalize on the way in: a roster written by an older pad points its defense
   // at batting-order slots, and everything above this line works in player ids.
   return L.normalizeRoster((data && data.data) || {});
