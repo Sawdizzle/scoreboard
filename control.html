@@ -308,6 +308,12 @@
         <span class="air-dot" aria-hidden="true"></span><span id="air-lab" class="air-lab"></span>
         <button id="air-clear" class="air-x" type="button" aria-label="Take the card off air">✕</button>
       </span>
+      <!-- The shadow fold (rework stage 2): the pad rebuilds the game from its
+           own event log and says whether that answer matches the row it is
+           showing. Read-only — nothing on the scorebug comes from it. Tap to
+           re-check and to see what disagreed. -->
+      <button id="fold-badge" class="fold-badge" type="button" data-state="idle" hidden
+              title="Rebuild this game from its event log and compare">◌</button>
       <span id="conn-dot" class="conn-dot" data-state="connecting" title="Connecting…"></span>
     </header>
 
