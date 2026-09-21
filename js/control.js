@@ -472,6 +472,9 @@ async function shadowFold(why = 'auto') {
   const id = game.id;
   foldBusy = true;
   foldBadge('busy', '◌', 'Rebuilding from the event log…');
+  // Belt and braces: this is a check on the model, not part of scoring. Nothing
+  // it can do — a bad row, a rule that throws on a shape it has not seen — may
+  // reach the operator as anything louder than a grey badge.
   try {
     const { data, error } = await db.from('events').select('type,payload,prev_state')
       .eq('game_id', id).order('id', { ascending: true });
@@ -494,6 +497,9 @@ async function shadowFold(why = 'auto') {
     } else {
       foldBadge('ok', '✓', `The rebuild of all ${applied} events matches the pad exactly`);
     }
+  } catch (e) {
+    console.warn('Scoreboard shadow fold failed (scoring is unaffected):', e);
+    foldBadge('idle', '◌', 'The rebuild could not run — scoring is unaffected');
   } finally { foldBusy = false; }
 }
 // After a burst of taps, once — not per pitch, which would be a select per
