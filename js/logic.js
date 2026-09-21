@@ -183,6 +183,29 @@ export function onBalk(g) {
     anim: 'play', animMeta: { text: 'Balk', runs }, text: runs ? 'Balk · run scores' : 'Balk · runners up' };
 }
 
+// Batter's interference on a play at a base (the catcher's throw on a steal).
+// The batter is out, the pitch counts, and every runner goes back to the base
+// he held: nobody advances. One exception, from the rulebook: with fewer than
+// 2 outs and the play on a runner trying to score from 3rd, THAT runner is out
+// instead, and the batter stays up with the count as it was.
+// (If the catcher throws the runner out anyway, the interference is ignored:
+// record Caught stealing instead.)
+export function onBatterInterference(g, from) {
+  const b = safeBases(g.bases);
+  if (!b[from]) return null;
+  const side = battingSide(g);
+  const text = 'Batter’s interference';
+  if (from === 'third' && (g.outs | 0) < 2) {
+    const bases = { ...b, third: false };
+    const patch = withPitch(g, { outs: (g.outs | 0) + 1, bases });
+    return { type: 'bint', patch, payload: { from, inputs: { from }, subject: 'runner@third', play: playNote(g, 'BI', { outs: 1 }) },
+      anim: 'play', animMeta: { text: 'Runner out · batter’s interference' }, text: 'Batter’s interference · runner out at home' };
+  }
+  const res = outResult({ ...g, bases: b }, 'bint');
+  return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), from, inputs: { from }, play: playNote(g, 'BI', { outs: 1 }) },
+    anim: 'play', animMeta: { text, side, idx: currentBatterIdx(g, side) }, text: `${text} · batter out` };
+}
+
 export function onRunnerPlay(g, from, kind) {
   if (!RUNNER_LABEL[kind] || runnerBlocked(g, from, kind)) return null;
   const b = safeBases(g.bases);
@@ -446,7 +469,7 @@ export function halfEndsGame(after) {
   return inn - 1 >= reg && h !== a;                             // a full last (or extra) inning just ended
 }
 // A play that belongs to the new half takes Mid-Inning down.
-export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'run', 'error']);
+export const HALF_STARTERS = new Set(['ball', 'strike', 'foul', 'strikeout', 'walk', 'ibb', 'hbp', 'ci', 'hit', 'play', 'homerun', 'runner', 'balk', 'bint', 'run', 'error']);
 
 // The spots nobody fills yet, in field order — the sheet's field check.
 export function missingPositions(team) {
@@ -666,7 +689,7 @@ export const PLAY_LABEL = {
   H1: 'Single', H2: 'Double', H3: 'Triple',
   // Recorded for the play-by-play by their own buttons, not the ball-in-play sheet.
   K: 'Strikeout swinging', KL: 'Strikeout looking', BB: 'Walk', IBB: 'Intentional walk', HBP: 'Hit by pitch', CI: 'Catcher’s interference',
-  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', HR: 'Home run', OUT: 'Out',
+  SB: 'Stolen base', CS: 'Caught stealing', PO: 'Picked off', ADV: 'Runner advanced', BK: 'Balk', BI: 'Batter’s interference', HR: 'Home run', OUT: 'Out',
 };
 
 // The name-free note an at-bat leaves in the event payload, which apply_event
@@ -817,7 +840,7 @@ export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@thir
 
 // Events named by the thing they happen to. Anything not here is a correction
 // or a clock/inning move and belongs to the game, not to a person.
-const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'hit',
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'ibb', 'hbp', 'ci', 'bint', 'hit',
   'homerun', 'play', 'error', 'batter', 'batidx']);
 
 export function subjectOf(res, g) {
@@ -921,6 +944,7 @@ const REBUILD = {
   half:      (g) => onToggleHalf(g),
   inning:    (g, p) => (p.inputs ? onNudgeInning(g, p.inputs.d) : null),
   balk:      (g) => onBalk(g),
+  bint:      (g, p) => (p.from ? onBatterInterference(g, p.from) : null),
   runner:    (g, p) => (p.from && p.kind ? onRunnerPlay(g, p.from, p.kind) : null),
   base:      (g, p) => (p.inputs && p.inputs.key ? toggleBase(g, p.inputs.key) : null),
   // Built on the pad from their own sheets, so the fold rebuilds them from the

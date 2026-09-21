@@ -889,7 +889,9 @@ function paintRunnerSheet(only = runnerOnly) {
     };
     return `<div class="rn-row"><b class="rn-who">On ${RN_BASE[k]}</b>` +
       btn('SB', `Stole ${RN_NEXT[k]}`) + btn('CS', 'Caught stealing') + btn('PO', 'Picked off') +
-      btn('ADV', `To ${RN_NEXT[k]} · WP/PB`) + `</div>`;
+      btn('ADV', `To ${RN_NEXT[k]} · WP/PB`) +
+      // The batter got in the way of the throw on this runner.
+      btn('BI', 'Batter’s interference') + `</div>`;
   }).join('');
 }
 function openRunners(only = null) { if (!game) return; paintRunnerSheet(only); openSheet('runners-sheet'); }
@@ -904,7 +906,8 @@ $('runners-done').onclick = () => closeSheet('runners-sheet');
 $('rn-list').onclick = (e) => {
   const o = e.target.closest('.rn-b'); if (!o) return;
   if (o.dataset.why) return showToast(o.dataset.why, 3000);
-  const r = L.onRunnerPlay(game, o.dataset.from, o.dataset.kind);
+  const r = o.dataset.kind === 'BI' ? L.onBatterInterference(game, o.dataset.from)
+    : L.onRunnerPlay(game, o.dataset.from, o.dataset.kind);
   if (!r) return;
   commit(r);
   showToast(r.text, 1800);

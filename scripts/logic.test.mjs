@@ -1157,3 +1157,32 @@ test('a batter-reaching stinger names the slot, never the player', () => {
   const r = L.onHitByPitch(G({ lineups: { away: order([1, 1]) }, state: { batIdx: { away: 1 } } }));
   assert.deepEqual(r.animMeta, { text: 'Hit by pitch', side: 'away', idx: 1, runs: 0 });
 });
+
+test('batter’s interference: batter out, runners go back, pitch counts, order moves', () => {
+  const g = G({ balls: 1, strikes: 1, outs: 0, bases: bases(1, 0, 0), lineups: { away: order([1, 1]) } });
+  const r = L.onBatterInterference(g, 'first');
+  assert.equal(r.type, 'bint');
+  assert.equal(r.patch.outs, 1);
+  assert.equal(r.patch.bases, undefined, 'bases untouched: the runner returns to 1st');
+  assert.equal(r.patch.balls, 0);
+  assert.equal(r.patch.state.batIdx.away, 1, 'next batter up');
+  assert.deepEqual(r.patch.state.pitches, { home: 1 });
+  assert.equal(r.payload.play.kind, 'BI');
+  assert.equal(L.subjectOf(r), 'batter');
+});
+
+test('batter’s interference on a play at home with < 2 outs: the runner is out, batter stays', () => {
+  const g = G({ balls: 2, strikes: 1, outs: 1, bases: bases(1, 0, 1), state: { batIdx: { away: 3 } } });
+  const r = L.onBatterInterference(g, 'third');
+  assert.equal(r.patch.outs, 2);
+  assert.deepEqual(r.patch.bases, bases(1, 0, 0));
+  assert.equal(r.patch.balls, undefined, 'count untouched');
+  assert.equal(r.patch.state.batIdx.away, 3, 'same batter');
+  assert.equal(L.subjectOf(r), 'runner@third');
+});
+
+test('batter’s interference with 2 outs ends the half on the batter, and no run scores', () => {
+  const r = L.onBatterInterference(G({ outs: 2, bases: bases(0, 0, 1) }), 'third');
+  assert.equal(r.patch.half, 'bottom');
+  assert.equal(r.patch.away_score, undefined);
+});
