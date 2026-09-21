@@ -160,3 +160,16 @@ test('a big margin that went the distance is not a run-rule game', () => {
 test('no run-rule setting means no run-rule tag, however lopsided', () => {
   assert.equal(L.finalStory(fin({ inning: 3, away_score: 15, home_score: 0 })).runRule, false);
 });
+
+test('batter’s interference replays as an out under its own name', () => {
+  // The play row carries its own out, so halfRecap counts it without knowing the kind.
+  const r = L.halfRecap([
+    play(3, 'top', 'H1'),
+    play(3, 'top', 'BI', { outs: 1 }),
+    play(3, 'top', 'K', { outs: 1 }),
+    play(3, 'top', 'GB', { code: '6-3', outs: 1 }),
+  ], game);
+  assert.equal(r.outs, 3);
+  assert.equal(r.rows[1].label, 'Batter’s interference');
+  assert.equal(r.oneTwoThree, false);
+});
