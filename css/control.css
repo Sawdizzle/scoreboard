@@ -995,6 +995,17 @@ button.set-row:active, a.set-row:active { background: var(--bg-2); }
 @media (hover: hover) { .set-row.danger:hover { background: var(--danger-bg); } }
 
 /* One line under a card, for the thing a row cannot say in four words. */
+/* A team reads as a crest, a name and what is in it. */
+.team-crest { flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px; background: var(--bg-2);
+  font-family: var(--num); font-size: 19px; font-weight: 700; letter-spacing: 0.02em; color: #f2f6fc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+.team-row { gap: 12px; }
+.team-row .set-lab b { display: block; font-size: 16px; font-weight: 700; }
+.team-crest-card { display: flex; align-items: center; gap: 13px; padding: 13px; }
+.team-crest-card .team-crest { width: 54px; height: 54px; border-radius: 14px; font-size: 23px; }
+.team-crest-card .set-lab b { display: block; font-size: 17px; font-weight: 700; }
+
 /* A range inside a row takes the space a value would. */
 .set-row input[type="range"] { flex: 1 1 auto; min-width: 0; max-width: 190px; }
 .set-row .fxbtn, .set-row .ghost { flex: 0 0 auto; margin: 0; }

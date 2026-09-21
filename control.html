@@ -742,22 +742,12 @@
       </div>
 
       <section class="lu-side" id="lu-side-away" aria-label="Away lineup">
-        <div class="team-load">
-          <select id="team-sel-away" aria-label="Load a saved team for away"><option value="">— load saved team —</option></select>
-          <button id="team-save-away" class="fxbtn">💾 Save</button>
-          <button id="team-del-away" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
-        </div>
         <button type="button" class="fieldcheck" id="fieldcheck-away"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-away"></div>
       </section>
 
       <section class="lu-side" id="lu-side-home" aria-label="Home lineup" hidden>
-        <div class="team-load">
-          <select id="team-sel-home" aria-label="Load a saved team for home"><option value="">— load saved team —</option></select>
-          <button id="team-save-home" class="fxbtn">💾 Save</button>
-          <button id="team-del-home" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
-        </div>
         <button type="button" class="fieldcheck" id="fieldcheck-home"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-home"></div>
@@ -943,23 +933,117 @@
       <div class="set-sec">
         <span class="set-head">Away / visitor</span>
         <div class="set-card">
+          <button class="set-row team-row" type="button" data-go="teams-away">
+            <span class="team-crest" id="card-crest-away">—</span>
+            <span class="set-lab"><b id="card-name-away">—</b><span class="set-sub" id="card-sub-away">—</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Home</span>
+        <div class="set-card">
+          <button class="set-row team-row" type="button" data-go="teams-home">
+            <span class="team-crest" id="card-crest-home">—</span>
+            <span class="set-lab"><b id="card-name-home">—</b><span class="set-sub" id="card-sub-home">—</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-swap"><span class="set-lab">⇅ Swap home and away<span class="set-sub">Names, colours, logos and both rosters</span></span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">A team is a name, an abbreviation, a colour, a logo and a roster. Saved teams carry all of it, so loading one fills the card and the lineup at once.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams-away" data-title="Away team" hidden>
+      <div class="set-sec">
+        <div class="set-card team-crest-card">
+          <span class="team-crest" id="crest-away">—</span>
+          <span class="set-lab">
+            <b id="crest-name-away">—</b>
+            <span class="set-sub" id="crest-sub-away">—</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Identity</span>
+        <div class="set-card">
           <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-away-name" placeholder="Visitor" /></label>
           <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-away-abbr" placeholder="VIS" maxlength="6" /></label>
           <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-away-logo" placeholder="optional" /></label>
-          <label class="set-row"><span class="set-lab">Colour</span><input id="su-away-color" type="color" /></label>
+          <div class="set-row"><span class="set-lab">Colour</span><input id="su-away-color" type="color" /></div>
         </div>
       </div>
+
       <div class="set-sec">
-        <span class="set-head">Home</span>
+        <span class="set-head">Roster</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-lineup-away"><span class="set-lab">Batting order</span><span class="set-val" id="team-order-away">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" id="team-field-away"><span class="set-lab">Positions</span><span class="set-val" id="team-pos-away">—</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">The same two screens the batter line opens mid-game, reached from the team they belong to.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">My teams</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Swap in</span>
+            <select class="set-input" id="team-sel-away" aria-label="Load a saved team for away"><option value="">— saved teams —</option></select>
+          </label>
+          <button class="set-row" type="button" id="team-save-away"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <button class="set-row danger" type="button" id="team-del-away"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams-home" data-title="Home team" hidden>
+      <div class="set-sec">
+        <div class="set-card team-crest-card">
+          <span class="team-crest" id="crest-home">—</span>
+          <span class="set-lab">
+            <b id="crest-name-home">—</b>
+            <span class="set-sub" id="crest-sub-home">—</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Identity</span>
         <div class="set-card">
           <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-home-name" placeholder="Home" /></label>
           <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-home-abbr" placeholder="HOME" maxlength="6" /></label>
           <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-home-logo" placeholder="optional" /></label>
-          <label class="set-row"><span class="set-lab">Colour</span><input id="su-home-color" type="color" /></label>
+          <div class="set-row"><span class="set-lab">Colour</span><input id="su-home-color" type="color" /></div>
         </div>
-        <p class="set-note">Saved teams carry their own name, colour, logo and roster — load one from the Lineup screen.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Roster</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-lineup-home"><span class="set-lab">Batting order</span><span class="set-val" id="team-order-home">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" id="team-field-home"><span class="set-lab">Positions</span><span class="set-val" id="team-pos-home">—</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">The same two screens the batter line opens mid-game, reached from the team they belong to.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">My teams</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Swap in</span>
+            <select class="set-input" id="team-sel-home" aria-label="Load a saved team for home"><option value="">— saved teams —</option></select>
+          </label>
+          <button class="set-row" type="button" id="team-save-home"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <button class="set-row danger" type="button" id="team-del-home"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
+        </div>
       </div>
     </section>
+
 
     <section class="sv-pane" data-pane="game" data-title="Sport &amp; scorebug" hidden>
       <div class="set-sec">

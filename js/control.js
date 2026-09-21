@@ -1154,11 +1154,79 @@ async function loadTeams() {
   for (const side of ['away', 'home']) {
     const sel = $('team-sel-' + side); if (!sel) continue;
     const cur = sel.value;
-    sel.innerHTML = '<option value="">— load saved team —</option>' +
+    sel.innerHTML = '<option value="">— saved teams —</option>' +
       savedTeams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
     if (savedTeams.some((t) => t.id === cur)) sel.value = cur;
   }
 }
+// ---- The team screens -----------------------------------------------------
+// A team is a name, an abbreviation, a colour, a logo and a roster. The teams
+// table has stored it that way since saved teams existed; the pad was the only
+// thing that split identity into Setup and the roster into the Lineup screen,
+// two taps apart with nothing saying they were the same thing.
+const monogram = (side) => {
+  const ab = String(game[side + '_abbr'] || game[side + '_name'] || '').trim();
+  return ab ? ab.slice(0, 3).toUpperCase() : '—';
+};
+const savedTeamFor = (side) => {
+  const name = String(game[side + '_name'] || '').trim().toLowerCase();
+  return name ? savedTeams.find((t) => String(t.name).trim().toLowerCase() === name) : null;
+};
+function renderTeamCards() {
+  if (!game) return;
+  for (const side of ['away', 'home']) {
+    const t = L.normalizeTeam((game.lineups || {})[side] || {});
+    const players = t.batters.filter((b) => b && (b.num || b.name)).length;
+    const missing = L.missingPositions(t).length;
+    const saved = savedTeamFor(side);
+    const name = game[side + '_name'] || (side === 'away' ? 'Visitor' : 'Home');
+    const sub = [
+      game[side + '_abbr'] || '—',
+      players ? `${players} player${players > 1 ? 's' : ''}` : 'no lineup',
+      players ? (missing ? `${9 - missing} of 9 positions` : 'all nine set') : null,
+      saved ? 'saved team' : null,
+    ].filter(Boolean).join(' · ');
+    for (const p of ['card-', '']) {
+      const crest = $(p ? 'card-crest-' + side : 'crest-' + side);
+      const nm = $(p ? 'card-name-' + side : 'crest-name-' + side);
+      const sb = $(p ? 'card-sub-' + side : 'crest-sub-' + side);
+      if (!crest) continue;
+      crest.textContent = monogram(side);
+      crest.style.background = game[side + '_color'] || '#26314a';
+      nm.textContent = name;
+      sb.textContent = sub;
+    }
+    $('team-order-' + side).textContent = players ? `${players} in the order` : 'Not set';
+    $('team-pos-' + side).textContent = players ? (missing ? `${missing} empty` : '✓ all nine') : '—';
+    $('team-del-' + side).disabled = !saved;
+  }
+}
+for (const side of ['away', 'home']) {
+  $('team-lineup-' + side).onclick = () => { closeSetup(); openLineupSheet(side); };
+  $('team-field-' + side).onclick = () => openField(side);
+}
+// Swapping sides is one write for the identities and one for the rosters, plus
+// the at-bat pointers and pitch counts that belong to them. Mid-game it would
+// be a mess, so it asks.
+$('team-swap').onclick = async () => {
+  if (!game) return;
+  if (!confirm('Swap home and away? Names, colours, logos, both rosters and their pitch counts change sides.')) return;
+  const lineups = game.lineups || {};
+  const st = game.state || {};
+  const bi = st.batIdx || {}, pi = st.pitches || {};
+  await saveRoster({ ...lineups, away: lineups.home || {}, home: lineups.away || {} }, { allowClear: true });
+  await writeField({
+    away_name: game.home_name, home_name: game.away_name,
+    away_abbr: game.home_abbr, home_abbr: game.away_abbr,
+    away_color: game.home_color, home_color: game.away_color,
+    away_logo_url: game.home_logo_url, home_logo_url: game.away_logo_url,
+    state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 } },
+  });
+  fillSetup();
+  renderTeamCards();
+  showToast('⇅ Sides swapped');
+};
+
 async function saveTeam(side) {
   if (!game) return;
   const name = String(game[side + '_name'] || '').trim();
@@ -1174,6 +1242,7 @@ async function saveTeam(side) {
   const { error } = await db.from('teams').upsert(row, { onConflict: 'owner_id,name' });
   if (error) return alert(error.message);
   await loadTeams();
+  renderTeamCards();
   showToast(`💾 Saved "${name}"`);
 }
 async function loadTeamInto(side, id) {
@@ -1197,17 +1266,22 @@ async function loadTeamInto(side, id) {
   };
   await writeField(patch);
   fillLineup(side); // force-refresh inputs even though focus sits in this panel
+  fillSetup();
   renderGame();
+  renderTeamCards();
   showToast(`📥 Loaded "${t.name}"`);
 }
 async function deleteTeam(side) {
-  const id = $('team-sel-' + side).value;
-  if (!id) return showToast('Pick a saved team to delete');
-  const t = savedTeams.find((x) => x.id === id);
-  if (!confirm(`Delete saved team "${t ? t.name : ''}"? This won't change any game.`)) return;
-  const { error } = await db.from('teams').delete().eq('id', id);
+  // The team this screen is about, not whatever is showing in a picker — the
+  // picker is for swapping one in, and deleting the thing you were about to
+  // load is not what the row says.
+  const t = savedTeamFor(side);
+  if (!t) return showToast('This team is not saved yet');
+  if (!confirm(`Delete saved team "${t.name}"? This game keeps its teams and lineups; only the saved copy goes.`)) return;
+  const { error } = await db.from('teams').delete().eq('id', t.id);
   if (error) return alert(error.message);
   await loadTeams();
+  renderTeamCards();
   showToast('Saved team deleted');
 }
 for (const side of ['away', 'home']) {
@@ -1779,6 +1853,7 @@ function svGo(pane) {
   $('setup-title').textContent = title;
   $('setup-view').scrollTop = 0;
   if (pane === 'home') renderSetupRows();
+  if (pane.startsWith('teams')) renderTeamCards();
 }
 $('setup-open').onclick = openSetup;
 // Back climbs one level: a panel pane (look-2) returns to its section (look),
@@ -1923,10 +1998,11 @@ for (const id of Object.keys(SU_TEXT)) {
     const stored = Object.values(patch)[0];
     if (typeof stored === 'string') $(id).value = stored;
     renderSetupRows();
+    renderTeamCards();
   });
 }
-$('su-away-color').addEventListener('change', (e) => writeField({ away_color: e.target.value }));
-$('su-home-color').addEventListener('change', (e) => writeField({ home_color: e.target.value }));
+$('su-away-color').addEventListener('change', (e) => { writeField({ away_color: e.target.value }); renderTeamCards(); });
+$('su-home-color').addEventListener('change', (e) => { writeField({ home_color: e.target.value }); renderTeamCards(); });
 $('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
 $('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
 $('su-regulation').addEventListener('change', () => { writeField({ regulation_innings: parseInt($('su-regulation').value, 10) || 0 }); renderSetupRows(); });
