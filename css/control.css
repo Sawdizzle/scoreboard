@@ -754,6 +754,14 @@ body.no-obs .obs-only { display: none; }
 .pending[hidden] { display: none; }
 
 /* Connection status dot */
+/* The shadow fold's badge. Quiet when the rebuild agrees with the row, loud
+   only when it does not — it is a check on the model, not a scoring control. */
+.fold-badge { flex: 0 0 auto; align-self: center; margin-right: 7px; padding: 3px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; line-height: 1.5; background: var(--bg-2); border: 1px solid var(--line-2); color: var(--muted); }
+.fold-badge[data-state="ok"]      { background: var(--hit-bg); border-color: var(--hit-line); color: var(--hit-text); }
+.fold-badge[data-state="diff"]    { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-text); }
+.fold-badge[data-state="partial"] { background: var(--undo-bg); border-color: var(--undo-line); color: var(--undo-text); }
+.fold-badge[data-state="busy"]    { opacity: 0.6; }
 .conn-dot { flex: 0 0 auto; align-self: center; width: 9px; height: 9px; border-radius: 999px; font-size: 0; }
 .conn-dot[data-state="live"] { background: #34b56a; box-shadow: 0 0 0 4px rgba(52, 181, 106, 0.16); }
 .conn-dot[data-state="connecting"] { background: var(--out-ui); }

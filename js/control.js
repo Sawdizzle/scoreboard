@@ -448,6 +448,72 @@ async function syncRoster(id, rev) {
   delete panelPainted.lineups;
   renderGame();
 }
+// ---- The shadow fold (rework stage 2) --------------------------------------
+// Rebuild this game from its own event log and compare the answer with the row
+// on screen. Nothing here writes, and nothing the scorebug shows comes from it:
+// it exists to find out whether the fold is trustworthy BEFORE anything is
+// staked on it. When it has agreed for a whole game, the fold can become the
+// record and the correction sheets can come out.
+//
+// The log keeps the newest 200 events per game, so the fold cannot start at the
+// first pitch. Every event stores the row as it was before it, so it starts at
+// the oldest snapshot still held and folds forward from there. Rosters are
+// private and never ride in a snapshot, so the lineups are handed in separately.
+let foldTimer = null, foldBusy = false, foldLast = null;
+function foldBadge(state, label, title) {
+  const b = $('fold-badge'); if (!b) return;
+  b.hidden = false;
+  b.dataset.state = state;
+  b.textContent = label;
+  b.title = title;
+}
+async function shadowFold(why = 'auto') {
+  if (!game || foldBusy) return;
+  const id = game.id;
+  foldBusy = true;
+  foldBadge('busy', '◌', 'Rebuilding from the event log…');
+  // Belt and braces: this is a check on the model, not part of scoring. Nothing
+  // it can do — a bad row, a rule that throws on a shape it has not seen — may
+  // reach the operator as anything louder than a grey badge.
+  try {
+    const { data, error } = await db.from('events').select('type,payload,prev_state')
+      .eq('game_id', id).order('id', { ascending: true });
+    if (error) { foldBadge('idle', '◌', `Could not read the log: ${error.message}`); return; }
+    if (!game || game.id !== id) return;
+    const events = data || [];
+    if (!events.length) { foldBadge('idle', '◌', 'No events for this game yet'); return; }
+    // The first row's snapshot is the state BEFORE that event, so every event
+    // held — that one included — folds forward from it.
+    const start = events[0].prev_state || {};
+    const { state, applied, skipped } = L.replay(start, events, game.lineups || {});
+    const diffs = L.compareGames(state, game);
+    foldLast = { at: Date.now(), applied, skipped, diffs, why };
+    const skipNote = skipped.length ? ` · ${skipped.length} event${skipped.length > 1 ? 's' : ''} it cannot rebuild yet (${[...new Set(skipped)].join(', ')})` : '';
+    if (diffs.length) {
+      foldBadge('diff', `⚠ ${diffs.length}`, `The rebuild disagrees with the pad on: ${diffs.map((d) => d.field).join(', ')}${skipNote}`);
+      console.warn('Scoreboard shadow fold disagrees:', diffs, { applied, skipped });
+    } else if (skipped.length) {
+      foldBadge('partial', '≈', `The rebuild agrees on everything it could replay (${applied})${skipNote}`);
+    } else {
+      foldBadge('ok', '✓', `The rebuild of all ${applied} events matches the pad exactly`);
+    }
+  } catch (e) {
+    console.warn('Scoreboard shadow fold failed (scoring is unaffected):', e);
+    foldBadge('idle', '◌', 'The rebuild could not run — scoring is unaffected');
+  } finally { foldBusy = false; }
+}
+// After a burst of taps, once — not per pitch, which would be a select per
+// pitch on a phone on venue LTE.
+const foldSoon = () => { clearTimeout(foldTimer); foldTimer = setTimeout(() => shadowFold('after taps'), 20000); };
+$('fold-badge').onclick = () => {
+  if (foldLast && foldLast.diffs.length) {
+    const lines = foldLast.diffs.map((d) => `${d.field}: log says ${JSON.stringify(d.folded)}, pad says ${JSON.stringify(d.row)}`);
+    showToast(`Rebuild differs — ${lines[0]}`, 6000);
+    console.warn('Scoreboard shadow fold detail:', foldLast);
+  }
+  shadowFold('tap');
+};
+
 const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
 
 async function openGame(id) {
@@ -473,6 +539,7 @@ async function openGame(id) {
   // Open only while there is real setup left; one step to go is a slim line you can tap.
   guideCollapsed = setupSteps().filter(([, ok]) => !ok).length <= 1;
   show('game'); renderGame();
+  shadowFold('open');
   $('overlay-url').value = overlayUrl();
   $('recap-url').value = `${location.origin}/recap?game=${id}`;
   keepAwake(true);
@@ -608,6 +675,9 @@ addEventListener('beforeunload', (e) => { if (queue.size()) { e.preventDefault()
 async function commit(res) {
   if (!game) return;
   if (!res || !res.patch || Object.keys(res.patch).length === 0) return;
+  // Every event says who it was about before it goes anywhere. One place, so a
+  // key added later cannot write an event that belongs to nobody.
+  res = L.stamp(res, game);
   // The first play of the game is what makes it live. Riding the play's own
   // write means undoing that play puts the game back to Not started too.
   if (game.status === 'setup' && !('status' in res.patch)) {
@@ -636,6 +706,7 @@ async function commit(res) {
   game = { ...game, ...patch };
   renderGame();
   queue.enqueue({ kind: 'event', gameId, type: res.type, patch, payload: res.payload || {} });
+  foldSoon();   // the shadow fold, once the taps stop
   midInningFollow(prev, game, res.type);
   sayLastPlay(res, prev, game);
 }
@@ -1887,7 +1958,7 @@ function demoStep() {
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs }, anim: 'webgem' }); }
+    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs, bases: w.bases }, anim: 'webgem' }); }
     else commit({ type: 'ball', patch: L.withPitch(game, { balls: (game.balls | 0) + 1 }) });
     return;
   }
@@ -2641,7 +2712,7 @@ $('walk-confirm').onclick = () => {
   const bases = { first: wState.first, second: wState.second, third: wState.third };
   // anim: the WALK reveal fires automatically, like run/strikeout do.
   commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }),
-    payload: { runs: wState.runs, play: L.playNote(game, 'BB', { runs: wState.runs }) }, anim: 'webgem' });
+    payload: { runs: wState.runs, bases, play: L.playNote(game, 'BB', { runs: wState.runs }) }, anim: 'webgem' });
 };
 
 // Render --------------------------------------------------------------------

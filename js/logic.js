@@ -61,7 +61,7 @@ export function homeRunPatch(g, runs) {
 // not the normal End-½ flow). Nudging the inning extends the line score to match.
 export function onNudgeInning(g, d) {
   const inning = Math.max(1, (g.inning | 0) + d);
-  return { type: 'inning', patch: { inning, line_score: lineScore({ ...g, inning }) } };
+  return { type: 'inning', patch: { inning, line_score: lineScore({ ...g, inning }) }, payload: { inputs: { d } } };
 }
 export function onToggleHalf(g) {
   return { type: 'half', patch: { half: g.half === 'top' ? 'bottom' : 'top' } };
@@ -103,14 +103,15 @@ export function onBall(g) {
 // `looking`: called third strike. Same out, its own note (a backwards K in the
 // book and on the recap) and its own stinger.
 export function onStrike(g, { looking = false } = {}) {
+  const inputs = { looking };
   const strikes = (g.strikes | 0) + 1;
   // 3rd strike ends the at-bat (pitch + advance batter); earlier strikes just count the pitch.
   if (strikes >= 3) {
     const res = outResult(g, 'strikeout');
-    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
+    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), inputs, play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
       anim: looking ? 'strikeoutlooking' : 'strikeout' };
   }
-  return { type: 'strike', patch: withPitch(g, { strikes }) };
+  return { type: 'strike', patch: withPitch(g, { strikes }), payload: { inputs } };
 }
 
 export function onFoul(g) {
@@ -157,14 +158,14 @@ export function onRunnerPlay(g, from, kind) {
   if (kind === 'CS' || kind === 'PO') {
     const outs = (g.outs | 0) + 1;
     const patch = outs >= 3 ? endHalfPatch({ ...g, bases }) : { outs, bases };
-    return { type: 'runner', patch, payload: { play: playNote(g, kind, { outs: 1 }) },
+    return { type: 'runner', patch, payload: { from, kind, play: playNote(g, kind, { outs: 1 }) },
       anim: 'play', animMeta: { text: RUNNER_LABEL[kind] }, text: RUNNER_LABEL[kind] };
   }
   const to = NEXT_BASE[from];
   const runs = to ? 0 : 1;
   if (to) bases[to] = true;
   const text = kind === 'SB' ? (to ? `Stole ${to === 'second' ? '2nd' : '3rd'}` : 'Stole home') : RUNNER_LABEL[kind];
-  return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { runs, play: playNote(g, kind, { runs }) },
+  return { type: 'runner', patch: { bases, ...runsPatch(g, runs) }, payload: { from, kind, runs, play: playNote(g, kind, { runs }) },
     anim: kind === 'SB' ? 'stolenbase' : runs ? 'run' : null, animMeta: {}, text };
 }
 
@@ -498,7 +499,7 @@ export function adjustPitch(g, d) {
   const side = fieldingSide(g);
   const cur = (g.state && g.state.pitches) || {};
   const next = Math.max(0, (cur[side] | 0) + d);
-  return { type: 'pitchadj', patch: { state: { ...(g.state || {}), pitches: { ...cur, [side]: next } } } };
+  return { type: 'pitchadj', patch: { state: { ...(g.state || {}), pitches: { ...cur, [side]: next } } }, payload: { inputs: { d } } };
 }
 
 // The next `n` filled hitters after the current one, wrapping (for Due Up).
@@ -593,7 +594,7 @@ export function onClearBases(g) {
 
 export function toggleBase(g, key) {
   const b = safeBases(g.bases);
-  return { type: 'base', patch: { bases: { ...b, [key]: !b[key] } } };
+  return { type: 'base', patch: { bases: { ...b, [key]: !b[key] } }, payload: { inputs: { key } } };
 }
 
 // ---- Balls in play --------------------------------------------------------
@@ -729,11 +730,154 @@ export function onPlay(g, { kind, pos = null, dest }) {
   return {
     type: 'play',
     patch: endPA(g, patch),
-    payload: { runs, play: playNote(g, kind, { pos, code, outs: r.outs, runs }) },
+    payload: { inputs: { kind, pos, dest }, runs, play: playNote(g, kind, { pos, code, outs: r.outs, runs }) },
     anim: kind === 'DP' ? 'doubleplay' : kind === 'H3' ? 'bigplay' : 'play',
     animMeta: { text, side, idx: currentBatterIdx(g, side), runs },
     text,
   };
+}
+
+// ---- Who the event was about ----------------------------------------------
+// Every event carries a subject. This is the first half of the move to an
+// event-sourced game: today it is metadata on the log, and tomorrow it is what
+// a replay reads to decide whether the batting order moves at all.
+//
+// The rule it encodes is the one a scorer already knows and the pad did not:
+// only a terminal BATTER event ends a plate appearance. An out recorded on a
+// runner — a steal, a pickoff — leaves the count, the hitter and the order
+// exactly where they were. The pad learned that in v3.86 by routing the tap;
+// this records it in the data, where a fold can enforce it.
+//
+// `stamp` is the single place it is attached, so an action added later cannot
+// quietly ship without one. subjectTest in the suite walks every exported
+// action and fails if any of them comes back unstamped.
+export const SUBJECTS = ['batter', 'runner@first', 'runner@second', 'runner@third', 'runners', 'game'];
+
+// Events named by the thing they happen to. Anything not here is a correction
+// or a clock/inning move and belongs to the game, not to a person.
+const BATTER_EVENTS = new Set(['ball', 'strike', 'foul', 'strikeout', 'out', 'walk', 'hbp', 'hit',
+  'homerun', 'play', 'error', 'batter', 'batidx']);
+
+export function subjectOf(res, g) {
+  if (!res || !res.type) return 'game';
+  const given = res.payload && res.payload.subject;
+  if (given && SUBJECTS.includes(given)) return given;      // an action that knows better
+  if (res.type === 'runner') {
+    const from = res.payload && res.payload.from;
+    return from ? `runner@${from}` : 'runners';
+  }
+  if (res.type === 'advance' || res.type === 'clearbases') return 'runners';
+  if (BATTER_EVENTS.has(res.type)) return 'batter';
+  return 'game';
+}
+// Attach the subject to an action's payload. Idempotent, and it never
+// overwrites a subject the action set itself.
+export function stamp(res, g) {
+  if (!res || !res.type) return res;
+  return { ...res, payload: { ...(res.payload || {}), subject: subjectOf(res, g) } };
+}
+
+// ---- The fold: a game rebuilt from its own events --------------------------
+// Stage 2 of moving the game onto its log. This runs in the SHADOW: the pad
+// folds the log, compares the answer to the live row and says whether the two
+// agree. Nothing here writes anything, and nothing on the scorebug comes from
+// it. The point is to find out whether the fold is right before anything is
+// staked on it.
+//
+// It does not reimplement the rules. It re-runs the same actions with the
+// arguments the event recorded, so the fold and the pad cannot drift apart:
+// there is one set of baseball rules in this file, and both callers use it.
+//
+// The log is trimmed to the newest 200 events per game, so the fold does not
+// start at the first pitch. It starts at the oldest snapshot it still has —
+// every event stores the row as it was BEFORE it — and folds forward from
+// there. That makes the check work on a 400-pitch game as well as a short one.
+//
+// An event whose type it cannot rebuild is counted and skipped, never guessed.
+// A skip is reported, because a fold that quietly ignores a third of the game
+// would agree with anything.
+const REBUILD = {
+  ball:      (g) => onBall(g),
+  strike:    (g, p) => onStrike(g, { looking: !!(p.inputs && p.inputs.looking) }),
+  foul:      (g) => onFoul(g),
+  strikeout: (g, p) => onStrike(g, { looking: !!(p.inputs && p.inputs.looking) }),
+  out:       (g) => onOut(g),
+  hbp:       (g) => onHitByPitch(g),
+  hit:       (g, p) => (p.reached ? onHit(g, p.reached) : null),
+  error:     (g) => onError(g),
+  run:       (g) => onRun(g),
+  advance:   (g) => onAdvance(g),
+  clear:     (g) => onClearBases(g),
+  endhalf:   (g) => onEndHalf(g),
+  count:     (g) => onResetCount(g),
+  batter:    (g) => onNextBatter(g),
+  half:      (g) => onToggleHalf(g),
+  inning:    (g, p) => (p.inputs ? onNudgeInning(g, p.inputs.d) : null),
+  runner:    (g, p) => (p.from && p.kind ? onRunnerPlay(g, p.from, p.kind) : null),
+  base:      (g, p) => (p.inputs && p.inputs.key ? toggleBase(g, p.inputs.key) : null),
+  // Built on the pad from their own sheets, so the fold rebuilds them from the
+  // numbers those sheets recorded rather than from an action of its own.
+  walk:      (g, p) => (p.bases
+    ? { type: 'walk', patch: endPA(g, { balls: 0, strikes: 0, bases: safeBases(p.bases), ...runsPatch(g, p.runs | 0) }) }
+    : null),
+  homerun:   (g, p) => ({ type: 'homerun', patch: homeRunPatch(g, p.runs | 0) }),
+  batidx:    (g, p) => (p.side != null && p.i != null
+    ? { type: 'batidx', patch: { state: { ...(g.state || {}), batIdx: { ...((g.state && g.state.batIdx) || {}), [p.side]: p.i } } } }
+    : null),
+  end_game:   (g) => ({ type: 'end_game', patch: { status: 'final', clock_running: false } }),
+  reopen_game:(g) => ({ type: 'reopen_game', patch: { status: 'live' } }),
+  play:      (g, p) => (p.inputs && p.inputs.kind ? onPlay(g, { kind: p.inputs.kind, pos: p.inputs.pos ?? null, dest: p.inputs.dest }) : null),
+  pitchadj:  (g, p) => (p.inputs ? adjustPitch(g, p.inputs.d) : null),
+  'adj-outs':    (g, p) => (p.inputs ? adjustOuts(g, p.inputs.d) : null),
+  'adj-balls':   (g, p) => (p.inputs ? adjustBalls(g, p.inputs.d) : null),
+  'adj-strikes': (g, p) => (p.inputs ? adjustStrikes(g, p.inputs.d) : null),
+  'adj-score':   (g, p) => (p.inputs ? adjustScore(g, p.inputs.side, p.inputs.d) : null),
+  'adj-hits':    (g, p) => (p.inputs ? adjustHits(g, p.inputs.side, p.inputs.d) : null),
+  'adj-errors':  (g, p) => (p.inputs ? adjustErrors(g, p.inputs.side, p.inputs.d) : null),
+};
+export const REPLAYABLE_TYPES = Object.keys(REBUILD);
+
+// Fold `events` (oldest first) over `start`. `lineups` is passed in because the
+// rosters are private and never ride in a snapshot, and the order cannot
+// advance without them. Returns the state it arrives at, what it applied and
+// what it could not.
+export function replay(start, events, lineups = {}) {
+  let g = { ...(start || {}), lineups };
+  const skipped = [];
+  let applied = 0;
+  for (const ev of events || []) {
+    const build = REBUILD[ev.type];
+    const res = build ? build(g, ev.payload || {}) : null;
+    if (!res || !res.patch) { skipped.push(ev.type); continue; }
+    g = { ...g, ...res.patch, lineups };
+    applied++;
+  }
+  return { state: g, applied, skipped };
+}
+
+// The fields a scorer would actually notice being wrong. Deliberately not every
+// column: a stinger nonce or a card differing says nothing about the baseball.
+const COMPARED = ['inning', 'half', 'outs', 'balls', 'strikes',
+  'away_score', 'home_score', 'away_hits', 'home_hits', 'away_errors', 'home_errors'];
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+// What the fold says versus what the row says. Returns one entry per field that
+// disagrees, each naming both answers, so a badge can say which.
+export function compareGames(folded, row) {
+  const out = [];
+  if (!folded || !row) return out;
+  for (const k of COMPARED) {
+    const a = k === 'half' ? folded[k] : (folded[k] | 0);
+    const b = k === 'half' ? row[k] : (row[k] | 0);
+    if (!same(a, b)) out.push({ field: k, folded: a, row: b });
+  }
+  const fb = safeBases(folded.bases), rb = safeBases(row.bases);
+  if (!same(fb, rb)) out.push({ field: 'bases', folded: fb, row: rb });
+  const fi = (folded.state && folded.state.batIdx) || {}, ri = (row.state && row.state.batIdx) || {};
+  for (const side of ['away', 'home']) {
+    if ((fi[side] | 0) !== (ri[side] | 0)) out.push({ field: `batIdx.${side}`, folded: fi[side] | 0, row: ri[side] | 0 });
+  }
+  return out;
 }
 
 // ---- Manual adjusters (direct edits; undoable via apply_event) -------------
@@ -741,12 +885,12 @@ export function onPlay(g, { kind, pos = null, dest }) {
 // errors adjust the running total only (line score is left to game-flow plays).
 const clampAdj = (v, lo, hi) => Math.max(lo, hi == null ? v : Math.min(hi, v));
 const sideKey = (side, stat) => (side === 'home' ? 'home_' : 'away_') + stat;
-export function adjustScore(g, side, d)  { const k = sideKey(side, 'score');  return { type: 'adj-score',  patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
-export function adjustHits(g, side, d)   { const k = sideKey(side, 'hits');   return { type: 'adj-hits',   patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
-export function adjustErrors(g, side, d) { const k = sideKey(side, 'errors'); return { type: 'adj-errors', patch: { [k]: clampAdj((g[k] | 0) + d, 0) } }; }
-export function adjustOuts(g, d)    { return { type: 'adj-outs',    patch: { outs: clampAdj((g.outs | 0) + d, 0, 3) } }; }
-export function adjustBalls(g, d)   { return { type: 'adj-balls',   patch: { balls: clampAdj((g.balls | 0) + d, 0, 4) } }; }
-export function adjustStrikes(g, d) { return { type: 'adj-strikes', patch: { strikes: clampAdj((g.strikes | 0) + d, 0, 3) } }; }
+export function adjustScore(g, side, d)  { const k = sideKey(side, 'score');  return { type: 'adj-score',  patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
+export function adjustHits(g, side, d)   { const k = sideKey(side, 'hits');   return { type: 'adj-hits',   patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
+export function adjustErrors(g, side, d) { const k = sideKey(side, 'errors'); return { type: 'adj-errors', patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
+export function adjustOuts(g, d)    { return { type: 'adj-outs',    patch: { outs: clampAdj((g.outs | 0) + d, 0, 3) }, payload: { inputs: { d } } }; }
+export function adjustBalls(g, d)   { return { type: 'adj-balls',   patch: { balls: clampAdj((g.balls | 0) + d, 0, 4) }, payload: { inputs: { d } } }; }
+export function adjustStrikes(g, d) { return { type: 'adj-strikes', patch: { strikes: clampAdj((g.strikes | 0) + d, 0, 3) }, payload: { inputs: { d } } }; }
 
 // ---- Offline undo ---------------------------------------------------------
 // The pad queues writes when the network drops. Undo has to mean the same thing
