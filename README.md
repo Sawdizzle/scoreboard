@@ -142,9 +142,9 @@ Baseball games also get a **play-by-play**, one card per half-inning with the ne
 
 ## Broadcast cards
 
-All of them live in **🎬 On Air** on the bottom bar: tap a card to raise it (the sheet closes behind it), tap it again or the header chip's ✕ to take it down. When the game is baseball the sheet outlines the likely card — Mid-Inning and Due Up at the top of a half, Starting Soon before first pitch.
+All of them live in **🎬 On Air** on the bottom bar: tap a card to raise it (the sheet closes behind it), tap it again or the header chip's ✕ to take it down. When the game is baseball the sheet outlines the likely card — Mid-Inning at the top of a half, Starting Soon before first pitch.
 
-Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), **Due Up** lower-third, and a **Sponsor** bumper.
+Persistent cards that stay up until cleared: pre-game **Matchup** (logos + VS + subtitle), post-game **Final** (score + baseball line-score table), and a **Sponsor** bumper. Due Up is no longer a card of its own: it is the closing line of Mid-Inning, the team coming to bat with its leadoff first.
 
 **Takeover cards** own the whole 1920×1080 frame instead of floating over the video — opaque backdrop tinted with both team colors, scorebug hidden underneath. The camera keeps running behind them, so crowd noise carries through and you never touch an OBS scene.
 

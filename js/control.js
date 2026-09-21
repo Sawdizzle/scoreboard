@@ -1364,13 +1364,6 @@ async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
   if (text) meta.text = text;
-  // Due Up builds itself in the overlay, live, from the roster the overlay holds
-  // privately — the hitter at bat and the two behind him, following the order
-  // as it moves. It used to be a snapshot of names written into this card, on
-  // the public games row: frozen the moment it went up, and a list of children's
-  // names readable by anyone with the game id, which is what moving rosters to
-  // their own table was for.
-  if (type === 'dueup' && !text) meta.auto = true;
   // Defense card always tracks the fielding team live (resolved in the overlay);
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;
@@ -1410,9 +1403,11 @@ function airSuggestions(g) {
   const b = L.safeBases(g.bases);
   const clean = !(g.outs | 0) && !(g.balls | 0) && !(g.strikes | 0) && !b.first && !b.second && !b.third;
   if (clean && (g.inning | 0) <= 1 && g.half !== 'bottom') return { why: 'before first pitch', ids: ['starting', 'matchup', 'lineup'] };
-  if (clean) return { why: 'start of the half', ids: ['midinning', 'dueup', 'defense'] };
-  if (!(g.balls | 0) && !(g.strikes | 0)) return { why: 'new batter', ids: ['dueup', 'lineup', 'sponsor'] };
-  return { why: 'mid at-bat', ids: ['dueup', 'defense', 'lineup'] };
+  // Due Up is not offered: since v3.96 it rides on Mid-Inning, which is the
+  // moment anyone wants it, so it no longer needs a card of its own.
+  if (clean) return { why: 'start of the half', ids: ['midinning', 'defense', 'lineup'] };
+  if (!(g.balls | 0) && !(g.strikes | 0)) return { why: 'new batter', ids: ['lineup', 'defense', 'sponsor'] };
+  return { why: 'mid at-bat', ids: ['defense', 'lineup', 'sponsor'] };
 }
 // The header chip, the lit card, and the baseball labels that follow the half
 // (batting order = batting side, defense = fielding side; the overlay tracks
