@@ -880,6 +880,20 @@
             <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" errors">Home errors</span><button class="step" data-adj="errors-home" data-d="-1">–</button><b id="adj-errors-home">0</b><button class="step" data-adj="errors-home" data-d="1">+</button></div>
           </div>
         </details>
+
+        <!-- Clearing a roster is the one lineup edit that is not a row at a time,
+             and rosters carry no undo — so it lives here with the corrections,
+             behind a confirm, rather than on the Lineup screen next to typing. -->
+        <details class="sit-more">
+          <summary>Lineups</summary>
+          <div class="sit-more-body">
+            <p class="hint">Names and the batting order are on the Lineup screen; the defense is on the Field screen. Clearing a lineup here empties that team's order and defense, and cannot be undone.</p>
+            <div class="sit-pair">
+              <button id="lu-clear-away" class="base-btn sit-end" type="button">Clear away lineup</button>
+              <button id="lu-clear-home" class="base-btn sit-end" type="button">Clear home lineup</button>
+            </div>
+          </div>
+        </details>
       </div>
       </div>
 

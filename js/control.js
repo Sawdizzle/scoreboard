@@ -2328,6 +2328,35 @@ function renderTeamLabels() {
     el.textContent = ab[el.dataset.team] + (el.dataset.suffix || '');
   });
 }
+// Clear one side's roster: the deliberate wipe the save guard exists to make
+// impossible by accident. Rosters are written straight to their table and carry
+// no undo, so this asks first and says how many players it is about to drop.
+async function clearLineup(side) {
+  if (!game) return;
+  const label = teamAbbr(side);
+  const n = teamOf(side).batters.filter((b) => b && (b.name || b.num)).length;
+  if (!n) return showToast(`${label} has no lineup to clear`);
+  if (!confirm(`Clear the ${label} lineup?\n\n${n} player${n > 1 ? 's' : ''} and that team's defense are removed. This cannot be undone.`)) return;
+  await saveRoster({ ...(game.lineups || {}), [side]: {} }, { allowClear: true });
+  // An empty order has nobody at bat and no pitcher, so the count of pitches
+  // thrown by a pitcher who is gone goes with it.
+  const st = game.state || {};
+  await writeField({ state: { ...st, batIdx: { ...(st.batIdx || {}), [side]: 0 }, pitches: { ...(st.pitches || {}), [side]: 0 } } });
+  renderGame();
+  showToast(`🧹 Cleared the ${label} lineup`);
+}
+$('lu-clear-away').onclick = () => clearLineup('away');
+$('lu-clear-home').onclick = () => clearLineup('home');
+// The buttons name the teams the way the scorebug does, and say so when there is
+// nothing to clear.
+function renderClearLineup() {
+  for (const side of ['away', 'home']) {
+    const b = $('lu-clear-' + side);
+    const n = teamOf(side).batters.filter((x) => x && (x.name || x.num)).length;
+    b.textContent = `Clear ${teamAbbr(side)} lineup`;
+    b.disabled = !n;
+  }
+}
 function renderEndGame() {
   const over = game.status === 'final';
   document.querySelectorAll('.end-game').forEach((b) => {
@@ -2560,6 +2589,7 @@ function renderLineups() {
   // focused input by itself, so there is nothing left to skip.
   fillLineup('away'); fillLineup('home');
   renderCurrentHitter('away'); renderCurrentHitter('home');
+  renderClearLineup();   // roster-shaped, so it rides the same paint as the sheet
   showLineupSide();
   paintField();   // a roster saved elsewhere repaints an open Field screen too
 }

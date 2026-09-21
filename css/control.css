@@ -545,6 +545,10 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .sit-card .sit-end.over { background: var(--bg-2); border-color: var(--line-2); color: #c8d4e8; }
 .sit-pair { display: flex; gap: 9px; margin-top: 9px; }
 .sit-pair .base-btn { flex: 1; padding: 13px 8px; font-size: 14px; background: var(--bg-2); border: 1px solid var(--line-2); color: #c8d4e8; }
+/* The two Clear lineup buttons sit in a pair, so they take the row's spacing
+   rather than End game's standalone gap, and grey out with nothing to clear. */
+.sit-card .sit-pair .sit-end { margin-top: 0; background: var(--bg-2); border-color: var(--danger-line); color: var(--danger-text); }
+.sit-card .sit-end:disabled { opacity: 0.4; pointer-events: none; }
 
 /* The diamond. Bases are 38px of ink inside a 44px target — nothing on this
    sheet is smaller than a thumb. */
