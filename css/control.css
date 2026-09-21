@@ -961,6 +961,78 @@ body.field-open { overflow: hidden; }
 .full-top .sit-sub { flex-basis: 100%; margin-top: -4px; }
 @media (min-width: 700px) { .sheet.full { padding: 0; align-items: stretch; } .full-top .sit-sub { flex-basis: auto; margin-top: 0; } }
 
+/* ---- Settings rows -------------------------------------------------------
+   Five row types, and nothing else. The drawer grew three ways to group a
+   setting (details accordions, caps headers with no box, bare rows on the
+   background), three ways to label one, and two toggle styles eight rows
+   apart — which is what reads as sloppy, rather than any single control
+   being ugly. A screen built only from these matches every other screen,
+   including ones nobody has designed yet.
+
+   They live inside the shell the Field, Lineup and On Air screens already
+   use (.sheet.full + .full-top), so a settings screen is not a new pattern —
+   it is the pattern this app already settled on.
+
+   The five: .set-head (section), then rows inside one .set-card —
+   .set-row (a value, taps through), .set-row.toggle, .set-row.field,
+   .set-row.danger. Nothing nests. */
+.set-sec { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.set-head { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.set-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+
+/* One row. A link or a button when it goes somewhere, a div when it doesn't —
+   never a div with a click handler, which Tab skips. */
+.set-row { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+  min-height: 52px; padding: 11px 13px; text-align: left; font-size: 16px; color: var(--chalk);
+  /* buttons here carry the app's bold button weight, divs do not — a row must
+     read the same whether or not it happens to tap through to something */
+  font-family: inherit; font-weight: 500;
+  background: none; border: none; border-radius: 0; text-decoration: none; }
+.set-row + .set-row { border-top: 1px solid var(--line); }
+.set-lab { flex: 1 1 auto; min-width: 0; }
+.set-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
+/* The current value, right-aligned: a row should answer its question without
+   being opened. */
+.set-val { flex: 0 1 auto; font-size: 15px; font-weight: 700; color: var(--body); text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-go { flex: 0 0 auto; font-size: 17px; line-height: 1; color: var(--muted); }
+.set-dot { flex: 0 0 auto; width: 16px; height: 16px; border-radius: 5px; border: 1px solid var(--line-2); }
+.set-tag { flex: 0 0 auto; padding: 3px 8px; font-size: 11px; font-weight: 700; border-radius: 999px;
+  background: var(--bg-2); border: 1px solid var(--line-2); color: var(--muted); }
+button.set-row, a.set-row { cursor: pointer; }
+button.set-row:active, a.set-row:active { background: var(--bg-2); }
+@media (hover: hover) { button.set-row:hover, a.set-row:hover { background: var(--bg-2); } }
+.set-row[aria-disabled="true"], .set-row:disabled { opacity: 0.45; pointer-events: none; }
+
+/* Toggle row: one switch, everywhere. A real checkbox underneath, so it is
+   focusable, announced and togglable from the keyboard. */
+.set-switch { position: relative; flex: 0 0 auto; width: 46px; height: 28px; }
+.set-switch input { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; opacity: 0; }
+.set-switch i { position: absolute; inset: 0; border-radius: 999px; background: var(--bg-2);
+  border: 1px solid var(--line-2); transition: background 0.14s linear; }
+.set-switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  border-radius: 999px; background: var(--body); transition: transform 0.14s ease, background 0.14s linear; }
+.set-switch input:checked + i { background: var(--ball); border-color: var(--ball); }
+.set-switch input:checked + i::after { transform: translateX(18px); background: var(--chalk); }
+.set-switch input:focus-visible + i { outline: 2px solid var(--steel); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .set-switch i, .set-switch i::after { transition: none; } }
+
+/* Field row: the label keeps a fixed column so stacked fields line up. */
+.set-row.field { padding: 9px 13px; }
+.set-row.field .set-lab { flex: 0 0 104px; font-size: 15px; color: var(--body); }
+.set-input { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 9px 11px; font: inherit; font-size: 16px;
+  color: var(--chalk); background: var(--sunken); border: 1px solid var(--line-2); border-radius: 10px; }
+.set-input:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
+
+/* Destructive row: the only red in a settings screen, so it means something. */
+.set-row.danger .set-lab { color: var(--danger-text); }
+.set-row.danger .set-go { color: var(--danger-line); }
+.set-row.danger:active { background: var(--danger-bg); }
+@media (hover: hover) { .set-row.danger:hover { background: var(--danger-bg); } }
+
+/* One line under a card, for the thing a row cannot say in four words. */
+.set-note { margin: 2px 2px 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
 /* Batter strip: jersey number first, then name and who follows; pitcher on the right. */
 .gm-num { flex: 0 0 auto; font-family: var(--num); font-size: 40px; font-weight: 700; line-height: 1; color: var(--chalk); }
 .gm-num:empty { display: none; }
