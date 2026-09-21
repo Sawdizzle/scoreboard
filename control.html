@@ -498,298 +498,7 @@
     <!-- Everything you set once. On a phone this is a bottom sheet dragged up
          over the pad; from 700px the sheet chrome falls away and it is the
          panel column it has always been — same panel bodies either way. -->
-    <div id="drawer" class="drawer">
-      <div class="dw-scrim" id="dw-scrim"></div>
-      <div class="dw-sheet">
-        <!-- The handle is a real control, not decoration: flick it down, or tap
-             Done at the foot like every other sheet. The scrim is 12% of a phone
-             screen and most of that sits under the status bar, so it cannot be
-             the only way out. -->
-        <div class="dw-grip" id="dw-grip"><span class="grab"></span></div>
-        <div class="dw-tabs" role="tablist">
-          <button class="dw-tab on" id="dw-tab-teams" data-tab="teams" role="tab" aria-selected="true" aria-controls="dw-pane-teams">Teams</button>
-          <button class="dw-tab" id="dw-tab-look" data-tab="look" role="tab" aria-selected="false" aria-controls="dw-pane-look">Look</button>
-          <button class="dw-tab" id="dw-tab-obs" data-tab="obs" role="tab" aria-selected="false" aria-controls="dw-pane-obs">OBS</button>
-        </div>
-        <div class="dw-body">
 
-          <section class="dw-pane" id="dw-pane-teams" data-tab="teams" role="tabpanel" aria-labelledby="dw-tab-teams">
-            <button id="setup-btn" class="ghost dw-row">⚙ Game setup — teams, style, times &amp; rules</button>
-            <!-- Lineups moved to their own sheet in v3.62, opened from the batter line. -->
-            <p class="hint sport-only" data-sport="baseball">Lineups, positions and saved teams: tap the batter line under the count.</p>
-          </section>
-
-          <section class="dw-pane" id="dw-pane-look" data-tab="look" role="tabpanel" aria-labelledby="dw-tab-look" hidden>
-            <details class="panel" id="panel-appearance">
-              <summary>🎨 Appearance</summary>
-              <div class="panel-body">
-                <span class="sublabel">Saved looks</span>
-                <div class="audio-row">
-                  <label class="sel">Preset<select id="preset-sel"><option value="">— none saved —</option></select></label>
-                  <button id="preset-apply" class="fxbtn">Apply</button>
-                </div>
-                <input id="preset-name" placeholder="Name this look…" />
-                <div class="shared-fx">
-                  <button id="preset-save" class="fxbtn">💾 Save current</button>
-                  <button id="preset-del" class="fxbtn cardclear">Delete</button>
-                </div>
-
-                <div class="audio-row">
-                  <label class="sel">Theme
-                    <select id="theme-sel">
-                      <option value="custom">✦ Custom (your colors)</option>
-                      <option value="nightgame">Midnight</option>
-                      <option value="espn">Broadcast Minimal</option>
-                      <option value="retro">Retro 8-bit</option>
-                      <option value="green">Classic Green</option>
-                      <option value="neon">Neon</option>
-                      <option value="sunset">Sunset</option>
-                      <option value="ice">Ice (light)</option>
-                      <option value="mono">Newsprint</option>
-                      <option value="gold">Gold</option>
-                      <option value="carbon">Carbon</option>
-                      <option value="vapor">Vaporwave</option>
-                      <option value="royal">Royal</option>
-                      <option value="volt">Volt (electric)</option>
-                      <option value="ember">Ember (molten)</option>
-                      <option value="blueprint">Blueprint</option>
-                      <option value="bubblegum">Bubblegum</option>
-                      <option value="cosmic">Cosmic</option>
-                      <option value="sunrise">Sunrise (light)</option>
-                      <option value="jumbotron">Jumbotron (LED)</option>
-                      <option value="crt">CRT (amber)</option>
-                      <option value="neonsign">Neon Sign</option>
-                      <option value="chrome">Chrome (metal)</option>
-                      <option value="ticker">Ticker (thin)</option>
-                      <option value="outline">Outline (frosted)</option>
-                      <option value="stack">Stack (modules)</option>
-                      <option value="chalkboard">Chalkboard (sandlot)</option>
-                      <option value="monster">Green Monster (painted)</option>
-                      <option value="marquee">Marquee (bulbs)</option>
-                      <option value="comic">Comic (pop art)</option>
-                      <option value="americana">Americana (bunting)</option>
-                      <option value="foil">Holo Foil (refractor)</option>
-                      <option value="dugout">Dugout (woodgrain)</option>
-                    </select>
-                  </label>
-                </div>
-                <span class="sublabel">Position on the 1080p frame</span>
-                <div class="pos-row">
-                <div class="pos-grid" id="pos-grid">
-                  <button data-pos="top-left" title="Top-left">↖</button>
-                  <button data-pos="top-center" title="Top-center">↑</button>
-                  <button data-pos="top-right" title="Top-right">↗</button>
-                  <button data-pos="mid-left" title="Middle-left">←</button>
-                  <button data-pos="mid-center" title="Center">●</button>
-                  <button data-pos="mid-right" title="Middle-right">→</button>
-                  <button data-pos="bottom-left" title="Bottom-left">↙</button>
-                  <button data-pos="bottom-center" title="Bottom-center">↓</button>
-                  <button data-pos="bottom-right" title="Bottom-right">↘</button>
-                </div>
-                <!-- Where the bug actually lands, without alt-tabbing to OBS. -->
-                <div class="pos-side">
-                  <p class="pos-note" id="pos-note"></p>
-                  <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
-                </div>
-                </div>
-                <label class="slider">Scale <input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b id="scale-val">1.0×</b></label>
-
-                <details class="panel">
-                  <summary>🎛️ Custom theme</summary>
-                  <div class="panel-body">
-                <p class="hint">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
-
-                <span class="sublabel">Row fills</span>
-                <div class="fill-row"><span class="fill-label">Away (row 1)</span>
-                  <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Home (row 2)</span>
-                  <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Details (bottom)</span>
-                  <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Panel (behind)</span>
-                  <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
-                </div>
-                <label class="slider">Gradient angle <input id="cust-angle" type="range" min="0" max="360" step="15" /><b id="cust-angle-val">180°</b></label>
-
-                <span class="sublabel">Text &amp; accents</span>
-                <div class="audio-row">
-                  <label class="sel">Text<input id="cust-text" type="color" /></label>
-                  <label class="sel">Accent<input id="cust-accent" type="color" /></label>
-                  <label class="sel">Highlight<input id="cust-steel" type="color" /></label>
-                  <label class="sel">Border<input id="cust-line" type="color" /></label>
-                </div>
-
-                <span class="sublabel">Type &amp; layout</span>
-                <div class="audio-row">
-                  <label class="sel">Font
-                    <select id="cust-font">
-                      <option value="">Default</option>
-                      <option value="condensed">Condensed</option>
-                      <option value="clean">Clean sans</option>
-                      <option value="mono">Monospace</option>
-                      <option value="serif">Serif</option>
-                      <option value="system">System</option>
-                    </select>
-                  </label>
-                  <label class="sel">Corners
-                    <select id="cust-radius">
-                      <option value="">Default</option>
-                      <option value="16">Round</option>
-                      <option value="8">Soft</option>
-                      <option value="0">Sharp</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="audio-row">
-                  <label class="sel">Logo size
-                    <select id="cust-logosize">
-                      <option value="">Default</option>
-                      <option value="sm">Small</option>
-                      <option value="lg">Large</option>
-                    </select>
-                  </label>
-                  <label class="sel">Border
-                    <select id="cust-border">
-                      <option value="">Default</option>
-                      <option value="0">None</option>
-                      <option value="2">Thick</option>
-                      <option value="3">Bold</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="toggles">
-                  <label><input type="checkbox" id="cust-teambars" /> Team color bars</label>
-                  <label><input type="checkbox" id="cust-teamfill" /> Team-color fill</label>
-                  <label><input type="checkbox" id="cust-logos" /> Hide logos</label>
-                  <label><input type="checkbox" id="cust-detail" /> Hide detail line</label>
-                  <label><input type="checkbox" id="cust-shadow" /> No shadow</label>
-                  <label><input type="checkbox" id="cust-uppercase" /> Uppercase</label>
-                </div>
-
-                    <button id="cust-reset" class="fxbtn">Reset customizations</button>
-                  </div>
-                </details>
-              </div>
-            </details>
-            <details class="panel">
-              <summary>🔊 Sound</summary>
-              <div class="panel-body">
-                <div class="audio-row">
-                  <label class="sel">Pack
-                    <select id="sound-pack">
-                      <option value="bigleague">Big League (organ)</option>
-                      <option value="modern">Modern (hits/whooshes)</option>
-                      <option value="sandlot">Sandlot (playful)</option>
-                      <option value="arcade">Arcade (chiptune)</option>
-                      <option value="cinematic">Cinematic (orchestral)</option>
-                      <option value="airhorn">Stadium (air horns)</option>
-                      <option value="chill">Chill (bells)</option>
-                      <option value="organ">Pipe Organ</option>
-                      <option value="radio">Vintage Radio</option>
-                      <option value="edm">EDM (drops)</option>
-                    </select>
-                  </label>
-                  <button id="mute-btn" class="fxbtn mute">Mute</button>
-                </div>
-                <label class="slider">Master <input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Moments <input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
-                <label class="slider">Organ <input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
-                <p class="hint">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
-              </div>
-            </details>
-            <!-- Set once before the game, so it lives with the rest of the look;
-                 raising a sponsor card is On Air's job. -->
-            <details class="panel">
-              <summary>💵 Sponsors</summary>
-              <div class="panel-body">
-                <div id="sponsor-list"></div>
-                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
-                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
-                <div class="sp-timing">
-                  <label class="fld">Every (sec)<input id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
-                  <label class="fld">On screen (sec)<input id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
-                </div>
-                <p class="hint">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
-              </div>
-            </details>
-          </section>
-
-          <section class="dw-pane" id="dw-pane-obs" data-tab="obs" role="tabpanel" aria-labelledby="dw-tab-obs" hidden>
-            <div class="pad-opt">
-              <span class="pad-opt-lab">🎛️ OBS controls</span>
-              <label class="switch" title="Hide the OBS panels if you don't use OBS">
-                <input type="checkbox" id="obs-ui" checked />
-                <span class="track"><span class="knob"></span></span>
-              </label>
-            </div>
-            <div class="obs-only">
-              <div class="obs-tier">
-                <span class="ot-lab">Page permissions: <b id="obs-tier">—</b></span>
-                <button id="obs-tier-help" class="ghost small">What this unlocks</button>
-              </div>
-              <p id="obs-tier-note" class="hint" hidden></p>
-              <span class="sublabel">Instant replay</span>
-              <p class="hint">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
-              <div class="replay-row">
-                <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
-                <p id="replay-hint" class="hint replay-hint" hidden></p>
-              </div>
-            </div>
-            <details class="panel" id="panel-cameras">
-              <summary><span>🎥 Cameras</span><span class="panel-need" id="scene-need"></span></summary>
-              <div class="panel-body">
-                <div id="scene-list" class="scene-list"></div>
-                <p id="scene-hint" class="hint"></p>
-              </div>
-            </details>
-            <details class="panel" id="panel-obs">
-              <summary><span>📡 Stream &amp; record</span><span class="panel-need" id="obs-need"></span></summary>
-              <div class="panel-body">
-                <div class="obs-row">
-                  <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
-                  <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
-                  <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
-                </div>
-                <p id="obs-hint" class="hint"></p>
-              </div>
-            </details>
-            <details class="panel" id="panel-overlay">
-              <summary>🔗 Overlay link &amp; practice</summary>
-              <div class="panel-body">
-                <div class="urlbar">
-                  <input id="overlay-url" readonly />
-                  <button id="copy-url-btn" class="ghost small">Copy</button>
-                  <button id="open-url-btn" class="ghost small">Open ▸</button>
-                </div>
-                <p class="hint">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
-                <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
-
-                <span class="sublabel">Share the recap</span>
-                <div class="urlbar">
-                  <input id="recap-url" readonly />
-                  <button id="copy-recap-btn" class="ghost small">Copy</button>
-                </div>
-                <p class="hint">A public scoreboard page for parents — score and line score only, never lineups.</p>
-                <div class="practice-row">
-                  <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
-                  <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
-                </div>
-              </div>
-            </details>
-            <p class="hint kbd-hint">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
-          </section>
-
-        </div>
-        <div class="dw-foot"><button id="dw-close" class="primary" type="button">Done</button></div>
-      </div>
-    </div>
     </div><!-- /.game-cols -->
 
     <!-- Fixed. Undo is the one thing you reach for when something has already
@@ -800,7 +509,7 @@
       <button id="cam-open" class="gm-b cam obs-only" hidden><i aria-hidden="true">🎥</i>Cameras</button>
       <button id="field-open" class="gm-b field sport-only" data-sport="baseball"><i aria-hidden="true">🧢</i>Field</button>
       <button id="onair-open" class="gm-b onair"><i aria-hidden="true">🎬</i>On Air</button>
-      <button id="dw-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
+      <button id="setup-open" class="gm-b more"><i aria-hidden="true">⚙</i>Setup</button>
     </div>
   </section>
 
@@ -1033,22 +742,12 @@
       </div>
 
       <section class="lu-side" id="lu-side-away" aria-label="Away lineup">
-        <div class="team-load">
-          <select id="team-sel-away" aria-label="Load a saved team for away"><option value="">— load saved team —</option></select>
-          <button id="team-save-away" class="fxbtn">💾 Save</button>
-          <button id="team-del-away" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
-        </div>
         <button type="button" class="fieldcheck" id="fieldcheck-away"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-away"></div>
       </section>
 
       <section class="lu-side" id="lu-side-home" aria-label="Home lineup" hidden>
-        <div class="team-load">
-          <select id="team-sel-home" aria-label="Load a saved team for home"><option value="">— load saved team —</option></select>
-          <button id="team-save-home" class="fxbtn">💾 Save</button>
-          <button id="team-del-home" class="fxbtn cardclear" aria-label="Delete the selected saved team">🗑</button>
-        </div>
         <button type="button" class="fieldcheck" id="fieldcheck-home"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
         <div class="lineup-list" id="lineup-home"></div>
@@ -1159,81 +858,566 @@
     </div>
   </div>
 
-  <!-- SETUP SHEET -->
-  <div id="setup-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1" hidden>
-    <div class="sheet-card scroll">
-      <h3 id="setup-title">Game Setup</h3>
-      <div class="audio-row">
-        <label class="sel">Sport
-          <select id="su-sport">
-            <option value="baseball">Baseball</option>
-            <option value="football">Football</option>
-            <option value="soccer">Soccer</option>
-            <option value="volleyball">Volleyball</option>
-            <option value="basketball">Basketball</option>
-          </select>
-        </label>
-        <label class="sel">Style
-          <select id="su-style">
-            <option value="scorebox">Scorebox (full broadcast)</option>
-            <option value="bar">Bar (wide strip)</option>
-            <option value="bug">Bug (stacked)</option>
-            <option value="minimal">Minimal (slim)</option>
-            <option value="lowerthird">Lower-third</option>
-          </select>
-        </label>
-      </div>
-      <div class="setup-cols">
-        <div class="setup-col">
-          <span class="col-h">Away / Visitor</span>
-          <input id="su-away-name" placeholder="Team name" />
-          <input id="su-away-abbr" placeholder="ABBR or a short name" maxlength="12" />
-          <input id="su-away-logo" placeholder="Logo URL (optional)" />
-          <label class="colorlab">Color <input id="su-away-color" type="color" /></label>
-        </div>
-        <div class="setup-col">
-          <span class="col-h">Home</span>
-          <input id="su-home-name" placeholder="Team name" />
-          <input id="su-home-abbr" placeholder="ABBR or a short name" maxlength="12" />
-          <input id="su-home-logo" placeholder="Logo URL (optional)" />
-          <label class="colorlab">Color <input id="su-home-color" type="color" /></label>
-        </div>
-      </div>
-
-      <details class="panel su-panel">
-        <summary>⏱️ Times &amp; rules</summary>
-        <div class="panel-body">
-          <label class="fld">Start time — sorts your games list and runs the Starting Soon countdown<input id="su-startsat" type="datetime-local" /></label>
-          <label class="fld"><span id="su-time-label">Time limit — minutes (0 = none)</span><input id="su-time" type="number" min="0" step="1" inputmode="numeric" /></label>
-          <label class="fld">Regulation innings — auto walk-off (0 = off)<input id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" /></label>
-        </div>
-      </details>
-
-      <details class="panel su-panel">
-        <summary>👁️ Show on overlay</summary>
-        <div class="panel-body">
-      <div class="toggles">
-        <label><input type="checkbox" id="su-show-clock" /> Clock</label>
-        <label><input type="checkbox" id="su-show-batter" /> Batter</label>
-        <label><input type="checkbox" id="su-show-pitcher" /> Pitcher</label>
-        <label><input type="checkbox" id="su-show-pitchcount" /> Pitch count</label>
-        <label><input type="checkbox" id="su-show-rhe" /> R-H-E on bug</label>
-        <label><input type="checkbox" id="su-show-runrule" /> Run-rule</label>
-      </div>
-
-      <p class="hint">Batter, pitcher &amp; pitch count are driven by the <b>Lineup</b> sheet — tap the batter line under the count. The toggles above just show/hide those lines on the overlay.</p>
-        </div>
-      </details>
-
-      <div class="danger-row">
-        <button id="reset-game" class="fxbtn">↺ Reset game</button>
-        <button id="delete-game" class="fxbtn cardclear">🗑 Delete game</button>
-      </div>
-      <div class="sheet-actions">
-        <button id="setup-cancel" class="ghost">Close</button>
-        <button id="setup-save" class="primary">Save</button>
-      </div>
+  <!-- SETUP SCREEN -->
+  <!-- Was a slide-up drawer with tabs, one of which held a single button that
+       opened a modal sheet with its own Close/Save footer. Now it is a screen
+       that pushes, like Field, Lineup and On Air — one Back, one chrome, and
+       every row built from the five in control.css. Edits write as you make
+       them, the way the lineup does, so there is one save contract. -->
+  <div id="setup-view" class="setup-view" hidden>
+    <div class="full-top">
+      <button id="setup-back" class="fv-back" type="button">‹ Back</button>
+      <h3 id="setup-title">Setup</h3>
     </div>
+
+    <section class="sv-pane" data-pane="home" data-title="Setup">
+      <div class="set-sec">
+        <span class="set-head">Teams</span>
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="teams">
+            <span class="set-lab">Names, colours &amp; logos<span class="set-sub" id="sv-teams-sub">Away and home</span></span>
+            <span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" id="sv-lineups">
+            <span class="set-lab">Lineups &amp; positions<span class="set-sub">The batter line opens these mid-game</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Game</span>
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="game">
+            <span class="set-lab">Sport &amp; scorebug</span><span class="set-val" id="sv-sport-val">Baseball</span><span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" data-go="times">
+            <span class="set-lab">Times &amp; rules</span><span class="set-val" id="sv-times-val">—</span><span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" data-go="overlay">
+            <span class="set-lab">Show on overlay</span><span class="set-val" id="sv-show-val">—</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Look</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="sv-look">
+            <span class="set-lab">Theme &amp; position</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">OBS</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="sv-obs">
+            <span class="set-lab">Clips &amp; cameras</span><span class="set-tag" id="sv-obs-tag">not connected</span><span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">This game</span>
+        <div class="set-card">
+          <button class="set-row danger" id="reset-game" type="button"><span class="set-lab">↺ Reset to 0–0</span><span class="set-go">›</span></button>
+          <button class="set-row danger" id="delete-game" type="button"><span class="set-lab">🗑 Delete game</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">Reset keeps the teams and the look. Delete cannot be undone.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams" data-title="Teams" hidden>
+      <div class="set-sec">
+        <span class="set-head">Away / visitor</span>
+        <div class="set-card">
+          <button class="set-row team-row" type="button" data-go="teams-away">
+            <span class="team-crest" id="card-crest-away">—</span>
+            <span class="set-lab"><b id="card-name-away">—</b><span class="set-sub" id="card-sub-away">—</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Home</span>
+        <div class="set-card">
+          <button class="set-row team-row" type="button" data-go="teams-home">
+            <span class="team-crest" id="card-crest-home">—</span>
+            <span class="set-lab"><b id="card-name-home">—</b><span class="set-sub" id="card-sub-home">—</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-swap"><span class="set-lab">⇅ Swap home and away<span class="set-sub">Names, colours, logos and both rosters</span></span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">A team is a name, an abbreviation, a colour, a logo and a roster. Saved teams carry all of it, so loading one fills the card and the lineup at once.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams-away" data-title="Away team" hidden>
+      <div class="set-sec">
+        <div class="set-card team-crest-card">
+          <span class="team-crest" id="crest-away">—</span>
+          <span class="set-lab">
+            <b id="crest-name-away">—</b>
+            <span class="set-sub" id="crest-sub-away">—</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Identity</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-away-name" placeholder="Visitor" /></label>
+          <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-away-abbr" placeholder="VIS or a short name" maxlength="12" /></label>
+          <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-away-logo" placeholder="optional" /></label>
+          <div class="set-row"><span class="set-lab">Colour</span><input id="su-away-color" type="color" /></div>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Roster</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-lineup-away"><span class="set-lab">Batting order</span><span class="set-val" id="team-order-away">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" id="team-field-away"><span class="set-lab">Positions</span><span class="set-val" id="team-pos-away">—</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">The same two screens the batter line opens mid-game, reached from the team they belong to.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">My teams</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Swap in</span>
+            <select class="set-input" id="team-sel-away" aria-label="Load a saved team for away"><option value="">— saved teams —</option></select>
+          </label>
+          <button class="set-row" type="button" id="team-save-away"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <button class="set-row danger" type="button" id="team-del-away"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="teams-home" data-title="Home team" hidden>
+      <div class="set-sec">
+        <div class="set-card team-crest-card">
+          <span class="team-crest" id="crest-home">—</span>
+          <span class="set-lab">
+            <b id="crest-name-home">—</b>
+            <span class="set-sub" id="crest-sub-home">—</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Identity</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Name</span><input class="set-input" id="su-home-name" placeholder="Home" /></label>
+          <label class="set-row field"><span class="set-lab">On the bug</span><input class="set-input" id="su-home-abbr" placeholder="HOME or a short name" maxlength="12" /></label>
+          <label class="set-row field"><span class="set-lab">Logo URL</span><input class="set-input" id="su-home-logo" placeholder="optional" /></label>
+          <div class="set-row"><span class="set-lab">Colour</span><input id="su-home-color" type="color" /></div>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">Roster</span>
+        <div class="set-card">
+          <button class="set-row" type="button" id="team-lineup-home"><span class="set-lab">Batting order</span><span class="set-val" id="team-order-home">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" id="team-field-home"><span class="set-lab">Positions</span><span class="set-val" id="team-pos-home">—</span><span class="set-go">›</span></button>
+        </div>
+        <p class="set-note">The same two screens the batter line opens mid-game, reached from the team they belong to.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head">My teams</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Swap in</span>
+            <select class="set-input" id="team-sel-home" aria-label="Load a saved team for home"><option value="">— saved teams —</option></select>
+          </label>
+          <button class="set-row" type="button" id="team-save-home"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <button class="set-row danger" type="button" id="team-del-home"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="sv-pane" data-pane="game" data-title="Sport &amp; scorebug" hidden>
+      <div class="set-sec">
+        <span class="set-head">Sport &amp; scorebug</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Sport</span>
+            <select class="set-input" id="su-sport">
+              <option value="baseball">Baseball</option>
+              <option value="football">Football</option>
+              <option value="soccer">Soccer</option>
+              <option value="volleyball">Volleyball</option>
+              <option value="basketball">Basketball</option>
+            </select>
+          </label>
+          <label class="set-row field"><span class="set-lab">Scorebug</span>
+            <select class="set-input" id="su-style">
+              <option value="scorebox">Scorebox (full broadcast)</option>
+              <option value="bar">Bar (wide strip)</option>
+              <option value="bug">Bug (stacked)</option>
+              <option value="minimal">Minimal (slim)</option>
+              <option value="lowerthird">Lower-third</option>
+            </select>
+          </label>
+        </div>
+        <p class="set-note">Changing sport keeps the score and swaps the pad and the overlay to that sport's controls.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="times" data-title="Times &amp; rules" hidden>
+      <div class="set-sec">
+        <span class="set-head">Times &amp; rules</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Start time</span><input class="set-input" id="su-startsat" type="datetime-local" /></label>
+          <label class="set-row field"><span class="set-lab" id="su-time-label">Time limit</span><input class="set-input" id="su-time" type="number" min="0" step="1" inputmode="numeric" placeholder="minutes (0 = none)" /></label>
+          <label class="set-row field"><span class="set-lab">Regulation</span><input class="set-input" id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" placeholder="innings (0 = off)" /></label>
+        </div>
+        <p class="set-note">Start time sorts your games list and runs the Starting Soon countdown. Regulation innings arms the automatic walk-off.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="overlay" data-title="Show on overlay" hidden>
+      <div class="set-sec">
+        <span class="set-head">Show on overlay</span>
+        <div class="set-card">
+          <div class="set-row"><span class="set-lab">Clock</span><label class="set-switch"><input type="checkbox" id="su-show-clock" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Batter</span><label class="set-switch"><input type="checkbox" id="su-show-batter" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Pitcher</span><label class="set-switch"><input type="checkbox" id="su-show-pitcher" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Pitch count</span><label class="set-switch"><input type="checkbox" id="su-show-pitchcount" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">R-H-E on the bug</span><label class="set-switch"><input type="checkbox" id="su-show-rhe" /><i></i></label></div>
+          <div class="set-row"><span class="set-lab">Run-rule watch</span><label class="set-switch"><input type="checkbox" id="su-show-runrule" /><i></i></label></div>
+        </div>
+        <p class="set-note">Batter, pitcher and pitch count come from the lineup. These only decide whether the overlay shows those lines.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look" data-title="Look" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="look-0"><span class="set-lab">🎨 Appearance</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-1"><span class="set-lab">🔊 Sound</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-2"><span class="set-lab">💵 Sponsors</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+
+
+            
+            
+            <!-- Set once before the game, so it lives with the rest of the look;
+                 raising a sponsor card is On Air's job. -->
+    </section>
+
+    <section class="sv-pane" data-pane="look-0" data-title="Appearance" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="look-0-0"><span class="set-lab">Saved looks</span><span class="set-val" id="sv-presets-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-1"><span class="set-lab">Theme</span><span class="set-val" id="sv-theme-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-2"><span class="set-lab">Position &amp; size</span><span class="set-val" id="sv-pos-val">—</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="look-0-3"><span class="set-lab">Custom theme<span class="set-sub">Only shows on the Custom theme</span></span><span class="set-go">›</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-0-0" data-title="Saved looks" hidden>
+      <div class="set-sec">
+        <span class="set-head">A whole look, under a name</span>
+
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Preset</span><select class="set-input" id="preset-sel"><option value="">— none saved —</option></select></label>
+                  <button id="preset-apply" class="fxbtn">Apply</button>
+                </div>
+                <input id="preset-name" placeholder="Name this look…" />
+                <div class="shared-fx">
+                  <button id="preset-save" class="fxbtn">💾 Save current</button>
+                  <button id="preset-del" class="fxbtn cardclear">Delete</button>
+                </div>
+        <p class="set-note">A look is the theme, style, position, scale, sound and every customization — saved together and applied to any game in one tap.</p>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-0-1" data-title="Theme" hidden>
+      <div class="set-sec">
+<div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Theme</span><select class="set-input" id="theme-sel">
+                      <option value="custom">✦ Custom (your colors)</option>
+                      <option value="nightgame">Midnight</option>
+                      <option value="espn">Broadcast Minimal</option>
+                      <option value="retro">Retro 8-bit</option>
+                      <option value="green">Classic Green</option>
+                      <option value="neon">Neon</option>
+                      <option value="sunset">Sunset</option>
+                      <option value="ice">Ice (light)</option>
+                      <option value="mono">Newsprint</option>
+                      <option value="gold">Gold</option>
+                      <option value="carbon">Carbon</option>
+                      <option value="vapor">Vaporwave</option>
+                      <option value="royal">Royal</option>
+                      <option value="volt">Volt (electric)</option>
+                      <option value="ember">Ember (molten)</option>
+                      <option value="blueprint">Blueprint</option>
+                      <option value="bubblegum">Bubblegum</option>
+                      <option value="cosmic">Cosmic</option>
+                      <option value="sunrise">Sunrise (light)</option>
+                      <option value="jumbotron">Jumbotron (LED)</option>
+                      <option value="crt">CRT (amber)</option>
+                      <option value="neonsign">Neon Sign</option>
+                      <option value="chrome">Chrome (metal)</option>
+                      <option value="ticker">Ticker (thin)</option>
+                      <option value="outline">Outline (frosted)</option>
+                      <option value="stack">Stack (modules)</option>
+                      <option value="chalkboard">Chalkboard (sandlot)</option>
+                      <option value="monster">Green Monster (painted)</option>
+                      <option value="marquee">Marquee (bulbs)</option>
+                      <option value="comic">Comic (pop art)</option>
+                      <option value="americana">Americana (bunting)</option>
+                      <option value="foil">Holo Foil (refractor)</option>
+                      <option value="dugout">Dugout (woodgrain)</option>
+                    </select>
+                  </label>
+                </div>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-0-2" data-title="Position &amp; size" hidden>
+      <div class="set-sec">
+        <span class="set-head">Where the bug sits on the 1080p frame</span>
+
+                <div class="pos-row">
+                <div class="pos-grid" id="pos-grid">
+                  <button data-pos="top-left" title="Top-left">↖</button>
+                  <button data-pos="top-center" title="Top-center">↑</button>
+                  <button data-pos="top-right" title="Top-right">↗</button>
+                  <button data-pos="mid-left" title="Middle-left">←</button>
+                  <button data-pos="mid-center" title="Center">●</button>
+                  <button data-pos="mid-right" title="Middle-right">→</button>
+                  <button data-pos="bottom-left" title="Bottom-left">↙</button>
+                  <button data-pos="bottom-center" title="Bottom-center">↓</button>
+                  <button data-pos="bottom-right" title="Bottom-right">↘</button>
+                </div>
+                <!-- Where the bug actually lands, without alt-tabbing to OBS. -->
+                <div class="pos-side">
+                  <p class="pos-note" id="pos-note"></p>
+                  <div class="pos-preview" aria-hidden="true"><span id="pos-bug" class="pos-bug"></span></div>
+                </div>
+                </div>
+                <label class="set-row"><span class="set-lab">Scale</span><input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b class="set-val" id="scale-val">1.0×</b></label>
+      </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-0-3" data-title="Custom theme" hidden>
+
+                  
+                <p class="set-note">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
+
+                <span class="set-head">Row fills</span>
+                <div class="fill-row"><span class="fill-label">Away (row 1)</span>
+                  <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Home (row 2)</span>
+                  <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Details (bottom)</span>
+                  <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
+                </div>
+                <div class="fill-row"><span class="fill-label">Panel (behind)</span>
+                  <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
+                  <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
+                </div>
+                <label class="set-row"><span class="set-lab">Gradient angle</span><input id="cust-angle" type="range" min="0" max="360" step="15" /><b class="set-val" id="cust-angle-val">180°</b></label>
+
+                <span class="set-head">Text &amp; accents</span>
+                <div class="set-card">
+                  <div class="set-row"><span class="set-lab">Text</span><input id="cust-text" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Accent</span><input id="cust-accent" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Highlight</span><input id="cust-steel" type="color" /></div>
+                  <div class="set-row"><span class="set-lab">Border</span><input id="cust-line" type="color" /></div>
+                </div>
+
+                <span class="set-head">Type &amp; layout</span>
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Font</span><select class="set-input" id="cust-font">
+                      <option value="">Default</option>
+                      <option value="condensed">Condensed</option>
+                      <option value="clean">Clean sans</option>
+                      <option value="mono">Monospace</option>
+                      <option value="serif">Serif</option>
+                      <option value="system">System</option>
+                    </select>
+                  </label>
+                  <label class="set-row field"><span class="set-lab">Corners</span><select class="set-input" id="cust-radius">
+                      <option value="">Default</option>
+                      <option value="16">Round</option>
+                      <option value="8">Soft</option>
+                      <option value="0">Sharp</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Logo size</span><select class="set-input" id="cust-logosize">
+                      <option value="">Default</option>
+                      <option value="sm">Small</option>
+                      <option value="lg">Large</option>
+                    </select>
+                  </label>
+                  <label class="set-row field"><span class="set-lab">Border</span><select class="set-input" id="cust-border">
+                      <option value="">Default</option>
+                      <option value="0">None</option>
+                      <option value="2">Thick</option>
+                      <option value="3">Bold</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="toggles">
+                  <div class="set-row"><span class="set-lab">Team color bars</span><label class="set-switch"><input type="checkbox" id="cust-teambars" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Team-color fill</span><label class="set-switch"><input type="checkbox" id="cust-teamfill" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Hide logos</span><label class="set-switch"><input type="checkbox" id="cust-logos" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Hide detail line</span><label class="set-switch"><input type="checkbox" id="cust-detail" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">No shadow</span><label class="set-switch"><input type="checkbox" id="cust-shadow" /><i></i></label></div>
+                  <div class="set-row"><span class="set-lab">Uppercase</span><label class="set-switch"><input type="checkbox" id="cust-uppercase" /><i></i></label></div>
+                </div>
+
+                    <button id="cust-reset" class="fxbtn">Reset customizations</button>
+
+
+        </section>
+
+<section class="sv-pane" data-pane="look-1" data-title="Sound" hidden>
+
+              <div class="set-sec">
+                <div class="set-card">
+                  <label class="set-row field"><span class="set-lab">Pack</span><select class="set-input" id="sound-pack">
+                      <option value="bigleague">Big League (organ)</option>
+                      <option value="modern">Modern (hits/whooshes)</option>
+                      <option value="sandlot">Sandlot (playful)</option>
+                      <option value="arcade">Arcade (chiptune)</option>
+                      <option value="cinematic">Cinematic (orchestral)</option>
+                      <option value="airhorn">Stadium (air horns)</option>
+                      <option value="chill">Chill (bells)</option>
+                      <option value="organ">Pipe Organ</option>
+                      <option value="radio">Vintage Radio</option>
+                      <option value="edm">EDM (drops)</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div class="set-sec">
+                <span class="set-head">Volume</span>
+                <div class="set-card">
+                  <label class="set-row"><span class="set-lab">Master</span><input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+                  <label class="set-row"><span class="set-lab">Moments</span><input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
+                  <label class="set-row"><span class="set-lab">Organ</span><input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
+                  <div class="set-row"><span class="set-lab">Everything off</span><button id="mute-btn" class="fxbtn mute">Mute</button></div>
+                </div>
+                <p class="set-note">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="look-2" data-title="Sponsors" hidden>
+
+              <div class="set-sec">
+                <div id="sponsor-list"></div>
+                <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
+                <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
+                <div class="sp-timing">
+                  <label class="set-row field"><span class="set-lab">Every (sec)</span><input class="set-input" id="sponsor-every" type="number" min="15" max="1800" step="5" inputmode="numeric" /></label>
+                  <label class="set-row field"><span class="set-lab">On screen (sec)</span><input class="set-input" id="sponsor-secs" type="number" min="3" max="60" step="1" inputmode="numeric" /></label>
+                </div>
+                <p class="set-note">A small “brought to you by” bug in the corner, cycling through the list. It hides itself whenever a full-screen card is up.</p>
+              </div>
+    </section>
+
+
+    <section class="sv-pane" data-pane="obs" data-title="OBS" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="obs-0"><span class="set-lab">🎥 Cameras</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="obs-1"><span class="set-lab">📡 Stream &amp; record</span><span class="set-go">›</span></button>
+          <button class="set-row" type="button" data-go="obs-2"><span class="set-lab">🔗 Overlay link &amp; practice</span><span class="set-go">›</span></button>
+        </div>
+      </div>
+
+
+            <div class="pad-opt">
+              <span class="pad-opt-lab">🎛️ OBS controls</span>
+              <label class="switch" title="Hide the OBS panels if you don't use OBS">
+                <input type="checkbox" id="obs-ui" checked />
+                <span class="track"><span class="knob"></span></span>
+              </label>
+            </div>
+            <div class="obs-only">
+              <div class="obs-tier">
+                <span class="ot-lab">Page permissions: <b id="obs-tier">—</b></span>
+                <button id="obs-tier-help" class="ghost small">What this unlocks</button>
+              </div>
+              <p id="obs-tier-note" class="hint" hidden></p>
+              <span class="set-head">Instant replay</span>
+              <p class="set-note">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
+              <div class="replay-row">
+                <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
+                <p id="replay-hint" class="hint replay-hint" hidden></p>
+              </div>
+            </div>
+            
+            
+            
+            <p class="set-note">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-0" data-title="Cameras" hidden>
+
+              <div class="set-sec">
+                <div id="scene-list" class="scene-list"></div>
+                <p id="scene-hint" class="hint"></p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-1" data-title="Stream &amp; record" hidden>
+
+              <div class="set-sec">
+                <div class="obs-row">
+                  <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
+                  <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
+                  <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
+                </div>
+                <p id="obs-hint" class="hint"></p>
+              </div>
+    </section>
+
+    <section class="sv-pane" data-pane="obs-2" data-title="Overlay link &amp; practice" hidden>
+
+              <div class="set-sec">
+                <div class="urlbar">
+                  <input id="overlay-url" readonly />
+                  <button id="copy-url-btn" class="ghost small">Copy</button>
+                  <button id="open-url-btn" class="ghost small">Open ▸</button>
+                </div>
+                <p class="set-note">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
+
+                <span class="set-head">Share the recap</span>
+                <div class="urlbar">
+                  <input id="recap-url" readonly />
+                  <button id="copy-recap-btn" class="ghost small">Copy</button>
+                </div>
+                <p class="set-note">A public scoreboard page for parents — score and line score only, never lineups.</p>
+                <div class="practice-row">
+                  <button id="demo-btn" class="fxbtn demo">▶ Demo Mode</button>
+                  <button id="preview-fx-btn" class="fxbtn">Preview All FX</button>
+                </div>
+              </div>
+    </section>
+
   </div>
 
   <!-- NEW GAME SHEET -->
