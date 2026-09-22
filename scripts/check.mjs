@@ -18,11 +18,11 @@ const fail = (msg) => problems.push(msg);
 // Pages and the modules that drive them.
 const PAGES = [
   { html: 'control.html', js: ['js/control.js'] },
-  { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/anim.js', 'js/logic.js', 'js/clock.js'] },
+  { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/storm.js', 'js/anim.js', 'js/logic.js', 'js/clock.js'] },
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.
@@ -30,7 +30,7 @@ const REQUIRED_HANDLERS = [
   'setup-open', 'setup-back', 'delete-game', 'reset-game',
   'new-game-btn', 'back-btn', 'logout-btn', 'undo-btn', 'signup-btn',
   'btn-ball', 'btn-strike', 'btn-foul', 'btn-inplay', 'btn-run', 'btn-batter', 'pad-dia', 'runners-done', 'field-open', 'field-back', 'fv-tab-away', 'fv-tab-home', 'btn-endhalf',
-  'onair-open', 'onair-done', 'air-clear', 'play-just-out', 'k3-swing', 'k3-look', 'k3-dropped', 'k3-cancel', 'btn-more', 'more-hbp', 'more-ci', 'more-ibb', 'more-balk', 'more-cancel', 'pick-back', 'play-cancel', 'rs-record', 'rs-back', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
+  'onair-open', 'onair-done', 'air-clear', 'tk-show', 'tk-hide', 'tk-chip-x', 'pz-show', 'pz-hide', 'pz-restart', 'pz-minus', 'pz-plus', 'play-just-out', 'k3-swing', 'k3-look', 'k3-dropped', 'k3-cancel', 'btn-more', 'more-hbp', 'more-ci', 'more-ibb', 'more-balk', 'more-cancel', 'pick-back', 'play-cancel', 'rs-record', 'rs-back', 'fx-replay', 'fx-rally', 'copy-url-btn', 'obs-ui', 'rotate-url-btn',
 ];
 
 // ---- 1. Syntax ------------------------------------------------------------

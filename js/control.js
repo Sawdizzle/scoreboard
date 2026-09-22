@@ -7,6 +7,7 @@ import * as V from './volleyball.js';
 import * as B from './basketball.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
+import { geocode } from './weather.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -1378,7 +1379,7 @@ $('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3,
 // down, or ✕ on the header chip, which is on screen whatever else is open.
 const CARD_LABEL = {
   dueup: 'Due Up', lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
-  final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)',
+  final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)', paused: 'Paused',
 };
 const cardLabel = (type) => CARD_LABEL[type] || type;
 async function showCard(type) {
@@ -1405,7 +1406,7 @@ function toggleCard(type) {
   haptic();
   return game.card && game.card.type === type ? clearCard() : showCard(type);
 }
-$('onair-open').onclick = () => { renderOnAir(); openSheet('onair-sheet'); };
+$('onair-open').onclick = () => { renderOnAir(); loadTickerDraft(); loadPausedDraft(); openSheet('onair-sheet'); };
 $('onair-done').onclick = () => closeSheet('onair-sheet');
 $('air-clear').onclick = () => { haptic(); clearCard(); };
 // Raising a card or firing a moment is the whole errand, so the sheet gets out
@@ -1415,6 +1416,136 @@ $('onair-sheet').addEventListener('click', (e) => {
   const card = e.target.closest('[data-card]');
   if (card) toggleCard(card.dataset.card);
   if (card || e.target.closest('.moment')) closeSheet('onair-sheet');
+});
+
+// Game paused. Like the ticker, the controls are a draft until Show / Update.
+// The countdown is stored as a restart time (meta.until), so the overlay and
+// the pad agree on it however late either one loads. While the card is up the
+// minutes field reads the time left; editing it and tapping Update moves the
+// restart time. The card keeps its nonce across updates, so the overlay
+// refreshes it in place instead of replaying the entrance.
+const PZ_NO_CLOCK = new Set(['suspended', 'called']);
+let pzReason = 'lightning';
+let pzLoaded = null;   // minutes-left the field was filled with, so Update without an edit keeps the clock
+const pausedUp = () => !!(game && game.card && game.card.type === 'paused');
+const pzMins = () => Math.max(0, Math.min(240, parseInt($('pz-mins').value, 10) || 0));
+function setPzReason(r, fillMins) {
+  pzReason = r;
+  document.querySelectorAll('.pz-r').forEach((b) => {
+    const on = b.dataset.reason === r;
+    b.setAttribute('aria-pressed', String(on));
+    if (on && fillMins) $('pz-mins').value = b.dataset.mins;
+  });
+  const clockless = PZ_NO_CLOCK.has(r);
+  $('pz-timer').hidden = clockless;
+  $('pz-note').textContent = clockless
+    ? (r === 'called' ? 'No countdown. End the game from the Situation sheet when you are ready.' : 'No countdown.')
+    : '0 = no countdown. Lightning: restart at every new strike.';
+  renderPaused();
+}
+function pzLeftMins() {
+  const u = game.card && game.card.meta && game.card.meta.until;
+  return u ? Math.max(0, Math.ceil((new Date(u).getTime() - serverNow()) / 60000)) : 0;
+}
+function loadPausedDraft() {
+  if (!pausedUp()) return;
+  const m = game.card.meta || {};
+  setPzReason(m.reason || 'weather', false);
+  $('pz-mins').value = pzLeftMins();
+  pzLoaded = pzMins();
+}
+function renderPaused() {
+  if (!game) return;
+  const up = pausedUp();
+  const m = (up && game.card.meta) || {};
+  const at = m.until ? new Date(m.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  $('pz-state').textContent = up ? (at && !PZ_NO_CLOCK.has(m.reason) ? `· on air · restart ${at}` : '· on air') : 'off';
+  $('pz-state').classList.toggle('on', up);
+  $('pz-show').textContent = up ? 'Update' : 'Show';
+  $('pz-show').classList.toggle('live', up);
+  $('pz-hide').hidden = !up;
+  $('pz-restart').hidden = !(up && pzReason === 'lightning');
+}
+function pausedMeta(mins) {
+  const meta = { reason: pzReason };
+  if (!PZ_NO_CLOCK.has(pzReason) && mins > 0) meta.until = new Date(serverNow() + mins * 60000).toISOString();
+  return meta;
+}
+async function showPaused() {
+  haptic();
+  const was = pausedUp();
+  const nonce = was ? game.card.nonce : nextNonce();
+  const prev = was ? game.card.meta || {} : {};
+  const meta = pausedMeta(pzMins());
+  // Only the reason changed: the countdown carries on from where it was.
+  if (was && pzMins() === pzLoaded && prev.until && !PZ_NO_CLOCK.has(pzReason)) meta.until = prev.until;
+  if (prev.strike) meta.strike = prev.strike;   // an Update is not a new strike
+  await writeField({ card: { type: 'paused', meta, nonce } });
+  pzLoaded = null;
+  showToast(was ? '⏸ Pause card updated' : '⏸ Game paused on air');
+  closeSheet('onair-sheet');
+}
+$('pz-show').onclick = showPaused;
+$('pz-hide').onclick = () => { haptic(); clearCard(); closeSheet('onair-sheet'); };
+// A new strike: straight back to 30, on air at once — no Update needed.
+$('pz-restart').onclick = async () => {
+  if (!pausedUp()) return;
+  haptic();
+  $('pz-mins').value = 30;
+  // `strike` tells the overlay to throw a bolt and roll thunder for it.
+  await writeField({ card: { ...game.card, meta: { ...pausedMeta(30), reason: 'lightning', strike: Date.now() } } });
+  showToast('⚡ Countdown restarted — 30:00');
+};
+$('pz-minus').onclick = () => { $('pz-mins').value = Math.max(0, pzMins() - 5); };
+$('pz-plus').onclick = () => { $('pz-mins').value = Math.min(240, pzMins() + 5); };
+document.querySelectorAll('.pz-r').forEach((b) => { b.onclick = () => setPzReason(b.dataset.reason, true); });
+
+// Announcement ticker. The box is a draft: it is filled from what is on air
+// when the sheet opens, and nothing reaches the stream until Show / Update.
+// Taking it down keeps the text, so the same notice can go back up.
+let tkTone = 'info';
+const tickerUp = () => !!(game && game.ticker && game.ticker.on);
+function setTkTone(t) {
+  tkTone = t === 'alert' ? 'alert' : 'info';
+  $('tk-tone-info').setAttribute('aria-pressed', String(tkTone === 'info'));
+  $('tk-tone-alert').setAttribute('aria-pressed', String(tkTone === 'alert'));
+}
+function loadTickerDraft() {
+  const t = game && game.ticker;
+  if (t && t.text) { $('tk-text').value = t.text; setTkTone(t.tone); }
+}
+function renderTicker() {
+  if (!game) return;
+  const up = tickerUp();
+  $('tk-chip').hidden = !up;
+  $('tk-state').textContent = up ? '· on air' : 'off';
+  $('tk-state').classList.toggle('on', up);
+  $('tk-show').textContent = up ? 'Update' : 'Show';
+  $('tk-show').classList.toggle('live', up);
+  $('tk-hide').hidden = !up;
+}
+async function showTicker() {
+  const text = $('tk-text').value.replace(/\s+/g, ' ').trim();
+  if (!text) { showToast('Type a message first'); $('tk-text').focus(); return; }
+  haptic();
+  const was = tickerUp();
+  await writeField({ ticker: { text, tone: tkTone, on: true, nonce: nextNonce() } });
+  showToast(was ? '📣 Ticker updated' : '📣 Ticker on air');
+  closeSheet('onair-sheet');
+}
+async function hideTicker() {
+  if (!game || !game.ticker) return;
+  haptic();
+  await writeField({ ticker: { ...game.ticker, on: false } });
+  showToast('Ticker off air');
+}
+$('tk-show').onclick = showTicker;
+$('tk-hide').onclick = () => { hideTicker(); closeSheet('onair-sheet'); };
+$('tk-chip-x').onclick = hideTicker;
+$('tk-tone-info').onclick = () => setTkTone('info');
+$('tk-tone-alert').onclick = () => setTkTone('alert');
+document.querySelectorAll('.tk-pre').forEach((b) => {
+  b.onclick = () => { $('tk-text').value = b.dataset.text; setTkTone(b.dataset.tone); };
 });
 
 // What you'd most likely raise at this point in the game. Baseball only — it is
@@ -1917,7 +2048,8 @@ function renderSetupRows() {
   $('sv-sport-val').textContent = sport.charAt(0).toUpperCase() + sport.slice(1);
   const mins = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) + ' min' : '';
   const reg = (game.regulation_innings | 0) ? `${game.regulation_innings} innings` : '';
-  $('sv-times-val').textContent = [mins, reg].filter(Boolean).join(' · ') || 'Not set';
+  const where = game.venue && game.venue.label ? game.venue.label.split(',')[0] : '';
+  $('sv-times-val').textContent = [where, mins, reg].filter(Boolean).join(' · ') || 'Not set';
   const on = ['show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule'].filter((k) => game[k]).length;
   $('sv-show-val').textContent = on ? `${on} on` : 'Nothing extra';
   // The theme's own name, as its option reads it — no second list to drift.
@@ -2012,6 +2144,8 @@ function fillSetup() {
   $('su-home-logo').value = game.home_logo_url || '';
   $('su-home-color').value = game.home_color || '#1b2a41';
   $('su-startsat').value = toLocalInput(game.starts_at);
+  $('su-venue').value = (game.venue && game.venue.query) || '';
+  showVenueHit(game.venue);
   $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
   $('su-regulation').value = game.regulation_innings || '';
   $('su-show-clock').checked = !!game.show_clock;
@@ -2053,6 +2187,28 @@ $('su-away-color').addEventListener('change', (e) => { writeField({ away_color: 
 $('su-home-color').addEventListener('change', (e) => { writeField({ home_color: e.target.value }); renderTeamCards(); });
 $('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
 $('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
+// Venue: looked up once here, so the overlay only ever asks for the forecast.
+// The note under the field says which place it matched — "Aubrey" alone is
+// a town in more than one state.
+function showVenueHit(v, msg) {
+  const hit = $('su-venue-hit');
+  hit.textContent = msg || (v && v.label ? `📍 ${v.label} — weather on` : '');
+  hit.hidden = !hit.textContent;
+}
+let venueAsk = 0;
+$('su-venue').addEventListener('change', async () => {
+  const q = $('su-venue').value.trim();
+  const ask = ++venueAsk;
+  if (!q) { writeField({ venue: null }); showVenueHit(null); renderSetupRows(); return; }
+  showVenueHit(null, 'Looking up…');
+  let v = null;
+  try { v = await geocode(q); } catch (e) { if (ask === venueAsk) showVenueHit(null, 'Could not reach the weather service — try again'); return; }
+  if (ask !== venueAsk) return;
+  if (!v) { showVenueHit(null, `No place called “${q}” — try a ZIP`); return; }
+  writeField({ venue: v });
+  showVenueHit(v);
+  renderSetupRows();
+});
 $('su-regulation').addEventListener('change', () => { writeField({ regulation_innings: parseInt($('su-regulation').value, 10) || 0 }); renderSetupRows(); });
 $('su-time').addEventListener('change', () => {
   const mins = parseInt($('su-time').value, 10);
@@ -3035,6 +3191,8 @@ function renderGame() {
   // The on-air chip is part of the shell for every sport; the suggestions read the at-bat.
   paintIf('onair', [g.card, g.half, g.inning, g.outs, g.balls, g.strikes, g.bases, g.away_abbr, g.home_abbr, sport], renderOnAir);
   // ---- the drawer: only what changed ----
+  paintIf('ticker', [g.ticker], renderTicker);
+  paintIf('paused', [g.card], renderPaused);
   paintIf('rally', [g.rally_mode], renderRally);
   paintIf('sponsors', [g.sponsors], renderSponsors);
   paintIf('replay', [g.replay_ack, g.auto_clip], renderReplay);

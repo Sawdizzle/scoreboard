@@ -124,7 +124,7 @@ body.takeover #bug-wrap { display: none; }
 .ss-volleyball .ss-field .net { animation: ss-sway 5s ease-in-out 3.4s infinite alternate; transform-origin: 50% 540px; }
 @keyframes ss-sway { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 
-.ss-kicker { display: flex; align-items: center; gap: 22px; margin-bottom: 58px; font-size: 30px; letter-spacing: 0.24em; text-transform: uppercase; }
+.ss-kicker { display: flex; align-items: center; gap: 22px; margin-bottom: 44px; font-size: 30px; letter-spacing: 0.24em; text-transform: uppercase; }
 .ss-sport { padding: 9px 22px 9px 26px; border-radius: 999px; background: var(--accent); color: #0b0f17; font-weight: 900; letter-spacing: 0.2em; }
 .ss-sub { font-weight: 700; opacity: 0.85; }
 
@@ -161,13 +161,57 @@ body.takeover #bug-wrap { display: none; }
   animation: ss-pop 0.6s cubic-bezier(.2, .9, .3, 1.4) 0.9s both; }
 @keyframes ss-pop { from { opacity: 0; transform: scale(1.8); } to { opacity: 1; transform: none; } }
 
-.ss-clock { margin-top: 56px; display: flex; flex-direction: column; align-items: center;
+.ss-clock { margin-top: 40px; display: flex; flex-direction: column; align-items: center;
   padding: 18px 64px 20px; border-radius: 28px; background: rgba(8, 12, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
   animation: rise-in 0.8s cubic-bezier(.2, .8, .2, 1) 1.1s both; }
 .card.starting .cd { font-family: var(--num); font-size: 120px; font-weight: 800; line-height: 1; letter-spacing: 0.02em; }
 .card.starting .cd.now { font-family: var(--disp); font-size: 88px; color: var(--accent); letter-spacing: 0.08em; animation: ss-pulse 1.6s ease-in-out infinite; }
 @keyframes ss-pulse { 50% { transform: scale(1.06); } }
 .card.starting .cd-when { margin-top: 10px; font-size: 26px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+
+/* Venue weather, under the countdown (or under the teams when there is none). */
+.ss-wx { order: 9; margin-top: 24px; display: flex; align-items: center; gap: 16px;
+  padding: 14px 34px; border-radius: 999px; background: rgba(8, 12, 20, 0.55); border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 30px; font-weight: 700; letter-spacing: 0.04em; color: #f4f7fb;
+  animation: rise-in 0.8s cubic-bezier(.2, .8, .2, 1) 1.3s both; }
+.ss-wx[hidden] { display: none; }
+.ss-wx .wx-i { font-size: 40px; line-height: 1; }
+.ss-wx .wx-t { font-family: var(--num); font-size: 40px; font-weight: 800; }
+.ss-wx .wx-dot { font-style: normal; opacity: 0.45; }
+.ss-wx .wx-where { margin-left: 10px; padding-left: 22px; border-left: 2px solid rgba(255, 255, 255, 0.22);
+  color: var(--steel); text-transform: uppercase; letter-spacing: 0.14em; font-size: 24px; }
+
+/* Game paused — weather stop. Same dark backdrop and light ink as Starting
+   Soon; the tag carries the reason's colour. */
+.card.pz { width: 1500px; display: flex; flex-direction: column; align-items: center; color: #f4f7fb; --pz: #e8a531; }
+.card.pz-lightning { --pz: #f2c230; }
+.card.pz-rain { --pz: #5fa8e8; }
+.card.pz-weather { --pz: #9aa8c4; }
+.card.pz-suspended { --pz: #c9a1f0; }
+.card.pz-called { --pz: #ff6a5c; }
+.pz-kicker { margin-bottom: 26px; }
+.pz-tag { display: inline-flex; align-items: center; gap: 14px; padding: 10px 30px 10px 24px; border-radius: 999px;
+  background: var(--pz); color: #0b0f17; font-size: 30px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; }
+.pz-tag i { font-style: normal; font-size: 34px; letter-spacing: 0; }
+.pz-lightning .pz-tag { animation: pz-flash 3.2s ease-in-out infinite; }
+@keyframes pz-flash { 0%, 86%, 100% { filter: none; } 89% { filter: brightness(1.6); } 92% { filter: none; } 95% { filter: brightness(1.4); } }
+.pz-title { font-size: 112px; font-weight: 900; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.pz-sub { margin-top: 18px; font-size: 34px; font-weight: 700; opacity: 0.85; text-wrap: balance; }
+.pz-score { margin-top: 44px; display: flex; align-items: center; gap: 30px; padding: 16px 40px; border-radius: 26px;
+  background: rgba(8, 12, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.12); }
+.pz-team { display: flex; align-items: center; gap: 20px; }
+.pz-team img { width: 76px; height: 76px; object-fit: contain; }
+.pz-team .n { font-size: 46px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+.pz-team .r { font-family: var(--num); font-size: 84px; font-weight: 800; line-height: 1; min-width: calc(2 * var(--digit)); text-align: center; }
+.pz-dash { font-size: 60px; color: var(--steel); opacity: 0.5; }
+.pz-where { margin-top: 14px; font-size: 26px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.pz-clock { margin-top: 30px; display: flex; flex-direction: column; align-items: center; }
+.card.pz .cd { font-family: var(--num); font-size: 110px; font-weight: 800; line-height: 1; letter-spacing: 0.02em; color: #f4f7fb; }
+.card.pz .cd.soon { color: var(--pz); }
+.card.pz .cd.now { font-family: var(--disp); font-size: 76px; color: var(--pz); letter-spacing: 0.08em; }
+.card.pz .cd-when { margin-top: 8px; font-size: 24px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.card.pz .pz-wx { margin-top: 30px; }
+@media (prefers-reduced-motion: reduce) { .pz-lightning .pz-tag { animation: none; } }
 
 /* Mid-inning / full-page final: one big scoreboard slab */
 .card.slab .card-sub { font-size: 30px; letter-spacing: 0.2em; margin-bottom: 40px; color: var(--chalk); opacity: 0.75; }
@@ -233,7 +277,7 @@ body.takeover #bug-wrap { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #card.takeover::before, #card.takeover::after { animation: none; }
   .card.takeover-card.enter > * { animation: none; }
-  .ss-field, .ss-field *, .ss-team, .ss-bar, .ss-ball, .ss-vs, .ss-clock, .card.starting .cd.now { animation: none !important; }
+  .ss-field, .ss-field *, .ss-team, .ss-bar, .ss-ball, .ss-vs, .ss-clock, .ss-wx, .card.starting .cd.now { animation: none !important; }
   .ss-field .ln { stroke-dashoffset: 0; } .ss-field .base { opacity: 1; }
 }
 
@@ -344,3 +388,47 @@ body.takeover #sponsor-bug { display: none; }
 .card.slab .md-who.lead::before { content: '\25B8  '; color: var(--accent, #e0a92a); }
 .card.slab .md-due.rp-go { animation: rp-in 0.55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: 2.6s; }
 @media (prefers-reduced-motion: reduce) { .card.slab .md-due.rp-go { animation: none; } }
+
+/* ---- Storm on the Game paused card (js/storm.js) ---------------------------
+   Behind the card (z 0 under .card's z 1): clouds, rain, bolts. The flash is
+   a body-level layer above everything. */
+#card > .storm { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.st-cloud { position: absolute; left: -25%; width: 150%; height: 46%; will-change: transform;
+  background:
+    radial-gradient(38% 60% at 18% 30%, var(--cl) 0%, transparent 70%),
+    radial-gradient(30% 55% at 46% 20%, var(--cl) 0%, transparent 72%),
+    radial-gradient(34% 62% at 74% 34%, var(--cl) 0%, transparent 70%),
+    radial-gradient(26% 50% at 96% 18%, var(--cl) 0%, transparent 72%); }
+.clouds-dark { --cl: rgba(46, 53, 76, 0.8); }
+.clouds-grey { --cl: rgba(70, 78, 98, 0.55); }
+.st-cloud.c0 { top: -16%; animation: st-drift 90s linear infinite alternate; }
+.st-cloud.c1 { top: -8%; opacity: 0.8; animation: st-drift 64s linear infinite alternate-reverse; }
+.st-cloud.c2 { top: -20%; opacity: 0.65; height: 38%; animation: st-drift 120s linear infinite alternate; }
+@keyframes st-drift { from { transform: translate3d(-6%, 0, 0); } to { transform: translate3d(6%, 0, 0); } }
+
+/* Rain: slanted streaks on a sheet twice the frame tall, sliding down one
+   frame-height per loop so it never shows a seam. */
+.st-rain { position: absolute; left: -10%; top: -100%; width: 120%; height: 200%; will-change: transform;
+  transform: rotate(8deg); pointer-events: none; }
+.st-rain.far { opacity: 0.22; background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(190, 210, 240, 0.9) 22px 23px, transparent 23px 57px);
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+          mask-image: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+  animation: st-fall 1.6s linear infinite; }
+.st-rain.near { opacity: 0.32; background: repeating-linear-gradient(90deg, transparent 0 41px, rgba(210, 225, 250, 0.95) 41px 43px, transparent 43px 97px);
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 44px, transparent 44px 130px);
+          mask-image: repeating-linear-gradient(180deg, #000 0 44px, transparent 44px 130px);
+  animation: st-fall 0.9s linear infinite; }
+.st-rain.light.far { opacity: 0.14; } .st-rain.light.near { opacity: 0.2; }
+@keyframes st-fall { from { transform: rotate(8deg) translate3d(0, 0, 0); } to { transform: rotate(8deg) translate3d(0, 50%, 0); } }
+
+.st-bolts { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.st-bolt path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.st-bolt .glow { stroke: rgba(150, 185, 255, 0.55); stroke-width: 16; filter: blur(8px); }
+.st-bolt .core { stroke: #f4f8ff; stroke-width: 4.5; }
+.st-bolt .glow.fork { stroke-width: 9; } .st-bolt .core.fork { stroke-width: 2.2; }
+.st-bolt.big .glow { stroke-width: 26; } .st-bolt.big .core { stroke-width: 7; }
+
+#storm-flash { position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0;
+  background: radial-gradient(120% 90% at 50% 10%, #eef3ff 0%, #b9c9ee 55%, #8ea3d6 100%); mix-blend-mode: screen; }
+
+@media (prefers-reduced-motion: reduce) { .st-cloud, .st-rain { animation: none; } }

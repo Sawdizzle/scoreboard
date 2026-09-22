@@ -2,12 +2,18 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
-import { startingCard, fitStartingNames } from './starting.js';
+import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
+import { fetchWeather } from './weather.js';
+import { setStorm, strike } from './storm.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
-if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
+if (params.get('debug')) {
+  document.body.classList.add('debug'); window.__audio = audio;
+  // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
+  window.__sb = { render: (patch) => render({ ...last, ...patch }), strike: (big) => { strike(big); audio.thunder(big); } };
+}
 // The roster lives in an owner-only table (it has kids' names in it), so the
 // overlay reads it through a token that travels only in this URL. No token, no
 // lineup or defense cards — everything else still runs.
@@ -210,6 +216,9 @@ function render(s) {
   if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
   else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(withBatterName(a, s)); audio.play(soundFor(a)); }
 
+  syncWeather(s);
+  syncTicker(s);
+  syncStorm(s);
   syncSponsors(s);
   replayHello();
   handleReplay(s.replay_cmd);
@@ -500,6 +509,9 @@ function recapStripHtml(s) {
 
 let lastCardKey = null, lastCardSig = null;
 function cardSig(c, s) {
+  // Paused tracks its own reason and countdown (edited in place, same nonce)
+  // and the score behind it.
+  if (c.type === 'paused') return `${JSON.stringify(c.meta || {})}:${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${s.outs}:${JSON.stringify(s.state || {})}`;
   if (c.type === 'lineup') {
     const side = (c.meta && c.meta.auto) ? battingSide(s) : ((c.meta && c.meta.side) || battingSide(s));
     const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
@@ -549,6 +561,7 @@ function renderCard(s) {
     layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
     fitStartingNames(layer);
+    paintWeather();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitStartingNames(layer));
     const fresh = layer.querySelector('.takeover-card');
     if (fresh) {
@@ -571,6 +584,7 @@ function renderCard(s) {
       const st = next.getAttribute('style');
       if (st) cur.setAttribute('style', st); else cur.removeAttribute('style');
       cur.replaceChildren(...next.childNodes); // live refresh, no re-animation
+      cdPainted = null; paintWeather(); // the countdown and weather were rebuilt with placeholders
     } else layer.innerHTML = html;
   }
   layer.hidden = false;
@@ -616,8 +630,144 @@ function renderCard(s) {
     }
   }
 }
+// ---- Storm on the pause card ------------------------------------------------
+// The sky follows the reason. A lightning pause going up, and every "new
+// strike" from the pad (meta.strike, a timestamp), bring a big strike with
+// thunder — but only when strictly newer than what this overlay saw on its
+// first paint, so reloading OBS mid-delay never sets one off.
+let stormPrimed = false;
+let stormNonce = 0;   // newest pause card seen
+let stormStrike = 0;  // newest strike seen
+function syncStorm(s) {
+  const c = s.card;
+  const paused = c && c.type === 'paused';
+  const meta = (paused && c.meta) || {};
+  setStorm(document.getElementById('card'), paused ? (meta.reason || 'weather') : null);
+  const nonce = paused ? Number(c.nonce) || 0 : 0;
+  const hit = Number(meta.strike) || 0;
+  if (!stormPrimed) { stormPrimed = true; stormNonce = nonce; stormStrike = hit; return; }
+  if (!paused || meta.reason !== 'lightning') { if (nonce > stormNonce) stormNonce = nonce; return; }
+  let big = false;
+  if (nonce > stormNonce) { stormNonce = nonce; big = true; }
+  if (hit > stormStrike) { stormStrike = hit; big = true; }
+  // Let the card's entrance land first.
+  if (big) setTimeout(() => { strike(true); audio.thunder(true); }, 700);
+}
+
+// ---- Announcement ticker ----------------------------------------------------
+// One pass = the strip slides left by exactly one copy of the message, which
+// puts the next copy where the first began, so passes join without a seam. An
+// edit made while it runs waits for the pass to end, then enters behind the
+// message still on screen, so the text never jumps under the viewer's eyes.
+const TK_SPEED = 120;   // px per second
+const tk = { text: null, next: null, anim: null, hideTimer: null };
+function syncTicker(s) {
+  const box = document.getElementById('ticker');
+  const t = s.ticker;
+  const text = t && t.on && typeof t.text === 'string' ? t.text.trim() : '';
+  if (!text) {
+    if (tk.text === null) return;
+    tk.text = tk.next = null;
+    box.classList.remove('up');
+    document.body.classList.remove('ticker-on');
+    clearTimeout(tk.hideTimer);
+    tk.hideTimer = setTimeout(() => {
+      if (tk.text !== null) return;
+      if (tk.anim) { tk.anim.cancel(); tk.anim = null; }
+      box.hidden = true;
+      document.getElementById('tk-run').innerHTML = '';
+    }, 500);
+    return;
+  }
+  const alert = t.tone === 'alert';
+  box.classList.toggle('alert', alert);
+  const lab = alert ? '⚠ Alert' : 'Notice';
+  const labEl = document.getElementById('tk-lab');
+  if (labEl.textContent !== lab) labEl.textContent = lab;
+  if (tk.text === null) {
+    clearTimeout(tk.hideTimer);
+    tk.text = text; tk.next = null;
+    box.hidden = false;
+    tickerPass(null);
+    void box.offsetWidth;   // commit the off-screen position so the slide-up runs
+    box.classList.add('up');
+    document.body.classList.add('ticker-on');
+  } else if (text !== tk.text) tk.next = text;
+  else tk.next = null;
+}
+function tickerPass(lead) {
+  const run = document.getElementById('tk-run');
+  const track = run.parentElement;
+  if (tk.anim) { tk.anim.cancel(); tk.anim = null; }
+  if (tk.text === null) return;
+  const item = (t) => `<span class="tk-item">${escapeHtml(t)}</span>`;
+  // `lead` is the old message still on screen: it goes first and scrolls off.
+  run.innerHTML = (lead ? item(lead) : '') + item(tk.text);
+  const first = run.firstElementChild;
+  const unit = first.offsetWidth || 1;
+  const W = track.clientWidth || 1600;
+  const copy = run.lastElementChild.offsetWidth || 1;
+  const copies = Math.max(1, Math.ceil(W / copy) + 1);
+  run.innerHTML = (lead ? item(lead) : '') + item(tk.text).repeat(copies);
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  tk.anim = run.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-unit}px)` }],
+    { duration: (unit / TK_SPEED) * 1000, easing: 'linear' });
+  tk.anim.onfinish = () => {
+    if (tk.text === null) return;
+    let prev = null;
+    if (tk.next) { prev = tk.text; tk.text = tk.next; tk.next = null; }
+    // After a lead pass the strip starts on the new message; after a plain
+    // pass it starts on the next copy, which looks the same as the first.
+    tickerPass(prev);
+  };
+}
+
+// ---- Venue weather --------------------------------------------------------
+// Fetched here, straight from Open-Meteo, every 10 minutes while the game has a
+// venue. A failed fetch keeps the last reading on screen (venue LTE drops out)
+// and tries again sooner; a reading older than 90 minutes is dropped rather
+// than shown as if it were now.
+const WX_EVERY = 10 * 60 * 1000;
+let wx = null;          // last good reading
+let wxKey = null;       // venue + first pitch it was fetched for
+let wxTimer = null;
+function syncWeather(s) {
+  const v = s.venue && s.venue.lat != null ? s.venue : null;
+  const key = v ? `${v.lat},${v.lon}|${s.starts_at || ''}` : null;
+  if (key === wxKey) return;
+  wxKey = key;
+  clearTimeout(wxTimer);
+  if (!key) { wx = null; paintWeather(); return; }
+  if (wx && wx.key !== key.split('|')[0]) wx = null;   // a different place, not a new first pitch
+  pullWeather();
+}
+async function pullWeather() {
+  clearTimeout(wxTimer);
+  const key = wxKey;
+  if (!key || !last) return;
+  let next = WX_EVERY;
+  try {
+    const w = await fetchWeather(last.venue, last.starts_at);
+    if (key !== wxKey) return;
+    if (w) wx = { ...w, key: key.split('|')[0] };
+  } catch (e) {
+    console.warn('weather fetch failed', e.message);
+    next = 2 * 60 * 1000;
+  }
+  if (wx && Date.now() - wx.at > 90 * 60 * 1000) wx = null;
+  paintWeather();
+  wxTimer = setTimeout(pullWeather, next);
+}
+function paintWeather() {
+  document.querySelectorAll('#card .ss-wx, #card .pz-wx').forEach((n) => {
+    const html = wx ? weatherHtml(wx, last && last.venue) : '';
+    if (n.innerHTML !== html) n.innerHTML = html;
+    n.hidden = !html;
+  });
+}
+
 // Cards that cover the whole 1920×1080 frame instead of floating over the video.
-const TAKEOVER = new Set(['starting', 'midinning', 'finalfull']);
+const TAKEOVER = new Set(['starting', 'midinning', 'finalfull', 'paused']);
 
 // Countdown to first pitch, repainted on the shared tick. Only the number is
 // rewritten — the card around it stays put, so nothing re-animates.
@@ -630,9 +780,13 @@ function fmtCountdown(sec) {
 }
 function updateCardCountdown() {
   const el2 = document.getElementById('card-cd');
-  if (!el2 || !last || !last.starts_at) return;
-  const ms = new Date(last.starts_at).getTime() - serverNow();
-  const txt = ms <= 0 ? 'STARTING NOW' : fmtCountdown(ms / 1000);
+  if (!el2 || !last) return;
+  // Starting Soon counts to first pitch; the pause card to its own restart time.
+  const paused = last.card && last.card.type === 'paused';
+  const target = paused ? last.card.meta && last.card.meta.until : last.starts_at;
+  if (!target) return;
+  const ms = new Date(target).getTime() - serverNow();
+  const txt = ms <= 0 ? (paused ? 'ANY MINUTE' : 'STARTING NOW') : fmtCountdown(ms / 1000);
   if (txt === cdPainted) return;
   cdPainted = txt;
   el2.textContent = txt;
@@ -678,6 +832,51 @@ function lineScoreHtml(s, fresh = null, replay = false) {
     <tr><th>${hAbbr}</th>${cells('bottom')}<td class="rhe">${s.home_score | 0}</td><td class="rhe">${s.home_hits | 0}</td><td class="rhe">${s.home_errors | 0}</td></tr></table>`;
 }
 
+// ---- Game paused -----------------------------------------------------------
+// Full-screen, for a weather stop. The reason sets the headline; the score and
+// where the game stands stay on screen so nobody has to ask; the countdown is
+// the operator's (lightning: 30 minutes from the last strike, restarted at
+// every new one). Called and Suspended have no countdown — there is nothing to
+// count down to.
+const PAUSE = {
+  lightning: { icon: '⚡', tag: 'Lightning delay', title: 'Play is paused', sub: 'Lightning in the area — players are off the field' },
+  rain:      { icon: '🌧', tag: 'Rain delay',      title: 'Play is paused', sub: 'Waiting out the rain' },
+  weather:   { icon: '⛈', tag: 'Weather delay',   title: 'Play is paused', sub: 'Waiting out the weather' },
+  suspended: { icon: '⏸', tag: 'Suspended',       title: 'Game suspended', sub: 'Play will pick up at a later date' },
+  called:    { icon: '🏁', tag: 'Called',          title: 'Game called',    sub: 'The game has been called due to weather' },
+};
+const NO_CLOCK = new Set(['suspended', 'called']);
+function standsLabel(s) {
+  const st = s.state || {};
+  const sport = s.sport || 'baseball';
+  if (sport === 'baseball') {
+    const outs = s.outs | 0;
+    return `${s.half === 'bottom' ? 'Bottom' : 'Top'} of the ${ordinal(s.inning | 0 || 1)}${outs ? ` · ${outs} out${outs > 1 ? 's' : ''}` : ''}`;
+  }
+  if (sport === 'football') return `Q${st.quarter || 1}`;
+  if (sport === 'basketball') return `Q${st.period || 1}`;
+  if (sport === 'soccer') return (st.half || 1) === 1 ? '1st half' : '2nd half';
+  if (sport === 'volleyball') return `Set ${st.set || 1}`;
+  return '';
+}
+function pausedCard(meta, s) {
+  const reason = PAUSE[meta.reason] ? meta.reason : 'weather';
+  const r = PAUSE[reason];
+  const until = !NO_CLOCK.has(reason) && meta.until ? new Date(meta.until) : null;
+  const at = until ? until.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const side = (x) => `<div class="pz-team">${logoHtml(s[x + '_logo_url'])}<span class="n">${escapeHtml(s[x + '_abbr'] || s[x + '_name'] || (x === 'home' ? 'HOME' : 'AWAY'))}</span><b class="r">${s[x + '_score'] | 0}</b></div>`;
+  const where = reason === 'called' ? 'Final' : standsLabel(s);
+  return `<div class="card takeover-card pz pz-${reason}">
+    <div class="pz-kicker"><span class="pz-tag"><i aria-hidden="true">${r.icon}</i>${escapeHtml(r.tag)}</span></div>
+    <div class="pz-title">${escapeHtml(r.title)}</div>
+    <div class="pz-sub">${escapeHtml(meta.text || r.sub)}</div>
+    <div class="pz-score">${side('away')}<span class="pz-dash">–</span>${side('home')}</div>
+    ${where ? `<div class="pz-where">${escapeHtml(where)}</div>` : ''}
+    ${until ? `<div class="pz-clock"><div class="cd" id="card-cd">--:--</div><div class="cd-when">${reason === 'lightning' ? 'Earliest restart' : 'Back at'} · ${escapeHtml(at)}</div></div>` : ''}
+    <div class="ss-wx pz-wx" hidden></div>
+  </div>`;
+}
+
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
 const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
 function buildCard(c, s) {
@@ -692,6 +891,7 @@ function buildCard(c, s) {
     </div>${meta.text ? `<div class="card-meta">${escapeHtml(meta.text)}</div>` : ''}</div>`;
   }
   if (c.type === 'starting') return startingCard(meta, s);
+  if (c.type === 'paused') return pausedCard(meta, s);
   if (c.type === 'midinning' || c.type === 'finalfull') {
     const fin = c.type === 'finalfull';
     // Final says who won: the winner's colour washes in from their side, their
