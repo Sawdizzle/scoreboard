@@ -310,6 +310,10 @@
         <span class="air-dot" aria-hidden="true"></span><span id="air-lab" class="air-lab"></span>
         <button id="air-clear" class="air-x" type="button" aria-label="Take the card off air">✕</button>
       </span>
+      <span id="tk-chip" class="air-chip tk-chip" hidden>
+        <span class="air-lab" aria-hidden="true">📣</span>
+        <button id="tk-chip-x" class="air-x" type="button" aria-label="Take the announcement ticker down">✕</button>
+      </span>
       <!-- The shadow fold (rework stage 2): the pad rebuilds the game from its
            own event log and says whether that answer matches the row it is
            showing. Read-only — nothing on the scorebug comes from it. Tap to
@@ -714,6 +718,28 @@
         <button class="fxbtn takeover" type="button" data-card="starting">Starting Soon</button>
         <button class="fxbtn takeover" type="button" data-card="midinning">Mid-Inning</button>
         <button class="fxbtn takeover" type="button" data-card="finalfull">Final screen</button>
+      </div>
+
+      <!-- The announcement ticker: a strip that scrolls along the bottom of
+           every scene until taken down. Its own text, not the card text —
+           a delay notice has to outlive whatever card is up. -->
+      <span class="sublabel">Announcement ticker <em id="tk-state">off</em></span>
+      <div class="tk-box">
+        <textarea id="tk-text" rows="2" maxlength="220" placeholder="Weather delay — we'll be back shortly…"></textarea>
+        <div class="tk-presets" role="group" aria-label="Quick messages">
+          <button type="button" class="tk-pre" data-tone="alert" data-text="⚡ Lightning in the area — players are off the field. We'll resume 30 minutes after the last strike.">⚡ Lightning</button>
+          <button type="button" class="tk-pre" data-tone="alert" data-text="🌧 Rain delay — play is paused. Stay with us, we'll be back when it clears.">🌧 Rain delay</button>
+          <button type="button" class="tk-pre" data-tone="alert" data-text="Weather delay — play is paused. Stay tuned for updates.">Weather delay</button>
+          <button type="button" class="tk-pre" data-tone="info" data-text="Game will resume shortly — thanks for watching!">Resuming soon</button>
+        </div>
+        <div class="tk-row">
+          <div class="tk-tone" role="group" aria-label="Tone">
+            <button type="button" id="tk-tone-info" aria-pressed="true">Notice</button>
+            <button type="button" id="tk-tone-alert" aria-pressed="false">⚠ Alert</button>
+          </div>
+          <button type="button" id="tk-show" class="fxbtn tk-go">Show</button>
+          <button type="button" id="tk-hide" class="fxbtn cardclear tk-off" hidden>Take down</button>
+        </div>
       </div>
 
       <span class="sublabel">Moments <em>play once</em></span>

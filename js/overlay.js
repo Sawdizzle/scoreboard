@@ -8,7 +8,11 @@ import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game');
-if (params.get('debug')) { document.body.classList.add('debug'); window.__audio = audio; }
+if (params.get('debug')) {
+  document.body.classList.add('debug'); window.__audio = audio;
+  // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
+  window.__sb = { render: (patch) => render({ ...last, ...patch }) };
+}
 // The roster lives in an owner-only table (it has kids' names in it), so the
 // overlay reads it through a token that travels only in this URL. No token, no
 // lineup or defense cards — everything else still runs.
@@ -212,6 +216,7 @@ function render(s) {
   else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(withBatterName(a, s)); audio.play(soundFor(a)); }
 
   syncWeather(s);
+  syncTicker(s);
   syncSponsors(s);
   replayHello();
   handleReplay(s.replay_cmd);
@@ -619,6 +624,74 @@ function renderCard(s) {
     }
   }
 }
+// ---- Announcement ticker ----------------------------------------------------
+// One pass = the strip slides left by exactly one copy of the message, which
+// puts the next copy where the first began, so passes join without a seam. An
+// edit made while it runs waits for the pass to end, then enters behind the
+// message still on screen, so the text never jumps under the viewer's eyes.
+const TK_SPEED = 120;   // px per second
+const tk = { text: null, next: null, anim: null, hideTimer: null };
+function syncTicker(s) {
+  const box = document.getElementById('ticker');
+  const t = s.ticker;
+  const text = t && t.on && typeof t.text === 'string' ? t.text.trim() : '';
+  if (!text) {
+    if (tk.text === null) return;
+    tk.text = tk.next = null;
+    box.classList.remove('up');
+    document.body.classList.remove('ticker-on');
+    clearTimeout(tk.hideTimer);
+    tk.hideTimer = setTimeout(() => {
+      if (tk.text !== null) return;
+      if (tk.anim) { tk.anim.cancel(); tk.anim = null; }
+      box.hidden = true;
+      document.getElementById('tk-run').innerHTML = '';
+    }, 500);
+    return;
+  }
+  const alert = t.tone === 'alert';
+  box.classList.toggle('alert', alert);
+  const lab = alert ? '⚠ Alert' : 'Notice';
+  const labEl = document.getElementById('tk-lab');
+  if (labEl.textContent !== lab) labEl.textContent = lab;
+  if (tk.text === null) {
+    clearTimeout(tk.hideTimer);
+    tk.text = text; tk.next = null;
+    box.hidden = false;
+    tickerPass(null);
+    void box.offsetWidth;   // commit the off-screen position so the slide-up runs
+    box.classList.add('up');
+    document.body.classList.add('ticker-on');
+  } else if (text !== tk.text) tk.next = text;
+  else tk.next = null;
+}
+function tickerPass(lead) {
+  const run = document.getElementById('tk-run');
+  const track = run.parentElement;
+  if (tk.anim) { tk.anim.cancel(); tk.anim = null; }
+  if (tk.text === null) return;
+  const item = (t) => `<span class="tk-item">${escapeHtml(t)}</span>`;
+  // `lead` is the old message still on screen: it goes first and scrolls off.
+  run.innerHTML = (lead ? item(lead) : '') + item(tk.text);
+  const first = run.firstElementChild;
+  const unit = first.offsetWidth || 1;
+  const W = track.clientWidth || 1600;
+  const copy = run.lastElementChild.offsetWidth || 1;
+  const copies = Math.max(1, Math.ceil(W / copy) + 1);
+  run.innerHTML = (lead ? item(lead) : '') + item(tk.text).repeat(copies);
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  tk.anim = run.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-unit}px)` }],
+    { duration: (unit / TK_SPEED) * 1000, easing: 'linear' });
+  tk.anim.onfinish = () => {
+    if (tk.text === null) return;
+    let prev = null;
+    if (tk.next) { prev = tk.text; tk.text = tk.next; tk.next = null; }
+    // After a lead pass the strip starts on the new message; after a plain
+    // pass it starts on the next copy, which looks the same as the first.
+    tickerPass(prev);
+  };
+}
+
 // ---- Venue weather --------------------------------------------------------
 // Fetched here, straight from Open-Meteo, every 10 minutes while the game has a
 // venue. A failed fetch keeps the last reading on screen (venue LTE drops out)

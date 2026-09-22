@@ -71,7 +71,8 @@ body.debug {
    Each rule sets BOTH edges (one to auto) so switching position never leaves a
    stale top/bottom. transform-origin matches the anchor so scaling looks right. */
 #bug-wrap { position: fixed; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  top: auto; bottom: 46px; left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+  top: auto; bottom: calc(46px + var(--tk, 0px)); left: 50%; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center;
+  transition: bottom 0.45s cubic-bezier(.2, .8, .2, 1); }
 
 /* Full 3×3 grid: {top,mid,bottom} × {left,center,right}. Each sets both edges
    (unused one = auto), the matching transform, and transform-origin. */
@@ -81,11 +82,11 @@ body[data-pos="top-right"]     #bug-wrap { top: 32px; bottom: auto; right: 44px;
 body[data-pos="mid-left"]      #bug-wrap { top: 50%; bottom: auto; left: 44px; right: auto; align-items: flex-start; transform: translateY(-50%) scale(var(--scale)); transform-origin: center left; }
 body[data-pos="mid-center"]    #bug-wrap { top: 50%; bottom: auto; left: 50%; right: auto; align-items: center; transform: translate(-50%, -50%) scale(var(--scale)); transform-origin: center; }
 body[data-pos="mid-right"]     #bug-wrap { top: 50%; bottom: auto; right: 44px; left: auto; align-items: flex-end; transform: translateY(-50%) scale(var(--scale)); transform-origin: center right; }
-body[data-pos="bottom-left"]   #bug-wrap { bottom: 46px; top: auto; left: 44px; right: auto; align-items: flex-start; transform: scale(var(--scale)); transform-origin: bottom left; }
-body[data-pos="bottom-center"] #bug-wrap { bottom: 46px; top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
-body[data-pos="bottom-right"]  #bug-wrap { bottom: 46px; top: auto; right: 44px; left: auto; align-items: flex-end; transform: scale(var(--scale)); transform-origin: bottom right; }
+body[data-pos="bottom-left"]   #bug-wrap { bottom: calc(46px + var(--tk, 0px)); top: auto; left: 44px; right: auto; align-items: flex-start; transform: scale(var(--scale)); transform-origin: bottom left; }
+body[data-pos="bottom-center"] #bug-wrap { bottom: calc(46px + var(--tk, 0px)); top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="bottom-right"]  #bug-wrap { bottom: calc(46px + var(--tk, 0px)); top: auto; right: 44px; left: auto; align-items: flex-end; transform: scale(var(--scale)); transform-origin: bottom right; }
 /* legacy aliases (older games) */
-body[data-pos="bottom-bar"] #bug-wrap { bottom: 46px; top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
+body[data-pos="bottom-bar"] #bug-wrap { bottom: calc(46px + var(--tk, 0px)); top: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: bottom center; }
 body[data-pos="top-bar"]    #bug-wrap { top: 32px; bottom: auto; left: 50%; right: auto; align-items: center; transform: translateX(-50%) scale(var(--scale)); transform-origin: top center; }
 
 .team { display: flex; align-items: center; gap: 12px; padding: 11px 18px; }
@@ -135,3 +136,31 @@ body.rhe .team .rhe { display: inline-flex; gap: 9px; margin-left: 2px; }
 #sound-hint { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 30;
   padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
   background: rgba(16, 22, 33, 0.92); color: var(--chalk); font-family: var(--disp); font-size: 14px; }
+
+/* ---- Announcement ticker ---------------------------------------------------
+   A strip along the bottom edge, over every scene (cards included). While it is
+   up, --tk lifts a bottom-anchored scorebug and shortens the card layer, so
+   nothing sits underneath it. */
+body.ticker-on { --tk: 60px; }
+#ticker { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; z-index: 20; display: flex; align-items: stretch;
+  font-family: var(--disp); color: #f4f7fb; background: rgba(10, 14, 22, 0.95); border-top: 3px solid var(--accent);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+  transform: translateY(105%); transition: transform 0.45s cubic-bezier(.2, .8, .2, 1); }
+#ticker[hidden] { display: none; }
+#ticker.up { transform: none; }
+#ticker .tk-lab { flex: 0 0 auto; display: flex; align-items: center; padding: 0 26px 0 28px;
+  background: var(--accent); color: #0b0f17; font-weight: 900; font-size: 24px; letter-spacing: 0.18em; text-transform: uppercase; }
+#ticker .tk-track { flex: 1; min-width: 0; position: relative; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+#ticker .tk-run { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap;
+  will-change: transform; font-size: 30px; font-weight: 700; letter-spacing: 0.02em; }
+#ticker .tk-item { padding: 0 40px; }
+#ticker .tk-item::after { content: '◆'; margin-left: 80px; font-size: 16px; vertical-align: 4px; color: var(--accent); opacity: 0.7; }
+/* Alert: amber strip, the label breathing so a delay reads as urgent. */
+#ticker.alert { background: linear-gradient(90deg, #3b1f05, #22130a 60%, #2a1606); border-top-color: #f0a52c; }
+#ticker.alert .tk-lab { background: #f0a52c; color: #1a0f02; animation: tk-pulse 1.8s ease-in-out infinite; }
+#ticker.alert .tk-item::after { color: #f0a52c; }
+@keyframes tk-pulse { 50% { background: #ffcf6e; } }
+body.ticker-on #card { bottom: var(--tk); }
+@media (prefers-reduced-motion: reduce) { #ticker, #bug-wrap { transition: none; } #ticker.alert .tk-lab { animation: none; } }

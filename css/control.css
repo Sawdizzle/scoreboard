@@ -1058,3 +1058,24 @@ button.lineup-row .b-pos, .lineup-row .b-pos { text-align: center; }
 button.fieldcheck { width: 100%; background: none; border: none; padding: 6px 2px; text-align: left; font-weight: 600; min-height: 40px; }
 .lu-status[data-state="saved"] { color: var(--ball); font-weight: 700; }
 .lu-status[data-state="failed"] { color: var(--out-ui); font-weight: 700; }
+
+/* Announcement ticker (On Air). Presets fill the box; Show puts it up, and
+   while it is up the same button reads Update. */
+.tk-box { display: flex; flex-direction: column; gap: 8px; }
+#tk-text { width: 100%; box-sizing: border-box; resize: none; padding: 12px 14px; font: inherit; font-size: 16px; line-height: 1.35;
+  color: var(--chalk); background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
+.tk-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-pre { padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); }
+.tk-pre:active { filter: brightness(1.2); }
+.tk-row { display: flex; gap: 8px; align-items: stretch; }
+.tk-tone { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; flex: 0 0 auto; }
+.tk-tone button { padding: 0 12px; font-size: 13px; font-weight: 700; background: var(--bg-2); color: var(--muted); border: 0; }
+.tk-tone button[aria-pressed="true"] { background: var(--steel); color: #06090f; }
+.tk-tone #tk-tone-alert[aria-pressed="true"] { background: #e8a531; color: #1a1204; }
+.onair-card .tk-row .fxbtn { flex: 1; min-height: 48px; margin: 0; width: auto; }
+.onair-card .tk-row .fxbtn[hidden] { display: none; }
+.tk-go.live { background: var(--steel); border-color: var(--steel); color: #06090f; }
+#tk-state { color: var(--muted); }
+#tk-state.on { color: #ff7a6e; }
+.tk-chip { max-width: none; }

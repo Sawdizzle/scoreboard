@@ -1406,7 +1406,7 @@ function toggleCard(type) {
   haptic();
   return game.card && game.card.type === type ? clearCard() : showCard(type);
 }
-$('onair-open').onclick = () => { renderOnAir(); openSheet('onair-sheet'); };
+$('onair-open').onclick = () => { renderOnAir(); loadTickerDraft(); openSheet('onair-sheet'); };
 $('onair-done').onclick = () => closeSheet('onair-sheet');
 $('air-clear').onclick = () => { haptic(); clearCard(); };
 // Raising a card or firing a moment is the whole errand, so the sheet gets out
@@ -1416,6 +1416,54 @@ $('onair-sheet').addEventListener('click', (e) => {
   const card = e.target.closest('[data-card]');
   if (card) toggleCard(card.dataset.card);
   if (card || e.target.closest('.moment')) closeSheet('onair-sheet');
+});
+
+// Announcement ticker. The box is a draft: it is filled from what is on air
+// when the sheet opens, and nothing reaches the stream until Show / Update.
+// Taking it down keeps the text, so the same notice can go back up.
+let tkTone = 'info';
+const tickerUp = () => !!(game && game.ticker && game.ticker.on);
+function setTkTone(t) {
+  tkTone = t === 'alert' ? 'alert' : 'info';
+  $('tk-tone-info').setAttribute('aria-pressed', String(tkTone === 'info'));
+  $('tk-tone-alert').setAttribute('aria-pressed', String(tkTone === 'alert'));
+}
+function loadTickerDraft() {
+  const t = game && game.ticker;
+  if (t && t.text) { $('tk-text').value = t.text; setTkTone(t.tone); }
+}
+function renderTicker() {
+  if (!game) return;
+  const up = tickerUp();
+  $('tk-chip').hidden = !up;
+  $('tk-state').textContent = up ? '· on air' : 'off';
+  $('tk-state').classList.toggle('on', up);
+  $('tk-show').textContent = up ? 'Update' : 'Show';
+  $('tk-show').classList.toggle('live', up);
+  $('tk-hide').hidden = !up;
+}
+async function showTicker() {
+  const text = $('tk-text').value.replace(/\s+/g, ' ').trim();
+  if (!text) { showToast('Type a message first'); $('tk-text').focus(); return; }
+  haptic();
+  const was = tickerUp();
+  await writeField({ ticker: { text, tone: tkTone, on: true, nonce: nextNonce() } });
+  showToast(was ? '📣 Ticker updated' : '📣 Ticker on air');
+  closeSheet('onair-sheet');
+}
+async function hideTicker() {
+  if (!game || !game.ticker) return;
+  haptic();
+  await writeField({ ticker: { ...game.ticker, on: false } });
+  showToast('Ticker off air');
+}
+$('tk-show').onclick = showTicker;
+$('tk-hide').onclick = () => { hideTicker(); closeSheet('onair-sheet'); };
+$('tk-chip-x').onclick = hideTicker;
+$('tk-tone-info').onclick = () => setTkTone('info');
+$('tk-tone-alert').onclick = () => setTkTone('alert');
+document.querySelectorAll('.tk-pre').forEach((b) => {
+  b.onclick = () => { $('tk-text').value = b.dataset.text; setTkTone(b.dataset.tone); };
 });
 
 // What you'd most likely raise at this point in the game. Baseball only — it is
@@ -3061,6 +3109,7 @@ function renderGame() {
   // The on-air chip is part of the shell for every sport; the suggestions read the at-bat.
   paintIf('onair', [g.card, g.half, g.inning, g.outs, g.balls, g.strikes, g.bases, g.away_abbr, g.home_abbr, sport], renderOnAir);
   // ---- the drawer: only what changed ----
+  paintIf('ticker', [g.ticker], renderTicker);
   paintIf('rally', [g.rally_mode], renderRally);
   paintIf('sponsors', [g.sponsors], renderSponsors);
   paintIf('replay', [g.replay_ack, g.auto_clip], renderReplay);
