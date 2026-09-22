@@ -1120,10 +1120,12 @@
         <span class="set-head">Times &amp; rules</span>
         <div class="set-card">
           <label class="set-row field"><span class="set-lab">Start time</span><input class="set-input" id="su-startsat" type="datetime-local" /></label>
+          <label class="set-row field"><span class="set-lab">Venue</span><input class="set-input" id="su-venue" type="text" autocomplete="off" enterkeyhint="done" placeholder="ZIP or city, state" /></label>
           <label class="set-row field"><span class="set-lab" id="su-time-label">Time limit</span><input class="set-input" id="su-time" type="number" min="0" step="1" inputmode="numeric" placeholder="minutes (0 = none)" /></label>
           <label class="set-row field"><span class="set-lab">Regulation</span><input class="set-input" id="su-regulation" type="number" min="0" max="15" step="1" inputmode="numeric" placeholder="innings (0 = off)" /></label>
         </div>
-        <p class="set-note">Start time sorts your games list and runs the Starting Soon countdown. Regulation innings arms the automatic walk-off.</p>
+        <p class="set-note" id="su-venue-hit" aria-live="polite" hidden></p>
+        <p class="set-note">Start time sorts your games list and runs the Starting Soon countdown. Venue puts the local weather on Starting Soon and the pause card. Regulation innings arms the automatic walk-off.</p>
       </div>
     </section>
 

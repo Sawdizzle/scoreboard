@@ -7,6 +7,7 @@ import * as V from './volleyball.js';
 import * as B from './basketball.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
+import { geocode } from './weather.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -1917,7 +1918,8 @@ function renderSetupRows() {
   $('sv-sport-val').textContent = sport.charAt(0).toUpperCase() + sport.slice(1);
   const mins = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) + ' min' : '';
   const reg = (game.regulation_innings | 0) ? `${game.regulation_innings} innings` : '';
-  $('sv-times-val').textContent = [mins, reg].filter(Boolean).join(' · ') || 'Not set';
+  const where = game.venue && game.venue.label ? game.venue.label.split(',')[0] : '';
+  $('sv-times-val').textContent = [where, mins, reg].filter(Boolean).join(' · ') || 'Not set';
   const on = ['show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule'].filter((k) => game[k]).length;
   $('sv-show-val').textContent = on ? `${on} on` : 'Nothing extra';
   // The theme's own name, as its option reads it — no second list to drift.
@@ -2012,6 +2014,8 @@ function fillSetup() {
   $('su-home-logo').value = game.home_logo_url || '';
   $('su-home-color').value = game.home_color || '#1b2a41';
   $('su-startsat').value = toLocalInput(game.starts_at);
+  $('su-venue').value = (game.venue && game.venue.query) || '';
+  showVenueHit(game.venue);
   $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
   $('su-regulation').value = game.regulation_innings || '';
   $('su-show-clock').checked = !!game.show_clock;
@@ -2053,6 +2057,28 @@ $('su-away-color').addEventListener('change', (e) => { writeField({ away_color: 
 $('su-home-color').addEventListener('change', (e) => { writeField({ home_color: e.target.value }); renderTeamCards(); });
 $('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
 $('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
+// Venue: looked up once here, so the overlay only ever asks for the forecast.
+// The note under the field says which place it matched — "Aubrey" alone is
+// a town in more than one state.
+function showVenueHit(v, msg) {
+  const hit = $('su-venue-hit');
+  hit.textContent = msg || (v && v.label ? `📍 ${v.label} — weather on` : '');
+  hit.hidden = !hit.textContent;
+}
+let venueAsk = 0;
+$('su-venue').addEventListener('change', async () => {
+  const q = $('su-venue').value.trim();
+  const ask = ++venueAsk;
+  if (!q) { writeField({ venue: null }); showVenueHit(null); renderSetupRows(); return; }
+  showVenueHit(null, 'Looking up…');
+  let v = null;
+  try { v = await geocode(q); } catch (e) { if (ask === venueAsk) showVenueHit(null, 'Could not reach the weather service — try again'); return; }
+  if (ask !== venueAsk) return;
+  if (!v) { showVenueHit(null, `No place called “${q}” — try a ZIP`); return; }
+  writeField({ venue: v });
+  showVenueHit(v);
+  renderSetupRows();
+});
 $('su-regulation').addEventListener('change', () => { writeField({ regulation_innings: parseInt($('su-regulation').value, 10) || 0 }); renderSetupRows(); });
 $('su-time').addEventListener('change', () => {
   const mins = parseInt($('su-time').value, 10);

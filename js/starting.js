@@ -72,6 +72,7 @@ export function startingCard(meta, s) {
       <div class="ss-mid"><svg class="ss-ball" viewBox="0 0 100 100" aria-hidden="true">${SS_BALL[sport]}</svg><span class="ss-vs">VS</span></div>
       ${ssTeam('home', s)}
     </div>
+    <div class="ss-wx" id="ss-wx" hidden></div>
     ${t ? `<div class="ss-clock"><div class="cd" id="card-cd">--:--</div><div class="cd-when">${info.start} · ${escapeHtml(when)}</div></div>` : ''}
   </div>`;
 }
@@ -86,4 +87,15 @@ export function fitStartingNames(root) {
   }
   // One size for both, so the sides mirror each other.
   names.forEach((el) => { el.style.fontSize = size + 'px'; });
+}
+
+// The weather line under the countdown. Filled in after the card is up, and
+// again on every forecast refresh, without rebuilding the card around it.
+export function weatherHtml(w, venue) {
+  if (!w) return '';
+  const bits = [`<b class="wx-t">${w.temp}°</b>`, `<span>${escapeHtml(w.text)}</span>`];
+  if (w.wind) bits.push(`<span>Wind ${escapeHtml(w.dir)} ${w.wind} mph</span>`);
+  if (w.pop != null) bits.push(`<span>${w.pop}% rain</span>`);
+  return `<span class="wx-i" aria-hidden="true">${w.icon}</span>${bits.join('<i class="wx-dot">·</i>')}`
+    + (venue && venue.label ? `<span class="wx-where">${escapeHtml(venue.label)}</span>` : '');
 }

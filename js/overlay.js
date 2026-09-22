@@ -2,7 +2,8 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
-import { startingCard, fitStartingNames } from './starting.js';
+import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
+import { fetchWeather } from './weather.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
@@ -210,6 +211,7 @@ function render(s) {
   if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
   else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(withBatterName(a, s)); audio.play(soundFor(a)); }
 
+  syncWeather(s);
   syncSponsors(s);
   replayHello();
   handleReplay(s.replay_cmd);
@@ -549,6 +551,7 @@ function renderCard(s) {
     layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
     fitStartingNames(layer);
+    paintWeather();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitStartingNames(layer));
     const fresh = layer.querySelector('.takeover-card');
     if (fresh) {
@@ -616,6 +619,50 @@ function renderCard(s) {
     }
   }
 }
+// ---- Venue weather --------------------------------------------------------
+// Fetched here, straight from Open-Meteo, every 10 minutes while the game has a
+// venue. A failed fetch keeps the last reading on screen (venue LTE drops out)
+// and tries again sooner; a reading older than 90 minutes is dropped rather
+// than shown as if it were now.
+const WX_EVERY = 10 * 60 * 1000;
+let wx = null;          // last good reading
+let wxKey = null;       // venue + first pitch it was fetched for
+let wxTimer = null;
+function syncWeather(s) {
+  const v = s.venue && s.venue.lat != null ? s.venue : null;
+  const key = v ? `${v.lat},${v.lon}|${s.starts_at || ''}` : null;
+  if (key === wxKey) return;
+  wxKey = key;
+  clearTimeout(wxTimer);
+  if (!key) { wx = null; paintWeather(); return; }
+  if (wx && wx.key !== key.split('|')[0]) wx = null;   // a different place, not a new first pitch
+  pullWeather();
+}
+async function pullWeather() {
+  clearTimeout(wxTimer);
+  const key = wxKey;
+  if (!key || !last) return;
+  let next = WX_EVERY;
+  try {
+    const w = await fetchWeather(last.venue, last.starts_at);
+    if (key !== wxKey) return;
+    if (w) wx = { ...w, key: key.split('|')[0] };
+  } catch (e) {
+    console.warn('weather fetch failed', e.message);
+    next = 2 * 60 * 1000;
+  }
+  if (wx && Date.now() - wx.at > 90 * 60 * 1000) wx = null;
+  paintWeather();
+  wxTimer = setTimeout(pullWeather, next);
+}
+function paintWeather() {
+  document.querySelectorAll('#card .ss-wx, #card .pz-wx').forEach((n) => {
+    const html = wx ? weatherHtml(wx, last && last.venue) : '';
+    if (n.innerHTML !== html) n.innerHTML = html;
+    n.hidden = !html;
+  });
+}
+
 // Cards that cover the whole 1920×1080 frame instead of floating over the video.
 const TAKEOVER = new Set(['starting', 'midinning', 'finalfull']);
 
