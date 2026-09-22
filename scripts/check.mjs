@@ -18,11 +18,11 @@ const fail = (msg) => problems.push(msg);
 // Pages and the modules that drive them.
 const PAGES = [
   { html: 'control.html', js: ['js/control.js'] },
-  { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/anim.js', 'js/logic.js', 'js/clock.js'] },
+  { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/storm.js', 'js/anim.js', 'js/logic.js', 'js/clock.js'] },
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.

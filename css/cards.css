@@ -388,3 +388,47 @@ body.takeover #sponsor-bug { display: none; }
 .card.slab .md-who.lead::before { content: '\25B8  '; color: var(--accent, #e0a92a); }
 .card.slab .md-due.rp-go { animation: rp-in 0.55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: 2.6s; }
 @media (prefers-reduced-motion: reduce) { .card.slab .md-due.rp-go { animation: none; } }
+
+/* ---- Storm on the Game paused card (js/storm.js) ---------------------------
+   Behind the card (z 0 under .card's z 1): clouds, rain, bolts. The flash is
+   a body-level layer above everything. */
+#card > .storm { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.st-cloud { position: absolute; left: -25%; width: 150%; height: 46%; will-change: transform;
+  background:
+    radial-gradient(38% 60% at 18% 30%, var(--cl) 0%, transparent 70%),
+    radial-gradient(30% 55% at 46% 20%, var(--cl) 0%, transparent 72%),
+    radial-gradient(34% 62% at 74% 34%, var(--cl) 0%, transparent 70%),
+    radial-gradient(26% 50% at 96% 18%, var(--cl) 0%, transparent 72%); }
+.clouds-dark { --cl: rgba(46, 53, 76, 0.8); }
+.clouds-grey { --cl: rgba(70, 78, 98, 0.55); }
+.st-cloud.c0 { top: -16%; animation: st-drift 90s linear infinite alternate; }
+.st-cloud.c1 { top: -8%; opacity: 0.8; animation: st-drift 64s linear infinite alternate-reverse; }
+.st-cloud.c2 { top: -20%; opacity: 0.65; height: 38%; animation: st-drift 120s linear infinite alternate; }
+@keyframes st-drift { from { transform: translate3d(-6%, 0, 0); } to { transform: translate3d(6%, 0, 0); } }
+
+/* Rain: slanted streaks on a sheet twice the frame tall, sliding down one
+   frame-height per loop so it never shows a seam. */
+.st-rain { position: absolute; left: -10%; top: -100%; width: 120%; height: 200%; will-change: transform;
+  transform: rotate(8deg); pointer-events: none; }
+.st-rain.far { opacity: 0.22; background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(190, 210, 240, 0.9) 22px 23px, transparent 23px 57px);
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+          mask-image: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+  animation: st-fall 1.6s linear infinite; }
+.st-rain.near { opacity: 0.32; background: repeating-linear-gradient(90deg, transparent 0 41px, rgba(210, 225, 250, 0.95) 41px 43px, transparent 43px 97px);
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 44px, transparent 44px 130px);
+          mask-image: repeating-linear-gradient(180deg, #000 0 44px, transparent 44px 130px);
+  animation: st-fall 0.9s linear infinite; }
+.st-rain.light.far { opacity: 0.14; } .st-rain.light.near { opacity: 0.2; }
+@keyframes st-fall { from { transform: rotate(8deg) translate3d(0, 0, 0); } to { transform: rotate(8deg) translate3d(0, 50%, 0); } }
+
+.st-bolts { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.st-bolt path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.st-bolt .glow { stroke: rgba(150, 185, 255, 0.55); stroke-width: 16; filter: blur(8px); }
+.st-bolt .core { stroke: #f4f8ff; stroke-width: 4.5; }
+.st-bolt .glow.fork { stroke-width: 9; } .st-bolt .core.fork { stroke-width: 2.2; }
+.st-bolt.big .glow { stroke-width: 26; } .st-bolt.big .core { stroke-width: 7; }
+
+#storm-flash { position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0;
+  background: radial-gradient(120% 90% at 50% 10%, #eef3ff 0%, #b9c9ee 55%, #8ea3d6 100%); mix-blend-mode: screen; }
+
+@media (prefers-reduced-motion: reduce) { .st-cloud, .st-rain { animation: none; } }

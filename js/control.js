@@ -1479,6 +1479,7 @@ async function showPaused() {
   const meta = pausedMeta(pzMins());
   // Only the reason changed: the countdown carries on from where it was.
   if (was && pzMins() === pzLoaded && prev.until && !PZ_NO_CLOCK.has(pzReason)) meta.until = prev.until;
+  if (prev.strike) meta.strike = prev.strike;   // an Update is not a new strike
   await writeField({ card: { type: 'paused', meta, nonce } });
   pzLoaded = null;
   showToast(was ? '⏸ Pause card updated' : '⏸ Game paused on air');
@@ -1491,7 +1492,8 @@ $('pz-restart').onclick = async () => {
   if (!pausedUp()) return;
   haptic();
   $('pz-mins').value = 30;
-  await writeField({ card: { ...game.card, meta: { ...pausedMeta(30), reason: 'lightning' } } });
+  // `strike` tells the overlay to throw a bolt and roll thunder for it.
+  await writeField({ card: { ...game.card, meta: { ...pausedMeta(30), reason: 'lightning', strike: Date.now() } } });
   showToast('⚡ Countdown restarted — 30:00');
 };
 $('pz-minus').onclick = () => { $('pz-mins').value = Math.max(0, pzMins() - 5); };

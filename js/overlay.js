@@ -4,6 +4,7 @@ import { playAnimation, setRally } from './anim.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
 import { fetchWeather } from './weather.js';
+import { setStorm, strike } from './storm.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
@@ -11,7 +12,7 @@ const gameId = params.get('game');
 if (params.get('debug')) {
   document.body.classList.add('debug'); window.__audio = audio;
   // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
-  window.__sb = { render: (patch) => render({ ...last, ...patch }) };
+  window.__sb = { render: (patch) => render({ ...last, ...patch }), strike: (big) => { strike(big); audio.thunder(big); } };
 }
 // The roster lives in an owner-only table (it has kids' names in it), so the
 // overlay reads it through a token that travels only in this URL. No token, no
@@ -217,6 +218,7 @@ function render(s) {
 
   syncWeather(s);
   syncTicker(s);
+  syncStorm(s);
   syncSponsors(s);
   replayHello();
   handleReplay(s.replay_cmd);
@@ -628,6 +630,30 @@ function renderCard(s) {
     }
   }
 }
+// ---- Storm on the pause card ------------------------------------------------
+// The sky follows the reason. A lightning pause going up, and every "new
+// strike" from the pad (meta.strike, a timestamp), bring a big strike with
+// thunder — but only when strictly newer than what this overlay saw on its
+// first paint, so reloading OBS mid-delay never sets one off.
+let stormPrimed = false;
+let stormNonce = 0;   // newest pause card seen
+let stormStrike = 0;  // newest strike seen
+function syncStorm(s) {
+  const c = s.card;
+  const paused = c && c.type === 'paused';
+  const meta = (paused && c.meta) || {};
+  setStorm(document.getElementById('card'), paused ? (meta.reason || 'weather') : null);
+  const nonce = paused ? Number(c.nonce) || 0 : 0;
+  const hit = Number(meta.strike) || 0;
+  if (!stormPrimed) { stormPrimed = true; stormNonce = nonce; stormStrike = hit; return; }
+  if (!paused || meta.reason !== 'lightning') { if (nonce > stormNonce) stormNonce = nonce; return; }
+  let big = false;
+  if (nonce > stormNonce) { stormNonce = nonce; big = true; }
+  if (hit > stormStrike) { stormStrike = hit; big = true; }
+  // Let the card's entrance land first.
+  if (big) setTimeout(() => { strike(true); audio.thunder(true); }, 700);
+}
+
 // ---- Announcement ticker ----------------------------------------------------
 // One pass = the strip slides left by exactly one copy of the message, which
 // puts the next copy where the first began, so passes join without a seam. An

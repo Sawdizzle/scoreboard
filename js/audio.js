@@ -35,6 +35,7 @@ export function setSettings(s) {
   applyGains();
 }
 
+const PACKS_EXTRA = {};   // pack-independent sounds, for _debugRender
 // Football / volleyball / basketball moments reuse existing pack sounds.
 const ALIAS = {
   touchdown: 'homerun', fieldgoal: 'webgem', turnover: 'strikeout', bigplay: 'webgem', goal: 'walkoff',
@@ -51,12 +52,30 @@ export function play(type) {
   fn(ctx, catGain[cat] || master, ctx.currentTime);
 }
 
+// Thunder for the pause card's lightning: a crack, then a long rolling rumble.
+// Pack-independent (weather sounds the same whatever the pack), and it rides
+// the moments slider and master mute like every stinger.
+export function thunder(big = false) {
+  ensure();
+  if (ctx.state !== 'running') ctx.resume();
+  thunderAt(ctx, catGain.moments || master, ctx.currentTime, big);
+}
+function thunderAt(c, out, t, big) {
+  const g = big ? 1 : 0.6;
+  noise(c, out, t, { dur: 0.25, type: 'highpass', freq: 1800, gain: 0.32 * g, a: 0.002, d: 0.25 });
+  noise(c, out, t + 0.02, { dur: 0.5, type: 'bandpass', freq: 700, gain: 0.3 * g, a: 0.004, d: 0.5 });
+  // The roll: overlapping low swells, each a little later and softer.
+  [0.08, 0.5, 1.1, 1.8].forEach((dt, i) => noise(c, out, t + dt, { dur: 1.6, type: 'lowpass', freq: 180 + i * 30, gain: (0.5 - i * 0.09) * g, a: 0.12 + i * 0.05, d: 1.5 }));
+  boom(c, out, t + 0.05, { f: 42, dur: 2.2, gain: 0.3 * g });
+}
+PACKS_EXTRA.thunder = (c, o, t) => thunderAt(c, o, t, true);
+
 // Debug-only: render a sound offline and report peak amplitude (proves non-silence
 // without needing speakers). Exposed on window.__audio when overlay ?debug=1.
 export async function _debugRender(type, pack = 'bigleague') {
   const off = new OfflineAudioContext(1, 44100 * 2, 44100);
   const out = off.createGain(); out.connect(off.destination);
-  const fn = (PACKS[pack] || PACKS.bigleague)[type];
+  const fn = PACKS_EXTRA[type] || (PACKS[pack] || PACKS.bigleague)[type];
   if (!fn) return { found: false, peak: 0 };
   fn(off, out, 0);
   const buf = await off.startRendering();
