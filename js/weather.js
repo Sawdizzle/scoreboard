@@ -87,7 +87,8 @@ export async function fetchWeather(venue, at = null) {
   const cur = d.current || {};
   const times = (d.hourly && d.hourly.time) || [];
   const pops = (d.hourly && d.hourly.precipitation_probability) || [];
-  const want = Math.floor((at ? new Date(at).getTime() : Date.now()) / 1000);
+  // Never an hour already gone: once first pitch has passed, the chance is for now.
+  const want = Math.floor(Math.max(at ? new Date(at).getTime() || 0 : 0, Date.now()) / 1000);
   let i = times.findIndex((t) => t > want) - 1;
   if (i < 0) i = times.length && want >= times[0] ? times.length - 1 : 0;
   const pop = pops[i];

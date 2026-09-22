@@ -1379,7 +1379,7 @@ $('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3,
 // down, or ✕ on the header chip, which is on screen whatever else is open.
 const CARD_LABEL = {
   dueup: 'Due Up', lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
-  final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)',
+  final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)', paused: 'Paused',
 };
 const cardLabel = (type) => CARD_LABEL[type] || type;
 async function showCard(type) {
@@ -1406,7 +1406,7 @@ function toggleCard(type) {
   haptic();
   return game.card && game.card.type === type ? clearCard() : showCard(type);
 }
-$('onair-open').onclick = () => { renderOnAir(); loadTickerDraft(); openSheet('onair-sheet'); };
+$('onair-open').onclick = () => { renderOnAir(); loadTickerDraft(); loadPausedDraft(); openSheet('onair-sheet'); };
 $('onair-done').onclick = () => closeSheet('onair-sheet');
 $('air-clear').onclick = () => { haptic(); clearCard(); };
 // Raising a card or firing a moment is the whole errand, so the sheet gets out
@@ -1417,6 +1417,86 @@ $('onair-sheet').addEventListener('click', (e) => {
   if (card) toggleCard(card.dataset.card);
   if (card || e.target.closest('.moment')) closeSheet('onair-sheet');
 });
+
+// Game paused. Like the ticker, the controls are a draft until Show / Update.
+// The countdown is stored as a restart time (meta.until), so the overlay and
+// the pad agree on it however late either one loads. While the card is up the
+// minutes field reads the time left; editing it and tapping Update moves the
+// restart time. The card keeps its nonce across updates, so the overlay
+// refreshes it in place instead of replaying the entrance.
+const PZ_NO_CLOCK = new Set(['suspended', 'called']);
+let pzReason = 'lightning';
+let pzLoaded = null;   // minutes-left the field was filled with, so Update without an edit keeps the clock
+const pausedUp = () => !!(game && game.card && game.card.type === 'paused');
+const pzMins = () => Math.max(0, Math.min(240, parseInt($('pz-mins').value, 10) || 0));
+function setPzReason(r, fillMins) {
+  pzReason = r;
+  document.querySelectorAll('.pz-r').forEach((b) => {
+    const on = b.dataset.reason === r;
+    b.setAttribute('aria-pressed', String(on));
+    if (on && fillMins) $('pz-mins').value = b.dataset.mins;
+  });
+  const clockless = PZ_NO_CLOCK.has(r);
+  $('pz-timer').hidden = clockless;
+  $('pz-note').textContent = clockless
+    ? (r === 'called' ? 'No countdown. End the game from the Situation sheet when you are ready.' : 'No countdown.')
+    : '0 = no countdown. Lightning: restart at every new strike.';
+  renderPaused();
+}
+function pzLeftMins() {
+  const u = game.card && game.card.meta && game.card.meta.until;
+  return u ? Math.max(0, Math.ceil((new Date(u).getTime() - serverNow()) / 60000)) : 0;
+}
+function loadPausedDraft() {
+  if (!pausedUp()) return;
+  const m = game.card.meta || {};
+  setPzReason(m.reason || 'weather', false);
+  $('pz-mins').value = pzLeftMins();
+  pzLoaded = pzMins();
+}
+function renderPaused() {
+  if (!game) return;
+  const up = pausedUp();
+  const m = (up && game.card.meta) || {};
+  const at = m.until ? new Date(m.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  $('pz-state').textContent = up ? (at && !PZ_NO_CLOCK.has(m.reason) ? `· on air · restart ${at}` : '· on air') : 'off';
+  $('pz-state').classList.toggle('on', up);
+  $('pz-show').textContent = up ? 'Update' : 'Show';
+  $('pz-show').classList.toggle('live', up);
+  $('pz-hide').hidden = !up;
+  $('pz-restart').hidden = !(up && pzReason === 'lightning');
+}
+function pausedMeta(mins) {
+  const meta = { reason: pzReason };
+  if (!PZ_NO_CLOCK.has(pzReason) && mins > 0) meta.until = new Date(serverNow() + mins * 60000).toISOString();
+  return meta;
+}
+async function showPaused() {
+  haptic();
+  const was = pausedUp();
+  const nonce = was ? game.card.nonce : nextNonce();
+  const prev = was ? game.card.meta || {} : {};
+  const meta = pausedMeta(pzMins());
+  // Only the reason changed: the countdown carries on from where it was.
+  if (was && pzMins() === pzLoaded && prev.until && !PZ_NO_CLOCK.has(pzReason)) meta.until = prev.until;
+  await writeField({ card: { type: 'paused', meta, nonce } });
+  pzLoaded = null;
+  showToast(was ? '⏸ Pause card updated' : '⏸ Game paused on air');
+  closeSheet('onair-sheet');
+}
+$('pz-show').onclick = showPaused;
+$('pz-hide').onclick = () => { haptic(); clearCard(); closeSheet('onair-sheet'); };
+// A new strike: straight back to 30, on air at once — no Update needed.
+$('pz-restart').onclick = async () => {
+  if (!pausedUp()) return;
+  haptic();
+  $('pz-mins').value = 30;
+  await writeField({ card: { ...game.card, meta: { ...pausedMeta(30), reason: 'lightning' } } });
+  showToast('⚡ Countdown restarted — 30:00');
+};
+$('pz-minus').onclick = () => { $('pz-mins').value = Math.max(0, pzMins() - 5); };
+$('pz-plus').onclick = () => { $('pz-mins').value = Math.min(240, pzMins() + 5); };
+document.querySelectorAll('.pz-r').forEach((b) => { b.onclick = () => setPzReason(b.dataset.reason, true); });
 
 // Announcement ticker. The box is a draft: it is filled from what is on air
 // when the sheet opens, and nothing reaches the stream until Show / Update.
@@ -3110,6 +3190,7 @@ function renderGame() {
   paintIf('onair', [g.card, g.half, g.inning, g.outs, g.balls, g.strikes, g.bases, g.away_abbr, g.home_abbr, sport], renderOnAir);
   // ---- the drawer: only what changed ----
   paintIf('ticker', [g.ticker], renderTicker);
+  paintIf('paused', [g.card], renderPaused);
   paintIf('rally', [g.rally_mode], renderRally);
   paintIf('sponsors', [g.sponsors], renderSponsors);
   paintIf('replay', [g.replay_ack, g.auto_clip], renderReplay);

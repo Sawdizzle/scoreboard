@@ -181,6 +181,38 @@ body.takeover #bug-wrap { display: none; }
 .ss-wx .wx-where { margin-left: 10px; padding-left: 22px; border-left: 2px solid rgba(255, 255, 255, 0.22);
   color: var(--steel); text-transform: uppercase; letter-spacing: 0.14em; font-size: 24px; }
 
+/* Game paused — weather stop. Same dark backdrop and light ink as Starting
+   Soon; the tag carries the reason's colour. */
+.card.pz { width: 1500px; display: flex; flex-direction: column; align-items: center; color: #f4f7fb; --pz: #e8a531; }
+.card.pz-lightning { --pz: #f2c230; }
+.card.pz-rain { --pz: #5fa8e8; }
+.card.pz-weather { --pz: #9aa8c4; }
+.card.pz-suspended { --pz: #c9a1f0; }
+.card.pz-called { --pz: #ff6a5c; }
+.pz-kicker { margin-bottom: 26px; }
+.pz-tag { display: inline-flex; align-items: center; gap: 14px; padding: 10px 30px 10px 24px; border-radius: 999px;
+  background: var(--pz); color: #0b0f17; font-size: 30px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; }
+.pz-tag i { font-style: normal; font-size: 34px; letter-spacing: 0; }
+.pz-lightning .pz-tag { animation: pz-flash 3.2s ease-in-out infinite; }
+@keyframes pz-flash { 0%, 86%, 100% { filter: none; } 89% { filter: brightness(1.6); } 92% { filter: none; } 95% { filter: brightness(1.4); } }
+.pz-title { font-size: 112px; font-weight: 900; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.pz-sub { margin-top: 18px; font-size: 34px; font-weight: 700; opacity: 0.85; text-wrap: balance; }
+.pz-score { margin-top: 44px; display: flex; align-items: center; gap: 30px; padding: 16px 40px; border-radius: 26px;
+  background: rgba(8, 12, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.12); }
+.pz-team { display: flex; align-items: center; gap: 20px; }
+.pz-team img { width: 76px; height: 76px; object-fit: contain; }
+.pz-team .n { font-size: 46px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+.pz-team .r { font-family: var(--num); font-size: 84px; font-weight: 800; line-height: 1; min-width: calc(2 * var(--digit)); text-align: center; }
+.pz-dash { font-size: 60px; color: var(--steel); opacity: 0.5; }
+.pz-where { margin-top: 14px; font-size: 26px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.pz-clock { margin-top: 30px; display: flex; flex-direction: column; align-items: center; }
+.card.pz .cd { font-family: var(--num); font-size: 110px; font-weight: 800; line-height: 1; letter-spacing: 0.02em; color: #f4f7fb; }
+.card.pz .cd.soon { color: var(--pz); }
+.card.pz .cd.now { font-family: var(--disp); font-size: 76px; color: var(--pz); letter-spacing: 0.08em; }
+.card.pz .cd-when { margin-top: 8px; font-size: 24px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.card.pz .pz-wx { margin-top: 30px; }
+@media (prefers-reduced-motion: reduce) { .pz-lightning .pz-tag { animation: none; } }
+
 /* Mid-inning / full-page final: one big scoreboard slab */
 .card.slab .card-sub { font-size: 30px; letter-spacing: 0.2em; margin-bottom: 40px; color: var(--chalk); opacity: 0.75; }
 .card.slab .slab-line { display: flex; align-items: center; justify-content: center; gap: 40px; }

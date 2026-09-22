@@ -720,6 +720,32 @@
         <button class="fxbtn takeover" type="button" data-card="finalfull">Final screen</button>
       </div>
 
+      <!-- Game paused: the weather-stop takeover. Pick the reason, set how long
+           the countdown runs, Show. While it is up the minutes field is the
+           time left, so any edit + Update moves the restart time. -->
+      <span class="sublabel">Game paused <em id="pz-state">off</em></span>
+      <div class="pz-box">
+        <div class="pz-reasons" role="group" aria-label="Reason">
+          <button type="button" class="pz-r" data-reason="lightning" data-mins="30" aria-pressed="true">⚡ Lightning</button>
+          <button type="button" class="pz-r" data-reason="rain" data-mins="15" aria-pressed="false">🌧 Rain</button>
+          <button type="button" class="pz-r" data-reason="weather" data-mins="15" aria-pressed="false">⛈ Weather</button>
+          <button type="button" class="pz-r" data-reason="suspended" data-mins="0" aria-pressed="false">⏸ Suspended</button>
+          <button type="button" class="pz-r" data-reason="called" data-mins="0" aria-pressed="false">🏁 Called</button>
+        </div>
+        <div class="pz-timer" id="pz-timer">
+          <span class="pz-tl">Countdown</span>
+          <button type="button" class="step" id="pz-minus" aria-label="5 minutes less">−5</button>
+          <label class="pz-mins"><input id="pz-mins" type="number" min="0" max="240" step="1" inputmode="numeric" value="30" aria-label="Minutes" /><span>min</span></label>
+          <button type="button" class="step" id="pz-plus" aria-label="5 minutes more">+5</button>
+        </div>
+        <p class="pz-note" id="pz-note">0 = no countdown. Lightning: restart at every new strike.</p>
+        <div class="tk-row">
+          <button type="button" class="fxbtn pz-restart" id="pz-restart" hidden>⚡ Restart 30</button>
+          <button type="button" id="pz-show" class="fxbtn tk-go">Show</button>
+          <button type="button" id="pz-hide" class="fxbtn cardclear" hidden>Take down</button>
+        </div>
+      </div>
+
       <!-- The announcement ticker: a strip that scrolls along the bottom of
            every scene until taken down. Its own text, not the card text —
            a delay notice has to outlive whatever card is up. -->

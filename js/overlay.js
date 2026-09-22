@@ -507,6 +507,9 @@ function recapStripHtml(s) {
 
 let lastCardKey = null, lastCardSig = null;
 function cardSig(c, s) {
+  // Paused tracks its own reason and countdown (edited in place, same nonce)
+  // and the score behind it.
+  if (c.type === 'paused') return `${JSON.stringify(c.meta || {})}:${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${s.outs}:${JSON.stringify(s.state || {})}`;
   if (c.type === 'lineup') {
     const side = (c.meta && c.meta.auto) ? battingSide(s) : ((c.meta && c.meta.side) || battingSide(s));
     const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
@@ -579,6 +582,7 @@ function renderCard(s) {
       const st = next.getAttribute('style');
       if (st) cur.setAttribute('style', st); else cur.removeAttribute('style');
       cur.replaceChildren(...next.childNodes); // live refresh, no re-animation
+      cdPainted = null; paintWeather(); // the countdown and weather were rebuilt with placeholders
     } else layer.innerHTML = html;
   }
   layer.hidden = false;
@@ -737,7 +741,7 @@ function paintWeather() {
 }
 
 // Cards that cover the whole 1920×1080 frame instead of floating over the video.
-const TAKEOVER = new Set(['starting', 'midinning', 'finalfull']);
+const TAKEOVER = new Set(['starting', 'midinning', 'finalfull', 'paused']);
 
 // Countdown to first pitch, repainted on the shared tick. Only the number is
 // rewritten — the card around it stays put, so nothing re-animates.
@@ -750,9 +754,13 @@ function fmtCountdown(sec) {
 }
 function updateCardCountdown() {
   const el2 = document.getElementById('card-cd');
-  if (!el2 || !last || !last.starts_at) return;
-  const ms = new Date(last.starts_at).getTime() - serverNow();
-  const txt = ms <= 0 ? 'STARTING NOW' : fmtCountdown(ms / 1000);
+  if (!el2 || !last) return;
+  // Starting Soon counts to first pitch; the pause card to its own restart time.
+  const paused = last.card && last.card.type === 'paused';
+  const target = paused ? last.card.meta && last.card.meta.until : last.starts_at;
+  if (!target) return;
+  const ms = new Date(target).getTime() - serverNow();
+  const txt = ms <= 0 ? (paused ? 'ANY MINUTE' : 'STARTING NOW') : fmtCountdown(ms / 1000);
   if (txt === cdPainted) return;
   cdPainted = txt;
   el2.textContent = txt;
@@ -798,6 +806,51 @@ function lineScoreHtml(s, fresh = null, replay = false) {
     <tr><th>${hAbbr}</th>${cells('bottom')}<td class="rhe">${s.home_score | 0}</td><td class="rhe">${s.home_hits | 0}</td><td class="rhe">${s.home_errors | 0}</td></tr></table>`;
 }
 
+// ---- Game paused -----------------------------------------------------------
+// Full-screen, for a weather stop. The reason sets the headline; the score and
+// where the game stands stay on screen so nobody has to ask; the countdown is
+// the operator's (lightning: 30 minutes from the last strike, restarted at
+// every new one). Called and Suspended have no countdown — there is nothing to
+// count down to.
+const PAUSE = {
+  lightning: { icon: '⚡', tag: 'Lightning delay', title: 'Play is paused', sub: 'Lightning in the area — players are off the field' },
+  rain:      { icon: '🌧', tag: 'Rain delay',      title: 'Play is paused', sub: 'Waiting out the rain' },
+  weather:   { icon: '⛈', tag: 'Weather delay',   title: 'Play is paused', sub: 'Waiting out the weather' },
+  suspended: { icon: '⏸', tag: 'Suspended',       title: 'Game suspended', sub: 'Play will pick up at a later date' },
+  called:    { icon: '🏁', tag: 'Called',          title: 'Game called',    sub: 'The game has been called due to weather' },
+};
+const NO_CLOCK = new Set(['suspended', 'called']);
+function standsLabel(s) {
+  const st = s.state || {};
+  const sport = s.sport || 'baseball';
+  if (sport === 'baseball') {
+    const outs = s.outs | 0;
+    return `${s.half === 'bottom' ? 'Bottom' : 'Top'} of the ${ordinal(s.inning | 0 || 1)}${outs ? ` · ${outs} out${outs > 1 ? 's' : ''}` : ''}`;
+  }
+  if (sport === 'football') return `Q${st.quarter || 1}`;
+  if (sport === 'basketball') return `Q${st.period || 1}`;
+  if (sport === 'soccer') return (st.half || 1) === 1 ? '1st half' : '2nd half';
+  if (sport === 'volleyball') return `Set ${st.set || 1}`;
+  return '';
+}
+function pausedCard(meta, s) {
+  const reason = PAUSE[meta.reason] ? meta.reason : 'weather';
+  const r = PAUSE[reason];
+  const until = !NO_CLOCK.has(reason) && meta.until ? new Date(meta.until) : null;
+  const at = until ? until.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const side = (x) => `<div class="pz-team">${logoHtml(s[x + '_logo_url'])}<span class="n">${escapeHtml(s[x + '_abbr'] || s[x + '_name'] || (x === 'home' ? 'HOME' : 'AWAY'))}</span><b class="r">${s[x + '_score'] | 0}</b></div>`;
+  const where = reason === 'called' ? 'Final' : standsLabel(s);
+  return `<div class="card takeover-card pz pz-${reason}">
+    <div class="pz-kicker"><span class="pz-tag"><i aria-hidden="true">${r.icon}</i>${escapeHtml(r.tag)}</span></div>
+    <div class="pz-title">${escapeHtml(r.title)}</div>
+    <div class="pz-sub">${escapeHtml(meta.text || r.sub)}</div>
+    <div class="pz-score">${side('away')}<span class="pz-dash">–</span>${side('home')}</div>
+    ${where ? `<div class="pz-where">${escapeHtml(where)}</div>` : ''}
+    ${until ? `<div class="pz-clock"><div class="cd" id="card-cd">--:--</div><div class="cd-when">${reason === 'lightning' ? 'Earliest restart' : 'Back at'} · ${escapeHtml(at)}</div></div>` : ''}
+    <div class="ss-wx pz-wx" hidden></div>
+  </div>`;
+}
+
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
 const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
 function buildCard(c, s) {
@@ -812,6 +865,7 @@ function buildCard(c, s) {
     </div>${meta.text ? `<div class="card-meta">${escapeHtml(meta.text)}</div>` : ''}</div>`;
   }
   if (c.type === 'starting') return startingCard(meta, s);
+  if (c.type === 'paused') return pausedCard(meta, s);
   if (c.type === 'midinning' || c.type === 'finalfull') {
     const fin = c.type === 'finalfull';
     // Final says who won: the winner's colour washes in from their side, their

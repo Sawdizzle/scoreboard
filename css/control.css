@@ -1079,3 +1079,23 @@ button.fieldcheck { width: 100%; background: none; border: none; padding: 6px 2p
 #tk-state { color: var(--muted); }
 #tk-state.on { color: #ff7a6e; }
 .tk-chip { max-width: none; }
+
+/* Game paused (On Air). */
+.pz-box { display: flex; flex-direction: column; gap: 8px; }
+.pz-reasons { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-r { padding: 9px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); }
+.pz-r[aria-pressed="true"] { background: #e8a531; border-color: #e8a531; color: #1a1204; }
+.pz-timer { display: flex; align-items: center; gap: 6px; }
+.pz-timer[hidden] { display: none; }
+.pz-tl { font-size: 13px; color: var(--muted); margin-right: auto; }
+.pz-timer .step { min-width: 46px; height: 44px; padding: 0 8px; font-size: 14px; font-weight: 700; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); }
+.pz-mins { display: flex; align-items: center; gap: 4px; padding: 0 10px; height: 44px; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.pz-mins input { width: 2.4em; background: none; border: 0; padding: 0; color: var(--chalk);
+  font: inherit; font-size: 20px; font-weight: 800; text-align: right; }
+.onair-card .tk-row .pz-restart { background: #3a2d0a; border-color: #6b5214; color: #f5d98a; }
+
+.pz-note { margin: 0; font-size: 12px; color: var(--muted); }
+#pz-state.on { color: #ff7a6e; }
