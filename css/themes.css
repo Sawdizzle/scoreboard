@@ -178,3 +178,34 @@ body[data-theme="foil"] .bug { border: 2px solid transparent;
 body[data-theme="foil"] .team .runs, body[data-theme="foil"] .count {
   text-shadow: -1px 0 rgba(0, 229, 255, 0.45), 1px 0 rgba(255, 43, 214, 0.45); }
 
+
+/* Blue Steel — the club's own look, from bluesteelbaseball.com and its stream
+   graphics: night-field navy, chalk-white type, ice-steel and infield-clay
+   accents, chamfered corners, scores in a boxed mono slot. The site's faces
+   (Tanker, Supreme, Martian Mono) load from third-party CDNs, which the overlay
+   does not do, so heavy and mono system stacks stand in. */
+body[data-theme="bluesteel"] {
+  --panel: rgba(12, 18, 29, 0.96); --panel-2: rgba(6, 9, 16, 0.6);
+  --line: rgba(242, 240, 233, 0.16); --chalk: #f2f0e9; --steel: #7fc0ef; --accent: #e0794a; --radius: 0px;
+  --disp: "Tanker", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --num: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --digit: 0.62em;
+}
+body[data-theme="bluesteel"] .bug {
+  background: linear-gradient(180deg, rgba(18, 26, 41, 0.96), rgba(10, 14, 22, 0.96));
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(242, 240, 233, 0.05);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+}
+body[data-theme="bluesteel"] .team.away, body[data-theme="bluesteel"] .team.home { background: none; }
+body[data-theme="bluesteel"] .team .abbr { font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+body[data-theme="bluesteel"] .team .runs {
+  font-size: 24px; padding: 2px 7px; color: var(--chalk);
+  background: rgba(6, 9, 16, 0.6); border: 1px solid var(--line); border-radius: 4px;
+}
+body[data-theme="bluesteel"] .inning, body[data-theme="bluesteel"] .fb-q { font-family: var(--num); color: var(--steel); }
+body[data-theme="bluesteel"] .diamond .base.on rect { filter: drop-shadow(0 0 5px rgba(224, 121, 74, 0.8)); }
+body[data-theme="bluesteel"] .outs .dot.on { box-shadow: 0 0 9px var(--accent); }
+/* Balls read in steel, strikes and outs in clay, as on the club's own board. */
+body[data-theme="bluesteel"] #bso-b .d.on { background: var(--steel); border-color: var(--steel); box-shadow: 0 0 8px rgba(127, 192, 239, 0.7); }
+body[data-theme="bluesteel"] .bso .d.on { box-shadow: 0 0 8px rgba(224, 121, 74, 0.7); }
+body[data-theme="bluesteel"] .bso-row em { font-family: var(--num); color: #5f7086; }
