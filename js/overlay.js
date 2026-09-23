@@ -8,7 +8,32 @@ import { setStorm, strike } from './storm.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
-const gameId = params.get('game');
+// The account link (?ch=) names no game: it asks which game the pad last
+// opened, and reloads itself when that changes, so OBS keeps one URL forever.
+// The older per-game link (?game=&t=) still works on its own.
+const linkKey = params.get('ch');
+const linked = linkKey ? await resolveLink() : null;
+const gameId = linked ? linked.game_id : params.get('game');
+async function resolveLink() {
+  for (let wait = 2000; ; wait = Math.min(wait * 2, 30000)) {
+    const { data, error } = await db.rpc('resolve_channel', { p_token: linkKey });
+    if (!error) {
+      if (!data || !data.length) console.warn('Scoreboard: this overlay link has been replaced — copy it again from the pad.');
+      return (data && data[0]) || { game_id: null, token: null };
+    }
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+if (linkKey) {
+  // Cheap: one tiny RPC every few seconds. A change of game is a reload, which
+  // starts everything — roster, realtime, OBS relay — cleanly on the new game.
+  setInterval(async () => {
+    const { data, error } = await db.rpc('resolve_channel', { p_token: linkKey });
+    if (error) return;
+    const now = (data && data[0]) || { game_id: null };
+    if ((now.game_id || null) !== (gameId || null)) location.reload();
+  }, 5000);
+}
 if (params.get('debug')) {
   document.body.classList.add('debug'); window.__audio = audio;
   // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
@@ -17,7 +42,7 @@ if (params.get('debug')) {
 // The roster lives in an owner-only table (it has kids' names in it), so the
 // overlay reads it through a token that travels only in this URL. No token, no
 // lineup or defense cards — everything else still runs.
-const rosterToken = params.get('t');
+const rosterToken = linked ? linked.token : params.get('t');
 // Writing back to the game row -- the OBS status, scene and clip-ack relay --
 // is gated on that same token, so a link someone found can't drive the pad's
 // OBS panel. A URL without &t= still runs the whole overlay; it just can't
@@ -1271,7 +1296,9 @@ addEventListener('online', () => { syncClock(); fetchState(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { syncClock(); fetchState(); } });
 
 if (!gameId) {
-  el.bug.innerHTML = '<div class="err">Add ?game=&lt;id&gt; to the URL</div>';
+  // An account link with no game yet stays clear until the pad opens one.
+  if (!linkKey) el.bug.innerHTML = '<div class="err">Add ?game=&lt;id&gt; to the URL</div>';
+  else el.bug.hidden = true;
   el.bug.dataset.ready = '1';
 } else {
   // Not awaited: the clock repaints at 4Hz so it corrects itself the moment

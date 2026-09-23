@@ -1500,7 +1500,9 @@
                   <button id="copy-url-btn" class="ghost small">Copy</button>
                   <button id="open-url-btn" class="ghost small">Open ▸</button>
                 </div>
-                <p class="set-note">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <p class="set-note">Add this URL to OBS once, as a Browser Source (1920×1080). It is yours, not this game's: it shows whichever game you open here, so it never needs pasting again. It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <p class="set-note" id="link-note" aria-live="polite"></p>
+                <button id="link-here" class="fxbtn" type="button" hidden>📺 Show this game on the overlay</button>
                 <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
 
                 <span class="set-head">Share the recap</span>
@@ -1531,18 +1533,10 @@
           <option value="basketball">Basketball</option>
         </select>
       </label>
-      <label class="sel" style="margin-top:12px">Scorebug style
-        <select id="ng-style">
-          <option value="scorebox">Scorebox (full broadcast)</option>
-          <option value="bar">Bar (wide strip)</option>
-          <option value="bug">Bug (stacked)</option>
-          <option value="minimal">Minimal (slim)</option>
-          <option value="lowerthird">Lower-third</option>
-        </select>
-      </label>
-      <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Game setup</em>
+      <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Setup</em>
         <input id="ng-startsat" type="datetime-local" />
       </label>
+      <p class="set-note">The look, sound, sponsors and overlay switches come from your last game. Change any of them in Setup.</p>
       <div class="sheet-actions">
         <button id="ng-cancel" class="ghost">Cancel</button>
         <button id="ng-create" class="primary">Create Game</button>

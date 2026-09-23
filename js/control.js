@@ -312,14 +312,30 @@ document.querySelector('.help-tiles').addEventListener('click', (e) => {
   if (t) openHelp(t.dataset.help);
 });
 
-// New game: pick sport + style first, then create with the right initial state.
+// New game: pick the sport, then create with the right initial state; the rest
+// comes from your last game.
 $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
 $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
+// What a new game takes from your last one: how the broadcast looks and
+// sounds, and the house rules. Not the teams (home and away change every game;
+// saved teams load them in one pick) and not the venue (away games move it).
+const CARRY = ['style', 'theme', 'scorebug_position', 'scorebug_scale', 'sound_pack', 'audio', 'look', 'sponsors',
+  'show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule', 'auto_clip'];
+const CARRY_SAME_SPORT = ['regulation_innings', 'time_limit_seconds'];
+async function lastGameSettings(sport) {
+  const { data } = await db.from('games').select([...CARRY, ...CARRY_SAME_SPORT, 'sport'].join(','))
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (!data) return { style: 'scorebox' };
+  const out = {};
+  for (const k of CARRY) if (data[k] != null) out[k] = data[k];
+  if (data.sport === sport) for (const k of CARRY_SAME_SPORT) if (data[k] != null) out[k] = data[k];
+  return out;
+}
 $('ng-create').onclick = async () => {
-  const sport = $('ng-sport').value, style = $('ng-style').value;
+  const sport = $('ng-sport').value;
   // Every game opens on Starting Soon: a real card, so it can be taken down by
   // hand like any other. Starting the clock or the first play also drops it.
-  const row = { status: 'setup', sport, style, starts_at: fromLocalInput($('ng-startsat').value),
+  const row = { ...(await lastGameSettings(sport)), status: 'setup', sport, starts_at: fromLocalInput($('ng-startsat').value),
     card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
   if (sport === 'football') row.state = F.fbState({});
   else if (sport === 'soccer') row.state = S.scState({});
@@ -537,7 +553,36 @@ $('fold-badge').onclick = () => {
   shadowFold('tap');
 };
 
-const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
+// One link per account: OBS keeps it forever and it shows whichever game the
+// pad opened last (see resolve_channel). The per-game form is only the fallback
+// for a moment when the account link hasn't loaded.
+let channelToken = null;     // this account's permanent overlay link
+let channelGame = null;      // the game that link is showing, as far as this pad knows
+async function loadChannel() {
+  if (channelToken) return;
+  const { data } = await db.rpc('channel_token');
+  channelToken = data || null;
+}
+// Opening a game puts it on the overlay link — unless it is already over, so
+// looking back at last week's final does not take tonight's game off the air.
+async function putOnLink(id, force = false) {
+  if (!force && game && game.status === 'final') return renderLinkNote();
+  const { error } = await db.rpc('set_channel_game', { p_game: id });
+  if (!error) channelGame = id;
+  renderLinkNote();
+}
+function renderLinkNote() {
+  const n = $('link-note'); if (!n || !game) return;
+  const here = channelGame === game.id;
+  n.textContent = here ? '✓ The overlay link is showing this game.' : 'The overlay link is showing a different game.';
+  $('link-here').hidden = here;
+}
+const overlayUrl = () => (channelToken
+  ? `${location.origin}/overlay?ch=${channelToken}`
+  : `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`);
+const LINK_COPIED = 'sb:linkCopied';
+const linkCopied = () => { try { return localStorage.getItem(LINK_COPIED) === channelToken && !!channelToken; } catch { return false; } };
+function markLinkCopied() { try { if (channelToken) localStorage.setItem(LINK_COPIED, channelToken); } catch {} overlayCopied = true; }
 
 async function openGame(id) {
   guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
@@ -552,7 +597,9 @@ async function openGame(id) {
   $('lu-status').textContent = 'saves as you type'; delete $('lu-status').dataset.state;
   // Before the first nonce of this game, not after: a nonce minted on an
   // uncorrected clock is one the other device can never beat.
-  const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
+  const [, lineups] = await Promise.all([syncClock(), loadRoster(id), loadChannel()]);
+  overlayCopied = linkCopied();
+  putOnLink(id);
   game.lineups = lineups;
   rosterHave = game.roster_rev | 0;
   // The saved-team pickers are a one-shot action, not a label. Left showing the
@@ -2792,6 +2839,7 @@ const endGameClick = () => {
     // Same confirm as ending: the button flips in place, so a second tap (or a
     // second device that just ended it) must not quietly reopen the game.
     if (!confirm('Reopen this game? It goes back to live in your games and on the recap page.')) return;
+    putOnLink(game.id, true);
     return commit({ type: 'reopen_game', patch: { status: 'live' } });
   }
   if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
@@ -3421,9 +3469,12 @@ function renderBasketballControl() {
 
 $('rotate-url-btn').onclick = async () => {
   if (!confirm('Rotate the overlay link?\n\nEvery link you have shared stops working, including the one in OBS — you will need to paste the new one into your Browser Source.')) return;
-  const { data, error } = await db.rpc('rotate_overlay_token', { p_game: game.id });
+  const { data, error } = await db.rpc('rotate_channel_token');
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  overlayToken = data;
+  channelToken = data;
+  const t = await db.rpc('overlay_token', { p_game: game.id });   // every game's key turned too
+  overlayToken = t.data || null;
+  overlayCopied = false; renderSetupGuide();
   $('overlay-url').value = overlayUrl();
   showToast('🔑 New link — update OBS');
 };
@@ -3433,9 +3484,10 @@ $('copy-recap-btn').onclick = async () => {
 };
 $('copy-url-btn').onclick = async () => {
   try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; showToast('🔗 Overlay URL copied'); setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
-  overlayCopied = true; renderSetupGuide();
+  markLinkCopied(); renderSetupGuide();
 };
-$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); overlayCopied = true; renderSetupGuide(); };
+$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); markLinkCopied(); renderSetupGuide(); };
+$('link-here').onclick = () => game && putOnLink(game.id, true);
 
 // Keyboard shortcuts (desktop control): ignore while typing in a field.
 document.addEventListener('keydown', (e) => {
