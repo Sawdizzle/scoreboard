@@ -22,5 +22,10 @@
     <p>Live, phone-controlled scorebug overlays for OBS.</p>
     <a href="/control">Open Control Panel</a>
   </div>
+<!-- Vercel Web Analytics. Served from this origin (/_vercel/insights/...), so
+     it keeps the rule that every byte comes from here; no package, no build.
+     Deliberately not on overlay.html: that page is an OBS browser source that
+     runs for hours behind a camera, and it is not a visit worth counting. -->
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
