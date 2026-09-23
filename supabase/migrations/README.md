@@ -47,8 +47,14 @@ indexes, 20 policies, 5 RLS flags and 11 functions, with no extras. Function
 bodies are verbatim `pg_get_functiondef` output, so the part that would be
 hardest to reconstruct by hand cannot drift.
 
-It has **not** been executed end to end against an empty database. Before
-trusting it for a real restore, run it once somewhere disposable:
+On 2026-09-23 the whole folder was run in order on a Supabase branch after
+dropping the branch's `scoreboard` schema, the way a new project would get it.
+Two fixes came out of that: `20260907021051` used plain `create function` for
+three RPCs the baseline already defines (now `create or replace`), and the
+baseline lacked three function grants the live project has. After them, the
+rebuilt schema matched production on every column, policy, function signature,
+grant, index and Realtime table, and a smoke test (a play, undo, a roster save,
+the account overlay link read anonymously) passed. To repeat it locally:
 
 ```bash
 supabase start && supabase db reset     # applies every migration in order
