@@ -69,11 +69,5 @@ body[data-style="scorebox"] .sit-baseball .outs { display: none; }
 body[data-style="scorebox"] .sit-baseball .bso { display: flex; }
 body[data-style="scorebox"] .inning { font-size: 24px; }
 
-/* ---- Customize overrides (the `look` jsonb, applied on top of any theme) ---- */
-body.team-bars .team { box-shadow: inset 0 -3px 0 var(--tc, transparent); }
+/* ---- Custom theme: team rows filled with their team colours (look.teamFill) ---- */
 body.team-fill .team { background: linear-gradient(180deg, var(--tc, transparent), transparent); }
-body.no-logos .team .logo { display: none !important; }
-body.no-detail .detail { display: none !important; }
-body.no-shadow .bug { box-shadow: none !important; }
-body.uppercase .team .abbr, body.uppercase .detail, body.uppercase .count,
-body.uppercase .fb-dd, body.uppercase .fb-poss, body.uppercase .fb-q { text-transform: uppercase; }

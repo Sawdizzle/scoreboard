@@ -1920,16 +1920,11 @@ const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
 const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-right': 'Top-right',
   'mid-left': 'Middle-left', 'mid-center': 'Centre', 'mid-right': 'Middle-right',
   'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
-// Themes retired from the picker still paint for the games that use them; the
-// picker names the one in use rather than showing a blank.
+// A theme no longer in the picker paints as Midnight, so the picker says so.
 function renderLook() {
-  const sel = $('theme-sel'), th = game.theme || 'nightgame';
-  sel.querySelector('option[data-retired]')?.remove();
-  if (![...sel.options].some((o) => o.value === th)) {
-    const o = new Option(`${th.charAt(0).toUpperCase() + th.slice(1)} (retired)`, th);
-    o.dataset.retired = '1'; sel.prepend(o);
-  }
-  sel.value = th;
+  const sel = $('theme-sel');
+  sel.value = game.theme || 'nightgame';
+  if (!sel.value) sel.value = 'nightgame';
   const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
   document.querySelectorAll('#pos-grid button').forEach((b) => b.classList.toggle('on', b.dataset.pos === cur));
   const sc = game.scorebug_scale || 1;
@@ -1981,15 +1976,13 @@ function renderCustomize() {
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
 $('fx-charge').onclick = () => fireAnim('charge');
 
-const audioOf = () => game.audio || { muted: false, master: 0.8, cats: { moments: 1, organ: 1 } };
+const audioOf = () => game.audio || { muted: false, master: 0.8 };
 async function writeAudio(patch) {
   const cur = audioOf();
-  await writeField({ audio: { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } } });
+  await writeField({ audio: { muted: !!cur.muted, master: cur.master ?? 0.8, ...patch } });
 }
 $('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
-// One volume. The per-category levels it replaced go back to full, so a slider
-// that is no longer on screen can't be what keeps the overlay quiet.
-$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value, cats: { moments: 1, organ: 1 } }));
+$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
 $('sound-pack').addEventListener('change', (e) => writeField({ sound_pack: e.target.value }));
 
 function renderAudio() {
@@ -1998,6 +1991,7 @@ function renderAudio() {
   $('mute-btn').classList.toggle('on', !!a.muted);
   $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
   $('sound-pack').value = game.sound_pack || 'bigleague';
+  if (!$('sound-pack').value) $('sound-pack').value = 'bigleague';   // a retired pack plays as Big League
 }
 
 // Ball in play ---------------------------------------------------------------

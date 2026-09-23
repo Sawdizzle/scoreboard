@@ -279,45 +279,25 @@ const LOOK_FONTS = {
   clean: '"Helvetica Neue", Arial, system-ui, sans-serif',
   mono: 'ui-monospace, Menlo, Consolas, monospace',
   serif: '"Times New Roman", Georgia, serif',
-  system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
 };
 function setVar(el, name, val) { if (val) el.style.setProperty(name, val); else el.style.removeProperty(name); }
-const LOGO_SIZES = { sm: '22px', lg: '40px' };
-function fillOf(el, type, c1, c2, angle) {
-  if (!el) return;
-  if (type === 'gradient' && c1 && c2) el.style.background = `linear-gradient(${angle ?? 180}deg, ${c1}, ${c2})`;
-  else if (type === 'solid' && c1) el.style.background = c1;
-  else el.style.background = '';
-}
+// The Custom theme's eight keys (the pad's Custom colours screen). Built-in
+// themes ignore `look` entirely.
 function applyLook(s) {
   const b = document.body;
-  // Customizations apply ONLY to the Custom theme; built-in themes stay as designed.
   const L = (s.theme === 'custom') ? (s.look || {}) : {};
-  const bugEl = document.getElementById('bug');
-  const aw = document.querySelector('.team.away'), hm = document.querySelector('.team.home');
-
   setVar(b, '--accent', L.accent);
   setVar(b, '--chalk', L.text);
-  setVar(b, '--steel', L.steel);
-  setVar(b, '--line', L.line);
   setVar(b, '--disp', L.font ? LOOK_FONTS[L.font] : '');
   setVar(b, '--radius', (L.radius != null && L.radius !== '') ? parseInt(L.radius, 10) + 'px' : '');
-  setVar(b, '--logo-size', L.logoSize ? LOGO_SIZES[L.logoSize] : '');
-  setVar(b, '--bd-width', (L.border != null && L.border !== '') ? parseInt(L.border, 10) + 'px' : '');
-
-  // Per-row / panel fills (shared gradient angle).
-  fillOf(bugEl, L.panelType, L.panelC1, L.panelC2, L.angle);
-  fillOf(aw, L.awayType, L.awayC1, L.awayC2, L.angle);
-  fillOf(hm, L.homeType, L.homeC1, L.homeC2, L.angle);
-  document.querySelectorAll('.situation').forEach((sit) => fillOf(sit, L.sitType, L.sitC1, L.sitC2, L.angle));
-
+  const bug = document.getElementById('bug');
+  if (bug) {
+    bug.style.background = L.panelType === 'gradient' && L.panelC1 && L.panelC2 ? `linear-gradient(180deg, ${L.panelC1}, ${L.panelC2})`
+      : L.panelType === 'solid' && L.panelC1 ? L.panelC1 : '';
+  }
   b.classList.toggle('team-fill', !!L.teamFill);
-  b.classList.toggle('no-logos', !!L.hideLogos);
-  b.classList.toggle('no-detail', !!L.hideDetail);
-  b.classList.toggle('no-shadow', !!L.noShadow);
-  b.classList.toggle('uppercase', !!L.uppercase);
-  b.classList.toggle('team-bars', !!L.teamBars);
-  // Team colors (for team-bars / team-fill) always come from the game, not the look.
+  // Team colours for the fill always come from the game, not the look.
+  const aw = document.querySelector('.team.away'), hm = document.querySelector('.team.home');
   if (aw) aw.style.setProperty('--tc', s.away_color || '#888');
   if (hm) hm.style.setProperty('--tc', s.home_color || '#888');
 }
