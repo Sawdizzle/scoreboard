@@ -1,5 +1,5 @@
--- NOT APPLIED. Apply after the `simplify` branch is on main (prod), never
--- before: prod main's Reset game still writes pitch_count until then.
+-- Applied 2026-09-23, after v4.01 reached prod (the pad before it still wrote
+-- pitch_count on Reset).
 --
 -- Five columns nothing uses any more:
 --   lineups        rosters moved to scoreboard.rosters (private) long ago
