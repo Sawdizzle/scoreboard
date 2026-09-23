@@ -1,10 +1,9 @@
 // Web Audio engine for the overlay. All sounds are synthesized (no samples, nothing
 // copyrighted). Runs in the overlay so OBS captures the browser-source audio.
-// Categories: 'moments' (stingers) and 'organ' (charge riff). Master gain + mute.
+// One master volume and a mute, set from the pad's Look & sound screen.
 
 let ctx = null, master = null;
-const catGain = {};
-let settings = { muted: false, master: 0.8, cats: { moments: 1, organ: 1 } };
+let settings = { muted: false, master: 0.8 };
 let packName = 'bigleague';
 
 function ensure() {
@@ -13,16 +12,12 @@ function ensure() {
   ctx = new AC();
   master = ctx.createGain();
   master.connect(ctx.destination);
-  catGain.moments = ctx.createGain(); catGain.moments.connect(master);
-  catGain.organ = ctx.createGain(); catGain.organ.connect(master);
   applyGains();
   return ctx;
 }
 function applyGains() {
   if (!master) return;
   master.gain.value = settings.muted ? 0 : settings.master;
-  catGain.moments.gain.value = settings.cats?.moments ?? 1;
-  catGain.organ.gain.value = settings.cats?.organ ?? 1;
 }
 
 export function resume() { try { ensure(); if (ctx.state !== 'running') return ctx.resume(); } catch {} }
@@ -31,7 +26,7 @@ export function setPack(p) { if (p) packName = p; }
 export function setSettings(s) {
   if (!s) return;
   if (typeof s === 'string') { try { s = JSON.parse(s); } catch { return; } }
-  settings = { ...settings, ...s, cats: { ...settings.cats, ...(s.cats || {}) } };
+  settings = { ...settings, muted: !!s.muted, master: s.master ?? settings.master };
   applyGains();
 }
 
@@ -50,17 +45,16 @@ export function play(type) {
   const pack = PACKS[packName] || PACKS.bigleague;
   const fn = pack[ALIAS[type] || type];
   if (!fn) return;
-  const cat = type === 'charge' ? 'organ' : 'moments';
-  fn(ctx, catGain[cat] || master, ctx.currentTime);
+  fn(ctx, master, ctx.currentTime);
 }
 
 // Thunder for the pause card's lightning: a crack, then a long rolling rumble.
 // Pack-independent (weather sounds the same whatever the pack), and it rides
-// the moments slider and master mute like every stinger.
+// the master volume and mute like every stinger.
 export function thunder(big = false) {
   ensure();
   if (ctx.state !== 'running') ctx.resume();
-  thunderAt(ctx, catGain.moments || master, ctx.currentTime, big);
+  thunderAt(ctx, master, ctx.currentTime, big);
 }
 function thunderAt(c, out, t, big) {
   const g = big ? 1 : 0.6;
@@ -87,7 +81,7 @@ export async function _debugRender(type, pack = 'bigleague') {
   return { found: true, peak: Math.round(peak * 1000) / 1000 };
 }
 export function _debugState() {
-  return ctx ? { state: ctx.state, master: master.gain.value, moments: catGain.moments.gain.value, organ: catGain.organ.gain.value } : { state: 'none' };
+  return ctx ? { state: ctx.state, master: master.gain.value } : { state: 'none' };
 }
 
 // -- primitives -------------------------------------------------------------

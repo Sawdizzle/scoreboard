@@ -4,6 +4,8 @@ import * as L from './logic.js';
 import * as S from './soccer.js';
 import { createSports } from './pads.js';
 import { createObs } from './obs-pad.js';
+import { createLobby } from './lobby.js';
+import { createSetup } from './setup.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
@@ -202,121 +204,6 @@ $('logout-btn').addEventListener('click', async () => {
   await teardownChannel(); await supabase.auth.signOut();
   user = null; game = null; await refreshSession();
 });
-
-// ---------------------------------------------------------------- Lobby
-const SPORT_LABEL = { baseball: '⚾', football: '🏈', soccer: '⚽', volleyball: '🏐', basketball: '🏀' };
-// Compact "how stale is this game" stamp for the lobby list.
-function timeAgo(iso) {
-  if (!iso) return '';
-  const s = (serverNow() - new Date(iso).getTime()) / 1000;  // updated_at is server time
-  if (s < 90) return 'just now';
-  if (s < 3600) return Math.floor(s / 60) + 'm ago';
-  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
-  if (s < 7 * 86400) return Math.floor(s / 86400) + 'd ago';
-  return new Date(iso).toLocaleDateString();
-}
-// "live" tells you nothing when you're picking between two games; where the game
-// actually stands does.
-function situationLabel(g) {  // ordinal() is defined further down; both run after load
-  const sp = SPORTS[g.sport];
-  return sp ? sp.lobby(g.state || {}) : `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
-}
-// Nothing moves a game out of 'live' (there is no end-game step), so the status
-// alone would badge every game ever made. LIVE means touched in the last 3 hours.
-const LIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
-const isOnNow = (g) => g.status === 'live' && Date.now() - new Date(g.updated_at).getTime() < LIVE_WINDOW_MS;
-const rowState = (g) => (g.status === 'final' ? 'Final' : g.status === 'setup' ? 'Not started' : situationLabel(g));
-
-async function loadGames() {
-  const list = $('games-list');
-  list.innerHTML = '<p class="muted">Loading…</p>';
-  const { data, error } = await db.from('games')
-    .select('id,home_name,away_name,home_score,away_score,status,sport,updated_at,starts_at,inning,half,state')
-    .eq('owner_id', user.id).order('updated_at', { ascending: false });
-  list.innerHTML = '';
-  if (error) { list.textContent = error.message; return; }
-  if (!data.length) { list.innerHTML = '<p class="muted">No games yet — create one.</p>'; return; }
-  // Games still to play or in progress on top; finished ones fold away below.
-  // Top: what is on now, then what is scheduled soonest, then anything with no
-  // start time (most recently touched first). Past: newest game first.
-  const t = (g) => (g.starts_at ? new Date(g.starts_at).getTime() : null);
-  const rank = (g) => (isOnNow(g) ? 0 : t(g) != null ? 1 : 2);
-  const current = data.filter((g) => g.status !== 'final').sort((a, b) =>
-    rank(a) - rank(b) || (rank(a) === 1 ? t(a) - t(b) : 0));
-  const past = data.filter((g) => g.status === 'final').sort((a, b) =>
-    (t(b) ?? new Date(b.updated_at).getTime()) - (t(a) ?? new Date(a.updated_at).getTime()));
-  if (!current.length) list.insertAdjacentHTML('beforeend', '<p class="muted">No upcoming games — create one.</p>');
-  for (const g of current) list.appendChild(gameRow(g));
-  if (past.length) {
-    const box = document.createElement('details');
-    box.className = 'past-games';
-    try { box.open = localStorage.getItem(PAST_OPEN) === '1'; } catch {}
-    box.ontoggle = () => { try { localStorage.setItem(PAST_OPEN, box.open ? '1' : '0'); } catch {} };
-    box.innerHTML = `<summary>Past games <span class="past-n">${past.length}</span></summary><div class="games-list"></div>`;
-    const inner = box.querySelector('.games-list');
-    for (const g of past) inner.appendChild(gameRow(g));
-    list.appendChild(box);
-  }
-}
-const PAST_OPEN = 'sb-past-open';
-// "Sat, Sep 20 · 10:00 AM" — the year only when it is not this one.
-function whenLabel(iso) {
-  const d = new Date(iso), now = new Date();
-  const day = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric',
-    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
-  return `${day} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
-}
-// A game not yet started says when it starts; one under way says where it is.
-const rowLine = (g) => (g.status === 'setup' && g.starts_at
-  ? whenLabel(g.starts_at)
-  : `${rowState(g)} · ${g.status === 'final' && g.starts_at ? whenLabel(g.starts_at).split(' · ')[0] : timeAgo(g.updated_at)}`);
-// Delete lives in the game's own Setup, not here: an always-visible bin on a
-// list you scroll one-handed is a mis-tap that cannot be undone.
-function gameRow(g) {
-  const open = document.createElement('button');
-  open.className = 'game-row' + (g.status === 'final' ? ' final' : '');
-  open.innerHTML = `<span class="g-sport">${SPORT_LABEL[g.sport] || '⚾'}</span>` +
-    `<span class="g-main"><span class="g-name">${esc(g.away_name)} @ ${esc(g.home_name)}</span>` +
-    `<span class="g-state">${isOnNow(g) ? '<span class="g-live">LIVE</span>' : ''}` +
-    `<span>${esc(rowLine(g))}</span></span></span>` +
-    `<span class="g-score">${g.away_score}–${g.home_score}</span><span class="g-chev">▸</span>`;
-  open.onclick = () => openGame(g.id);
-  return open;
-}
-
-// New game: pick the sport, then create with the right initial state; the rest
-// comes from your last game.
-$('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
-$('ng-cancel').onclick = () => closeSheet('newgame-sheet');
-// What a new game takes from your last one: how the broadcast looks and
-// sounds, and the house rules. Not the teams (home and away change every game;
-// saved teams load them in one pick) and not the venue (away games move it).
-const CARRY = ['style', 'theme', 'scorebug_position', 'scorebug_scale', 'sound_pack', 'audio', 'look', 'sponsors',
-  'show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule', 'auto_clip'];
-const CARRY_SAME_SPORT = ['regulation_innings', 'time_limit_seconds'];
-async function lastGameSettings(sport) {
-  const { data } = await db.from('games').select([...CARRY, ...CARRY_SAME_SPORT, 'sport'].join(','))
-    .order('created_at', { ascending: false }).limit(1).maybeSingle();
-  if (!data) return { style: 'scorebox' };
-  const out = {};
-  for (const k of CARRY) if (data[k] != null) out[k] = data[k];
-  if (data.sport === sport) for (const k of CARRY_SAME_SPORT) if (data[k] != null) out[k] = data[k];
-  return out;
-}
-const sportState = (sport) => (SPORTS[sport] ? SPORTS[sport].init() : null);
-$('ng-create').onclick = async () => {
-  const sport = $('ng-sport').value;
-  // Every game opens on Starting Soon: a real card, so it can be taken down by
-  // hand like any other. Starting the clock or the first play also drops it.
-  const row = { ...(await lastGameSettings(sport)), status: 'setup', sport, starts_at: fromLocalInput($('ng-startsat').value),
-    card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
-  const st = sportState(sport); if (st) row.state = st;
-  const { data, error } = await db.from('games').insert(row).select().single();
-  if (error) return alert(error.message);
-  closeSheet('newgame-sheet');
-  await openGame(data.id);
-  openSetupGuide(); // fresh game → expand the checklist
-};
 
 // The shell's height, measured rather than assumed. `100dvh` is supposed to
 // track the keyboard, and on iOS after a number pad closes it can stay at the
@@ -1553,82 +1440,7 @@ document.addEventListener('keydown', (e) => {
 // ---- Game setup sheet -----------------------------------------------------
 const suVal = (id) => $(id).value.trim();
 
-// ---- The Setup screen -----------------------------------------------------
-// A screen that pushes panes, not a drawer holding a sheet. Back goes up one
-// pane and then out, so there is one way through and one way home.
-//
-// There is no Save. Every field writes when you leave it, the way the lineup
-// screen does — the old sheet's Save button, its Cancel, and the "discard your
-// changes?" guard all existed because this one corner of the app batched its
-// writes while everything else committed immediately. One contract is worth
-// more than the batch was.
-let svPane = 'home';
-function openSetup() {
-  if (!game) return;
-  fillSetup();
-  svGo('home');
-  $('setup-view').hidden = false;
-  document.body.classList.add('setup-open');
-  $('setup-back').focus({ preventScroll: true });
-}
-function closeSetup() {
-  $('setup-view').hidden = true;
-  document.body.classList.remove('setup-open');
-}
-// A pane names itself, so the header cannot drift from the pane it sits over.
-function svGo(pane) {
-  svPane = pane;
-  let title = 'Setup';
-  document.querySelectorAll('#setup-view .sv-pane').forEach((p) => {
-    const on = p.dataset.pane === pane;
-    p.hidden = !on;
-    if (on) title = p.dataset.title || 'Setup';
-  });
-  $('setup-title').textContent = title;
-  $('setup-view').scrollTop = 0;
-  if (pane === 'home') renderSetupRows();
-  if (pane === 'link') renderLinkNote();
-  if (pane.startsWith('teams')) renderTeamCards();
-}
-$('setup-open').onclick = openSetup;
-// Back climbs one level: a panel pane (look-2) returns to its section (look),
-// a section returns home, and home leaves.
-const svUp = (pane) => (pane.includes('-') ? pane.split('-').slice(0, -1).join('-') : 'home');
-$('setup-back').onclick = () => (svPane === 'home' ? closeSetup() : svGo(svUp(svPane)));
-$('setup-view').addEventListener('click', (e) => {
-  const go = e.target.closest('[data-go]');
-  if (go) svGo(go.dataset.go);
-});
-addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || $('setup-view').hidden) return;
-  e.preventDefault();
-  if (svPane === 'home') closeSetup(); else svGo(svUp(svPane));
-});
-// The rows on the first pane answer their own question, so the screen is worth
-// reading before anything is opened.
-function renderSetupRows() {
-  if (!game) return;
-  const sport = game.sport || 'baseball';
-  $('sv-teams-sub').textContent = `${game.away_abbr || game.away_name || 'Away'} · ${game.home_abbr || game.home_name || 'Home'}`;
-  $('sv-sport-val').textContent = sport.charAt(0).toUpperCase() + sport.slice(1);
-  const mins = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) + ' min' : '';
-  const reg = (game.regulation_innings | 0) ? `${game.regulation_innings} innings` : '';
-  const where = game.venue && game.venue.label ? game.venue.label.split(',')[0] : '';
-  $('sv-times-val').textContent = [where, mins, reg].filter(Boolean).join(' · ') || 'Not set';
-  const on = ['show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule'].filter((k) => game[k]).length;
-  $('sv-show-val').textContent = on ? `${on} on` : 'Nothing extra';
-  // The theme's own name, as its option reads it — no second list to drift.
-  const opt = $('theme-sel').querySelector(`option[value="${game.theme || 'nightgame'}"]`);
-  const themeName = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
-  const pos = (POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center').replace('-', ' ');
-  $('sv-look-val').textContent = `${themeName} · ${pos}`;
-  const sp = spCfg();
-  $('sv-sponsors-val').textContent = sp.list.length ? `${sp.list.length}${sp.rotate ? ' · rotating' : ''}` : 'None';
-  const lvl = obsLevel();
-  $('sv-obs-tag').textContent = lvl === null ? 'not connected' : (OBS_TIER[lvl] || 'no access');
-}
-$('sv-lineups').onclick = () => { closeSetup(); openLineupSheet(); };
-
+// ---- Setup screen (js/setup.js) --------------------------------------------
 $('delete-game').onclick = async () => {
   if (!game) return;
   if (!confirm(`Delete "${game.away_name} @ ${game.home_name}"? This permanently removes the game and cannot be undone.`)) return;
@@ -1664,138 +1476,6 @@ $('reset-game').onclick = async () => {
   await writeField(patch);
   showToast('↺ Game reset');
 };
-// The same column is a game time limit, a quarter, or a half depending on the
-// sport. Say which, so nobody has to guess what soccer does with it.
-function renderSetupTimeLabel() {
-  const sp = SPORTS[$('su-sport').value];
-  $('su-time-label').textContent = sp ? sp.timeLabel : 'Time limit — minutes (0 = none)';
-}
-$('su-sport').addEventListener('change', renderSetupTimeLabel);
-
-// What goes on the bug. A true abbreviation is upper-cased, the way scoreboards
-// write them; a short name is left as it was typed, because BLUE STEEL is both
-// wider than Blue Steel and not how anyone writes it.
-function bugLabel(v, fallback) {
-  const t = String(v || '').trim();
-  if (!t) return fallback;
-  return t.length <= 5 ? t.toUpperCase() : t;
-}
-
-function fillSetup() {
-  $('su-sport').value = game.sport || 'baseball';
-  renderSetupTimeLabel();
-  $('su-style').value = game.style || 'bar';
-  $('su-away-name').value = game.away_name || '';
-  $('su-away-abbr').value = game.away_abbr || '';
-  $('su-away-logo').value = game.away_logo_url || '';
-  $('su-away-color').value = game.away_color || '#7a8794';
-  $('su-home-name').value = game.home_name || '';
-  $('su-home-abbr').value = game.home_abbr || '';
-  $('su-home-logo').value = game.home_logo_url || '';
-  $('su-home-color').value = game.home_color || '#1b2a41';
-  $('su-startsat').value = toLocalInput(game.starts_at);
-  $('su-venue').value = (game.venue && game.venue.query) || '';
-  showVenueHit(game.venue);
-  $('su-time').value = game.time_limit_seconds ? Math.round(game.time_limit_seconds / 60) : '';
-  $('su-regulation').value = game.regulation_innings || '';
-  $('su-show-clock').checked = !!game.show_clock;
-  $('su-show-batter').checked = !!game.show_batter;
-  $('su-show-pitcher').checked = !!game.show_pitcher;
-  $('su-show-pitchcount').checked = !!game.show_pitchcount;
-  $('su-show-runrule').checked = !!game.show_runrule;
-  $('su-show-rhe').checked = !!game.show_rhe;
-}
-// Each field writes itself. `change` rather than `input`, so a name is one
-// write when you leave the field and not one per letter; the colour pickers
-// fire `change` on release for the same reason.
-//
-// The sport field carries the old Save button's one piece of real work: a game
-// switching sport for the first time needs that sport's situation initialised,
-// or its pad opens onto a state that has no quarter, half, set or period.
-const SU_TEXT = {
-  'su-away-name': (v) => ({ away_name: v || 'Visitor' }),
-  'su-home-name': (v) => ({ home_name: v || 'Home' }),
-  'su-away-abbr': (v) => ({ away_abbr: bugLabel(v, 'VIS') }),
-  'su-home-abbr': (v) => ({ home_abbr: bugLabel(v, 'HOME') }),
-  'su-away-logo': (v) => ({ away_logo_url: v || null }),
-  'su-home-logo': (v) => ({ home_logo_url: v || null }),
-};
-for (const id of Object.keys(SU_TEXT)) {
-  $(id).addEventListener('change', () => {
-    const patch = SU_TEXT[id](suVal(id));
-    writeField(patch);
-    // Show what was actually stored: an abbreviation is upper-cased and an
-    // empty name becomes "Visitor", and a field that kept saying otherwise
-    // would be the screen disagreeing with the bug again.
-    const stored = Object.values(patch)[0];
-    if (typeof stored === 'string') $(id).value = stored;
-    renderSetupRows();
-    renderTeamCards();
-  });
-}
-$('su-away-color').addEventListener('change', (e) => { writeField({ away_color: e.target.value }); renderTeamCards(); });
-$('su-home-color').addEventListener('change', (e) => { writeField({ home_color: e.target.value }); renderTeamCards(); });
-$('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
-$('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
-// Venue: looked up once here, so the overlay only ever asks for the forecast.
-// The note under the field says which place it matched — "Aubrey" alone is
-// a town in more than one state.
-function showVenueHit(v, msg) {
-  const hit = $('su-venue-hit');
-  hit.textContent = msg || (v && v.label ? `📍 ${v.label} — weather on` : '');
-  hit.hidden = !hit.textContent;
-}
-let venueAsk = 0;
-$('su-venue').addEventListener('change', async () => {
-  const q = $('su-venue').value.trim();
-  const ask = ++venueAsk;
-  if (!q) { writeField({ venue: null }); showVenueHit(null); renderSetupRows(); return; }
-  showVenueHit(null, 'Looking up…');
-  let v = null;
-  try { v = await geocode(q); } catch (e) { if (ask === venueAsk) showVenueHit(null, 'Could not reach the weather service — try again'); return; }
-  if (ask !== venueAsk) return;
-  if (!v) { showVenueHit(null, `No place called “${q}” — try a ZIP`); return; }
-  writeField({ venue: v });
-  showVenueHit(v);
-  renderSetupRows();
-});
-$('su-regulation').addEventListener('change', () => { writeField({ regulation_innings: parseInt($('su-regulation').value, 10) || 0 }); renderSetupRows(); });
-$('su-time').addEventListener('change', () => {
-  const mins = parseInt($('su-time').value, 10);
-  const time_limit_seconds = Number.isFinite(mins) && mins > 0 ? mins * 60 : null;
-  const patch = { time_limit_seconds };
-  // A limit changed while the clock is stopped resets what is left on it.
-  if (time_limit_seconds && !game.clock_running) patch.clock_remaining_seconds = time_limit_seconds;
-  writeField(patch);
-  renderSetupRows();
-});
-$('su-sport').addEventListener('change', () => {
-  const sport = $('su-sport').value;
-  const patch = { sport };
-  const sp = SPORTS[sport];
-  if (sp && !sp.started(game.state)) patch.state = sp.init(game);
-  writeField(patch);
-  renderSetupTimeLabel();
-  renderSetupRows();
-});
-for (const id of ['su-show-clock', 'su-show-batter', 'su-show-pitcher', 'su-show-pitchcount', 'su-show-rhe', 'su-show-runrule']) {
-  $(id).addEventListener('change', (e) => {
-    writeField({ [id.replace('su-show-', 'show_').replace('rhe', 'rhe')]: e.target.checked });
-    renderSetupRows();
-  });
-}
-
-// <input type="datetime-local"> speaks local wall time; the column is timestamptz.
-function toLocalInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso), p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-function fromLocalInput(v) {
-  if (!v) return null;
-  const d = new Date(v);
-  return isNaN(d) ? null : d.toISOString();
-}
 
 // ---- Time-limit clock -----------------------------------------------------
 function clockRemaining(g) {
@@ -1920,16 +1600,11 @@ const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
 const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-right': 'Top-right',
   'mid-left': 'Middle-left', 'mid-center': 'Centre', 'mid-right': 'Middle-right',
   'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
-// Themes retired from the picker still paint for the games that use them; the
-// picker names the one in use rather than showing a blank.
+// A theme no longer in the picker paints as Midnight, so the picker says so.
 function renderLook() {
-  const sel = $('theme-sel'), th = game.theme || 'nightgame';
-  sel.querySelector('option[data-retired]')?.remove();
-  if (![...sel.options].some((o) => o.value === th)) {
-    const o = new Option(`${th.charAt(0).toUpperCase() + th.slice(1)} (retired)`, th);
-    o.dataset.retired = '1'; sel.prepend(o);
-  }
-  sel.value = th;
+  const sel = $('theme-sel');
+  sel.value = game.theme || 'nightgame';
+  if (!sel.value) sel.value = 'nightgame';
   const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
   document.querySelectorAll('#pos-grid button').forEach((b) => b.classList.toggle('on', b.dataset.pos === cur));
   const sc = game.scorebug_scale || 1;
@@ -1981,15 +1656,13 @@ function renderCustomize() {
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
 $('fx-charge').onclick = () => fireAnim('charge');
 
-const audioOf = () => game.audio || { muted: false, master: 0.8, cats: { moments: 1, organ: 1 } };
+const audioOf = () => game.audio || { muted: false, master: 0.8 };
 async function writeAudio(patch) {
   const cur = audioOf();
-  await writeField({ audio: { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } } });
+  await writeField({ audio: { muted: !!cur.muted, master: cur.master ?? 0.8, ...patch } });
 }
 $('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
-// One volume. The per-category levels it replaced go back to full, so a slider
-// that is no longer on screen can't be what keeps the overlay quiet.
-$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value, cats: { moments: 1, organ: 1 } }));
+$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
 $('sound-pack').addEventListener('change', (e) => writeField({ sound_pack: e.target.value }));
 
 function renderAudio() {
@@ -1998,6 +1671,7 @@ function renderAudio() {
   $('mute-btn').classList.toggle('on', !!a.muted);
   $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
   $('sound-pack').value = game.sound_pack || 'bigleague';
+  if (!$('sound-pack').value) $('sound-pack').value = 'bigleague';   // a retired pack plays as Big League
 }
 
 // Ball in play ---------------------------------------------------------------
@@ -2829,5 +2503,11 @@ document.addEventListener('keydown', (e) => {
 
 // The other four sports' pads, wired now that every helper they borrow exists.
 const SPORTS = createSports({ $, esc, ordinal, setSitLabel, commit, commitOrAsk, fireAnim, game: () => game });
+// The Setup screen (js/setup.js).
+const { closeSetup, fillSetup, fromLocalInput, openSetup, svGo } = createSetup({ $, suVal, POS_ALIAS, OBS_TIER, obsLevel, writeField, spCfg,
+  openLineupSheet, renderTeamCards, renderLinkNote, game: () => game, sports: () => SPORTS });
+// The games list and New Game (js/lobby.js).
+const { loadGames, CARRY, sportState } = createLobby({ $, db, esc, ordinal, nextNonce, fromLocalInput, openSheet, closeSheet,
+  openGame, openSetupGuide, user: () => user, sports: () => SPORTS });
 
 refreshSession();

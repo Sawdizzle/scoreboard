@@ -1,7 +1,7 @@
 # Migrations
 
 The database side of the app, in the repo rather than only in the hosted
-project. Before this existed, the schema, the RLS policies and the nine RPCs
+project. Before this existed, the schema, the RLS policies and the RPCs
 lived exclusively in Supabase — the one part of a deliberately no-build app that
 could not be recovered from the files you can see.
 
@@ -29,13 +29,20 @@ to run it against a database that already has everything:
 supabase migration repair --status applied 00000000000000
 ```
 
-The three migrations dated 2026-09-07 are already in the remote history under
-these exact names and need no repair.
+Every file after the baseline is named with the version the remote history
+recorded for it (`supabase_migrations.schema_migrations`), so `supabase
+migration list` shows local and remote in step and a `db push` has nothing to
+re-run. Migrations applied through the Supabase MCP get their version at apply
+time: after applying one, rename the file to that version.
+
+`supabase/pending/` holds migrations written but not yet applied. Each says
+what has to be true first; once applied, it moves here under its recorded
+version.
 
 ## How the baseline was checked
 
 It was written from catalog introspection, then compared field by field against
-the live schema: all 92 columns (type, default, not-null), 19 constraints, 9
+the live schema as it stood then: all 92 columns (type, default, not-null), 19 constraints, 9
 indexes, 20 policies, 5 RLS flags and 11 functions, with no extras. Function
 bodies are verbatim `pg_get_functiondef` output, so the part that would be
 hardest to reconstruct by hand cannot drift.
