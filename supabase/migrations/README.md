@@ -16,7 +16,7 @@ migrations that built it (`20260812225438_live_scoreboard` onward). Those exist
 only in the remote history. To bring them down instead:
 
 ```bash
-supabase link --project-ref yeykyutsbeqjcgdxlucn
+supabase link --project-ref <your-project-ref>
 supabase db pull --schema scoreboard    # needs the database password
 ```
 

@@ -1,6 +1,9 @@
 // ---------------------------------------------------------------------------
-// Live config. The publishable/anon key is SAFE in client code — Row Level
-// Security in Postgres is what actually protects your data.
+// The one file a self-hoster edits (see "Get your own" in the README): your
+// Supabase project URL and publishable key. The publishable/anon key is SAFE in
+// client code — Row Level Security in Postgres is what protects the data. The
+// same project URL also sits in a preconnect hint in control.html, overlay.html
+// and recap.html; scripts/check.mjs fails if they disagree.
 // ---------------------------------------------------------------------------
 export const SUPABASE_URL = 'https://yeykyutsbeqjcgdxlucn.supabase.co';
 export const SUPABASE_ANON_KEY = 'sb_publishable_SLM96UPQ3Rgrf6MTpXRZUQ_LklkFhPH';

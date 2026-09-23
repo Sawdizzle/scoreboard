@@ -158,6 +158,19 @@ for (const f of ALL_JS) {
   }
 }
 
+// ---- 6. The preconnect hints name the project config.js uses -------------
+// A self-hoster changes SUPABASE_URL in js/config.js. A page still warming up a
+// connection to somebody else's project costs every cold load on field LTE and
+// says nothing about it, so the hint has to follow the config.
+{
+  const url = (read('js/config.js').match(/SUPABASE_URL\s*=\s*'([^']+)'/) || [])[1];
+  for (const page of ['control.html', 'overlay.html', 'recap.html']) {
+    for (const m of read(page).matchAll(/<link rel="preconnect" href="(https:\/\/[^"]+\.supabase\.co)"/g)) {
+      if (m[1] !== url) fail(`${page}: preconnects to ${m[1]}, but js/config.js uses ${url}`);
+    }
+  }
+}
+
 // ---- report ---------------------------------------------------------------
 if (problems.length) {
   console.error(`\n✗ ${problems.length} problem${problems.length > 1 ? 's' : ''}:\n`);
@@ -165,4 +178,4 @@ if (problems.length) {
   console.error('');
   process.exit(1);
 }
-console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls, module contexts');
+console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls, module contexts, config');
