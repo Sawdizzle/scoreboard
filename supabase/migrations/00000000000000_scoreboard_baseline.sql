@@ -390,6 +390,16 @@ comment on function scoreboard.server_now() is
 
 -- Internal only: never an RPC, so it cannot be used as a token oracle.
 revoke all on function scoreboard.overlay_token_ok(uuid, uuid) from public, anon, authenticated;
+-- As on the live project: the token issuers are for signed-in owners only, and
+-- the roster read is for the overlay (anon) and the pad. Added 2026-09-23 when a
+-- rebuild from these files on a Supabase branch showed the live grants were
+-- tighter than this file.
+revoke all on function scoreboard.overlay_token(uuid) from public, anon, service_role;
+revoke all on function scoreboard.rotate_overlay_token(uuid) from public, anon, service_role;
+grant execute on function scoreboard.overlay_token(uuid) to authenticated;
+grant execute on function scoreboard.rotate_overlay_token(uuid) to authenticated;
+revoke all on function scoreboard.get_roster(uuid, uuid) from public, service_role;
+grant execute on function scoreboard.get_roster(uuid, uuid) to anon, authenticated;
 
 -- -------------------------------------------------------------- triggers ----
 create trigger games_touch before update on scoreboard.games

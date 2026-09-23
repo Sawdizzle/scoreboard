@@ -27,7 +27,7 @@ $$;
 revoke all on function scoreboard.overlay_token_ok(uuid, uuid) from public, anon, authenticated;
 
 drop function if exists scoreboard.ack_replay(uuid, bigint, boolean, text, integer, boolean);
-create function scoreboard.ack_replay(
+create or replace function scoreboard.ack_replay(
   p_game uuid, p_nonce bigint, p_ok boolean, p_code text,
   p_level integer default null, p_buffering boolean default null,
   p_token uuid default null)
@@ -52,7 +52,7 @@ end;
 $$;
 
 drop function if exists scoreboard.set_obs_status(uuid, integer, boolean, boolean, boolean, boolean);
-create function scoreboard.set_obs_status(
+create or replace function scoreboard.set_obs_status(
   p_game uuid, p_level integer, p_streaming boolean, p_recording boolean,
   p_paused boolean, p_buffer boolean, p_token uuid default null)
 returns void
@@ -73,7 +73,7 @@ end;
 $$;
 
 drop function if exists scoreboard.set_obs_scenes(uuid, integer, text, jsonb);
-create function scoreboard.set_obs_scenes(
+create or replace function scoreboard.set_obs_scenes(
   p_game uuid, p_level integer, p_current text, p_scenes jsonb,
   p_token uuid default null)
 returns void
