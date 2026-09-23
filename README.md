@@ -112,12 +112,15 @@ Both run on push via `.github/workflows/check.yml`.
 
 | File | What it is |
 | --- | --- |
-| `js/control.js` | The pad: auth, lobby, baseball scoring, sheets, Setup |
+| `js/control.js` | The pad: auth, the open game, baseball scoring, sheets, Field and Lineup screens |
+| `js/lobby.js` | The games list and New Game (what a new game carries over) |
+| `js/setup.js` | The Setup screen: panes, summary rows, fields that write as you edit |
 | `js/pads.js` | The other four sports' pads: buttons, Situation rows, demo, stingers — one table |
 | `js/obs-pad.js` | OBS from the pad: permission tiers, stream/record/buffer, scene cuts, replay clips |
 | `js/overlay.js` | The OBS page: render, Realtime, roster pull, OBS relay |
 | `js/recap.js` | The public recap page |
 | `js/logic.js` | Baseball rules as pure functions, plus the event-log replay |
+| `js/roster.js` | A team's roster: players, ids, positions (re-exported by logic.js) |
 | `js/football.js`, `js/soccer.js`, `js/volleyball.js`, `js/basketball.js` | Rules for the other sports |
 | `js/sync.js` | The pad's write queue — plays, settings and lineups, in order, retried (no DOM, no Supabase; tested with injected I/O) |
 | `js/clock.js` | Server-time offset shared by nonces and game clocks |
