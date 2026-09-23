@@ -15,17 +15,17 @@ A phone-controlled scoreboard overlay for live-streamed youth sports. You score 
 
 Scoreboard runs on a free Supabase project and any static host. Setup takes about 20 minutes if you have used Supabase before.
 
-1. Create a Supabase project.
+1. Create a Supabase project, and give this app one of its own. The publishable key ships in `js/config.js`, so whoever reads your repo can talk to that project as `anon`. RLS keeps them out of Scoreboard's data, but any *other* app sharing the project is exposed to the same key — an anon-writable table belonging to something else becomes a spam target. One project, one app.
 2. Project Settings → API (Data API): add **`scoreboard`** to the exposed schemas.
 3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline. `supabase/pending/` holds changes written but not yet applied; each says when it may run.
 4. Deploy the signup function with JWT verification off (new users have no JWT; it uses the injected service role, so no secret is set by hand): `supabase functions deploy signup --no-verify-jwt`.
-5. Put your project URL and publishable key in `js/config.js`, and the same project URL in the three `<link rel="preconnect">` lines in `control.html`, `overlay.html` and `recap.html` (`node scripts/check.mjs` fails until they match). The publishable key is safe in client code; RLS protects the data. If you change `USER_EMAIL_DOMAIN` there, change `EMAIL_DOMAIN` in `supabase/functions/signup/index.ts` to match.
+5. Put your project URL and publishable key in `js/config.js`, and the same project URL in the three `<link rel="preconnect">` lines in `control.html`, `overlay.html` and `recap.html` (`node scripts/check.mjs` fails until they match). The publishable key is safe in client code; RLS protects the data, and `service_role` is granted nothing in the `scoreboard` schema, so even that key cannot read a roster through the API. If you change `USER_EMAIL_DOMAIN` there, change `EMAIL_DOMAIN` in `supabase/functions/signup/index.ts` to match.
 6. Deploy the repo root as a static site. On Vercel: framework preset **Other**, no build command, root as output. `vercel.json` turns on clean URLs (`/control`, `/overlay`, `/recap`).
 7. Optional: the lobby's footer carries the original author's Buy Me a Coffee button (`control.html`, `<footer class="support">`). Change it to yours or delete it.
 
 Anyone who can reach your site can create an account; the signup function allows five attempts per address per hour.
 
-**Local development**: serve the folder over HTTP (ES modules do not load from `file://`), for example `python3 -m http.server 5173`, and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Local pages talk to whatever Supabase project `js/config.js` names, so if that is the project your games run on, test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
+**Local development**: serve the folder over HTTP (ES modules do not load from `file://`), and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Use a threaded server — `python3 -c "from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; ThreadingHTTPServer(('127.0.0.1', 5173), SimpleHTTPRequestHandler).serve_forever()"` — because `python3 -m http.server` handles one request at a time and a browser asking for every stylesheet, font and module at once can get served a page with no CSS at all. Local pages talk to whatever Supabase project `js/config.js` names, so if that is the project your games run on, test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
 
 ## Your first game
 
