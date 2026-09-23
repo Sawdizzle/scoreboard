@@ -2544,12 +2544,12 @@ document.addEventListener('keydown', (e) => {
 
 // The other four sports' pads, wired now that every helper they borrow exists.
 const SPORTS = createSports({ $, esc, ordinal, setSitLabel, commit, commitOrAsk, fireAnim, game: () => game });
-// The Field screen (js/field.js).
-const { openField, paintField } = createField({ $, haptic, showToast, saveRoster, writeField, commit, closeSetup, teamOf, teamAbbr, shortName, renderLineups,
-  closeAllSheets: () => { for (const id of [...sheetStack]) closeSheet(id); }, game: () => game });
 // The Setup screen (js/setup.js).
 const { closeSetup, fillSetup, fromLocalInput, openSetup, svGo } = createSetup({ $, suVal, POS_ALIAS, OBS_TIER, obsLevel, writeField, spCfg,
   openLineupSheet, renderTeamCards, renderLinkNote, game: () => game, sports: () => SPORTS });
+// The Field screen (js/field.js).
+const { openField, paintField } = createField({ $, haptic, showToast, saveRoster, writeField, commit, closeSetup, teamOf, teamAbbr, shortName, renderLineups,
+  closeAllSheets: () => { for (const id of [...sheetStack]) closeSheet(id); }, game: () => game });
 // The games list and New Game (js/lobby.js).
 const { loadGames, CARRY, sportState } = createLobby({ $, db, esc, ordinal, nextNonce, fromLocalInput, openSheet, closeSheet,
   openGame, openSetupGuide, abbrFor: L.abbrFor, seedNewGame, teams: () => savedTeams, user: () => user, sports: () => SPORTS });
