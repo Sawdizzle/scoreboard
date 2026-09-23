@@ -5,8 +5,8 @@
 // same project URL also sits in a preconnect hint in control.html, overlay.html
 // and recap.html; scripts/check.mjs fails if they disagree.
 // ---------------------------------------------------------------------------
-export const SUPABASE_URL = 'https://yeykyutsbeqjcgdxlucn.supabase.co';
-export const SUPABASE_ANON_KEY = 'sb_publishable_SLM96UPQ3Rgrf6MTpXRZUQ_LklkFhPH';
+export const SUPABASE_URL = 'https://zhucylsplepnghgybktt.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_Vh78iZ3hbb3fO6VF6H4FAQ_8RoQy6Im';
 
 // All app tables live in this Postgres schema.
 export const DB_SCHEMA = 'scoreboard';
