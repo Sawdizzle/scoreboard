@@ -7,7 +7,7 @@ A phone-controlled scoreboard overlay for live-streamed youth sports. You score 
 Hosted app: **<https://scoreboard-ashen-rho.vercel.app/control>**. On a phone, Safari → Share → **Add to Home Screen** runs it full-screen.
 
 1. **Create an account**: a username and a 6–8 digit PIN. There is no email step.
-2. **+ New Game**, pick the sport. Look, sound, sponsors and the Show-on-overlay switches copy from your last game.
+2. **+ New Game**: pick the sport and both teams. A saved team loads with its lineup and positions, and a team marked **★ My team** (Setup → Teams) is preselected on the side it last played. A new team only needs a name; Create opens the jersey keypad for it. Look, sound, sponsors and the Show-on-overlay switches copy from your last game.
 3. Work through the checklist at the top of the game: teams, lineups, positions (including the pitcher), overlay link.
 4. **⚙ Setup → Overlay link → Copy**, and paste it into OBS as a Browser source (next section). You do this once.
 5. Score from the pad. It keeps the phone's screen awake while a game is open.
@@ -82,7 +82,8 @@ The other sports use simple button grids. Corrections and End game for each are 
 ## Setup screen
 
 - **Overlay link**: copy, open, Show this game on the overlay, Rotate link; the recap link; Demo Mode and Preview All FX.
-- **Teams**: names, abbreviations, colours, logos and rosters; saved teams (load one to fill the card and the lineup at once); swap home and away.
+- **Teams**: names, abbreviations, colours, logos and rosters; swap home and away. A named team with a lineup saves itself as you edit (keyed by name), so next game it is one pick. **★ My team** marks your own: preselected in New Game, and the setup checklist asks for its positions only; an opponent's are optional.
+- **Lineup**: rows of number, name and position; **⌨ Jersey numbers** for entering a lineup card at game time (tap a number, Next, repeat; ⌫ on an empty keypad takes the last one back), and **📋 Paste a list** for one player per line (`7 Ava Reyes SS`, `#12 Ben Ortiz (P)`, `3 Cy`).
 - **Lineups & positions**: the same screens the batter line and 🧢 Field open.
 - **Sport & scorebug**: sport, and one of five scorebug styles: Scorebox, Bar, Bug, Minimal, Lower-third.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).

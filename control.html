@@ -67,7 +67,7 @@
         <summary>🚀 Quick start</summary>
         <div class="panel-body help-body">
           <ol>
-            <li><b>+ New Game</b> — pick the sport. The look, sound and sponsors come from your last game.</li>
+            <li><b>+ New Game</b> — pick the sport and both teams. A saved team loads with its lineup; mark your own as <b>★ My team</b> (Setup → Teams) and it is picked for you. A new team just needs a name — the jersey keypad opens for it. The look, sound and sponsors come from your last game.</li>
             <li>The checklist at the top of the game walks you through teams, lineups, positions and the overlay link.</li>
             <li><b>⚙ Setup → Overlay link → Copy</b>, and add it to OBS as a Browser source (below). You only do this once: the link is yours, not the game's, and it shows whichever game you open on the pad.</li>
             <li>Score from the pad. The overlay updates instantly. Keep the pad open — it holds the screen awake while a game is open.</li>
@@ -86,7 +86,7 @@
             <li><b>MORE</b>: hit by pitch, catcher’s interference, intentional walk, balk.</li>
             <li>Runs, strikeouts, walks, hits and outs fire their own animation. The third out ends the half and puts Mid-Inning on the stream.</li>
             <li><b>↶ Undo</b> reverses the last play. For anything else that drifted, tap the count bar at the top: that is the Situation screen, with every correction and <b>🏁 End game</b>.</li>
-            <li>Tap the batter line for the <b>Lineup</b>; <b>🧢 Field</b> on the bottom bar sets positions by jersey number. A new pitcher gets his own pitch count.</li>
+            <li>Tap the batter line for the <b>Lineup</b>. <b>⌨ Jersey numbers</b> there takes a lineup card at game time: tap each number in batting order and hit Next; names can wait. <b>📋 Paste a list</b> reads one player per line. <b>🧢 Field</b> on the bottom bar sets positions by jersey number; an opponent's are optional. A new pitcher gets his own pitch count.</li>
           </ul>
         </div>
       </details>
@@ -646,6 +646,32 @@
         <button id="lu-tab-home" type="button" aria-pressed="false">Home</button>
       </div>
 
+      <!-- Quick entry, for the lineup card handed over at game time: jersey
+           numbers in batting order on a keypad, or a pasted list. Names can
+           follow in the rows below whenever there is a moment. -->
+      <div class="lq-bar">
+        <button id="lq-keys-btn" class="lq-btn" type="button">⌨ Jersey numbers</button>
+        <button id="lq-paste-btn" class="lq-btn" type="button">📋 Paste a list</button>
+      </div>
+      <div id="lq-keys" class="lq-keys" hidden>
+        <div class="lq-typed"><b id="lq-typed">–</b><span id="lq-hint">Batter 1 · the number on their back</span></div>
+        <div class="lq-pad" id="lq-pad">
+          <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+          <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+          <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+          <button type="button" data-k="del" aria-label="Back">⌫</button><button type="button" data-k="0">0</button><button type="button" data-k="next" class="lq-next">Next ↵</button>
+        </div>
+        <button id="lq-keys-done" class="ghost lq-done" type="button">Done · names can wait</button>
+      </div>
+      <div id="lq-paste" class="lq-paste" hidden>
+        <textarea id="lq-text" rows="6" autocomplete="off" placeholder="One player per line, in batting order:&#10;7 Ava Reyes SS&#10;12 Ben Ortiz P&#10;3 Cy"></textarea>
+        <p id="lq-preview" class="hint" aria-live="polite">Number, name and position, in any order you have them.</p>
+        <div class="sheet-actions">
+          <button id="lq-paste-cancel" class="ghost" type="button">Cancel</button>
+          <button id="lq-paste-use" class="primary" type="button">Use this list</button>
+        </div>
+      </div>
+
       <section class="lu-side" id="lu-side-away" aria-label="Away lineup">
         <button type="button" class="fieldcheck" id="fieldcheck-away"></button>
         <div class="lu-cols" aria-hidden="true"><span class="c-ord">Order</span><span class="c-num">#</span><span class="c-name">Name</span><span class="c-pos">Pos</span></div>
@@ -876,7 +902,7 @@
         <div class="set-card">
           <button class="set-row" type="button" id="team-swap"><span class="set-lab">⇅ Swap home and away<span class="set-sub">Names, colours, logos and both rosters</span></span><span class="set-go">›</span></button>
         </div>
-        <p class="set-note">A team is a name, an abbreviation, a colour, a logo and a roster. Saved teams carry all of it, so loading one fills the card and the lineup at once.</p>
+        <p class="set-note">A team is a name, an abbreviation, a colour, a logo and a roster. A named team with a lineup saves itself as you edit, so next game it is one pick in New Game.</p>
       </div>
     </section>
 
@@ -916,7 +942,7 @@
           <label class="set-row field"><span class="set-lab">Swap in</span>
             <select class="set-input" id="team-sel-away" aria-label="Load a saved team for away"><option value="">— saved teams —</option></select>
           </label>
-          <button class="set-row" type="button" id="team-save-away"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <div class="set-row" id="team-mine-row-away"><span class="set-lab">★ My team<span class="set-sub">Picked for you in New Game; its positions are the ones the checklist asks for</span></span><label class="set-switch"><input type="checkbox" id="team-mine-away" /><i></i></label></div>
           <button class="set-row danger" type="button" id="team-del-away"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
         </div>
       </div>
@@ -958,7 +984,7 @@
           <label class="set-row field"><span class="set-lab">Swap in</span>
             <select class="set-input" id="team-sel-home" aria-label="Load a saved team for home"><option value="">— saved teams —</option></select>
           </label>
-          <button class="set-row" type="button" id="team-save-home"><span class="set-lab">💾 Save this team<span class="set-sub">Name, colour, logo and roster, together</span></span><span class="set-go">›</span></button>
+          <div class="set-row" id="team-mine-row-home"><span class="set-lab">★ My team<span class="set-sub">Picked for you in New Game; its positions are the ones the checklist asks for</span></span><label class="set-switch"><input type="checkbox" id="team-mine-home" /><i></i></label></div>
           <button class="set-row danger" type="button" id="team-del-home"><span class="set-lab">🗑 Delete the saved team</span><span class="set-go">›</span></button>
         </div>
       </div>
@@ -1208,7 +1234,7 @@
 
   <!-- NEW GAME SHEET -->
   <div id="newgame-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="newgame-title" tabindex="-1" hidden>
-    <div class="sheet-card">
+    <div class="sheet-card scroll">
       <h3 id="newgame-title">New Game</h3>
       <label class="sel">Sport
         <select id="ng-sport">
@@ -1219,10 +1245,26 @@
           <option value="basketball">Basketball</option>
         </select>
       </label>
+      <!-- Teams: a saved team loads with its lineup; one marked as yours is
+           preselected on the side it last played. "New team" takes a name. -->
+      <div class="ng-teams">
+        <div class="ng-team">
+          <label class="sel" for="ng-away">Away</label>
+          <select id="ng-away"></select>
+          <input id="ng-away-name" placeholder="Visitor's name (optional)" autocomplete="off" />
+        </div>
+        <button id="ng-swap" class="ng-swap" type="button" aria-label="Swap home and away">⇅</button>
+        <div class="ng-team">
+          <label class="sel" for="ng-home">Home</label>
+          <select id="ng-home"></select>
+          <input id="ng-home-name" placeholder="Home team's name (optional)" autocomplete="off" />
+        </div>
+      </div>
+      <p class="set-note" id="ng-note"></p>
       <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Setup</em>
         <input id="ng-startsat" type="datetime-local" />
       </label>
-      <p class="set-note">The look, sound, sponsors and overlay switches come from your last game. Change any of them in Setup.</p>
+      <p class="set-note">The look, sound, sponsors and overlay switches come from your last game.</p>
       <div class="sheet-actions">
         <button id="ng-cancel" class="ghost">Cancel</button>
         <button id="ng-create" class="primary">Create Game</button>

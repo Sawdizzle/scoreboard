@@ -204,3 +204,67 @@ export function setBatterField(stored, idx, field, value) {
   // not disturb a pitcher typed in without a row in the order.
   return withPitcherMirror({ ...t, batters, positions }, emptied && wasPitcher);
 }
+
+// ---- Quick entry: a pasted list, or jersey numbers off a keypad ------------
+// One player per line, in batting order, in the shapes people actually paste
+// from a group text, a lineup card or GameChanger:
+//   "7 Ava Reyes SS"   "#12 Ben Ortiz (P)"   "3. Cy Park - CF"   "Finn Moore"   "21"
+// A leading 1–3 digit number is the jersey; a trailing position (in brackets,
+// after a dash or comma, or just last) is the spot; the rest is the name.
+const POS_RE = /(?:^|[\s(,–-])\(?(P|C|1B|2B|3B|SS|LF|CF|RF|DH)\)?\.?$/i;
+export function parseRosterLine(line) {
+  let s = String(line || '').replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s) return null;
+  let pos = '';
+  const pm = s.match(POS_RE);
+  if (pm) {
+    pos = pm[1].toUpperCase();
+    s = s.slice(0, pm.index).replace(/[\s,(–-]+$/, '').trim();
+  }
+  let num = '';
+  const nm = s.match(/^(?:no\.?\s*)?#?(\d{1,3})(?:[.):,]|\s|$)\s*/i);
+  if (nm) { num = nm[1]; s = s.slice(nm[0].length).trim(); }
+  const name = s.replace(/^[-–:,.]\s*/, '').trim();
+  if (!num && !name) return null;
+  return { num, name, pos: pos === 'DH' ? '' : pos };
+}
+export function parseRoster(text) {
+  return String(text || '').split(/\r?\n/).map(parseRosterLine).filter(Boolean);
+}
+// A fresh team from a parsed list: the order as given, and each spot that came
+// with a position placed on the diamond (a second claim on a spot benches the
+// first, as it would on the Field screen).
+export function teamFromList(list) {
+  let t = normalizeTeam({});
+  list.forEach((p, i) => {
+    if (p.num) t = setBatterField(t, i, 'num', p.num);
+    if (p.name) t = setBatterField(t, i, 'name', p.name);
+    if (p.pos) t = setPosition(t, i, p.pos).team;
+  });
+  return t;
+}
+// The keypad: a number goes into the first slot nobody holds yet. Returns the
+// team and the slot it landed in.
+export function appendNumber(team, num) {
+  const t = normalizeTeam(team);
+  let idx = t.batters.findIndex((b) => !filled(b));
+  if (idx < 0) idx = t.batters.length;
+  return { team: setBatterField(t, idx, 'num', String(num)), idx };
+}
+// Backspace on an empty keypad: take back the last number entered, as long as
+// that row is only a number — a named player is never erased from here.
+export function popNumber(team) {
+  const t = normalizeTeam(team);
+  let idx = -1;
+  t.batters.forEach((b, i) => { if (filled(b)) idx = i; });
+  if (idx < 0 || t.batters[idx].name) return { team: t, num: '' };
+  const num = t.batters[idx].num;
+  return { team: setBatterField(t, idx, 'num', ''), num };
+}
+// What goes on the bug for a team typed in by name: short names as they are,
+// long ones by their first word (the pad's own rule upper-cases 5 or fewer).
+export function abbrFor(name) {
+  const n = String(name || '').trim();
+  if (n.length <= 12) return n;
+  return n.split(/\s+/)[0].slice(0, 12);
+}

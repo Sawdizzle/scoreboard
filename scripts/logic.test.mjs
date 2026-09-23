@@ -1214,3 +1214,62 @@ test('a pitching change leaves the other team’s count alone', () => {
   const r = L.onPitcherChange(G({ state: { pitches: { home: 30, away: 17 } } }), 'home', 'bA', 'bB');
   assert.equal(r.patch.state.pitches.away, 17);
 });
+
+// ---------------------------------------------------------------------------
+// Quick lineup entry: pasted lists and the jersey keypad
+// ---------------------------------------------------------------------------
+test('a pasted line gives number, name and position in the usual shapes', () => {
+  const cases = {
+    '7 Ava Reyes SS': { num: '7', name: 'Ava Reyes', pos: 'SS' },
+    '#12 Ben Ortiz (P)': { num: '12', name: 'Ben Ortiz', pos: 'P' },
+    '3. Cy Park - CF': { num: '3', name: 'Cy Park', pos: 'CF' },
+    '5 Hal Kim, 3B': { num: '5', name: 'Hal Kim', pos: '3B' },
+    'Finn Moore': { num: '', name: 'Finn Moore', pos: '' },
+    '21': { num: '21', name: '', pos: '' },
+    '44\tGus Tran\tc': { num: '44', name: 'Gus Tran', pos: 'C' },
+    '9 Eli DH': { num: '9', name: 'Eli', pos: '' },
+  };
+  for (const [line, want] of Object.entries(cases)) assert.deepEqual(L.parseRosterLine(line), want, line);
+});
+
+test('a name ending in capital letters that are not a position stays whole', () => {
+  assert.deepEqual(L.parseRosterLine('8 Jo Cope'), { num: '8', name: 'Jo Cope', pos: '' });
+  assert.deepEqual(L.parseRosterLine('10 Max Lee Jr'), { num: '10', name: 'Max Lee Jr', pos: '' });
+});
+
+test('blank lines are skipped and the order is kept', () => {
+  const list = L.parseRoster('7 Ava SS\n\n12 Ben P\n  \n3 Cy');
+  assert.deepEqual(list.map((p) => p.num), ['7', '12', '3']);
+});
+
+test('a parsed list becomes a team with its positions on the diamond', () => {
+  const t = L.teamFromList(L.parseRoster('7 Ava SS\n12 Ben P\n3 Cy\n4 Dee SS'));
+  assert.equal(t.batters.length, 4);
+  assert.equal(L.positionOf(t, 1), 'P');
+  assert.equal(L.positionOf(t, 3), 'SS', 'the later claim on SS wins');
+  assert.equal(L.positionOf(t, 0), '', 'and the earlier one goes to the bench');
+  assert.equal(L.positionOf(t, 2), '');
+});
+
+test('the keypad fills the next open slot, and backspace takes it back', () => {
+  let r = L.appendNumber({}, '7');
+  assert.equal(r.idx, 0);
+  r = L.appendNumber(r.team, '12');
+  assert.equal(r.idx, 1);
+  assert.deepEqual(r.team.batters.map((b) => b.num), ['7', '12']);
+  const p = L.popNumber(r.team);
+  assert.equal(p.num, '12');
+  assert.deepEqual(p.team.batters.filter((b) => b.num).map((b) => b.num), ['7']);
+});
+
+test('backspace never erases a named player', () => {
+  const t = L.teamFromList([{ num: '7', name: 'Ava', pos: '' }]);
+  const p = L.popNumber(t);
+  assert.equal(p.num, '');
+  assert.equal(p.team.batters[0].name, 'Ava');
+});
+
+test('a typed team name gets a short bug label', () => {
+  assert.equal(L.abbrFor('Krum 14u'), 'Krum 14u');
+  assert.equal(L.abbrFor('Wildcats Baseball - Owens'), 'Wildcats');
+});
