@@ -171,6 +171,38 @@ for (const f of ALL_JS) {
   }
 }
 
+// ---- 7. A screen wired before the screen it borrows from -----------------
+// v4.13 shipped a blank pad. The Field screen was constructed one line above
+// the Setup screen, and it takes closeSetup from it. Reading a const before
+// its declaration is a TDZ ReferenceError, not undefined, so control.js threw
+// at load and the page rendered nothing at all. node --check never runs the
+// module, so nothing here saw it. Each create*() line hands the next module a
+// bag of helpers; a bare name in that bag is read immediately, so it has to
+// already exist. Arrow-wrapped ones (game: () => game) are read later and fine.
+for (const f of ALL_JS) {
+  const s = code(read(f));
+  const wiring = [];                          // { names, args, at } per create*() line
+  for (const m of s.matchAll(/const\s*\{([^}]*)\}\s*=\s*(create\w+)\(/g)) {
+    let i = m.index + m[0].length, depth = 1;
+    while (i < s.length && depth) { const c = s[i++]; if (c === '(') depth++; else if (c === ')') depth--; }
+    wiring.push({ names: m[1].match(/[A-Za-z_$][\w$]*/g) || [], args: s.slice(m.index + m[0].length, i), at: m.index });
+  }
+  for (let a = 0; a < wiring.length; a++) {
+    const later = new Map();                  // name -> the create*() line that makes it
+    for (let b = a + 1; b < wiring.length; b++) for (const n of wiring[b].names) if (!later.has(n)) later.set(n, b);
+    // Bare shorthand only: skip keys (name:), property reads (.name) and
+    // anything inside an arrow body, which does not run until it is called.
+    const bag = wiring[a].args.replace(/=>\s*\{[\s\S]*?\}/g, '=>{}').replace(/=>[^,]*/g, '=>0');
+    for (const m of bag.matchAll(/(^|[,{(\s])([A-Za-z_$][\w$]*)(?=\s*[,}])/g)) {
+      const b = later.get(m[2]);
+      if (b === undefined) continue;
+      const line = s.slice(0, wiring[a].at).split('\n').length;
+      const declLine = s.slice(0, wiring[b].at).split('\n').length;
+      fail(`${f}:${line}: takes ${m[2]}, which line ${declLine} does not create until later — the module throws at load`);
+    }
+  }
+}
+
 // ---- report ---------------------------------------------------------------
 if (problems.length) {
   console.error(`\n✗ ${problems.length} problem${problems.length > 1 ? 's' : ''}:\n`);
@@ -178,4 +210,4 @@ if (problems.length) {
   console.error('');
   process.exit(1);
 }
-console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls, module contexts, config');
+console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls, module contexts, load order, config');
