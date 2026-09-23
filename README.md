@@ -96,7 +96,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 1. Create a Supabase project.
 2. Project Settings → API (Data API): add **`scoreboard`** to the exposed schemas.
-3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline.
+3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline. `supabase/pending/` holds changes written but not yet applied; each says when it may run.
 4. Deploy the signup function with JWT verification off (new users have no JWT; it uses the injected service role, so no secret is set by hand): `supabase functions deploy signup --no-verify-jwt`.
 5. Put your project URL and publishable key in `js/config.js`. The publishable key is safe in client code; RLS protects the data. If you change `USER_EMAIL_DOMAIN` there, change `EMAIL_DOMAIN` in `supabase/functions/signup/index.ts` to match.
 6. Deploy the repo root as a static site. On Vercel: framework preset **Other**, no build command, root as output. `vercel.json` turns on clean URLs (`/control`, `/overlay`, `/recap`).
@@ -112,12 +112,14 @@ Both run on push via `.github/workflows/check.yml`.
 
 | File | What it is |
 | --- | --- |
-| `js/control.js` | The pad: auth, lobby, scoring, sheets, Setup, OBS commands |
+| `js/control.js` | The pad: auth, lobby, baseball scoring, sheets, Setup |
+| `js/pads.js` | The other four sports' pads: buttons, Situation rows, demo, stingers — one table |
+| `js/obs-pad.js` | OBS from the pad: permission tiers, stream/record/buffer, scene cuts, replay clips |
 | `js/overlay.js` | The OBS page: render, Realtime, roster pull, OBS relay |
 | `js/recap.js` | The public recap page |
 | `js/logic.js` | Baseball rules as pure functions, plus the event-log replay |
 | `js/football.js`, `js/soccer.js`, `js/volleyball.js`, `js/basketball.js` | Rules for the other sports |
-| `js/sync.js` | The pad's write queue (no DOM, no Supabase; tested with injected I/O) |
+| `js/sync.js` | The pad's write queue — plays, settings and lineups, in order, retried (no DOM, no Supabase; tested with injected I/O) |
 | `js/clock.js` | Server-time offset shared by nonces and game clocks |
 | `js/anim.js`, `js/audio.js` | Overlay animations and synthesized sound |
 | `js/starting.js` | Starting Soon card markup |
