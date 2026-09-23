@@ -1,10 +1,28 @@
 # Broadcast Scoreboard
 
+[![checks](https://github.com/Sawdizzle/scoreboard/actions/workflows/check.yml/badge.svg)](https://github.com/Sawdizzle/scoreboard/actions/workflows/check.yml) [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A phone-controlled scoreboard overlay for live-streamed youth sports. You score the game on your phone at `/control`; OBS shows the scorebug, cards and animations from `/overlay`, a transparent 1920×1080 Browser Source. Baseball has the deepest pad; football, soccer, volleyball and basketball work too. It is two static pages (plus a public recap page) on Supabase (Postgres, Realtime, Auth) with no build step. Updates reach the overlay in about a quarter of a second, and the overlay keeps its last state through network drops instead of going blank.
 
-## Quick start
+## Get your own
 
-Hosted app: **<https://scoreboard-ashen-rho.vercel.app/control>**. On a phone, Safari → Share → **Add to Home Screen** runs it full-screen.
+Scoreboard runs on a free Supabase project and any static host. Setup takes about 20 minutes if you have used Supabase before.
+
+1. Create a Supabase project.
+2. Project Settings → API (Data API): add **`scoreboard`** to the exposed schemas.
+3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline. `supabase/pending/` holds changes written but not yet applied; each says when it may run.
+4. Deploy the signup function with JWT verification off (new users have no JWT; it uses the injected service role, so no secret is set by hand): `supabase functions deploy signup --no-verify-jwt`.
+5. Put your project URL and publishable key in `js/config.js`, and the same project URL in the three `<link rel="preconnect">` lines in `control.html`, `overlay.html` and `recap.html` (`node scripts/check.mjs` fails until they match). The publishable key is safe in client code; RLS protects the data. If you change `USER_EMAIL_DOMAIN` there, change `EMAIL_DOMAIN` in `supabase/functions/signup/index.ts` to match.
+6. Deploy the repo root as a static site. On Vercel: framework preset **Other**, no build command, root as output. `vercel.json` turns on clean URLs (`/control`, `/overlay`, `/recap`).
+7. Optional: the lobby's footer carries the original author's Buy Me a Coffee button (`control.html`, `<footer class="support">`). Change it to yours or delete it.
+
+Anyone who can reach your site can create an account; the signup function allows five attempts per address per hour.
+
+**Local development**: serve the folder over HTTP (ES modules do not load from `file://`), for example `python3 -m http.server 5173`, and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Local pages talk to whatever Supabase project `js/config.js` names, so if that is the project your games run on, test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
+
+## Your first game
+
+Open `/control` on your site. On a phone, Safari → Share → **Add to Home Screen** runs it full-screen.
 
 1. **Create an account**: a username and a 6–8 digit PIN. There is no email step.
 2. **+ New Game**: pick the sport and both teams. A saved team loads with its lineup and positions, and a team marked **★ My team** (Setup → Teams) is preselected on the side it last played. A new team only needs a name; Create opens the jersey keypad for it. Look, sound, sponsors and the Show-on-overlay switches copy from your last game.
@@ -93,20 +111,9 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **OBS**: the OBS-buttons switch, current page-permission level, auto-clip, Go Live / Record / Buffer.
 - **This game**: Reset to 0–0 (keeps teams and look) and Delete (cannot be undone).
 
-## Self-hosting
-
-1. Create a Supabase project.
-2. Project Settings → API (Data API): add **`scoreboard`** to the exposed schemas.
-3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline. `supabase/pending/` holds changes written but not yet applied; each says when it may run.
-4. Deploy the signup function with JWT verification off (new users have no JWT; it uses the injected service role, so no secret is set by hand): `supabase functions deploy signup --no-verify-jwt`.
-5. Put your project URL and publishable key in `js/config.js`. The publishable key is safe in client code; RLS protects the data. If you change `USER_EMAIL_DOMAIN` there, change `EMAIL_DOMAIN` in `supabase/functions/signup/index.ts` to match.
-6. Deploy the repo root as a static site. On Vercel: framework preset **Other**, no build command, root as output. `vercel.json` turns on clean URLs (`/control`, `/overlay`, `/recap`).
-
-**Local development**: serve the folder over HTTP (ES modules do not load from `file://`), for example `python3 -m http.server 5173`, and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Local pages talk to whatever Supabase project `js/config.js` names, which is the production one by default, so test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
-
 ## Development
 
-- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, and pad modules using a control.js name they were not handed.
+- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, pad modules using a control.js name they were not handed, and preconnect hints that disagree with `js/config.js`.
 - `node --test scripts/*.test.mjs`: the rules (all five sports), the event-log replay, the write queue, and the recap. No dependencies.
 
 Both run on push via `.github/workflows/check.yml`.
@@ -148,3 +155,7 @@ Debugging: `/overlay?…&debug=1` paints a checkerboard behind the transparent o
 - **The pad queues writes** in order and retries until the server accepts them, so scoring continues on flaky LTE. A header badge counts what is waiting, and leaving a game with unsent changes asks first. The queue is memory-only.
 - **OBS control happens inside the browser source.** The pad cannot reach OBS, so it writes a command with a nonce to the games row (`replay_cmd`, `scene_cmd`, `obs_cmd`). The overlay sees it over Realtime, calls `window.obsstudio`, and reports status back through token-gated RPCs.
 - **Accounts**: a username maps to an internal email and the PIN is the password. The `signup` function creates pre-confirmed accounts, requires 6–8 digit PINs (older 4-digit accounts still log in), and allows five attempts per address per hour.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Bundled third-party code keeps its own license: supabase-js (MIT, header of `js/vendor/supabase-js-2.115.0.js`) and Barlow Condensed (SIL Open Font License, `fonts/OFL.txt`).
