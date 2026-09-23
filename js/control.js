@@ -1,10 +1,8 @@
 import { supabase, db } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USER_EMAIL_DOMAIN } from './config.js';
 import * as L from './logic.js';
-import * as F from './football.js';
 import * as S from './soccer.js';
-import * as V from './volleyball.js';
-import * as B from './basketball.js';
+import { createSports } from './pads.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
@@ -219,14 +217,8 @@ function timeAgo(iso) {
 // "live" tells you nothing when you're picking between two games; where the game
 // actually stands does.
 function situationLabel(g) {  // ordinal() is defined further down; both run after load
-  const st = g.state || {};
-  switch (g.sport || 'baseball') {
-    case 'football': return `Q${st.quarter || 1}`;
-    case 'basketball': return `Q${st.period || 1}`;
-    case 'soccer': return (st.half || 1) === 1 ? '1st half' : '2nd half';
-    case 'volleyball': return `Set ${st.set || 1}`;
-    default: return `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
-  }
+  const sp = SPORTS[g.sport];
+  return sp ? sp.lobby(g.state || {}) : `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
 }
 // Nothing moves a game out of 'live' (there is no end-game step), so the status
 // alone would badge every game ever made. LIVE means touched in the last 3 hours.
@@ -310,8 +302,7 @@ async function lastGameSettings(sport) {
   if (data.sport === sport) for (const k of CARRY_SAME_SPORT) if (data[k] != null) out[k] = data[k];
   return out;
 }
-const sportState = (sport) => (sport === 'football' ? F.fbState({}) : sport === 'soccer' ? S.scState({})
-  : sport === 'volleyball' ? V.vbState({}) : sport === 'basketball' ? B.bkState({}) : null);
+const sportState = (sport) => (SPORTS[sport] ? SPORTS[sport].init() : null);
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value;
   // Every game opens on Starting Soon: a real card, so it can be taken down by
@@ -1063,102 +1054,6 @@ $('undo-btn').onclick    = doUndo;
 // An action that cannot know who to credit returns null rather than guessing.
 // A tap that quietly does nothing is its own bug, so say what is missing.
 const commitOrAsk = (r, msg) => (r ? commit(r) : showToast(msg, 2600));
-const NEED_BALL = 'Set possession first — tap Away ball or Home ball';
-
-// Football buttons
-$('fb-poss-away').onclick = () => commit(F.setPossession(game, 'away'));
-$('fb-poss-home').onclick = () => commit(F.setPossession(game, 'home'));
-$('fb-down-1').onclick = () => commit(F.setDown(game, 1));
-$('fb-down-2').onclick = () => commit(F.setDown(game, 2));
-$('fb-down-3').onclick = () => commit(F.setDown(game, 3));
-$('fb-down-4').onclick = () => commit(F.setDown(game, 4));
-$('fb-dist-dn').onclick = () => commit(F.distanceDelta(game, -1));
-$('fb-dist-up').onclick = () => commit(F.distanceDelta(game, 1));
-$('fb-goal').onclick = () => commit(F.setGoal(game));
-$('fb-firstdown').onclick = () => commit(F.firstDown(game));
-$('fb-td').onclick = () => commitOrAsk(F.touchdown(game), NEED_BALL);
-$('fb-fg').onclick = () => commitOrAsk(F.fieldGoal(game), NEED_BALL);
-$('fb-xp').onclick = () => commitOrAsk(F.extraPoint(game), NEED_BALL);
-$('fb-2pt').onclick = () => commitOrAsk(F.twoPoint(game), NEED_BALL);
-$('fb-safety').onclick = () => commitOrAsk(F.safety(game), NEED_BALL);
-$('fb-nextq').onclick = () => commit(F.nextQuarter(game));
-$('fb-away-dn').onclick = () => commit(F.manualScore(game, 'away', -1));
-$('fb-away-up').onclick = () => commit(F.manualScore(game, 'away', 1));
-$('fb-home-dn').onclick = () => commit(F.manualScore(game, 'home', -1));
-$('fb-home-up').onclick = () => commit(F.manualScore(game, 'home', 1));
-$('fb-to-away').onclick = () => commit(F.timeout(game, 'away'));
-$('fb-to-home').onclick = () => commit(F.timeout(game, 'home'));
-$('fb-to-reset').onclick = () => commit(F.resetTimeouts(game));
-$('fb-to-away-up').onclick = () => commit(F.adjustTimeouts(game, 'away', 1));
-$('fb-to-home-up').onclick = () => commit(F.adjustTimeouts(game, 'home', 1));
-$('fb-q-dn').onclick = () => commit(F.adjustQuarter(game, -1));
-$('fb-q-up').onclick = () => commit(F.adjustQuarter(game, 1));
-$('fb-kickoff').onclick = () => commit(F.kickoff(game));
-$('fx-turnover').onclick = () => commit(F.turnover(game));
-$('fx-bigplay').onclick = () => fireAnim('bigplay');
-
-// Soccer buttons
-$('sc-goal-away').onclick = () => commit(S.goal(game, 'away'));
-$('sc-goal-home').onclick = () => commit(S.goal(game, 'home'));
-$('sc-half-1').onclick = () => commit(S.setHalf(game, 1));
-$('sc-half-2').onclick = () => commit(S.setHalf(game, 2));
-$('sc-stop-dn').onclick = () => commit(S.stoppageDelta(game, -1));
-$('sc-stop-up').onclick = () => commit(S.stoppageDelta(game, 1));
-$('sc-yc-away').onclick = () => commit(S.card(game, 'away', 'y'));
-$('sc-rc-away').onclick = () => commit(S.card(game, 'away', 'r'));
-$('sc-yc-home').onclick = () => commit(S.card(game, 'home', 'y'));
-$('sc-rc-home').onclick = () => commit(S.card(game, 'home', 'r'));
-$('sc-away-dn').onclick = () => commit(S.manualScore(game, 'away', -1));
-$('sc-away-up').onclick = () => commit(S.manualScore(game, 'away', 1));
-$('sc-home-dn').onclick = () => commit(S.manualScore(game, 'home', -1));
-$('sc-home-up').onclick = () => commit(S.manualScore(game, 'home', 1));
-
-// Volleyball buttons
-$('vb-point-away').onclick = () => commit(V.point(game, 'away'));
-$('vb-point-home').onclick = () => commit(V.point(game, 'home'));
-$('vb-serve-away').onclick = () => commit(V.setServe(game, 'away'));
-$('vb-serve-home').onclick = () => commit(V.setServe(game, 'home'));
-$('vb-target').onclick = () => commit(V.cycleTarget(game));
-$('vb-endset').onclick = () => commitOrAsk(V.endSet(game), 'Tied — score the deciding point first');
-$('vb-set-dn').onclick = () => commit(V.adjustSet(game, -1));
-$('vb-set-up').onclick = () => commit(V.adjustSet(game, 1));
-$('vb-sets-away-dn').onclick = () => commit(V.adjustSets(game, 'away', -1));
-$('vb-sets-away-up').onclick = () => commit(V.adjustSets(game, 'away', 1));
-$('vb-sets-home-dn').onclick = () => commit(V.adjustSets(game, 'home', -1));
-$('vb-sets-home-up').onclick = () => commit(V.adjustSets(game, 'home', 1));
-$('vb-away-dn').onclick = () => commit(V.manualScore(game, 'away', -1));
-$('vb-home-dn').onclick = () => commit(V.manualScore(game, 'home', -1));
-$('vb-away-up').onclick = () => commit(V.manualScore(game, 'away', 1));
-$('vb-home-up').onclick = () => commit(V.manualScore(game, 'home', 1));
-$('fx-ace').onclick = () => commitOrAsk(V.ace(game), 'Set the serving team first');
-
-// Basketball buttons
-$('bk-away-1').onclick = () => commit(B.score(game, 'away', 1));
-$('bk-away-2').onclick = () => commit(B.score(game, 'away', 2));
-$('bk-away-3').onclick = () => commit(B.score(game, 'away', 3));
-$('bk-home-1').onclick = () => commit(B.score(game, 'home', 1));
-$('bk-home-2').onclick = () => commit(B.score(game, 'home', 2));
-$('bk-home-3').onclick = () => commit(B.score(game, 'home', 3));
-$('bk-away-dn').onclick = () => commit(B.score(game, 'away', -1));
-$('bk-home-dn').onclick = () => commit(B.score(game, 'home', -1));
-$('bk-period-dn').onclick = () => commit(B.adjustPeriod(game, -1));
-$('bk-period-up').onclick = () => commit(B.adjustPeriod(game, 1));
-$('bk-nextperiod').onclick = () => commit(B.nextPeriod(game));
-$('bk-foul-away').onclick = () => commit(B.foul(game, 'away', 1));
-$('bk-foul-away-dn').onclick = () => commit(B.foul(game, 'away', -1));
-$('bk-foul-home').onclick = () => commit(B.foul(game, 'home', 1));
-$('bk-foul-home-dn').onclick = () => commit(B.foul(game, 'home', -1));
-$('bk-to-away').onclick = () => commit(B.timeout(game, 'away'));
-$('bk-to-home').onclick = () => commit(B.timeout(game, 'home'));
-$('bk-to-reset').onclick = () => commit(B.resetTimeouts(game));
-// The sheet's + are corrections: one point or one foul (only +3 has a stinger).
-$('bk-away-up').onclick = () => commit(B.score(game, 'away', 1));
-$('bk-home-up').onclick = () => commit(B.score(game, 'home', 1));
-$('bk-foul-away-up').onclick = () => commit(B.foul(game, 'away', 1));
-$('bk-foul-home-up').onclick = () => commit(B.foul(game, 'home', 1));
-$('bk-to-away-up').onclick = () => commit(B.adjustTimeouts(game, 'away', 1));
-$('bk-to-home-up').onclick = () => commit(B.adjustTimeouts(game, 'home', 1));
-$('fx-bigplay-bk').onclick = () => fireAnim('bigplay');
 
 // ---- Saved teams (reusable rosters) ---------------------------------------
 // A team = identity (name/abbr/color/logo) + roster (a lineups[side] blob).
@@ -2063,10 +1958,7 @@ $('reset-game').onclick = async () => {
     bases: { first: false, second: false, third: false },
     state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {} },
   });
-  else if (sport === 'football') patch.state = F.fbState({});
-  else if (sport === 'soccer') patch.state = S.scState({});
-  else if (sport === 'volleyball') patch.state = V.vbState({});
-  else if (sport === 'basketball') patch.state = B.bkState({});
+  else if (SPORTS[sport]) patch.state = SPORTS[sport].init();
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
   await db.from('plays').delete().eq('game_id', game.id);  // and the recap's play-by-play
   closeSetup();
@@ -2075,15 +1967,9 @@ $('reset-game').onclick = async () => {
 };
 // The same column is a game time limit, a quarter, or a half depending on the
 // sport. Say which, so nobody has to guess what soccer does with it.
-const SU_TIME_LABEL = {
-  baseball: 'Time limit — minutes (0 = none)',
-  football: 'Quarter length — minutes (0 = none)',
-  basketball: 'Period length — minutes (0 = none)',
-  soccer: 'Half length — minutes (blank = 45)',
-  volleyball: 'Time limit — minutes (0 = none)',
-};
 function renderSetupTimeLabel() {
-  $('su-time-label').textContent = SU_TIME_LABEL[$('su-sport').value] || SU_TIME_LABEL.baseball;
+  const sp = SPORTS[$('su-sport').value];
+  $('su-time-label').textContent = sp ? sp.timeLabel : 'Time limit — minutes (0 = none)';
 }
 $('su-sport').addEventListener('change', renderSetupTimeLabel);
 
@@ -2187,10 +2073,8 @@ $('su-time').addEventListener('change', () => {
 $('su-sport').addEventListener('change', () => {
   const sport = $('su-sport').value;
   const patch = { sport };
-  if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
-  if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
-  if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
-  if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
+  const sp = SPORTS[sport];
+  if (sp && !sp.started(game.state)) patch.state = sp.init(game);
   writeField(patch);
   renderSetupTimeLabel();
   renderSetupRows();
@@ -2295,10 +2179,7 @@ $('demo-btn').onclick = async () => {
 function demoStep() {
   if (!game) return stopDemo(); // game closed under us
   const sport = game.sport || 'baseball';
-  if (sport === 'football') return demoStepFootball();
-  if (sport === 'soccer') return demoStepSoccer();
-  if (sport === 'volleyball') return demoStepVolleyball();
-  if (sport === 'basketball') return demoStepBasketball();
+  if (SPORTS[sport]) return SPORTS[sport].demo(game);
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
@@ -2313,58 +2194,9 @@ function demoStep() {
   return commit(L.onAdvance(game));
 }
 
-function demoStepFootball() {
-  // Nothing scores until somebody has the ball, so give it to one of them first.
-  if (!F.fbState(game).possession) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
-  const r = Math.random();
-  if (r < 0.14) return fireAnim(['touchdown', 'fieldgoal', 'turnover', 'bigplay'][Math.floor(Math.random() * 4)]);
-  if (r < 0.28) return commit(F.touchdown(game));
-  if (r < 0.38) return commit(F.fieldGoal(game));
-  if (r < 0.54) return commit(F.setDown(game, (F.fbState(game).down % 4) + 1));
-  if (r < 0.70) return commit(F.distanceDelta(game, Math.random() < 0.5 ? -3 : 3));
-  if (r < 0.82) return commit(F.firstDown(game));
-  if (r < 0.93) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
-  return commit(F.nextQuarter(game));
-}
-
-function demoStepVolleyball() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.10) { const a = V.ace(game); return a && commit(a); }
-  if (r < 0.85) return commit(V.point(game, team()));
-  return commit(V.setServe(game, team()));
-}
-
-function demoStepBasketball() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.45) return commit(B.score(game, team(), 2));
-  if (r < 0.62) return commit(B.score(game, team(), 3));
-  if (r < 0.74) return commit(B.score(game, team(), 1));
-  if (r < 0.92) return commit(B.foul(game, team(), 1));
-  return commit(B.timeout(game, team()));
-}
-
-function demoStepSoccer() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.14) return fireAnim('goal');
-  if (r < 0.22) return commit(S.goal(game, team()));
-  if (r < 0.36) return commit(S.card(game, team(), Math.random() < 0.85 ? 'y' : 'r'));
-  if (r < 0.52) return commit(S.stoppageDelta(game, Math.random() < 0.5 ? -1 : 1));
-  if (r < 0.58) return commit(S.setHalf(game, S.scState(game).half === 1 ? 2 : 1));
-  // otherwise idle; the match clock keeps ticking if running
-}
-
 $('preview-fx-btn').onclick = async () => {
-  const sets = {
-    baseball: ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'],
-    football: ['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'charge'],
-    soccer: ['goal', 'charge'],
-    volleyball: ['ace', 'setwin', 'charge'],
-    basketball: ['three', 'bigplay', 'charge'],
-  };
-  const types = sets[game.sport || 'baseball'] || sets.baseball;
+  const sp = SPORTS[game.sport];
+  const types = sp ? sp.fx : ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
   for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
 };
 
@@ -3096,10 +2928,7 @@ function renderGame() {
   ctrlScorePop('away', g.away_score, 'g-away-runs');
   ctrlScorePop('home', g.home_score, 'g-home-runs');
   renderScoreLabel(g);
-  if (sport === 'football') renderFootballControl();
-  else if (sport === 'soccer') renderSoccerControl();
-  else if (sport === 'volleyball') renderVolleyballControl();
-  else if (sport === 'basketball') renderBasketballControl();
+  if (SPORTS[sport]) SPORTS[sport].render(g);
   else renderBaseballControl();
   renderClock();   // already guards its own DOM writes, and ticks at 4Hz anyway
   // The on-air chip is part of the shell for every sport; the suggestions read the at-bat.
@@ -3250,58 +3079,6 @@ function renderBatterLine() {
   $('gm-batter').hidden = false;
 }
 
-function renderFootballControl() {
-  const st = F.fbState(game);
-  const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
-  const abbr = (t) => (t === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
-  const poss = st.possession === 'away' ? `◄ ${esc(abbr('away'))} ball` : st.possession === 'home' ? `${esc(abbr('home'))} ball ►` : 'no ball set';
-  $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
-  setSitLabel(`Quarter ${st.quarter}, ${dd}` +
-    (st.possession ? `, ${st.possession === 'home' ? game.home_name : game.away_name} ball` : ', possession not set'));
-  $('fb-dist-val').textContent = st.distance === 'goal' ? 'Goal' : st.distance;
-  $('fbs-away').textContent = game.away_score | 0; $('fbs-home').textContent = game.home_score | 0;
-  $('fb-q-val').textContent = st.quarter;
-  $('fb-to-away-val').textContent = st.away_timeouts; $('fb-to-home-val').textContent = st.home_timeouts;
-  $('fb-poss-away').classList.toggle('on', st.possession === 'away');
-  $('fb-poss-home').classList.toggle('on', st.possession === 'home');
-  for (const d of [1, 2, 3, 4]) $('fb-down-' + d).classList.toggle('on', st.down === d);
-}
-function renderSoccerControl() {
-  const st = S.scState(game);
-  $('sc-mid').innerHTML = `<span class="sc-inning">${st.half === 2 ? '2nd' : '1st'} Half</span>` +
-    `<span class="sc-count">⚽</span><span class="sc-outs">${st.stoppage ? '+' + st.stoppage : ''}</span>`;
-  setSitLabel(`${st.half === 2 ? 'Second' : 'First'} half` + (st.stoppage ? `, plus ${st.stoppage} minutes stoppage` : ''));
-  $('sc-stop-val').textContent = '+' + st.stoppage;
-  $('scs-away').textContent = game.away_score | 0; $('scs-home').textContent = game.home_score | 0;
-  $('sc-half-1').classList.toggle('on', st.half === 1);
-  $('sc-half-2').classList.toggle('on', st.half === 2);
-}
-function renderVolleyballControl() {
-  const st = V.vbState(game);
-  const serve = st.serve === 'away' ? '◄ serve' : st.serve === 'home' ? 'serve ►' : 'serve: —';
-  $('sc-mid').innerHTML = `<span class="sc-inning">SET ${st.set}</span>` +
-    `<span class="sc-count">${st.sets.away}–${st.sets.home}</span><span class="sc-outs">${serve}</span>`;
-  setSitLabel(`Set ${st.set}, sets ${st.sets.away} to ${st.sets.home}` +
-    (st.serve ? `, ${st.serve === 'home' ? game.home_name : game.away_name} serving` : ', server not set'));
-  $('vb-set-val').textContent = st.set;
-  $('vbs-away').textContent = game.away_score | 0; $('vbs-home').textContent = game.home_score | 0;
-  $('vb-sets-away-val').textContent = st.sets.away; $('vb-sets-home-val').textContent = st.sets.home;
-  $('vb-target').textContent = 'To ' + st.target;
-  $('vb-serve-away').classList.toggle('on', st.serve === 'away');
-  $('vb-serve-home').classList.toggle('on', st.serve === 'home');
-}
-function renderBasketballControl() {
-  const st = B.bkState(game);
-  const bonus = [B.bonusOf(st, 'away') && 'AWAY ' + B.bonusOf(st, 'away'), B.bonusOf(st, 'home') && 'HOME ' + B.bonusOf(st, 'home')].filter(Boolean).join(' · ');
-  $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.period}</span>` +
-    `<span class="sc-count">Fouls ${st.fouls.away}–${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
-  setSitLabel(`Quarter ${st.period}, fouls ${st.fouls.away} to ${st.fouls.home}` + (bonus ? `, ${bonus}` : ''));
-  $('bk-period-val').textContent = st.period;
-  $('bks-away').textContent = game.away_score | 0; $('bks-home').textContent = game.home_score | 0;
-  $('bk-foul-away-val').textContent = st.fouls.away; $('bk-foul-home-val').textContent = st.fouls.home;
-  $('bk-to-away-val').textContent = st.timeouts.away; $('bk-to-home-val').textContent = st.timeouts.home;
-}
-
 $('rotate-url-btn').onclick = async () => {
   if (!confirm('Rotate the overlay link?\n\nEvery link you have shared stops working, including the one in OBS — you will need to paste the new one into your Browser Source.')) return;
   const { data, error } = await db.rpc('rotate_channel_token');
@@ -3350,5 +3127,8 @@ document.addEventListener('keydown', (e) => {
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });
+
+// The other four sports' pads, wired now that every helper they borrow exists.
+const SPORTS = createSports({ $, esc, ordinal, setSitLabel, commit, commitOrAsk, fireAnim, game: () => game });
 
 refreshSession();

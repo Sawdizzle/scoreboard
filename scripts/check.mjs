@@ -17,12 +17,12 @@ const fail = (msg) => problems.push(msg);
 
 // Pages and the modules that drive them.
 const PAGES = [
-  { html: 'control.html', js: ['js/control.js'] },
+  { html: 'control.html', js: ['js/control.js', 'js/pads.js'] },
   { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/storm.js', 'js/anim.js', 'js/logic.js', 'js/clock.js'] },
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/pads.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.
@@ -103,7 +103,11 @@ for (const f of ALL_JS) {
     ...[...src.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=/g)].map((m) => m[1]),
     ...[...src.matchAll(/import\s+\*\s+as\s+(\w+)/g)].map((m) => m[1]),
     ...[...src.matchAll(/import\s*\{([^}]+)\}/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop())),
-    ...[...src.matchAll(/(\w+)\s*(?:=>|\()/g)].filter(() => false).map((m) => m[1]), // placeholder
+    // Destructured names — const { a, b } = ctx, for (const [id, run] of rows) —
+    // and object-literal methods, render(g) { … }, which define as much as a const.
+    ...[...src.matchAll(/(?:const|let|var)\s*[{[]([^}\]]+)[}\]]\s*(?:=|of\b)/g)]
+      .flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s*[:=]\s*/).pop().replace(/^\.\.\./, ''))),
+    ...[...src.matchAll(/(?:^|\n)\s+(\w+)\s*\([^)\n]*\)\s*\{/g)].map((m) => m[1]),
   ]);
   // locals: params and inline consts are noisy, so only flag calls to names that
   // look like module helpers (defined nowhere, not a global, not a method call).
