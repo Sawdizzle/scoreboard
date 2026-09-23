@@ -4,6 +4,13 @@
 
 A phone-controlled scoreboard overlay for live-streamed youth sports. You score the game on your phone at `/control`; OBS shows the scorebug, cards and animations from `/overlay`, a transparent 1920×1080 Browser Source. Baseball has the deepest pad; football, soccer, volleyball and basketball work too. It is two static pages (plus a public recap page) on Supabase (Postgres, Realtime, Auth) with no build step. Updates reach the overlay in about a quarter of a second, and the overlay keeps its last state through network drops instead of going blank.
 
+<table>
+<tr>
+<td width="55%" align="center"><img src="docs/img/scorebug.png" alt="The scorebug on the overlay: River 4, Blue Steel 2, top of the 5th, runners on first and third, 2-2 count, one out" /><br /><sub><b>The overlay</b> — a transparent Browser Source in OBS, shown here over a plain green plate</sub></td>
+<td width="45%" align="center"><img src="docs/img/pad.png" alt="The phone pad: score, count and bases up top, the batter, then BALL, STRIKE, FOUL and IN PLAY as full-height keys" /><br /><sub><b>The pad</b> — what you actually hold during the game</sub></td>
+</tr>
+</table>
+
 ## Get your own
 
 Scoreboard runs on a free Supabase project and any static host. Setup takes about 20 minutes if you have used Supabase before.
@@ -33,6 +40,8 @@ Open `/control` on your site. On a phone, Safari → Share → **Add to Home Scr
 **The overlay link belongs to your account, not to a game.** It looks like `/overlay?ch=<token>` and shows whichever game you last opened on the pad, so it never needs re-pasting. Opening a game that is already Final does not move it, so checking last week's result does not take tonight's game off the air. If the link is showing a different game, the Overlay link screen has **📺 Show this game on the overlay**. Old per-game links (`/overlay?game=<id>&t=<token>`) still work.
 
 **Treat the overlay link like a password**: its token can read your lineups. **🔑 Rotate link** on the same screen kills every old link of both kinds, and you paste the new one into OBS. The **recap link** (`/recap?game=<id>`) is safe to share with parents: score, line score and a play-by-play, never lineups or names.
+
+<p align="center"><img src="docs/img/recap.png" width="720" alt="The public recap page: the score, the line score by inning with runs, hits and errors, and the date" /><br /><sub>The recap link parents get: score and line score, never lineups or names</sub></p>
 
 To practise, **▶ Demo Mode** on the Overlay link screen plays a fake game in a new practice game, so your real one stays clean (the overlay link follows the practice game while it runs). **Preview All FX** next to it fires every animation.
 
