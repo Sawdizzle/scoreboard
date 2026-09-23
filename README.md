@@ -113,10 +113,12 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 ## Development
 
-- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, pad modules using a control.js name they were not handed, and preconnect hints that disagree with `js/config.js`.
+- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, pad modules using a control.js name they were not handed, a screen constructed before the screen it borrows a helper from, and preconnect hints that disagree with `js/config.js`.
 - `node --test scripts/*.test.mjs`: the rules (all five sports), the event-log replay, the write queue, and the recap. No dependencies.
 
-Both run on push via `.github/workflows/check.yml`.
+Both run on push and on every pull request via `.github/workflows/check.yml`.
+
+There is no build step, so nothing compiles these files before a browser does. That makes load-time errors the dangerous class: `control.js` is one module, and anything thrown while it runs leaves a blank page rather than a broken button. The load-order check exists because that shipped once. Each screen is built by a `create*()` call that is handed a bag of helpers, and a bare name in that bag is read the moment the line runs, so it has to come from a line above it. Wrap it in an arrow (`game: () => game`) when it should be read later instead.
 
 | File | What it is |
 | --- | --- |
