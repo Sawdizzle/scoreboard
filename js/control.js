@@ -74,12 +74,12 @@ async function refreshSession() {
       show('game'); renderGame();
       await subscribe(game.id);
       queue.drain();
-      await loadPresets(); await loadTeams();
+      await loadTeams();
       return;
     }
     resumeGameId = null;
     // Paint the lobby before waiting on the lists, as it always has.
-    show('lobby'); await loadGames(); await loadPresets(); await loadTeams();
+    show('lobby'); await loadGames(); await loadTeams();
   }
   else { show('auth'); if ($('username').value) $('pin').focus(); } // returning user lands on the PIN
 }
@@ -291,27 +291,6 @@ function gameRow(g) {
   return open;
 }
 
-// Help: four shortcut tiles over the same accordion, with the other ten folded
-// away. Opening a tile reveals the list so "back" is just scrolling.
-function openHelp(id) {
-  $('help-list').hidden = false;
-  $('help-all').setAttribute('aria-expanded', 'true');
-  const d = $(id);
-  if (!d) return;
-  d.open = true;
-  d.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-$('help-all').onclick = () => {
-  const list = $('help-list');
-  list.hidden = !list.hidden;
-  $('help-all').setAttribute('aria-expanded', String(!list.hidden));
-  $('help-all').textContent = list.hidden ? 'All 14 help topics ▸' : 'Hide help topics ▾';
-};
-document.querySelector('.help-tiles').addEventListener('click', (e) => {
-  const t = e.target.closest('.help-tile');
-  if (t) openHelp(t.dataset.help);
-});
-
 // New game: pick the sport, then create with the right initial state; the rest
 // comes from your last game.
 $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
@@ -331,16 +310,15 @@ async function lastGameSettings(sport) {
   if (data.sport === sport) for (const k of CARRY_SAME_SPORT) if (data[k] != null) out[k] = data[k];
   return out;
 }
+const sportState = (sport) => (sport === 'football' ? F.fbState({}) : sport === 'soccer' ? S.scState({})
+  : sport === 'volleyball' ? V.vbState({}) : sport === 'basketball' ? B.bkState({}) : null);
 $('ng-create').onclick = async () => {
   const sport = $('ng-sport').value;
   // Every game opens on Starting Soon: a real card, so it can be taken down by
   // hand like any other. Starting the clock or the first play also drops it.
   const row = { ...(await lastGameSettings(sport)), status: 'setup', sport, starts_at: fromLocalInput($('ng-startsat').value),
     card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
-  if (sport === 'football') row.state = F.fbState({});
-  else if (sport === 'soccer') row.state = S.scState({});
-  else if (sport === 'volleyball') row.state = V.vbState({});
-  else if (sport === 'basketball') row.state = B.bkState({});
+  const st = sportState(sport); if (st) row.state = st;
   const { data, error } = await db.from('games').insert(row).select().single();
   if (error) return alert(error.message);
   closeSheet('newgame-sheet');
@@ -506,8 +484,11 @@ function foldBadge(state, label, title) {
   b.textContent = label;
   b.title = title;
 }
+// A developer's instrument, not an operator's: it downloads the whole log, so
+// it runs — and its badge shows — only on a pad opened with ?debug.
+const FOLD_ON = new URLSearchParams(location.search).has('debug');
 async function shadowFold(why = 'auto') {
-  if (!game || foldBusy) return;
+  if (!FOLD_ON || !game || foldBusy) return;
   const id = game.id;
   foldBusy = true;
   foldBadge('busy', '◌', 'Rebuilding from the event log…');
@@ -543,7 +524,7 @@ async function shadowFold(why = 'auto') {
 }
 // After a burst of taps, once — not per pitch, which would be a select per
 // pitch on a phone on venue LTE.
-const foldSoon = () => { clearTimeout(foldTimer); foldTimer = setTimeout(() => shadowFold('after taps'), 20000); };
+const foldSoon = () => { if (!FOLD_ON) return; clearTimeout(foldTimer); foldTimer = setTimeout(() => shadowFold('after taps'), 20000); };
 $('fold-badge').onclick = () => {
   if (foldLast && foldLast.diffs.length) {
     const lines = foldLast.diffs.map((d) => `${d.field}: log says ${JSON.stringify(d.folded)}, pad says ${JSON.stringify(d.row)}`);
@@ -1193,51 +1174,6 @@ $('bk-to-away-up').onclick = () => commit(B.adjustTimeouts(game, 'away', 1));
 $('bk-to-home-up').onclick = () => commit(B.adjustTimeouts(game, 'home', 1));
 $('fx-bigplay-bk').onclick = () => fireAnim('bigplay');
 
-// Look presets (per-user saved bundles of presentation settings)
-async function loadPresets() {
-  if (!user) return;
-  const { data, error } = await db.from('presets').select('id,name,settings').eq('owner_id', user.id).order('name');
-  const sel = $('preset-sel');
-  sel.innerHTML = '<option value="">— saved looks —</option>';
-  if (error) return;
-  for (const p of data || []) {
-    const o = document.createElement('option');
-    o.value = p.id; o.textContent = p.name; o.dataset.settings = JSON.stringify(p.settings || {});
-    sel.appendChild(o);
-  }
-}
-const currentLookBundle = () => ({
-  theme: game.theme, style: game.style, scorebug_position: game.scorebug_position,
-  scorebug_scale: game.scorebug_scale, sound_pack: game.sound_pack, look: game.look || {},
-});
-$('preset-save').onclick = async () => {
-  const name = $('preset-name').value.trim();
-  if (!name) return alert('Name the preset first.');
-  const { error } = await db.from('presets').insert({ name, settings: currentLookBundle() });
-  if (error) return alert(error.message);
-  $('preset-name').value = '';
-  await loadPresets();
-  showToast('💾 Preset saved');
-};
-$('preset-apply').onclick = async () => {
-  const opt = $('preset-sel').selectedOptions[0];
-  if (!opt || !opt.value) return;
-  const s = JSON.parse(opt.dataset.settings || '{}');
-  await writeField({
-    theme: s.theme || 'nightgame', style: s.style || 'bar',
-    scorebug_position: s.scorebug_position || 'bottom-bar', scorebug_scale: s.scorebug_scale || 1,
-    sound_pack: s.sound_pack || 'bigleague', look: s.look || {},
-  });
-  showToast(`🎨 Applied "${opt.textContent}"`);
-};
-$('preset-del').onclick = async () => {
-  const opt = $('preset-sel').selectedOptions[0];
-  if (!opt || !opt.value) return;
-  await db.from('presets').delete().eq('id', opt.value);
-  await loadPresets();
-  showToast('Preset deleted');
-};
-
 // ---- Saved teams (reusable rosters) ---------------------------------------
 // A team = identity (name/abbr/color/logo) + roster (a lineups[side] blob).
 let savedTeams = [];
@@ -1437,7 +1373,7 @@ const cardLabel = (type) => CARD_LABEL[type] || type;
 async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
-  if (text) meta.text = text;
+  if (text) { meta.text = text; $('card-text').value = ''; }   // spent on this card, not the next one too
   // Defense card always tracks the fielding team live (resolved in the overlay);
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;
@@ -1517,6 +1453,15 @@ function renderPaused() {
   $('pz-show').classList.toggle('live', up);
   $('pz-hide').hidden = !up;
   $('pz-restart').hidden = !(up && pzReason === 'lightning');
+  renderDelayState();
+}
+// The pause card and the ticker share one folded section; it says, and opens
+// to show, whichever of them is on air.
+function renderDelayState() {
+  const on = [pausedUp() && 'pause card', tickerUp() && 'ticker'].filter(Boolean);
+  $('air-delay-state').textContent = on.length ? `· ${on.join(' + ')} on air` : '';
+  $('air-delay-state').classList.toggle('on', on.length > 0);
+  if (on.length) $('air-delay').open = true;
 }
 function pausedMeta(mins) {
   const meta = { reason: pzReason };
@@ -1575,6 +1520,7 @@ function renderTicker() {
   $('tk-show').textContent = up ? 'Update' : 'Show';
   $('tk-show').classList.toggle('live', up);
   $('tk-hide').hidden = !up;
+  renderDelayState();
 }
 async function showTicker() {
   const text = $('tk-text').value.replace(/\s+/g, ' ').trim();
@@ -1642,10 +1588,6 @@ function renderOnAir() {
 }
 
 // Moments / FX
-$('fx-k').onclick       = () => fireAnim('strikeout');
-$('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
-$('fx-dp').onclick      = () => fireAnim('doubleplay');
-$('fx-sb').onclick      = () => fireAnim('stolenbase');
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 $('fx-rally').onclick   = () => writeField({ rally_mode: !game.rally_mode });
 function renderRally() {
@@ -1805,13 +1747,11 @@ async function switchScene(name) {
   if (error) showToast(`⚠️ ${error.message}`, 3000);
 }
 function renderScenes() {
-  const list = $('scene-list'), hint = $('scene-hint');
-  if (!list || !game) return;
+  if (!game) return;
   const obs = game.obs_scenes;
   const names = (obs && Array.isArray(obs.list) ? obs.list : []).filter((n) => typeof n === 'string');
   const level = obs ? obs.level | 0 : -1;
-  // The drawer panel and the bottom-bar sheet show the same buttons.
-  for (const [l, h] of [[list, hint], [$('cam-list'), $('cam-hint')]]) {
+  for (const [l, h] of [[$('cam-list'), $('cam-hint')]]) {
     l.innerHTML = '';
     for (const name of names) {
       const b = document.createElement('button');
@@ -2075,6 +2015,7 @@ function svGo(pane) {
   $('setup-title').textContent = title;
   $('setup-view').scrollTop = 0;
   if (pane === 'home') renderSetupRows();
+  if (pane === 'link') renderLinkNote();
   if (pane.startsWith('teams')) renderTeamCards();
 }
 $('setup-open').onclick = openSetup;
@@ -2107,19 +2048,13 @@ function renderSetupRows() {
   // The theme's own name, as its option reads it — no second list to drift.
   const opt = $('theme-sel').querySelector(`option[value="${game.theme || 'nightgame'}"]`);
   const themeName = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
-  $('sv-look-val').textContent = themeName;
-  $('sv-theme-val').textContent = themeName;
-  const presets = $('preset-sel').options.length - 1;   // minus the "— none saved —" row
-  $('sv-presets-val').textContent = presets > 0 ? `${presets} saved` : 'None saved';
   const pos = (POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center').replace('-', ' ');
-  $('sv-pos-val').textContent = `${pos} · ${(game.scorebug_scale || 1).toFixed(2)}×`;
+  $('sv-look-val').textContent = `${themeName} · ${pos}`;
+  const sp = spCfg();
+  $('sv-sponsors-val').textContent = sp.list.length ? `${sp.list.length}${sp.rotate ? ' · rotating' : ''}` : 'None';
   const lvl = obsLevel();
   $('sv-obs-tag').textContent = lvl === null ? 'not connected' : (OBS_TIER[lvl] || 'no access');
 }
-// Look and OBS still live in the drawer until their panes are built; the row
-// opens the drawer on that tab rather than pretending the section is missing.
-$('sv-look').onclick = () => svGo('look');
-$('sv-obs').onclick = () => svGo('obs');
 $('sv-lineups').onclick = () => { closeSetup(); openLineupSheet(); };
 
 $('delete-game').onclick = async () => {
@@ -2361,9 +2296,22 @@ function stopDemo() {
   if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
   paintDemoBtn();
 }
-$('demo-btn').onclick = () => {
-  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
-  else demoTimer = setInterval(demoStep, 1800);
+// Demo scores a fake game, so it never runs on a real one: it makes a practice
+// game with this game's look, opens it (the overlay link follows), and plays
+// there. Delete the practice game from the list when you are done with it.
+$('demo-btn').onclick = async () => {
+  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; return paintDemoBtn(); }
+  if (!(game.state && game.state.practice)) {
+    if (!confirm('Demo plays a fake game. It runs in a new practice game, so this one stays clean — and the overlay link switches to the practice game while you watch.\n\nStart it?')) return;
+    const row = { status: 'setup', sport: game.sport || 'baseball', away_name: 'Practice', away_abbr: 'PRAC', home_name: 'Demo', home_abbr: 'DEMO',
+      state: { ...(sportState(game.sport || 'baseball') || {}), practice: true } };
+    for (const k of CARRY) if (game[k] != null) row[k] = game[k];
+    const { data, error } = await db.from('games').insert(row).select().single();
+    if (error) return showToast(`⚠️ ${error.message}`, 3000);
+    closeSetup();
+    await openGame(data.id);
+  }
+  demoTimer = setInterval(demoStep, 1800);
   paintDemoBtn();
 };
 function demoStep() {
@@ -2463,8 +2411,16 @@ const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
 const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-right': 'Top-right',
   'mid-left': 'Middle-left', 'mid-center': 'Centre', 'mid-right': 'Middle-right',
   'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
+// Themes retired from the picker still paint for the games that use them; the
+// picker names the one in use rather than showing a blank.
 function renderLook() {
-  $('theme-sel').value = game.theme || 'nightgame';
+  const sel = $('theme-sel'), th = game.theme || 'nightgame';
+  sel.querySelector('option[data-retired]')?.remove();
+  if (![...sel.options].some((o) => o.value === th)) {
+    const o = new Option(`${th.charAt(0).toUpperCase() + th.slice(1)} (retired)`, th);
+    o.dataset.retired = '1'; sel.prepend(o);
+  }
+  sel.value = th;
   const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
   document.querySelectorAll('#pos-grid button').forEach((b) => b.classList.toggle('on', b.dataset.pos === cur));
   const sc = game.scorebug_scale || 1;
@@ -2481,76 +2437,36 @@ function renderLook() {
   renderCustomize();
 }
 
-// ---- Customize (freeform `look` overrides on top of the theme) ------------
+// ---- Custom colours (the `look` overrides, applied on the Custom theme only) --
 const lookOf = () => game.look || {};
 async function writeLook(patch) {
-  const look = { ...lookOf(), ...patch };
+  const look = Object.fromEntries(Object.entries({ ...lookOf(), ...patch }).filter(([k]) => LOOK_KEYS.includes(k)));
   for (const k of Object.keys(look)) if (look[k] === '' || look[k] === false || look[k] == null) delete look[k];
   await writeField({ look });
 }
-$('cust-accent').addEventListener('change', (e) => writeLook({ accent: e.target.value }));
-$('cust-font').addEventListener('change', (e) => writeLook({ font: e.target.value }));
-$('cust-radius').addEventListener('change', (e) => writeLook({ radius: e.target.value }));
-$('cust-logos').addEventListener('change', (e) => writeLook({ hideLogos: e.target.checked }));
-$('cust-detail').addEventListener('change', (e) => writeLook({ hideDetail: e.target.checked }));
-$('cust-shadow').addEventListener('change', (e) => writeLook({ noShadow: e.target.checked }));
-$('cust-uppercase').addEventListener('change', (e) => writeLook({ uppercase: e.target.checked }));
-$('cust-logosize').addEventListener('change', (e) => writeLook({ logoSize: e.target.value }));
-$('cust-border').addEventListener('change', (e) => writeLook({ border: e.target.value }));
-$('cust-teambars').addEventListener('change', (e) => writeLook({ teamBars: e.target.checked }));
-// Per-row fills (away / home / details / panel) + one shared gradient angle.
-$('cust-awaytype').addEventListener('change', (e) => writeLook({ awayType: e.target.value }));
-$('cust-awayc1').addEventListener('change', (e) => writeLook({ awayC1: e.target.value }));
-$('cust-awayc2').addEventListener('change', (e) => writeLook({ awayC2: e.target.value }));
-$('cust-hometype').addEventListener('change', (e) => writeLook({ homeType: e.target.value }));
-$('cust-homec1').addEventListener('change', (e) => writeLook({ homeC1: e.target.value }));
-$('cust-homec2').addEventListener('change', (e) => writeLook({ homeC2: e.target.value }));
-$('cust-sittype').addEventListener('change', (e) => writeLook({ sitType: e.target.value }));
-$('cust-sitc1').addEventListener('change', (e) => writeLook({ sitC1: e.target.value }));
-$('cust-sitc2').addEventListener('change', (e) => writeLook({ sitC2: e.target.value }));
-$('cust-paneltype').addEventListener('change', (e) => writeLook({ panelType: e.target.value }));
-$('cust-panelc1').addEventListener('change', (e) => writeLook({ panelC1: e.target.value }));
-$('cust-panelc2').addEventListener('change', (e) => writeLook({ panelC2: e.target.value }));
-$('cust-angle').addEventListener('input', (e) => { $('cust-angle-val').textContent = e.target.value + '°'; });
-$('cust-angle').addEventListener('change', (e) => writeLook({ angle: +e.target.value }));
-$('cust-text').addEventListener('change', (e) => writeLook({ text: e.target.value }));
-$('cust-steel').addEventListener('change', (e) => writeLook({ steel: e.target.value }));
-$('cust-line').addEventListener('change', (e) => writeLook({ line: e.target.value }));
-$('cust-teamfill').addEventListener('change', (e) => writeLook({ teamFill: e.target.checked }));
+// The custom editor is eight keys. Older looks carried more (row fills, bars,
+// borders…); the first edit here drops them, so what the overlay paints is
+// always what this screen shows.
+const LOOK_KEYS = ['accent', 'font', 'radius', 'teamFill', 'panelType', 'panelC1', 'panelC2', 'text'];
+for (const [id, key] of [
+  ['cust-accent', 'accent'], ['cust-font', 'font'], ['cust-radius', 'radius'], ['cust-text', 'text'],
+  ['cust-paneltype', 'panelType'], ['cust-panelc1', 'panelC1'], ['cust-panelc2', 'panelC2'], ['cust-teamfill', 'teamFill'],
+]) $(id).addEventListener('change', (e) => writeLook({ [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 $('cust-reset').onclick = async () => {
   await writeField({ look: {} });
-  showToast('Customize reset');
+  showToast('Custom colours reset');
 };
 function renderCustomize() {
   const L = lookOf();
   $('cust-accent').value = L.accent || '#e8b23a';
   $('cust-font').value = L.font || '';
   $('cust-radius').value = L.radius != null ? String(L.radius) : '';
-  $('cust-logos').checked = !!L.hideLogos;
-  $('cust-detail').checked = !!L.hideDetail;
-  $('cust-shadow').checked = !!L.noShadow;
-  $('cust-uppercase').checked = !!L.uppercase;
-  $('cust-logosize').value = L.logoSize || '';
-  $('cust-border').value = L.border != null ? String(L.border) : '';
-  $('cust-teambars').checked = !!L.teamBars;
   $('cust-teamfill').checked = !!L.teamFill;
-  $('cust-awaytype').value = L.awayType || '';
-  $('cust-awayc1').value = L.awayC1 || '#7a8794';
-  $('cust-awayc2').value = L.awayC2 || '#0e1421';
-  $('cust-hometype').value = L.homeType || '';
-  $('cust-homec1').value = L.homeC1 || '#1b2a41';
-  $('cust-homec2').value = L.homeC2 || '#0e1421';
-  $('cust-sittype').value = L.sitType || '';
-  $('cust-sitc1').value = L.sitC1 || '#0e1421';
-  $('cust-sitc2').value = L.sitC2 || '#1b2a41';
   $('cust-paneltype').value = L.panelType || '';
   $('cust-panelc1').value = L.panelC1 || '#1b2a41';
   $('cust-panelc2').value = L.panelC2 || '#0e1421';
-  $('cust-angle').value = L.angle ?? 180;
-  $('cust-angle-val').textContent = (L.angle ?? 180) + '°';
   $('cust-text').value = L.text || '#f4f7fb';
-  $('cust-steel').value = L.steel || '#8fb6de';
-  $('cust-line').value = L.line || '#2a3550';
+  $('sv-custom').hidden = (game.theme || 'nightgame') !== 'custom';
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
@@ -2562,16 +2478,14 @@ async function writeAudio(patch) {
   await writeField({ audio: { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } } });
 }
 $('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
-$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
-$('vol-moments').addEventListener('change', (e) => writeAudio({ cats: { moments: +e.target.value } }));
-$('vol-organ').addEventListener('change', (e) => writeAudio({ cats: { organ: +e.target.value } }));
+// One volume. The per-category levels it replaced go back to full, so a slider
+// that is no longer on screen can't be what keeps the overlay quiet.
+$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value, cats: { moments: 1, organ: 1 } }));
 $('sound-pack').addEventListener('change', (e) => writeField({ sound_pack: e.target.value }));
 
 function renderAudio() {
   const a = audioOf();
   $('vol-master').value = a.master ?? 0.8;
-  $('vol-moments').value = a.cats?.moments ?? 1;
-  $('vol-organ').value = a.cats?.organ ?? 1;
   $('mute-btn').classList.toggle('on', !!a.muted);
   $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
   $('sound-pack').value = game.sound_pack || 'bigleague';
@@ -2844,6 +2758,8 @@ const endGameClick = () => {
   }
   if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
   commit({ type: 'end_game', patch: { status: 'final', clock_running: false } });
+  // The stream's last word: the Final screen goes up with the result.
+  writeField({ card: { type: 'finalfull', meta: {}, nonce: nextNonce() } });
   closeSheet('sit-sheet');
 };
 document.querySelectorAll('.end-game').forEach((b) => { b.onclick = endGameClick; });
@@ -3328,7 +3244,7 @@ $('setup-guide').addEventListener('click', (e) => {
   else if (go === 'lineups') openLineupSheet(L.battingSide(game));
   else if (go === 'defense') openField();
   // Opens the link; the step ticks when Copy or Open is actually pressed.
-  else if (go === 'overlay') { openSetup(); svGo('obs-2'); }
+  else if (go === 'overlay') { openSetup(); svGo('link'); }
 });
 
 // The bar itself is dots and a diamond — shape, not text, and marked
