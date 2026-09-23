@@ -17,12 +17,12 @@ const fail = (msg) => problems.push(msg);
 
 // Pages and the modules that drive them.
 const PAGES = [
-  { html: 'control.html', js: ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js'] },
+  { html: 'control.html', js: ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/setup.js'] },
   { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/storm.js', 'js/anim.js', 'js/logic.js', 'js/roster.js', 'js/clock.js'] },
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/roster.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.
@@ -79,7 +79,7 @@ for (const { html, js } of PAGES) {
 }
 
 // ---- 3. Required handlers are still wired --------------------------------
-const control = ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js'].map((f) => noComments(read(f))).join('\n');
+const control = ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js'].map((f) => noComments(read(f))).join('\n');
 for (const id of REQUIRED_HANDLERS) {
   const wired = new RegExp(`\\$\\('${id}'\\)(?:\\.\\w+)*\\.(?:onclick|onchange|oninput|addEventListener)`).test(control);
   if (!wired) fail(`control modules: #${id} has no handler — that control is dead`);
