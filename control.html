@@ -1270,10 +1270,13 @@
   </div>
 
   <script type="module" src="/js/control.js"></script>
-<!-- Vercel Web Analytics. Served from this origin (/_vercel/insights/...), so
-     it keeps the rule that every byte comes from here; no package, no build.
+<!-- Vercel Speed Insights, which is what this project has switched on: the
+     platform serves the script from this origin, so there is still no package
+     and no build step. Web Analytics is a separate product and is off — its
+     /_vercel/insights/script.js 404s — so its tag is not here; add it the same
+     way if it is ever turned on.
      Deliberately not on overlay.html: that page is an OBS browser source that
-     runs for hours behind a camera, and it is not a visit worth counting. -->
-<script defer src="/_vercel/insights/script.js"></script>
+     sits behind a camera for hours, and its load timings are not a visit. -->
+<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
