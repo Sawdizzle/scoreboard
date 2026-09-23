@@ -105,7 +105,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 ## Development
 
-- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere.
+- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, and pad modules using a control.js name they were not handed.
 - `node --test scripts/*.test.mjs`: the rules (all five sports), the event-log replay, the write queue, and the recap. No dependencies.
 
 Both run on push via `.github/workflows/check.yml`.
