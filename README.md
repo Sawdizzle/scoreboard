@@ -158,4 +158,4 @@ Debugging: `/overlay?…&debug=1` paints a checkerboard behind the transparent o
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Bundled third-party code keeps its own license: supabase-js (MIT, header of `js/vendor/supabase-js-2.115.0.js`) and Barlow Condensed (SIL Open Font License, `fonts/OFL.txt`).
+MIT, see [LICENSE](LICENSE). Bundled third-party code keeps its own license: supabase-js (MIT, header of `js/vendor/supabase-js-2.115.0.js`), and the fonts Barlow Condensed, Martian Mono and Anton (SIL Open Font License: `fonts/OFL.txt`, `fonts/OFL-MartianMono.txt`, `fonts/OFL-Anton.txt`).

@@ -181,15 +181,17 @@ body[data-theme="foil"] .team .runs, body[data-theme="foil"] .count {
 
 /* Blue Steel — the club's own look, from bluesteelbaseball.com and its stream
    graphics: night-field navy, chalk-white type, ice-steel and infield-clay
-   accents, chamfered corners, scores in a boxed mono slot. The site's faces
-   (Tanker, Supreme, Martian Mono) load from third-party CDNs, which the overlay
-   does not do, so heavy and mono system stacks stand in. */
+   accents, chamfered corners, scores in a boxed mono slot. Martian Mono is the
+   club board's own numeral face; Anton stands in for its display face, Tanker
+   (both self-hosted, css/fonts.css). Anton has one weight, so the browser is
+   told not to fake a bolder one. */
 body[data-theme="bluesteel"] {
   --panel: rgba(12, 18, 29, 0.96); --panel-2: rgba(6, 9, 16, 0.6);
   --line: rgba(242, 240, 233, 0.16); --chalk: #f2f0e9; --steel: #7fc0ef; --accent: #e0794a; --radius: 0px;
-  --disp: "Tanker", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --disp: "Anton", "Arial Black", "Helvetica Neue", Arial, sans-serif;
   --num: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --digit: 0.62em;
+  font-synthesis: none;
 }
 body[data-theme="bluesteel"] .bug {
   background: linear-gradient(180deg, rgba(18, 26, 41, 0.96), rgba(10, 14, 22, 0.96));
@@ -197,7 +199,7 @@ body[data-theme="bluesteel"] .bug {
   clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
 }
 body[data-theme="bluesteel"] .team.away, body[data-theme="bluesteel"] .team.home { background: none; }
-body[data-theme="bluesteel"] .team .abbr { font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+body[data-theme="bluesteel"] .team .abbr { font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
 body[data-theme="bluesteel"] .team .runs {
   font-size: 24px; padding: 2px 7px; color: var(--chalk);
   background: rgba(6, 9, 16, 0.6); border: 1px solid var(--line); border-radius: 4px;
