@@ -87,7 +87,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **Sport & scorebug**: sport, and one of five scorebug styles: Scorebox, Bar, Bug, Minimal, Lower-third.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).
 - **Show on overlay**: clock, batter, pitcher, pitch count, R-H-E on the bug, run-rule watch.
-- **Look & sound**: 15 themes plus Custom colours, the 3×3 position grid, scale, five sound packs, one volume, mute.
+- **Look & sound**: 16 themes (including Blue Steel) plus Custom colours, the 3×3 position grid, scale, five sound packs, one volume, mute.
 - **Sponsors**: a list of names and logos, shown as a rotating "brought to you by" corner bug that hides while a full-screen card is up.
 - **OBS**: the OBS-buttons switch, current page-permission level, auto-clip, Go Live / Record / Buffer.
 - **This game**: Reset to 0–0 (keeps teams and look) and Delete (cannot be undone).
@@ -105,16 +105,17 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 ## Development
 
-- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere.
+- `node scripts/check.mjs`: wiring checks. Syntax on every module, every element id a script looks up against its page's markup, handlers that must stay wired, calls to functions defined nowhere, and pad modules using a control.js name they were not handed.
 - `node --test scripts/*.test.mjs`: the rules (all five sports), the event-log replay, the write queue, and the recap. No dependencies.
 
 Both run on push via `.github/workflows/check.yml`.
 
 | File | What it is |
 | --- | --- |
-| `js/control.js` | The pad: auth, the open game, baseball scoring, sheets, Field and Lineup screens |
+| `js/control.js` | The pad: auth, the open game, baseball scoring, sheets, the Lineup screen |
 | `js/lobby.js` | The games list and New Game (what a new game carries over) |
 | `js/setup.js` | The Setup screen: panes, summary rows, fields that write as you edit |
+| `js/field.js` | The Field screen: positions by jersey number, pitching changes |
 | `js/pads.js` | The other four sports' pads: buttons, Situation rows, demo, stingers — one table |
 | `js/obs-pad.js` | OBS from the pad: permission tiers, stream/record/buffer, scene cuts, replay clips |
 | `js/overlay.js` | The OBS page: render, Realtime, roster pull, OBS relay |

@@ -17,12 +17,12 @@ const fail = (msg) => problems.push(msg);
 
 // Pages and the modules that drive them.
 const PAGES = [
-  { html: 'control.html', js: ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/setup.js'] },
+  { html: 'control.html', js: ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/field.js', 'js/setup.js'] },
   { html: 'overlay.html', js: ['js/overlay.js', 'js/starting.js', 'js/weather.js', 'js/storm.js', 'js/anim.js', 'js/logic.js', 'js/roster.js', 'js/clock.js'] },
   { html: 'recap.html', js: ['js/recap.js'] },
 ];
 const ALL_JS = ['js/control.js', 'js/overlay.js', 'js/recap.js', 'js/logic.js', 'js/roster.js', 'js/anim.js', 'js/audio.js',
-  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
+  'js/config.js', 'js/supabase.js', 'js/clock.js', 'js/sync.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/field.js', 'js/football.js', 'js/soccer.js', 'js/volleyball.js', 'js/basketball.js', 'js/starting.js', 'js/weather.js', 'js/storm.js'];
 
 // Element handlers that must stay wired. Losing one is silent: the button simply
 // stops doing anything, which is exactly how the v3.23 regression presented.
@@ -79,7 +79,7 @@ for (const { html, js } of PAGES) {
 }
 
 // ---- 3. Required handlers are still wired --------------------------------
-const control = ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js'].map((f) => noComments(read(f))).join('\n');
+const control = ['js/control.js', 'js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/field.js'].map((f) => noComments(read(f))).join('\n');
 for (const id of REQUIRED_HANDLERS) {
   const wired = new RegExp(`\\$\\('${id}'\\)(?:\\.\\w+)*\\.(?:onclick|onchange|oninput|addEventListener)`).test(control);
   if (!wired) fail(`control modules: #${id} has no handler — that control is dead`);
@@ -120,6 +120,42 @@ for (const f of ALL_JS) {
   }
 }
 
+// ---- 5. A pad module uses only what control.js hands it ------------------
+// The pad's modules (pads, obs-pad, lobby, setup, field) are built from
+// control.js with a context object. A name from control.js's own scope that a
+// module uses but was not given is a ReferenceError the moment that code runs —
+// which, for a screen behind a login, is on the field. Catch it here.
+{
+  // Template literals stay in: `${teamAbbr(s)}` is a use, and blanking it is
+  // how the first version of this check missed exactly that.
+  const plain = (src) => noComments(src)
+    .replace(/'(?:\\.|[^'\\\n])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\\n])*"/g, '""');
+  const ctl = code(read('js/control.js'));
+  const outer = new Set([
+    ...[...ctl.matchAll(/(?:^|\n)(?:async\s+)?(?:function|const|let)\s+(\w+)/g)].map((m) => m[1]),
+    ...[...ctl.matchAll(/(?:^|\n)const\s*\{([^}]*)\}/g)].flatMap((m) => m[1].split(',').map((x) => x.trim())),
+  ]);
+  for (const f of ['js/pads.js', 'js/obs-pad.js', 'js/lobby.js', 'js/setup.js', 'js/field.js']) {
+    const src = plain(read(f));
+    const own = new Set([
+      ...[...src.matchAll(/(?:function|const|let|var)\s+(\w+)/g)].map((m) => m[1]),
+      ...[...src.matchAll(/(?:const|let|var)\s*[{[]([^}\]]+)[}\]]/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s*[:=]\s*/).pop().replace(/^\.\.\./, ''))),
+      ...[...src.matchAll(/import\s*\{([^}]+)\}/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop())),
+      ...[...src.matchAll(/import\s+\*\s+as\s+(\w+)/g)].map((m) => m[1]),
+      ...[...src.matchAll(/\(([^()]*)\)\s*=>/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s*=\s*/)[0])),
+      ...[...src.matchAll(/(\w+)\s*=>/g)].map((m) => m[1]),
+      ...[...src.matchAll(/function\s*\w*\s*\(([^)]*)\)/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s*=\s*/)[0])),
+    ]);
+    for (const name of outer) {
+      if (!name || own.has(name)) continue;
+      if (new RegExp(`(?<![.\\w$'"-])${name.replace('$', '\\$')}(?![\\w$:])`).test(src)) {
+        fail(`${f}: uses ${name} from control.js without receiving it in its context`);
+      }
+    }
+  }
+}
+
 // ---- report ---------------------------------------------------------------
 if (problems.length) {
   console.error(`\n✗ ${problems.length} problem${problems.length > 1 ? 's' : ''}:\n`);
@@ -127,4 +163,4 @@ if (problems.length) {
   console.error('');
   process.exit(1);
 }
-console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls');
+console.log('✓ checks passed — syntax, element ids, required handlers, undefined calls, module contexts');
