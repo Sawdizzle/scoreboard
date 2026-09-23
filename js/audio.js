@@ -40,6 +40,8 @@ const PACKS_EXTRA = {};   // pack-independent sounds, for _debugRender
 const ALIAS = {
   touchdown: 'homerun', fieldgoal: 'webgem', turnover: 'strikeout', bigplay: 'webgem', goal: 'walkoff',
   ace: 'strikeout', setwin: 'walkoff', three: 'webgem',
+  // A called third strike sounds like any other strikeout.
+  strikeoutlooking: 'strikeout',
 };
 
 export function play(type) {

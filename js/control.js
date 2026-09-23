@@ -997,10 +997,14 @@ $('fv-numbers').onclick = (e) => {
   const o = e.target.closest('.fv-num'); if (!o) return;
   const side = fieldSide, pos = fieldPick, i = +o.dataset.i;
   const lineups = game.lineups || {};
+  const before = L.normalizeTeam(lineups[side] || {}).positions.P || null;
   const { team, moved } = L.assignSpot(lineups[side] || {}, pos, i);
   haptic();
   fieldPick = null;
   saveRoster({ ...lineups, [side]: team });
+  // A new arm on the mound gets his own pitch count.
+  const pc = L.onPitcherChange(game, side, before, L.normalizeTeam(team).positions.P || null);
+  if (pc) { if (game.status === 'setup') writeField({ state: pc.patch.state }); else commit(pc); }
   const who = (b) => (b && b.num ? '#' + b.num : shortName(b));
   const bs = teamOf(side).batters;
   showToast(`✓ ${who(bs[i])} to ${pos}` + (moved ? (moved.to ? ` · ${who(bs[moved.idx])} to ${moved.to}` : ` · ${who(bs[moved.idx])} to bench`) : ''), 3000);
@@ -1264,7 +1268,8 @@ $('team-swap').onclick = async () => {
     away_abbr: game.home_abbr, home_abbr: game.away_abbr,
     away_color: game.home_color, home_color: game.away_color,
     away_logo_url: game.home_logo_url, home_logo_url: game.away_logo_url,
-    state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 } },
+    state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 },
+      pitchLog: { away: (st.pitchLog || {}).home || {}, home: (st.pitchLog || {}).away || {} } },
   });
   fillSetup();
   renderTeamCards();
@@ -1968,7 +1973,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet', 'cam-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2096,7 +2101,7 @@ $('reset-game').onclick = async () => {
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
     bases: { first: false, second: false, third: false }, pitch_count: 0,
-    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 } },
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {} },
   });
   else if (sport === 'football') patch.state = F.fbState({});
   else if (sport === 'soccer') patch.state = S.scState({});
@@ -3272,8 +3277,10 @@ $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
   if (go === 'teams') { openSetup(); svGo('teams'); }
-  else if (go === 'lineups' || go === 'defense') openLineupSheet(L.battingSide(game));
-  else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
+  else if (go === 'lineups') openLineupSheet(L.battingSide(game));
+  else if (go === 'defense') openField();
+  // Opens the link; the step ticks when Copy or Open is actually pressed.
+  else if (go === 'overlay') { openSetup(); svGo('obs-2'); }
 });
 
 // The bar itself is dots and a diamond — shape, not text, and marked
@@ -3438,6 +3445,9 @@ document.addEventListener('keydown', (e) => {
   // dialog you were looking at. defaultPrevented covers the same key being
   // spent by the sheet handler above — one Escape should close one thing.
   if (sheetOpen() || e.defaultPrevented) return;
+  // Setup and Field are full screens, not sheets, but the pad is just as
+  // hidden behind them: a key must not score a play you cannot see.
+  if (!$('setup-view').hidden || !$('field-view').hidden) return;
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();

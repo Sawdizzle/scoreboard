@@ -552,6 +552,26 @@ export function withPitch(g, patch) {
   const baseState = patch.state || (g.state || {});
   return { ...patch, state: { ...baseState, pitches: { ...cur, [side]: (cur[side] | 0) + 1 } } };
 }
+// A new pitcher starts from his own count, not the last one's. state.pitches
+// stays the count of whoever is on the mound (the overlay reads it as a
+// number); state.pitchLog keeps every pitcher's tally by roster id, so a
+// pitcher who comes back picks up where he left off. Null when nothing moves.
+export function onPitcherChange(g, side, fromBid, toBid) {
+  if (fromBid === toBid) return null;
+  const st = g.state || {};
+  const cur = st.pitches || {};
+  const log = st.pitchLog || {};
+  const mine = { ...(log[side] || {}) };
+  const now = cur[side] | 0;
+  if (fromBid) mine[fromBid] = now;
+  const next = toBid ? (mine[toBid] | 0) : 0;
+  if (now === next && !(fromBid && now)) return null;
+  return {
+    type: 'pitcher', text: 'New pitcher',
+    patch: { state: { ...st, pitches: { ...cur, [side]: next }, pitchLog: { ...log, [side]: mine } } },
+    payload: { inputs: { side, from: fromBid || null, to: toBid || null } },
+  };
+}
 export function adjustPitch(g, d) {
   const side = fieldingSide(g);
   const cur = (g.state && g.state.pitches) || {};
