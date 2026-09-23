@@ -81,40 +81,6 @@
   100% { transform: translateY(-100%); opacity: 0; }
 }
 
-/* ---- Strikeout: K stamp (backwards K = called strikeout / looking) ---- */
-.fx-stamp.backwards { transform: scaleX(-1); }
-.fx-stamp { display: grid; place-items: center; }
-.fx-stamp span { font: 900 40vh/1 var(--disp); opacity: 0; transform: scale(3) rotate(-13deg); filter: blur(6px);
-  color: #fff; text-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: stamp 1.8s cubic-bezier(.2,.8,.2,1) forwards; }
-.fx-k span { color: #fff; -webkit-text-stroke: 5px #d1483f; }
-@keyframes stamp {
-  0% { opacity: 0; transform: scale(3) rotate(-14deg); filter: blur(6px); }
-  12% { opacity: 1; filter: blur(0); }
-  20% { transform: scale(.9) rotate(-8deg); }
-  26% { transform: scale(1.05) rotate(-10deg); }
-  32% { transform: scale(1) rotate(-9deg); }
-  78% { opacity: 1; transform: scale(1) rotate(-9deg); }
-  100% { opacity: 0; transform: scale(1.06) rotate(-9deg); }
-}
-
-/* ---- Lower thirds: double play / web gem ---- */
-.fx-lower { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 16vh; }
-.lt-bar { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 40px; border-radius: 12px; opacity: 0; transform: translateY(140%);
-  background: linear-gradient(180deg, rgba(27,42,65,0.96), rgba(16,22,33,0.96)); border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: lower 3s cubic-bezier(.2,.8,.2,1) forwards; }
-.lt-bar b { font: 900 40px/1 var(--disp); letter-spacing: .08em; color: #fff; }
-.lt-bar i { font: 700 16px/1 var(--disp); font-style: normal; letter-spacing: .16em; color: var(--steel); }
-.fx-lower.gem .lt-bar b { background: linear-gradient(90deg, #8fb6de, #e8b23a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.fx-lower.turn .lt-bar b { color: #ff5a4d; }
-@keyframes lower { 0% { opacity: 0; transform: translateY(140%); } 12% { opacity: 1; transform: translateY(0); } 24% { transform: translateY(-6px); } 30% { transform: translateY(0); } 85% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(40%); } }
-
-/* ---- Stolen base: dust streak ---- */
-.fx-stolen { display: flex; align-items: center; justify-content: center; }
-.sb-text { font: 900 8vh/1 var(--disp); letter-spacing: .06em; color: #fff; opacity: 0; transform: translateX(-40vw); text-shadow: 0 8px 30px rgba(0,0,0,0.5); animation: sb-text 2.2s cubic-bezier(.15,.8,.2,1) forwards; }
-.sb-dust { position: absolute; left: 0; top: 55%; width: 60vw; height: 10px; filter: blur(3px); transform: translateX(-60vw); background: linear-gradient(90deg, transparent, rgba(200,209,218,0.5)); animation: sb-dust 2.2s ease-out forwards; }
-@keyframes sb-text { 0% { opacity: 0; transform: translateX(-40vw) skewX(-12deg); } 18% { opacity: 1; transform: translateX(0) skewX(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(6vw); } }
-@keyframes sb-dust { 0% { transform: translateX(-60vw); } 40% { transform: translateX(60vw); } 100% { opacity: 0; transform: translateX(85vw); } }
-
 /* ---- Walk-off: full-screen celebration ---- */
 .fx-walkoff { display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, rgba(59,111,214,0.25), transparent 55%); animation: wo-bg 4.8s ease-out forwards; }
 @keyframes wo-bg { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }

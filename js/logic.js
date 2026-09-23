@@ -279,12 +279,8 @@ export function currentPitcher(g) {
   return filled(p) ? p : null;
 }
 // ---- Defensive positions --------------------------------------------------
-// The 9 field spots. P is always the team's pitcher; the other 8 map to a
-// batting-order index via lineups[side].positions = { C: idx, '1B': idx, ... }.
+// The 9 field spots; lineups[side].positions maps each to a player's bid.
 export const FIELD_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
-export function teamPositions(g, side) {
-  return (g.lineups && g.lineups[side] && g.lineups[side].positions) || {};
-}
 // Resolve a position to its {num,name}, or null if unset.
 export function fielderAt(g, side, pos) {
   const t = normalizeTeam((g.lineups || {})[side] || {});
@@ -406,10 +402,6 @@ export function swapBatters(team, a, b) {
 // ---- Positions from the field screen ---------------------------------------
 // Every spot on the diamond, P included, is positions[pos] = the bid of the
 // player standing there.
-export function pitcherIdx(team) {
-  const t = normalizeTeam(team);
-  return slotOfBid(t, t.positions.P);
-}
 // What a batting-order slot plays: 'P', a field spot, or '' (not in the field).
 export function positionOf(team, idx) {
   const t = normalizeTeam(team);

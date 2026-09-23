@@ -546,13 +546,6 @@ function cardSig(c, s) {
     const side = fieldingSide(s);
     return `${side}:${rosterGen}`;
   }
-  // Due Up follows the order while it is up: a new hitter at bat, the half
-  // rolling to the other team, or the roster being re-pulled all repaint it.
-  if (c.type === 'dueup') {
-    const side = battingSide(s);
-    const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
-    return `${side}:${idx}:${rosterGen}:${s.away_abbr}:${s.home_abbr}`;
-  }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {
     return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}:${rosterGen}`;
@@ -579,11 +572,10 @@ function renderCard(s) {
   layer.classList.toggle('takeover', full);
   document.body.classList.toggle('takeover', full);
   if (remount) cdPainted = null; // a rebuilt card starts with placeholder text
-  if (!key) { layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('lower'); return; }
+  if (!key) { layer.hidden = true; layer.innerHTML = ''; return; }
   const html = buildCard(c, s);
   const cur = layer.querySelector('.card');
   if (remount || !cur) {
-    layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
     fitStartingNames(layer);
     paintWeather();
@@ -947,25 +939,6 @@ function buildCard(c, s) {
         <div class="side"><span class="n">${aAbbr}</span><span class="r">${s.away_score | 0}</span></div>
         <div class="side"><span class="n">${hAbbr}</span><span class="r">${s.home_score | 0}</span></div>
       </div>${ls}</div>`;
-  }
-  if (c.type === 'dueup') {
-    // Live from the roster: the hitter at bat, then who follows. Typed text still
-    // wins when the operator wrote the card by hand, and an old card that carried
-    // its own snapshot still shows it.
-    let body;
-    if (meta.text) body = `<span>${escapeHtml(meta.text)}</span>`;
-    else if (Array.isArray(meta.lines) && meta.lines.length) {
-      body = `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`;
-    } else if (rosterBad) body = `<span class="du-empty">${LINK_STALE}</span>`;
-    else {
-      const up = dueUpCard(s, battingSide(s), 3);
-      body = up.length
-        ? `<div class="du-list">${up.map((b) =>
-            `<span class="${b.current ? 'du-cur' : ''}">${b.num ? `<i>#${escapeHtml(b.num)}</i> ` : ''}${escapeHtml(b.name || '')}</span>`).join('')}</div>`
-        : '<span class="du-empty">No lineup set</span>';
-    }
-    const team = escapeHtml(battingSide(s) === 'home' ? (s.home_abbr || s.home_name || 'Home') : (s.away_abbr || s.away_name || 'Visitor'));
-    return `<div class="card lower-card"><b>Due Up · ${team}</b>${body}</div>`;
   }
   if (c.type === 'lineup') {
     const side = meta.auto ? battingSide(s) : (meta.side || battingSide(s));

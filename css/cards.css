@@ -3,7 +3,6 @@
 #card { position: fixed; inset: 0; z-index: 12; pointer-events: none;
   display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); }
 #card[hidden] { display: none; }
-#card.lower { place-items: end center; padding-bottom: 22vh; background: transparent; }
 
 .card { font-family: var(--disp); color: var(--chalk); text-align: center;
   background: var(--panel); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px);
@@ -34,17 +33,6 @@
 .card.final .linescore td.rhe { color: var(--accent); }
 .card.final .linescore th.rhe { color: var(--chalk); }
 
-/* Due Up (lower third) */
-.card.lower-card { padding: 18px 40px; text-align: left; }
-.card.lower-card b { display: block; color: var(--accent); letter-spacing: 0.14em; font-size: 16px; text-transform: uppercase; }
-.card.lower-card span { font-size: 30px; font-weight: 800; }
-.card.lower-card .du-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-.card.lower-card .du-list span { font-size: 26px; line-height: 1.15; color: var(--muted, #b7c2d6); }
-/* The hitter at bat leads, and reads as the one that matters. */
-.card.lower-card .du-list span.du-cur { color: var(--chalk, #f2f6fc); }
-.card.lower-card .du-list span.du-cur::before { content: '\25B8  '; color: var(--accent); }
-.card.lower-card .du-list i { font-style: normal; opacity: 0.75; }
-.card.lower-card .du-empty { font-size: 22px; opacity: 0.8; }
 
 /* Batting order / lineup card */
 .card.lineupcard { padding: 22px 34px; min-width: 400px; }

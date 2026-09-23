@@ -1366,7 +1366,7 @@ $('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3,
 // 🎬 On Air sheet. Tap a card to raise it, tap the card that's up to take it
 // down, or ✕ on the header chip, which is on screen whatever else is open.
 const CARD_LABEL = {
-  dueup: 'Due Up', lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
+  lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
   final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)', paused: 'Paused',
 };
 const cardLabel = (type) => CARD_LABEL[type] || type;
@@ -1646,16 +1646,10 @@ function renderObsTier() {
 $('obs-tier-help').onclick = () => {
   const n = $('obs-tier-note');
   n.textContent = obsLevel() === null
-    ? 'Add the overlay to OBS as a Browser Source and open it — the pad reads its permission level from there. Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording.'
-    : 'Set it on the Browser Source: Page permissions → Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording. Everything below your level keeps working.';
+    ? 'Add the overlay to OBS as a Browser Source and open it — the pad reads its permission level from there. No access runs the scorebug, cards, moments and sound; Basic adds replay clips; Advanced adds camera switching and the replay buffer; Full adds going live and recording.'
+    : 'Set it on the Browser Source: Page permissions → No access runs the scorebug, cards, moments and sound; Basic adds replay clips; Advanced adds camera switching and the replay buffer; Full adds going live and recording. Everything below your level keeps working.';
   n.hidden = !n.hidden;
 };
-
-function setNeedBadge(id, need) {
-  const el = $(id); if (!el) return;
-  const lvl = obsLevel();
-  el.textContent = lvl !== null && lvl >= need ? '' : `needs ${OBS_TIER[need]}`;
-}
 
 // ---- OBS stream / record / replay buffer ----------------------------------
 // Ending a stream from a phone in your pocket has to be hard to do by accident,
@@ -1720,7 +1714,6 @@ function renderObs() {
     b.classList.toggle('live', running && cfg.danger);
     b.classList.toggle('armed', obsArmed === key);
   }
-  setNeedBadge('obs-need', 5);
   const hint = $('obs-hint'); if (!hint) return;
   if (obsNote) { hint.dataset.tone = 'warn'; hint.textContent = obsNote; return; }
   if (level < 5) {
@@ -1770,7 +1763,6 @@ function renderScenes() {
       h.dataset.tone = 'ok'; h.textContent = `On air: ${obs.current || '—'}`;
     }
   }
-  setNeedBadge('scene-need', 4);
   // Only a door worth having once OBS has told us what there is to cut to.
   $('cam-open').hidden = !names.length;
 }
@@ -2082,7 +2074,7 @@ $('reset-game').onclick = async () => {
   };
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
-    bases: { first: false, second: false, third: false }, pitch_count: 0,
+    bases: { first: false, second: false, third: false },
     state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {} },
   });
   else if (sport === 'football') patch.state = F.fbState({});
@@ -3099,7 +3091,6 @@ function showSport(sport) {
   // Every sport has a Situation sheet now, and the bar already says what the
   // batter line used to repeat for the other sports, so that line is baseball's.
   $('sit-btn').disabled = false;
-  $('g-batting').hidden = true;
   $('gm-batter').disabled = sport !== 'baseball';   // the lineup sheet is baseball's
   if (sport !== 'baseball') {
     $('gm-batter').hidden = true;
@@ -3189,7 +3180,7 @@ function setupSteps() {
 const setupAllDone = () => setupSteps().every(([, ok]) => ok);
 // Any pitch, out, run or half-inning on the board means first pitch has been thrown.
 const gameStarted = () => !!game && ((game.home_score | 0) + (game.away_score | 0) + (game.balls | 0) + (game.strikes | 0)
-  + (game.outs | 0) + (game.pitch_count | 0) > 0 || (game.inning | 0) > 1 || game.half === 'bottom');
+  + (game.outs | 0) + L.pitchCount(game) > 0 || (game.inning | 0) > 1 || game.half === 'bottom');
 function renderSetupGuide() {
   const el = $('setup-guide'); if (!el || !game) return;
   // Once every step is done it is a finished list sitting on top of the pad, and
@@ -3216,27 +3207,6 @@ function renderSetupGuide() {
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
 
-// The setup checklist says "go here" — now a pane on the Setup screen rather
-// than a tab in a drawer that no longer exists.
-const PANEL_PANE = { 'panel-appearance': 'look', 'panel-cameras': 'obs', 'panel-obs': 'obs', 'panel-overlay': 'obs' };
-function jumpPanel(id) {
-  const p = $(id); if (!p) return;
-  openSetup();
-  svGo(PANEL_PANE[id] || 'home');
-  p.open = true;
-  requestAnimationFrame(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-}
-
-// Accordion: opening a top-level panel closes the others, so the page never
-// grows past one open panel. Nested sub-panels (lineups, custom theme) are
-// exempt. 'toggle' doesn't bubble — listen in the capture phase.
-const isTopPanel = (el) => el instanceof HTMLDetailsElement && el.classList.contains('panel') && !el.parentElement.closest('details.panel');
-document.addEventListener('toggle', (e) => {
-  if (!isTopPanel(e.target) || !e.target.open) return;
-  document.querySelectorAll('details.panel[open]').forEach((o) => {
-    if (o !== e.target && isTopPanel(o)) o.open = false;
-  });
-}, true);
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
@@ -3287,7 +3257,6 @@ function renderBaseballControl() {
       '<span class="mb mh"></span>' +
     '</span>';
   setSitLabel(L.situationSentence(game) + '. Edit the situation.');
-  $('g-batting').hidden = true;   // the batter strip names the hitter; the bold abbreviation up top says which team
   $('g-away-name').classList.toggle('bat', game.half === 'top');
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
   renderBatterLine();
@@ -3335,7 +3304,6 @@ function renderFootballControl() {
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
   setSitLabel(`Quarter ${st.quarter}, ${dd}` +
     (st.possession ? `, ${st.possession === 'home' ? game.home_name : game.away_name} ball` : ', possession not set'));
-  $('g-batting').textContent = st.possession ? `Ball: ${st.possession === 'home' ? game.home_name : game.away_name}` : 'Possession: —';
   $('fb-dist-val').textContent = st.distance === 'goal' ? 'Goal' : st.distance;
   $('fbs-away').textContent = game.away_score | 0; $('fbs-home').textContent = game.home_score | 0;
   $('fb-q-val').textContent = st.quarter;
@@ -3349,7 +3317,6 @@ function renderSoccerControl() {
   $('sc-mid').innerHTML = `<span class="sc-inning">${st.half === 2 ? '2nd' : '1st'} Half</span>` +
     `<span class="sc-count">⚽</span><span class="sc-outs">${st.stoppage ? '+' + st.stoppage : ''}</span>`;
   setSitLabel(`${st.half === 2 ? 'Second' : 'First'} half` + (st.stoppage ? `, plus ${st.stoppage} minutes stoppage` : ''));
-  $('g-batting').textContent = 'Soccer';
   $('sc-stop-val').textContent = '+' + st.stoppage;
   $('scs-away').textContent = game.away_score | 0; $('scs-home').textContent = game.home_score | 0;
   $('sc-half-1').classList.toggle('on', st.half === 1);
@@ -3362,7 +3329,6 @@ function renderVolleyballControl() {
     `<span class="sc-count">${st.sets.away}–${st.sets.home}</span><span class="sc-outs">${serve}</span>`;
   setSitLabel(`Set ${st.set}, sets ${st.sets.away} to ${st.sets.home}` +
     (st.serve ? `, ${st.serve === 'home' ? game.home_name : game.away_name} serving` : ', server not set'));
-  $('g-batting').textContent = st.serve ? `Serving: ${st.serve === 'home' ? game.home_name : game.away_name}` : 'Serving: —';
   $('vb-set-val').textContent = st.set;
   $('vbs-away').textContent = game.away_score | 0; $('vbs-home').textContent = game.home_score | 0;
   $('vb-sets-away-val').textContent = st.sets.away; $('vb-sets-home-val').textContent = st.sets.home;
@@ -3376,7 +3342,6 @@ function renderBasketballControl() {
   $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.period}</span>` +
     `<span class="sc-count">Fouls ${st.fouls.away}–${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
   setSitLabel(`Quarter ${st.period}, fouls ${st.fouls.away} to ${st.fouls.home}` + (bonus ? `, ${bonus}` : ''));
-  $('g-batting').textContent = `Q${st.period}` + (bonus ? ` · ${bonus}` : '');
   $('bk-period-val').textContent = st.period;
   $('bks-away').textContent = game.away_score | 0; $('bks-home').textContent = game.home_score | 0;
   $('bk-foul-away-val').textContent = st.fouls.away; $('bk-foul-home-val').textContent = st.fouls.home;
