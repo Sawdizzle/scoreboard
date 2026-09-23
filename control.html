@@ -416,7 +416,7 @@
           <span class="dhome"></span>
         </div>
         <div class="sit-side">
-          <p id="bases-note" class="sit-note">Tap a base to set or clear a runner.</p>
+          <p id="bases-note" class="sit-note">A fix, not a play: tap a base to put a runner on or take one off, and nothing goes in the book. A steal or a pickoff is the runner on the pad.</p>
           <button id="btn-advance" class="base-btn">Advance all ▸</button>
           <button id="btn-clear" class="base-btn">Clear bases</button>
         </div>
@@ -447,10 +447,7 @@
         <details class="sit-more" open>
           <summary>Runs · hits · errors</summary>
           <div class="sit-more-body">
-            <p class="hint">Direct edits for corrections — each is undoable. Runs, hits and errors change the total only.</p>
-            <!-- A run with no play behind it (a missed tag-up, a run the pad missed).
-                 Unlike the steppers it goes in this half's line-score cell too. -->
-            <button id="btn-run" class="base-btn">+1 run for the team at bat (line score too)</button>
+            <p class="hint">Direct edits for corrections — each is undoable. A run goes in that team's half of the line score too; hits and errors change the total only.</p>
             <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" runs">Away runs</span><button class="step" data-adj="score-away" data-d="-1">–</button><b id="adj-score-away">0</b><button class="step" data-adj="score-away" data-d="1">+</button></div>
             <div class="adj-row"><span class="adj-lab" data-team="home" data-suffix=" runs">Home runs</span><button class="step" data-adj="score-home" data-d="-1">–</button><b id="adj-score-home">0</b><button class="step" data-adj="score-home" data-d="1">+</button></div>
             <div class="adj-row"><span class="adj-lab" data-team="away" data-suffix=" hits">Away hits</span><button class="step" data-adj="hits-away" data-d="-1">–</button><b id="adj-hits-away">0</b><button class="step" data-adj="hits-away" data-d="1">+</button></div>

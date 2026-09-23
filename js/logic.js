@@ -831,11 +831,33 @@ export function compareGames(folded, row) {
 }
 
 // ---- Manual adjusters (direct edits; undoable via apply_event) -------------
-// Each nudges a single field by d, clamped to its DB constraint. Score/hits/
-// errors adjust the running total only (line score is left to game-flow plays).
+// Each nudges a single field by d, clamped to its DB constraint. A score fix
+// also moves the line score (adjustScore); hits and errors are totals only.
 const clampAdj = (v, lo, hi) => Math.max(lo, hi == null ? v : Math.min(hi, v));
 const sideKey = (side, stat) => (side === 'home' ? 'home_' : 'away_') + stat;
-export function adjustScore(g, side, d)  { const k = sideKey(side, 'score');  return { type: 'adj-score',  patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
+// A run fixed by hand goes in the line score too, in that team's half: the one
+// being played if they are at bat, else their last one. Taking one away takes
+// it from the latest of their halves that has a run. Other sports keep no
+// line score, so only the total moves.
+export function adjustScore(g, side, d) {
+  const k = sideKey(side, 'score');
+  const total = clampAdj((g[k] | 0) + d, 0);
+  const patch = { [k]: total };
+  if ((g.sport || 'baseball') === 'baseball' && total !== (g[k] | 0)) {
+    const half = side === 'home' ? 'bottom' : 'top';
+    const inn = g.inning | 0 || 1;
+    // Home has not batted yet in the top of an inning, so its latest half is the inning before.
+    const last = half === 'bottom' && g.half === 'top' ? inn - 1 : inn;
+    const ls = lineScore(g);
+    if (d > 0 && last >= 1) { ls[last - 1][half] = (ls[last - 1][half] || 0) + d; patch.line_score = ls; }
+    if (d < 0) {
+      for (let i = Math.min(last, ls.length) - 1; i >= 0; i--) {
+        if ((ls[i][half] | 0) > 0) { ls[i][half] = Math.max(0, (ls[i][half] | 0) + d); patch.line_score = ls; break; }
+      }
+    }
+  }
+  return { type: 'adj-score', patch, payload: { inputs: { side, d } } };
+}
 export function adjustHits(g, side, d)   { const k = sideKey(side, 'hits');   return { type: 'adj-hits',   patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
 export function adjustErrors(g, side, d) { const k = sideKey(side, 'errors'); return { type: 'adj-errors', patch: { [k]: clampAdj((g[k] | 0) + d, 0) }, payload: { inputs: { side, d } } }; }
 export function adjustOuts(g, d)    { return { type: 'adj-outs',    patch: { outs: clampAdj((g.outs | 0) + d, 0, 3) }, payload: { inputs: { d } } }; }

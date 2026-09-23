@@ -76,7 +76,7 @@ No OBS? Turn off **Show OBS buttons on this device** in Setup → OBS. The overl
 - **Tap a runner** on the pad's diamond for stole, caught stealing, picked off, to next on WP/PB, or batter's interference. The count and the batter stay.
 - **MORE**: hit by pitch, catcher's interference, intentional walk, balk.
 - **↶ Undo** reverses the last play, and again for the one before.
-- **The count bar** opens the Situation screen: every correction (bases, count, outs, inning, previous/next batter, pitch count, R/H/E, +1 run), and **🏁 End game**.
+- **The count bar** opens the Situation screen: every correction (bases, count, outs, inning, previous/next batter, pitch count, R/H/E — a run fixed here also goes in the line score), and **🏁 End game**.
 - **The batter line** opens the Lineup. **🧢 Field** on the bottom bar sets positions by jersey number: tap a spot, tap the number. A pitching change gives the new pitcher his own pitch count.
 - The third out ends the half and raises **Mid-Inning** on its own; the next half's first pitch takes it down. **End game** raises the **Final screen**.
 - Runs, strikeouts, walks, hits and outs fire their own animation and sound.

@@ -1273,3 +1273,42 @@ test('a typed team name gets a short bug label', () => {
   assert.equal(L.abbrFor('Krum 14u'), 'Krum 14u');
   assert.equal(L.abbrFor('Wildcats Baseball - Owens'), 'Wildcats');
 });
+
+// ---------------------------------------------------------------------------
+// Fixing a score by hand keeps the line score in step
+// ---------------------------------------------------------------------------
+test('a run added for the team at bat lands in this half of the line score', () => {
+  const r = L.adjustScore(G({ inning: 3, half: 'top', away_score: 2, line_score: [{ top: 1, bottom: 0 }, { top: 1, bottom: 0 }] }), 'away', 1);
+  assert.equal(r.patch.away_score, 3);
+  assert.equal(r.patch.line_score[2].top, 1);
+});
+
+test('a run added for the team in the field lands in its last half', () => {
+  const r = L.adjustScore(G({ inning: 3, half: 'top', home_score: 0 }), 'home', 1);
+  assert.equal(r.patch.line_score[1].bottom, 1, 'home last batted in the 2nd');
+  const r2 = L.adjustScore(G({ inning: 3, half: 'bottom', away_score: 0 }), 'away', 1);
+  assert.equal(r2.patch.line_score[2].top, 1, 'away batted in the top of this inning');
+});
+
+test('home in the top of the 1st has no half yet: only the total moves', () => {
+  const r = L.adjustScore(G({ inning: 1, half: 'top' }), 'home', 1);
+  assert.equal(r.patch.home_score, 1);
+  assert.equal(r.patch.line_score, undefined);
+});
+
+test('taking a run away takes it from the latest half that has one', () => {
+  const g = G({ inning: 4, half: 'top', away_score: 3, line_score: [{ top: 2, bottom: 0 }, { top: 1, bottom: 0 }, { top: 0, bottom: 0 }] });
+  const r = L.adjustScore(g, 'away', -1);
+  assert.equal(r.patch.away_score, 2);
+  assert.deepEqual(r.patch.line_score.map((c) => c.top), [2, 0, 0, 0]);
+});
+
+test('a score already at zero does not move the line score', () => {
+  const r = L.adjustScore(G({ away_score: 0, line_score: [{ top: 0, bottom: 0 }] }), 'away', -1);
+  assert.equal(r.patch.line_score, undefined);
+});
+
+test('other sports adjust the total only', () => {
+  const r = L.adjustScore(G({ sport: 'soccer', away_score: 1 }), 'away', 1);
+  assert.deepEqual(Object.keys(r.patch), ['away_score']);
+});

@@ -828,7 +828,6 @@ $('more-balk').onclick   = () => {
 $('more-cancel').onclick = () => closeSheet('more-sheet');
 $('btn-foul').onclick    = () => commit(L.onFoul(game));
 $('btn-inplay').onclick  = () => openPlaySheet();
-$('btn-run').onclick     = () => { commit(L.onRun(game)); showToast('+1 run', 1500); };
 $('btn-batter').onclick  = () => commit(L.onNextBatter(game));
 // The repair for an order pushed on by a tap that should not have ended the
 // at-bat — an out recorded on a runner, before RUNNERS was the way to do it.
@@ -2463,8 +2462,9 @@ function renderBaseballControl() {
   $('base-2').classList.toggle('on', b.second);
   $('base-3').classList.toggle('on', b.third);
   const on = [b.first && '1st', b.second && '2nd', b.third && '3rd'].filter(Boolean);
-  $('bases-note').textContent = 'Tap a base to set or clear a runner. ' +
-    (on.length ? `${on.join(' and ')} occupied.` : 'Nobody on.');
+  // A fix, not a play: the pad's diamond is where a steal or a pickoff is scored.
+  $('bases-note').textContent = `${on.length ? `${on.join(' and ')} occupied.` : 'Nobody on.'} ` +
+    'Tap a base to put a runner on or take one off — a fix, not a play. A steal or a pickoff is the runner on the pad.';
   // roster_rev rather than the lineups blob itself: it is bumped on every roster
   // write, which is exactly what that column is for, and it saves stringifying
   // two full rosters on every pitch.
