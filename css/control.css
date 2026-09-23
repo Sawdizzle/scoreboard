@@ -432,16 +432,8 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 /* Confirming a play is never a dialog — it is a sheet with the number big
    enough to read at a glance and one button that does the thing. */
 .confirm-copy { margin: 0; font-size: 14px; line-height: 1.55; color: var(--body); text-wrap: pretty; }
-.walk-bases { display: flex; gap: 10px; margin-top: 16px; }
-.walk-bases .base-btn { flex: 1; height: 64px; font-size: 16px; font-weight: 800; border-radius: 18px; }
-.runs-stepper { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 22px 0; }
-.runs-stepper .step { width: 64px; height: 64px; font-size: 28px; border-radius: 18px; }
-.runs-stepper b { font-family: var(--num); font-size: 54px; font-weight: 600; color: var(--chalk); min-width: 1.4ch; text-align: center; }
-.runs-stepper.big { margin: 26px 0 24px; }
-.runs-stepper.big b { font-size: 68px; line-height: 1; }
 .confirm-go { width: 100%; padding: 20px; font-size: 18px; font-weight: 800; letter-spacing: 0.04em;
   color: #fff; background: var(--hr-grad); border: 1px solid var(--hr-line); border-radius: 16px; }
-.confirm-go.walk { background: var(--run); border-color: var(--run); letter-spacing: 0; }
 .confirm-go:active { filter: brightness(1.15); transform: translateY(2px); }
 .confirm-card .ghost { border-radius: 14px; padding: 14px; font-size: 14px; }
 .step { width: 48px; height: 48px; font-size: 24px; background: var(--card); border: 1px solid var(--line-2); color: var(--chalk); border-radius: 13px; }
@@ -463,7 +455,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .fx-pad { margin-top: 16px; }
 .fxbtn { padding: 15px 6px; font-size: 14px; font-weight: 700; background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); border-radius: 12px; }
 .fxbtn:active { filter: brightness(1.15); transform: translateY(1px); }
-.fxbtn.hr { width: 100%; margin-bottom: 8px; padding: 20px; font-size: 19px; letter-spacing: 0.05em; color: #fff; background: var(--hr-grad); border-color: var(--hr-line); }
 .fx-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 /* An authored display: beats the UA [hidden] rule, so .sport-only could not
    hide this one — Batting order + Defense showed on football and soccer. */

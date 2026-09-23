@@ -74,7 +74,7 @@
         <summary>⚾ Scoring a game</summary>
         <div class="panel-body help-body">
           <ul>
-            <li><b>BALL · STRIKE · FOUL</b> for pitches. The fourth ball asks where the runners went; strike three asks swinging, looking or dropped.</li>
+            <li><b>BALL · STRIKE · FOUL</b> for pitches. Ball four walks the batter and pushes the forced runners; strike three asks swinging, looking or dropped.</li>
             <li><b>IN PLAY</b> asks what happened — a hit, an error or fielder’s choice, or the kind of out — then who fielded it, then (with runners on) where everyone ended up, already filled in.</li>
             <li>The <b>diamond</b> on the pad shows who’s on. Tap a runner for a steal, caught stealing, pickoff, wild pitch or passed ball.</li>
             <li><b>MORE</b>: hit by pitch, catcher’s interference, intentional walk, balk.</li>
@@ -756,43 +756,6 @@
       </div>
       <p id="k3-why" class="confirm-copy"></p>
       <button id="k3-cancel" class="ghost">Cancel</button>
-    </div>
-  </div>
-
-  <!-- WALK SHEET -->
-  <div id="walk-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="walk-title" tabindex="-1" hidden>
-    <div class="sheet-card confirm-card">
-      <span class="grab"></span>
-      <h3 id="walk-title">Walk</h3>
-      <p class="confirm-copy">Forced advance is pre-filled. Tap a base to override, then set the runs that scored.</p>
-      <div class="walk-bases">
-        <button id="w1" class="base-btn">1B</button>
-        <button id="w2" class="base-btn">2B</button>
-        <button id="w3" class="base-btn">3B</button>
-      </div>
-      <div class="runs-stepper">
-        <button id="w-runs-dn" class="step">–</button>
-        <b id="w-runs">0</b>
-        <button id="w-runs-up" class="step">+</button>
-      </div>
-      <button id="walk-confirm" class="confirm-go walk">Confirm walk</button>
-      <button id="walk-cancel" class="ghost">Cancel</button>
-    </div>
-  </div>
-
-  <!-- HOME RUN SHEET -->
-  <div id="hr-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="hr-title" tabindex="-1" hidden>
-    <div class="sheet-card confirm-card">
-      <span class="grab"></span>
-      <h3 id="hr-title">Home run</h3>
-      <p class="confirm-copy" id="hr-copy">Batter plus every runner scores and the bases clear. Adjust if the total is wrong.</p>
-      <div class="runs-stepper big">
-        <button id="hr-runs-dn" class="step">–</button>
-        <b id="hr-runs">1</b>
-        <button id="hr-runs-up" class="step">+</button>
-      </div>
-      <button id="hr-confirm" class="confirm-go">💥 Confirm home run</button>
-      <button id="hr-cancel" class="ghost">Cancel</button>
     </div>
   </div>
 

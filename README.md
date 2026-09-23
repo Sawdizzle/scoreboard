@@ -53,7 +53,7 @@ No OBS? Turn off **Show OBS buttons on this device** in Setup → OBS. The overl
 
 ## Scoring (baseball)
 
-- **BALL / STRIKE / FOUL** for pitches. The fourth ball opens the walk sheet with forced runners pre-filled. Strike three asks **Swinging**, **Looking** or **Dropped 3rd** (greyed out, with the reason, when the batter cannot run).
+- **BALL / STRIKE / FOUL** for pitches. Ball four records the walk and pushes the forced runners in one tap; the toast's **Fix runners** opens the Situation screen for the rare extra base. Strike three asks **Swinging**, **Looking** or **Dropped 3rd** (greyed out, with the reason, when the batter cannot run).
 - **IN PLAY** → the result (hit, reached, error, fielder's choice, or the kind of out) → the fielder → where the runners ended up, pre-filled with the likely result. The runner step is skipped when the bases are empty.
 - **Tap a runner** on the pad's diamond for stole, caught stealing, picked off, to next on WP/PB, or batter's interference. The count and the batter stay.
 - **MORE**: hit by pitch, catcher's interference, intentional walk, balk.

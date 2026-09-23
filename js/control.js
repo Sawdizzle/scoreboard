@@ -879,7 +879,7 @@ function undoQueued() {
 }
 
 // Buttons
-$('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? openWalkSheet(r) : commit(r); };
+$('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? recordWalk() : commit(r); };
 // Strike three asks how: swinging, looking, or dropped. It used to record a
 // swinging K on the spot and offer "Dropped 3rd?" on a toast, so a called
 // third strike went into the book and onto the stream as the wrong K.
@@ -1952,7 +1952,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet', 'cam-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'newgame-sheet', 'cam-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2316,7 +2316,7 @@ function demoStep() {
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs, bases: w.bases }, anim: 'webgem' }); }
+    if ((game.balls | 0) >= 3) recordWalk();
     else commit({ type: 'ball', patch: L.withPitch(game, { balls: (game.balls | 0) + 1 }) });
     return;
   }
@@ -2542,10 +2542,11 @@ function pickResult(kind) {
   if (why) return showToast(why, 3200);
   if (kind === 'HR') {
     if (!$('play-sheet').hidden) closeSheet('play-sheet');
-    // Solo shot: nothing to confirm. With runners on, confirm the run count.
-    if (basesEmpty()) return commit({ type: 'homerun', patch: L.homeRunPatch(game, 1),
-      payload: { runs: 1, play: L.playNote(game, 'HR', { runs: 1 }) }, anim: 'homerun' });
-    return openHrSheet();
+    // Everyone on base scores with the batter — the rulebook leaves nothing to
+    // confirm. A run that should not count is an Undo or a Situation fix.
+    const runs = L.computeHomeRun(game.bases).runs;
+    return commit({ type: 'homerun', patch: L.homeRunPatch(game, runs),
+      payload: { runs, play: L.playNote(game, 'HR', { runs }) }, anim: 'homerun' });
   }
   if (!NEEDS_FIELDER.has(kind)) return startPlay(kind, null, 'result');
   playType = kind;
@@ -2690,25 +2691,6 @@ function recordPlay() {
 // Home-run sheet ------------------------------------------------------------
 // Batter + every runner scores and the bases clear; the sheet just confirms the
 // run total (pre-filled from who's on base) before committing + firing the anim.
-let hrRuns = 1;
-function paintHr() { $('hr-runs').textContent = hrRuns; }
-function openHrSheet() {
-  hrRuns = L.computeHomeRun(game.bases).runs;
-  // Describes the bases, not the number — it has to stay true after a nudge.
-  const on = hrRuns - 1;
-  $('hr-copy').textContent = on
-    ? `${on === 1 ? 'One runner' : on + ' runners'} on — the batter and ${on === 1 ? 'that runner' : 'all of them'} score, and the bases clear.`
-    : 'Nobody on — a solo shot. The batter scores.';
-  paintHr(); openSheet('hr-sheet');
-}
-$('hr-runs-up').onclick = () => { hrRuns = Math.min(hrRuns + 1, 4); paintHr(); };
-$('hr-runs-dn').onclick = () => { hrRuns = Math.max(hrRuns - 1, 1); paintHr(); };
-$('hr-cancel').onclick = () => closeSheet('hr-sheet');
-$('hr-confirm').onclick = () => {
-  closeSheet('hr-sheet');
-  commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns),
-    payload: { runs: hrRuns, play: L.playNote(game, 'HR', { runs: hrRuns }) }, anim: 'homerun' });
-};
 
 // Pitch-count stepper (baseball) --------------------------------------------
 $('pc-dn').onclick = () => commit(L.adjustPitch(game, -1));
@@ -3030,32 +3012,18 @@ function renderLineups() {
 // The drag-onto-a-diamond Defense panel lived here until v3.62. Positions are
 // set on the Field screen (openField / L.assignSpot); lineup rows show them read-only.
 
-// Walk sheet ----------------------------------------------------------------
-let wState = { first: false, second: false, third: false, runs: 0 };
-function paintWalk() {
-  $('w1').classList.toggle('on', wState.first);
-  $('w2').classList.toggle('on', wState.second);
-  $('w3').classList.toggle('on', wState.third);
-  $('w-runs').textContent = wState.runs;
-}
-function openWalkSheet(r) {
-  const b = r.patch.bases;
-  wState = { first: b.first, second: b.second, third: b.third, runs: r.payload.runs | 0 };
-  paintWalk(); openSheet('walk-sheet');
-}
-$('w1').onclick = () => { wState.first = !wState.first; paintWalk(); };
-$('w2').onclick = () => { wState.second = !wState.second; paintWalk(); };
-$('w3').onclick = () => { wState.third = !wState.third; paintWalk(); };
-$('w-runs-up').onclick = () => { wState.runs = Math.min(wState.runs + 1, 4); paintWalk(); };
-$('w-runs-dn').onclick = () => { wState.runs = Math.max(wState.runs - 1, 0); paintWalk(); };
-$('walk-cancel').onclick = () => closeSheet('walk-sheet');
-$('walk-confirm').onclick = () => {
-  closeSheet('walk-sheet');
-  const bases = { first: wState.first, second: wState.second, third: wState.third };
+// Walk ----------------------------------------------------------------------
+// Ball four puts the batter on first and pushes the forced runners, in one tap.
+// A runner who took an extra base on it is a fix in the Situation sheet, which
+// the toast opens.
+function recordWalk() {
+  const w = L.computeWalk(game.bases);
   // anim: the WALK reveal fires automatically, like run/strikeout do.
-  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }),
-    payload: { runs: wState.runs, bases, play: L.playNote(game, 'BB', { runs: wState.runs }) }, anim: 'webgem' });
-};
+  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }),
+    payload: { runs: w.runs, bases: w.bases, play: L.playNote(game, 'BB', { runs: w.runs }) }, anim: 'webgem' });
+  showToast(w.runs ? `Walk · ${w.runs} run${w.runs > 1 ? 's' : ''} forced in` : 'Walk', 4000,
+    { label: 'Fix runners', run: () => openSheet('sit-sheet') });
+}
 
 // Render --------------------------------------------------------------------
 const ordinal = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || n + 'th');
