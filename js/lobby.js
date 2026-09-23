@@ -1,12 +1,14 @@
 // The games list and the New Game sheet: the screen before any game is open.
 //
 // ctx is control.js's side: $, db, esc, ordinal, nextNonce, fromLocalInput,
-// openSheet, closeSheet, openGame, openSetupGuide, and getters for the signed-in
-// user and the sport table (both are set after this module is built).
+// openSheet, closeSheet, openGame, openSetupGuide, abbrFor, seedNewGame (loads
+// the chosen rosters into the new game), and getters for the signed-in user,
+// the saved teams and the sport table (all set after this module is built).
 import { serverNow } from './clock.js';
 
 export function createLobby(ctx) {
-  const { $, db, esc, ordinal, nextNonce, fromLocalInput, openSheet, closeSheet, openGame, openSetupGuide } = ctx;
+  const { $, db, esc, ordinal, nextNonce, fromLocalInput, openSheet, closeSheet, openGame, openSetupGuide, abbrFor, seedNewGame } = ctx;
+  const teams = () => ctx.teams();
   const user = () => ctx.user();
   const sports = () => ctx.sports();
 
@@ -92,7 +94,48 @@ export function createLobby(ctx) {
 
   // New game: pick the sport, then create with the right initial state; the rest
   // comes from your last game.
-  $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
+  // Teams: every saved team is offered on both sides, yours (★) first. Yours
+  // starts on the side it played last on this device; the other side starts as
+  // a new team to name.
+  const MY_SIDE = 'sb:mySide';
+  const lastSide = () => { try { return localStorage.getItem(MY_SIDE) === 'away' ? 'away' : 'home'; } catch { return 'home'; } };
+  const teamLabel = (t) => {
+    const n = ((t.roster && t.roster.batters) || []).filter((b) => b && (b.num || b.name)).length;
+    return `${t.mine ? '★ ' : ''}${t.name}${n ? ` · ${n} players` : ' · no lineup yet'}`;
+  };
+  function fillTeamPickers() {
+    const list = [...teams()].sort((a, b) => (b.mine - a.mine) || a.name.localeCompare(b.name));
+    const opts = '<option value="">+ New team…</option>' + list.map((t) => `<option value="${t.id}">${esc(teamLabel(t))}</option>`).join('');
+    for (const s of ['away', 'home']) { $('ng-' + s).innerHTML = opts; $('ng-' + s + '-name').value = ''; }
+    const mine = list.find((t) => t.mine);
+    if (mine) $('ng-' + lastSide()).value = mine.id;
+    renderNewGame();
+  }
+  const pickOf = (s) => teams().find((t) => t.id === $('ng-' + s).value) || null;
+  function renderNewGame() {
+    for (const s of ['away', 'home']) $('ng-' + s + '-name').hidden = !!pickOf(s);
+    const sides = ['away', 'home'].map((s) => {
+      const t = pickOf(s);
+      const n = t ? ((t.roster && t.roster.batters) || []).filter((b) => b && (b.num || b.name)).length : 0;
+      return { s, t, n };
+    });
+    if ($('ng-sport').value !== 'baseball') { $('ng-note').textContent = 'Names, colours and logos load with the game.'; return; }
+    const need = sides.filter((x) => !x.n).map((x) => (x.t ? x.t.name : $('ng-' + x.s + '-name').value.trim() || (x.s === 'away' ? 'the visitors' : 'the home team')));
+    const ready = sides.filter((x) => x.n).map((x) => `${x.t.name}'s lineup`);
+    $('ng-note').textContent = !need.length ? `${ready.join(' and ')} load with the game.`
+      : `${ready.length ? ready.join(' and ') + ' loads with the game. ' : ''}Create opens the jersey keypad for ${need.join(' and ')}.`;
+  }
+  $('ng-sport').addEventListener('change', renderNewGame);
+  for (const s of ['away', 'home']) {
+    $('ng-' + s).addEventListener('change', renderNewGame);
+    $('ng-' + s + '-name').addEventListener('input', renderNewGame);
+  }
+  $('ng-swap').onclick = () => {
+    const a = $('ng-away').value, h = $('ng-home').value, an = $('ng-away-name').value, hn = $('ng-home-name').value;
+    $('ng-away').value = h; $('ng-home').value = a; $('ng-away-name').value = hn; $('ng-home-name').value = an;
+    renderNewGame();
+  };
+  $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; fillTeamPickers(); openSheet('newgame-sheet'); });
   $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
   // What a new game takes from your last one: how the broadcast looks and
   // sounds, and the house rules. Not the teams (home and away change every game;
@@ -117,10 +160,23 @@ export function createLobby(ctx) {
     const row = { ...(await lastGameSettings(sport)), status: 'setup', sport, starts_at: fromLocalInput($('ng-startsat').value),
       card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
     const st = sportState(sport); if (st) row.state = st;
+    const picked = {};
+    for (const s of ['away', 'home']) {
+      const t = pickOf(s);
+      picked[s] = t;
+      const name = t ? t.name : $('ng-' + s + '-name').value.trim();
+      if (!name) continue;
+      row[s + '_name'] = name;
+      row[s + '_abbr'] = (t && t.abbr) || abbrFor(name);
+      if (t && t.color) row[s + '_color'] = t.color;
+      if (t && t.logo_url) row[s + '_logo_url'] = t.logo_url;
+      if (t && t.mine) { try { localStorage.setItem(MY_SIDE, s); } catch {} }
+    }
     const { data, error } = await db.from('games').insert(row).select().single();
     if (error) return alert(error.message);
     closeSheet('newgame-sheet');
     await openGame(data.id);
+    await seedNewGame(picked);
     openSetupGuide(); // fresh game → expand the checklist
   };
 

@@ -299,6 +299,7 @@ function saveRoster(lineups, { allowClear = false } = {}) {
   if (wipeRefused(lineups, allowClear)) return Promise.resolve();
   game = { ...game, lineups };
   luStatus('saving');
+  autoSaveTeamsSoon();
   return queue.enqueue({ kind: 'roster', gameId: game.id, lineups });
 }
 // Another device (or this one after a reload elsewhere) saved a roster: the
@@ -906,6 +907,8 @@ function renderTeamCards() {
     $('team-order-' + side).textContent = players ? `${players} in the order` : 'Not set';
     $('team-pos-' + side).textContent = players ? (missing ? `${missing} empty` : '✓ all nine') : '—';
     $('team-del-' + side).disabled = !saved;
+    $('team-mine-' + side).checked = !!(saved && saved.mine);
+    $('team-mine-row-' + side).hidden = !teamRowFor(side);
   }
 }
 for (const side of ['away', 'home']) {
@@ -935,24 +938,80 @@ $('team-swap').onclick = async () => {
   showToast('⇅ Sides swapped');
 };
 
-async function saveTeam(side) {
-  if (!game) return;
+// A named team with somebody in its lineup keeps itself saved: every roster or
+// identity change schedules one quiet upsert per side, keyed by name, so next
+// game it is one pick in New Game. There is no Save button to forget. The
+// default names are not teams yet and are never saved.
+const DEFAULT_NAMES = new Set(['', 'visitor', 'home', 'away']);
+let teamSaveTimer = null;
+function autoSaveTeamsSoon() {
+  clearTimeout(teamSaveTimer);
+  teamSaveTimer = setTimeout(autoSaveTeams, 2500);
+}
+function teamRowFor(side) {
   const name = String(game[side + '_name'] || '').trim();
-  if (!name || name === 'Visitor' || name === 'Home') return showToast('Name the team in Setup first');
-  const row = {
+  if (DEFAULT_NAMES.has(name.toLowerCase())) return null;
+  return {
     owner_id: user.id, name,
     abbr: game[side + '_abbr'] || null,
     color: game[side + '_color'] || null,
     logo_url: game[side + '_logo_url'] || null,
     roster: (game.lineups || {})[side] || {},
-    updated_at: new Date().toISOString(),
   };
-  const { error } = await db.from('teams').upsert(row, { onConflict: 'owner_id,name' });
-  if (error) return alert(error.message);
+}
+async function autoSaveTeams({ force = null } = {}) {
+  if (!game || !user) return;
+  let saved = 0;
+  for (const side of ['away', 'home']) {
+    const row = teamRowFor(side); if (!row) continue;
+    const has = teamOf(side).batters.some((b) => b && (b.num || b.name));
+    if (!has && side !== force) continue;
+    const prev = savedTeamFor(side);
+    const same = prev && prev.abbr === row.abbr && prev.color === row.color && (prev.logo_url || null) === row.logo_url
+      && JSON.stringify(prev.roster || {}) === JSON.stringify(row.roster);
+    if (same) continue;
+    const { error } = await db.from('teams').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'owner_id,name' });
+    if (error) { console.warn('team auto-save failed', error.message); continue; }
+    saved++;
+  }
+  if (saved) { await loadTeams(); renderTeamCards(); }
+}
+// A game just made in New Game: load the saved lineups it was made with, then
+// open the jersey keypad on a team that still has nobody (the opponent first).
+async function seedNewGame(picked) {
+  if (!game) return;
+  const lineups = { ...(game.lineups || {}) };
+  let loaded = false;
+  for (const s of ['away', 'home']) {
+    const t = picked[s];
+    if (t && t.roster && ((t.roster.batters || []).some((b) => b && (b.num || b.name)))) { lineups[s] = L.normalizeTeam(t.roster); loaded = true; }
+  }
+  if (loaded) await saveRoster(lineups, { allowClear: true });
+  if ((game.sport || 'baseball') !== 'baseball') return;
+  const empty = ['away', 'home'].filter((s) => !teamOf(s).batters.some((b) => b && (b.num || b.name)));
+  if (!empty.length) return;
+  const first = empty.find((s) => !(picked[s] && picked[s].mine)) || empty[0];
+  openLineupSheet(first);
+  openQuick('keys');
+}
+// ★ My team: a flag on the saved team, set here and read by New Game.
+async function setMine(side, on) {
+  if (!game) return;
+  if (!teamRowFor(side)) { renderTeamCards(); return showToast('Name the team first'); }
+  await autoSaveTeams({ force: side });
+  const t = savedTeamFor(side);
+  if (!t) { renderTeamCards(); return showToast('⚠️ Could not save the team'); }
+  const { error } = await db.from('teams').update({ mine: on }).eq('id', t.id);
+  if (error) { renderTeamCards(); return showToast(`⚠️ ${error.message}`, 3000); }
   await loadTeams();
   renderTeamCards();
-  showToast(`💾 Saved "${name}"`);
+  renderLineups();
+  showToast(on ? `★ ${t.name} is your team` : `${t.name} is no longer marked as yours`);
 }
+// Is this side one of your own teams? The checklist asks for positions only
+// there when one of the two is yours; an opponent's are optional.
+const isMine = (side) => !!(game && savedTeamFor(side) && savedTeamFor(side).mine);
+const anyMine = () => isMine('away') || isMine('home');
 async function loadTeamInto(side, id) {
   const t = savedTeams.find((x) => x.id === id);
   $('team-sel-' + side).value = '';   // one-shot: picking the same team again must reload it
@@ -994,7 +1053,7 @@ async function deleteTeam(side) {
 }
 for (const side of ['away', 'home']) {
   $('team-sel-' + side).addEventListener('change', (e) => { if (e.target.value) loadTeamInto(side, e.target.value); });
-  $('team-save-' + side).onclick = () => saveTeam(side);
+  $('team-mine-' + side).onchange = (e) => setMine(side, e.target.checked);
   $('team-del-' + side).onclick = () => deleteTeam(side);
 }
 
@@ -1498,6 +1557,7 @@ async function writeField(patch) {
   game = { ...game, ...patch };
   renderGame();
   queue.enqueue({ kind: 'field', gameId, patch });
+  if (Object.keys(patch).some((k) => /^(away|home)_(name|abbr|color|logo_url)$/.test(k))) autoSaveTeamsSoon();
 }
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
 document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
@@ -1940,7 +2000,10 @@ function renderFieldCheck(side) {
   const el = $('fieldcheck-' + side); if (!el) return;
   const miss = L.missingPositions((game.lineups || {})[side] || {});
   el.classList.toggle('ok', !miss.length);
+  el.classList.toggle('optional', !!miss.length && anyMine() && !isMine(side));
   if (!miss.length) { el.textContent = '✓ All nine positions filled · Field ›'; return; }
+  // The other team's defense only feeds the Defense card; it is not a to-do.
+  if (anyMine() && !isMine(side)) { el.textContent = `Positions optional · ${9 - miss.length} of 9 set · Field ›`; return; }
   el.replaceChildren(document.createTextNode('Empty:'));
   for (const p of miss) { const s = document.createElement('b'); s.textContent = p; el.append(s); }
   el.append(document.createTextNode(' · Set on Field ›'));
@@ -2011,6 +2074,7 @@ let luSide = 'away';
 function openLineupSheet(side) {
   if (!game) return;
   luSide = side || L.battingSide(game);
+  closeQuick();
   renderLineups();
   openSheet('lineup-sheet');
 }
@@ -2025,8 +2089,76 @@ function showLineupSide() {
     tab.textContent = `${s === 'home' ? 'Home' : 'Away'} · ${abbr}${s === bat ? ' · batting' : ''}`;
   }
 }
-$('lu-tab-away').onclick = () => { luSide = 'away'; showLineupSide(); };
-$('lu-tab-home').onclick = () => { luSide = 'home'; showLineupSide(); };
+$('lu-tab-away').onclick = () => { luSide = 'away'; showLineupSide(); paintQuick(); };
+$('lu-tab-home').onclick = () => { luSide = 'home'; showLineupSide(); paintQuick(); };
+
+// Quick entry. The keypad puts each number into the next open slot of the team
+// on screen; backspace with nothing typed takes the last one back to edit. The
+// paste box reads one player per line (L.parseRoster) and replaces the order.
+let lqTyped = '';
+function openQuick(mode) {
+  lqTyped = '';
+  $('lq-keys').hidden = mode !== 'keys';
+  $('lq-paste').hidden = mode !== 'paste';
+  paintQuick();
+  if (mode === 'paste') $('lq-text').focus();
+}
+const closeQuick = () => { $('lq-keys').hidden = true; $('lq-paste').hidden = true; };
+function paintQuick() {
+  if (!game || $('lq-keys').hidden) return;
+  const bs = teamOf(luSide).batters;
+  const open = bs.findIndex((b) => !(b && (b.num || b.name)));
+  $('lq-typed').textContent = lqTyped || '–';
+  $('lq-hint').textContent = `Batter ${(open < 0 ? bs.length : open) + 1} · the number on their back`;
+}
+$('lq-keys-btn').onclick = () => openQuick($('lq-keys').hidden ? 'keys' : null);
+$('lq-paste-btn').onclick = () => openQuick($('lq-paste').hidden ? 'paste' : null);
+$('lq-keys-done').onclick = closeQuick;
+$('lq-paste-cancel').onclick = () => { $('lq-text').value = ''; closeQuick(); };
+$('lq-pad').onclick = (e) => {
+  const b = e.target.closest('button[data-k]'); if (!b || !game) return;
+  haptic();
+  const k = b.dataset.k, lineups = game.lineups || {};
+  if (k === 'next') {
+    if (!lqTyped) return;
+    const r = L.appendNumber(lineups[luSide] || {}, lqTyped);
+    lqTyped = '';
+    saveRoster({ ...lineups, [luSide]: r.team });
+    renderLineups();
+  } else if (k === 'del') {
+    if (lqTyped) lqTyped = lqTyped.slice(0, -1);
+    else {
+      const r = L.popNumber(lineups[luSide] || {});
+      if (r.num) { lqTyped = r.num; saveRoster({ ...lineups, [luSide]: r.team }, { allowClear: true }); renderLineups(); }
+    }
+  } else if (lqTyped.length < 2) lqTyped += k;
+  paintQuick();
+};
+$('lq-text').addEventListener('input', () => {
+  const list = L.parseRoster($('lq-text').value);
+  const pos = list.filter((p) => p.pos).length;
+  const first = list.slice(0, 3).map((p) => (p.num ? '#' + p.num + (p.name ? ' ' : '') : '') + p.name).join(', ');
+  $('lq-preview').textContent = list.length
+    ? `${list.length} player${list.length > 1 ? 's' : ''}${pos ? ` · ${pos} with positions` : ''}: ${first}${list.length > 3 ? '…' : ''}`
+    : 'Number, name and position, in any order you have them.';
+});
+$('lq-paste-use').onclick = async () => {
+  if (!game) return;
+  const list = L.parseRoster($('lq-text').value);
+  if (!list.length) return showToast('Paste one player per line', 2400);
+  const had = teamOf(luSide).batters.some((b) => b && (b.num || b.name));
+  if (had && !confirm(`Replace the ${luSide} lineup with these ${list.length} players?`)) return;
+  await saveRoster({ ...(game.lineups || {}), [luSide]: L.teamFromList(list) }, { allowClear: true });
+  // A new order starts at its top — unless the game is already under way.
+  if (!gameStarted()) {
+    const st = game.state || {};
+    writeField({ state: { ...st, batIdx: { ...(st.batIdx || {}), [luSide]: 0 } } });
+  }
+  $('lq-text').value = '';
+  closeQuick();
+  renderLineups();
+  showToast(`📋 ${list.length} players in the order`);
+};
 $('lu-done').onclick = () => closeSheet('lineup-sheet');
 $('gm-batter').onclick = () => { if (game && (game.sport || 'baseball') === 'baseball') openLineupSheet(); };
 
@@ -2235,7 +2367,9 @@ function setupSteps() {
   const teams = (game.away_name && game.away_name !== 'Visitor') || (game.home_name && game.home_name !== 'Home');
   const teamHas = (s) => { const t = (game.lineups || {})[s] || {}; return (t.pitcher && (t.pitcher.name || t.pitcher.num)) || (Array.isArray(t.batters) && t.batters.some((b) => b && (b.name || b.num))); };
   const hasLineup = teamHas('away') || teamHas('home');
-  const hasDefense = ['away', 'home'].some((s) => Object.keys(((game.lineups || {})[s] || {}).positions || {}).length > 0);
+  // With one of your teams in the game, its defense is the step; an opponent's is optional.
+  const defenseSides = anyMine() ? ['away', 'home'].filter(isMine) : ['away', 'home'];
+  const hasDefense = defenseSides.some((s) => Object.keys(((game.lineups || {})[s] || {}).positions || {}).length > 0);
   return sport === 'baseball'
     ? [['teams', !!teams], ['lineups', hasLineup], ['defense', hasDefense], ['overlay', overlayCopied]]
     : [['teams', !!teams], ['overlay', overlayCopied]];
@@ -2418,6 +2552,6 @@ const { closeSetup, fillSetup, fromLocalInput, openSetup, svGo } = createSetup({
   openLineupSheet, renderTeamCards, renderLinkNote, game: () => game, sports: () => SPORTS });
 // The games list and New Game (js/lobby.js).
 const { loadGames, CARRY, sportState } = createLobby({ $, db, esc, ordinal, nextNonce, fromLocalInput, openSheet, closeSheet,
-  openGame, openSetupGuide, user: () => user, sports: () => SPORTS });
+  openGame, openSetupGuide, abbrFor: L.abbrFor, seedNewGame, teams: () => savedTeams, user: () => user, sports: () => SPORTS });
 
 refreshSession();

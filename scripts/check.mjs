@@ -130,7 +130,9 @@ for (const f of ALL_JS) {
   // how the first version of this check missed exactly that.
   const plain = (src) => noComments(src)
     .replace(/'(?:\\.|[^'\\\n])*'/g, "''")
-    .replace(/"(?:\\.|[^"\\\n])*"/g, '""');
+    .replace(/"(?:\\.|[^"\\\n])*"/g, '""')
+    // A template literal keeps its ${…} expressions and drops its prose.
+    .replace(/`(?:\\.|[^`\\])*`/g, (t) => ' ' + [...t.matchAll(/\$\{([^}]*)\}/g)].map((m) => m[1]).join(' ; ') + ' ');
   const ctl = code(read('js/control.js'));
   const outer = new Set([
     ...[...ctl.matchAll(/(?:^|\n)(?:async\s+)?(?:function|const|let)\s+(\w+)/g)].map((m) => m[1]),

@@ -1067,3 +1067,34 @@ button.fieldcheck { width: 100%; background: none; border: none; padding: 6px 2p
 
 .pz-note { margin: 0; font-size: 12px; color: var(--muted); }
 #pz-state.on { color: #ff7a6e; }
+
+/* New Game: both teams, with a swap between them */
+.ng-teams { display: grid; gap: 8px; margin-top: 12px; }
+.ng-team { display: grid; gap: 6px; }
+.ng-team .sel { flex: none; }
+.ng-team select, .ng-team input { padding: 12px; font-size: 16px; background: var(--sunken); border: 1px solid var(--line);
+  border-radius: 12px; color: var(--chalk); }
+.ng-team input[hidden] { display: none; }
+.ng-swap { justify-self: center; width: 44px; height: 32px; border-radius: 10px; background: var(--card);
+  border: 1px solid var(--line-2); color: var(--chalk); font-size: 16px; }
+
+/* Lineup quick entry: the jersey keypad and the paste box */
+.lq-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.lq-btn { padding: 11px 8px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-2); color: var(--chalk);
+  font-size: 14px; font-weight: 700; }
+.lq-keys, .lq-paste { display: grid; gap: 10px; margin-bottom: 12px; }
+.lq-keys[hidden], .lq-paste[hidden] { display: none; }
+.lq-typed { display: flex; align-items: baseline; gap: 12px; padding: 8px 14px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 14px; }
+.lq-typed b { font: 600 40px/1 var(--num); min-width: 2ch; font-variant-numeric: tabular-nums; color: var(--chalk); }
+.lq-typed span { color: var(--muted); font-size: 13px; }
+.lq-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lq-pad button { height: 56px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line-2); color: var(--chalk);
+  font: 600 28px/1 var(--num); }
+.lq-pad button:active { filter: brightness(1.25); }
+.lq-pad .lq-next { background: var(--steel); border-color: var(--steel); color: #06090f; font-size: 20px; }
+.lq-done { border-radius: 12px; padding: 12px; }
+.lq-paste textarea { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; background: var(--sunken);
+  border: 1px solid var(--line); color: var(--chalk); font: 15px/1.5 var(--mono); resize: vertical; }
+/* An opponent's empty spots are information, not a to-do. */
+.fieldcheck.optional { background: var(--card); border-color: var(--line); color: var(--muted); }
