@@ -379,16 +379,12 @@ async function loadRoster(id) {
 // innings produced the same number and one edit left the overlay pointing at a
 // revision it thought it already had. The returned value is authoritative.
 //
-// One save in flight at a time. Every call carries the whole roster, so a
-// burst of edits between innings (a drag, then a position, then a name) used
-// to send three overlapping writes, and on field LTE the last to land was not
-// always the last made: the pad showed one order while the server, and so the
-// overlay, kept an older one. Now a save made while another is out waits, and
-// only the newest waiting roster is sent.
-// The lineup screen says which it is — Saving…, ✓ Saved, or Not saved — and a
-// failed save tries again on its own (the newest roster, every few seconds)
-// until it lands or a newer edit replaces it.
-let rosterSending = false, rosterNext = null, rosterRetry = null;
+// A roster rides the write queue like every other change (kind 'roster'):
+// in order, one at a time, retried until it lands. Every save carries the whole
+// roster, so a burst of edits between innings collapses to the newest one
+// instead of racing — the queue keeps only the latest waiting roster per game.
+// The lineup screen says which it is — Saving…, ✓ Saved, or Not saved.
+const rosterQueued = (id) => queue.entriesFor(id).some((w) => w.kind === 'roster');
 function luStatus(state) {
   const el = $('lu-status'); if (!el) return;
   el.textContent = { saving: 'Saving…', saved: '✓ Saved', failed: '⚠ Not saved yet — retrying' }[state];
@@ -419,31 +415,11 @@ function wipeRefused(lineups, allowClear) {
   } finally { wipeGuarding = false; }
   return true;
 }
-async function saveRoster(lineups, { allowClear = false } = {}) {
-  if (wipeRefused(lineups, allowClear)) return;
+function saveRoster(lineups, { allowClear = false } = {}) {
+  if (wipeRefused(lineups, allowClear)) return Promise.resolve();
   game = { ...game, lineups };
-  rosterNext = { id: game.id, lineups };
-  clearTimeout(rosterRetry);
   luStatus('saving');
-  if (rosterSending) return;
-  rosterSending = true;
-  try {
-    while (rosterNext) {
-      const { id, lineups: data } = rosterNext;
-      rosterNext = null;
-      const res = await db.rpc('save_roster', { p_game: id, p_data: data });
-      if (res.error) {
-        if (!rosterNext) {
-          luStatus('failed');
-          showToast(`⚠️ Lineup not saved yet — retrying`, 3000);
-          rosterRetry = setTimeout(() => { if (game && game.id === id && !rosterNext) saveRoster(game.lineups); }, 4000);
-        }
-        continue;
-      }
-      if (!rosterNext) luStatus('saved');
-      if (game && game.id === id) { game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) }; rosterHave = game.roster_rev; }
-    }
-  } finally { rosterSending = false; }
+  return queue.enqueue({ kind: 'roster', gameId: game.id, lineups });
 }
 // Another device (or this one after a reload elsewhere) saved a roster: the
 // row's roster_rev has moved past the one we hold. Re-read it, unless we have a
@@ -451,11 +427,11 @@ async function saveRoster(lineups, { allowClear = false } = {}) {
 // A save started while the read was out also wins over the read.
 let rosterHave = 0;
 async function syncRoster(id, rev) {
-  if (!game || game.id !== id || rev <= rosterHave || rosterSending || rosterNext) return;
+  if (!game || game.id !== id || rev <= rosterHave || rosterQueued(id)) return;
   rosterHave = rev;
   const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   if (error) { rosterHave = 0; return; }   // try again on the next row
-  if (!game || game.id !== id || rosterSending || rosterNext) return;
+  if (!game || game.id !== id || rosterQueued(id)) return;
   const incoming = L.normalizeRoster((data && data.data) || {});
   // The same rule as saveRoster, on the way in: a read that comes back empty
   // against a roster we are holding is a bad answer, not an edit somebody made.
@@ -691,6 +667,15 @@ const queue = createQueue({
     db.rpc('apply_event', { p_game: gameId, p_type: type, p_new: patch, p_payload: payload }),
   updateFields: (gameId, patch) =>
     db.from('games').update(patch).eq('id', gameId).select().maybeSingle(),
+  saveRoster: (gameId, lineups) => db.rpc('save_roster', { p_game: gameId, p_data: lineups }),
+  // The rev comes back from the database, so our own save doesn't send us to
+  // re-read a roster we just wrote.
+  onRosterSaved: (gameId, rev, settled) => {
+    if (!game || game.id !== gameId) return;
+    game = { ...game, roster_rev: Math.max(game.roster_rev | 0, rev) };
+    rosterHave = game.roster_rev;
+    if (settled) luStatus('saved');
+  },
   onPending: renderPending,
   // The row is only authoritative for the screen once the server has seen
   // everything we sent FOR THIS GAME, and it carries no roster — keep ours.
@@ -710,6 +695,7 @@ const queue = createQueue({
 });
 
 function renderPending(n, err) {
+  if (err && game && rosterQueued(game.id)) luStatus('failed');
   const el = $('pending-badge'); if (!el) return;
   el.hidden = !n;
   if (!n) return;

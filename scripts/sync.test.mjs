@@ -22,6 +22,7 @@ function harness(over = {}) {
     accepted: [],      // [row, gameId, settled]
     toasts: [],        // [message, ms]
     authErrors: [],
+    rosters: [],       // [gameId, rev, settled]
     retries: 0,
     clock: 1000,
     paused: false,
@@ -36,6 +37,11 @@ function harness(over = {}) {
   h.io = {
     applyEvent: async (gameId, type, patch, payload) => send({ kind: 'event', gameId, type, patch, payload }),
     updateFields: async (gameId, patch) => send({ kind: 'field', gameId, patch }),
+    saveRoster: async (gameId, lineups) => {
+      h.sent.push({ kind: 'roster', gameId, lineups });
+      return h.error ? { data: null, error: h.error } : { data: h.sent.length, error: null };
+    },
+    onRosterSaved: (gameId, rev, settled) => h.rosters.push([gameId, rev, settled]),
     onPending: (n, err) => h.badges.push([n, err]),
     onAccepted: (row, gameId, settled) => h.accepted.push([row, gameId, settled]),
     onToast: (m, ms) => h.toasts.push([m, ms]),
@@ -400,4 +406,72 @@ test('now is optional and falls back to the real clock', async () => {
   q.enqueue(play('g1', 'ball'));
   await q.drain();
   assert.equal(h.sent.length, 1);
+});
+
+// ===========================================================================
+// Rosters ride the same queue
+// ===========================================================================
+const roster = (gameId, n) => ({ kind: 'roster', gameId, lineups: { home: { n } } });
+
+test('a roster goes through save_roster, in order with the plays around it', async () => {
+  const h = harness();
+  h.q.enqueue(play('g1', 'ball'));
+  h.q.enqueue(roster('g1', 1));
+  h.q.enqueue(play('g1', 'strike'));
+  await h.q.drain();
+  assert.deepEqual(h.sent.map((w) => w.kind), ['event', 'roster', 'event']);
+  assert.deepEqual(h.rosters.map(([g, , settled]) => [g, settled]), [['g1', true]]);
+});
+
+test('rosters waiting on the network collapse to the newest one', async () => {
+  const h = harness();
+  h.paused = true;
+  h.q.enqueue(roster('g1', 1));
+  h.q.enqueue(roster('g1', 2));
+  h.q.enqueue(roster('g1', 3));
+  assert.equal(h.q.size(), 1);
+  h.paused = false;
+  await h.q.drain();
+  assert.deepEqual(h.sent.map((w) => w.lineups.home.n), [3]);
+});
+
+test('a roster edited while one is on the wire queues behind it, not over it', async () => {
+  const h = harness();
+  let release;
+  h.io.saveRoster = (gameId, lineups) => {
+    h.sent.push({ kind: 'roster', gameId, lineups });
+    if (lineups.home.n === 1) return new Promise((r) => { release = () => r({ data: 1, error: null }); });
+    return Promise.resolve({ data: 2, error: null });
+  };
+  h.q.enqueue(roster('g1', 1));
+  await Promise.resolve();
+  h.q.enqueue(roster('g1', 2));
+  h.q.enqueue(roster('g1', 3));
+  release();
+  await h.q.drain();
+  assert.deepEqual(h.sent.map((w) => w.lineups.home.n), [1, 3]);
+  assert.deepEqual(h.rosters.map(([, , settled]) => settled), [false, true]);
+});
+
+test('rosters for two games do not collapse into each other', async () => {
+  const h = harness();
+  h.paused = true;
+  h.q.enqueue(roster('g1', 1));
+  h.q.enqueue(roster('g2', 2));
+  h.paused = false;
+  await h.q.drain();
+  assert.deepEqual(h.sent.map((w) => w.gameId), ['g1', 'g2']);
+});
+
+test('a failed roster save retries like any other write', async () => {
+  const h = harness();
+  h.error = { message: 'Failed to fetch' };
+  h.q.enqueue(roster('g1', 1));
+  await h.q.drain();
+  assert.equal(h.q.size(), 1);
+  h.error = null;
+  h.fireRetry();
+  await h.q.drain();
+  assert.equal(h.q.size(), 0);
+  assert.equal(h.rosters.length, 1);
 });
