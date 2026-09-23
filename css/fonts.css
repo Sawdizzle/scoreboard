@@ -13,3 +13,14 @@
   src: url('/fonts/barlow-condensed-600.woff2') format('woff2'); }
 @font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap;
   src: url('/fonts/barlow-condensed-700.woff2') format('woff2'); }
+
+/* The Blue Steel theme's faces. A browser fetches a face only when something
+   on screen uses it, so every other theme costs nothing for these.
+   Martian Mono — the club board's numerals; one variable file, weights 100–800.
+   SIL OFL 1.1, /fonts/OFL-MartianMono.txt.
+   Anton — an open stand-in for the club's display face (Tanker, whose licence
+   does not cover shipping it in a public repo). SIL OFL 1.1, /fonts/OFL-Anton.txt. */
+@font-face { font-family: 'Martian Mono'; font-style: normal; font-weight: 100 800; font-display: swap;
+  src: url('/fonts/martian-mono-var.woff2') format('woff2'); }
+@font-face { font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/anton-400.woff2') format('woff2'); }
