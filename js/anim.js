@@ -112,18 +112,6 @@ function homerun() {
   burst(el.querySelector('.hr-particles'), 30, 'chalk', 0.85);
 }
 
-function stamp(text, cls) {
-  return mount('fx-stamp ' + cls, `<span>${text}</span>`, 1800);
-}
-
-function lowerThird(title, sub, cls = '') {
-  return mount('fx-lower ' + cls, `<div class="lt-bar"><b>${title}</b><i>${sub}</i></div>`, 3000);
-}
-
-function stolen() {
-  return mount('fx-stolen', `<div class="sb-dust"></div><div class="sb-text">STOLEN BASE</div>`, 2200);
-}
-
 function walkoff() {
   const el = mount('fx-walkoff', `<div class="wo-text">WALK-OFF!</div><div class="wo-particles"></div>`, 4800);
   burst(el.querySelector('.wo-particles'), 40, 'confetti', 0.15, ['#8fb6de', '#e8b23a', '#f4f7fb', '#3b6fd6', '#d1483f']);

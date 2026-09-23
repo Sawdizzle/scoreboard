@@ -22,6 +22,8 @@
   <link rel="modulepreload" href="/js/supabase.js" />
   <link rel="modulepreload" href="/js/config.js" />
   <link rel="modulepreload" href="/js/logic.js" />
+  <link rel="modulepreload" href="/js/pads.js" />
+  <link rel="modulepreload" href="/js/obs-pad.js" />
   <link rel="modulepreload" href="/js/football.js" />
   <link rel="modulepreload" href="/js/soccer.js" />
   <link rel="modulepreload" href="/js/volleyball.js" />
@@ -56,231 +58,73 @@
 
     <div class="help">
       <h2 class="help-h">Help &amp; setup</h2>
-      <!-- The four topics people actually open. The other ten are a tap away. -->
-      <div class="help-tiles">
-        <button class="help-tile" data-help="help-quickstart"><span class="ht-emoji">🚀</span>Quick start</button>
-        <button class="help-tile" data-help="help-obs-source"><span class="ht-emoji">🖥️</span>OBS setup</button>
-        <button class="help-tile" data-help="help-replay"><span class="ht-emoji">🎞️</span>Replay clips</button>
-        <button class="help-tile" data-help="help-trouble"><span class="ht-emoji">🔧</span>Troubleshooting</button>
-      </div>
-      <button id="help-all" class="ghost help-all" aria-expanded="false" aria-controls="help-list">All 14 help topics ▸</button>
-      <div id="help-list" class="help-list" hidden>
 
       <details class="panel" id="help-quickstart">
         <summary>🚀 Quick start</summary>
         <div class="panel-body help-body">
           <ol>
-            <li><b>+ New Game</b> — pick the sport, then the scorebug style.</li>
-            <li>Open the game. <b>📋 Game setup</b> at the top walks you through teams, lineups, defense, and the overlay link.</li>
-            <li><b>🔗 Overlay link &amp; practice → Copy.</b> That URL is what goes into OBS.</li>
-            <li>Add it in OBS as a <b>Browser</b> source (settings below).</li>
-            <li>Score from this pad — the overlay updates instantly. Keep the pad open on your phone or iPad; it holds the screen awake while a game is open.</li>
+            <li><b>+ New Game</b> — pick the sport. The look, sound and sponsors come from your last game.</li>
+            <li>The checklist at the top of the game walks you through teams, lineups, positions and the overlay link.</li>
+            <li><b>⚙ Setup → Overlay link → Copy</b>, and add it to OBS as a Browser source (below). You only do this once: the link is yours, not the game's, and it shows whichever game you open on the pad.</li>
+            <li>Score from the pad. The overlay updates instantly. Keep the pad open — it holds the screen awake while a game is open.</li>
           </ol>
-          <p class="help-tip">Practice first: <b>▶ Demo Mode</b> in the same panel plays a fake game so you can check the look with nobody watching.</p>
+          <p class="help-tip">Practice first: <b>▶ Demo Mode</b> on the Overlay link screen plays a fake game in a practice game of its own, so your real one stays clean.</p>
         </div>
       </details>
 
-      <details class="panel">
-        <summary>⚙️ Recommended OBS settings</summary>
-        <div class="panel-body help-body">
-          <p>Settings → <b>Video</b></p>
-          <table class="help-table">
-            <tr><td><b>Base &amp; Output resolution</b></td><td>1920×1080 both</td></tr>
-            <tr><td><b>FPS</b></td><td><b>30.</b> Baseball is mostly still between pitches — 60 roughly doubles encoding and rendering work for very little visible gain, and on a fanless laptop that's the difference between coasting and throttling.</td></tr>
-          </table>
-          <p>Settings → <b>Output</b> (Advanced mode) → <b>Streaming</b></p>
-          <table class="help-table">
-            <tr><td><b>Encoder</b></td><td><b>Hardware.</b> “Apple VT H.264 Hardware Encoder” on a Mac, NVENC on an Nvidia PC. Never x264 — software encoding is pure CPU and heat.</td></tr>
-            <tr><td><b>Rate control / bitrate</b></td><td>CBR, <b>6000 kbps</b> for 1080p30 (YouTube's range is 4500–9000).</td></tr>
-            <tr><td><b>Keyframe interval</b></td><td>2 seconds</td></tr>
-            <tr><td><b>Audio</b></td><td>AAC, 128–160 kbps, 48 kHz</td></tr>
-          </table>
-          <p>Settings → <b>Output</b> → <b>Recording</b></p>
-          <table class="help-table">
-            <tr><td><b>Encoder</b></td><td><b>“Same as stream”. This is the important one.</b> Any other setting makes OBS encode the whole game a second time, continuously, for the entire broadcast. Same-as-stream reuses frames it's already producing and costs almost nothing.</td></tr>
-            <tr><td><b>Format</b></td><td>Hybrid MP4 (or MKV) — a crash or dead battery won't corrupt the file the way plain MP4 does.</td></tr>
-          </table>
-          <p>Settings → <b>Output</b> → <b>Replay Buffer</b></p>
-          <table class="help-table">
-            <tr><td><b>Maximum replay time</b></td><td><b>90 seconds.</b> Auto-clips wait up to 60s after a walk-off before saving, and the buffer has to still reach back past the pitch. It holds encoded video in RAM — about 70 MB at 6000 kbps.</td></tr>
-          </table>
-          <p>And on the <b>Scorebug browser source</b>: 1920×1080, <b>FPS 30</b> (match your video FPS — a browser source at 60 doubles the cost of every animation), “Shutdown source when not visible” unchecked.</p>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>⚡ What costs performance</summary>
-        <div class="panel-body help-body">
-          <p>Roughly in order, largest first:</p>
-          <ol>
-            <li><b>Every additional camera.</b> This is bigger than everything else on this list combined. A capture device decodes continuously whether or not its scene is on air — two cameras means two pipelines running for the whole game. Switching between them is free; <i>having</i> them isn't.</li>
-            <li><b>A software encoder (x264)</b> instead of your machine's hardware encoder.</li>
-            <li><b>A separate recording encoder</b> — encodes the game twice. See “Same as stream” above.</li>
-            <li><b>60 FPS</b> instead of 30, on either the video output or the browser source.</li>
-            <li><b>Full-screen takeover cards</b>, and only while one is on screen. They animate continuously, so the overlay repaints every frame instead of sitting still. They're up during breaks, never during live play.</li>
-            <li><b>Everything else this app does</b> — clips, scene switches, stream control, status updates — is idle until you press something. It's a WebSocket carrying a few bytes per event, with no polling anywhere.</li>
-          </ol>
-          <p class="help-tip"><b>If a laptop is struggling with two cameras:</b> tick “Deactivate when not showing” on the capture devices. Only the on-air camera then decodes — but the camera has to wake up on each switch, so cuts get a visible beat. Fast cuts or lower load; pick one.</p>
-          <p><b>Heat matters more than CPU on a fanless laptop.</b> Two hours of streaming plus recording outdoors will throttle a machine sitting in the sun or in a bag long before it runs out of processing power. Keep it shaded, raised for airflow, and plugged in.</p>
-          <p><b>Check it yourself rather than trusting any of this:</b> View → Docks → <b>Stats</b>, and watch three numbers during a game — OBS's CPU usage, <b>frames missed due to rendering lag</b> (this catches the overlay), and <b>frames dropped due to encoding lag</b> (this catches a double encode or too-high bitrate). Put a takeover card up for a minute with Stats open; rendering lag should stay at zero.</p>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>🔒 Who can see what</summary>
+      <details class="panel" id="help-scoring">
+        <summary>⚾ Scoring a game</summary>
         <div class="panel-body help-body">
           <ul>
-            <li><b>Your lineups are private.</b> Rosters live in a table only your account can read. The overlay gets at them through a key carried in its URL — that's the <code>&amp;t=…</code> on the end of the link you paste into OBS.</li>
-            <li><b>Treat the overlay link like a password.</b> Anyone holding it can see your lineups. If it ends up somewhere it shouldn't, hit <b>🔑 Rotate link</b> in “Overlay link &amp; practice” — every old link dies instantly, and you paste the new one into OBS.</li>
-            <li><b>The recap link is safe to share.</b> Score, inning and line score only. Lineups are never on that page, by design.</li>
-            <li><b>The score itself isn't secret.</b> Anyone with a game link can read the score and team names — that's what lets the overlay work without a login.</li>
+            <li><b>BALL · STRIKE · FOUL</b> for pitches. Ball four walks the batter and pushes the forced runners; strike three asks swinging, looking or dropped.</li>
+            <li><b>IN PLAY</b> asks what happened — a hit, an error or fielder’s choice, or the kind of out — then who fielded it, then (with runners on) where everyone ended up, already filled in.</li>
+            <li>The <b>diamond</b> on the pad shows who’s on. Tap a runner for a steal, caught stealing, pickoff, wild pitch or passed ball.</li>
+            <li><b>MORE</b>: hit by pitch, catcher’s interference, intentional walk, balk.</li>
+            <li>Runs, strikeouts, walks, hits and outs fire their own animation. The third out ends the half and puts Mid-Inning on the stream.</li>
+            <li><b>↶ Undo</b> reverses the last play. For anything else that drifted, tap the count bar at the top: that is the Situation screen, with every correction and <b>🏁 End game</b>.</li>
+            <li>Tap the batter line for the <b>Lineup</b>; <b>🧢 Field</b> on the bottom bar sets positions by jersey number. A new pitcher gets his own pitch count.</li>
           </ul>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>💵 Sponsors</summary>
-        <div class="panel-body help-body">
-          <p>Add sponsors under <b>💵 Sponsors</b> on the game screen — a name, and a logo URL if you have one. Turn on rotation and a small “brought to you by” bug appears in the top-right of the overlay every few minutes, cycling the list.</p>
-          <ul>
-            <li><b>Every</b> is the gap between appearances; <b>On screen</b> is how long each one stays. 180 and 8 seconds is a sensible start.</li>
-            <li>It hides itself whenever a full-screen card is up, so it never fights a takeover.</li>
-            <li>Logos want a transparent PNG. Anything up to 240×120 shows at full size.</li>
-          </ul>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>🎛️ Not using OBS?</summary>
-        <div class="panel-body help-body">
-          <p>The <b>OBS controls</b> switch at the top of the panel column slides the OBS-only bits out of the way: <b>📡 Stream &amp; record</b>, <b>🎥 Cameras</b>, and <b>🎞️ Replay</b> on the bottom bar with its auto-clip checkbox.</p>
-          <p>Everything else stays exactly as it is — scoring, cards, takeovers, moments, sound, sponsors, the overlay link and the recap. The overlay itself is just a web page, so it works as a browser source in any streaming software, or on a laptop plugged into a screen at the field.</p>
-          <p class="help-tip">It's a per-device setting, not a per-game one — the same game might be run from an OBS laptop one night and a phone that has never seen OBS the next.</p>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>🔐 How much OBS access to give</summary>
-        <div class="panel-body help-body">
-          <p>One dropdown decides how much of OBS this app may touch: the overlay source's <b>Page permissions</b>. Every setting below is a fine way to run the app — pick the lowest one that covers what you actually want.</p>
-          <table class="help-table">
-            <tr><th>Page permissions</th><th>What you get</th></tr>
-            <tr><td><b>No access</b><br><span class="t-sub">the default</span></td><td>Scorebug, all cards and takeovers, moments, sound, camera-independent everything. The whole overlay works.</td></tr>
-            <tr><td><b>Basic</b></td><td>…plus <b>🎞️ Replay</b> (saving a clip) and auto-clip.</td></tr>
-            <tr><td><b>Advanced</b></td><td>…plus <b>🎥 Cameras</b> (scene switching) and starting/stopping the replay buffer.</td></tr>
-            <tr><td><b>Full</b></td><td>…plus <b>📡 Go live</b>, end stream, and record.</td></tr>
-          </table>
-          <p>The pad adapts on its own: anything above your level is greyed out with a <span class="t-need">needs advanced</span> tag on the panel, and the note under it tells you which setting to raise. Nothing breaks and nothing nags — a locked feature is a choice you haven't made, not an error.</p>
-          <p class="help-tip">Changing the dropdown reloads the source, which is also how the pad finds out. If the pad still shows the old level, right-click the source → Refresh.</p>
         </div>
       </details>
 
       <details class="panel" id="help-obs-source">
-        <summary>🖥️ OBS browser source settings</summary>
+        <summary>🖥️ OBS setup</summary>
         <div class="panel-body help-body">
-          <p>Sources → <b>+</b> → <b>Browser</b>, name it “Scorebug”.</p>
+          <p>Sources → <b>+</b> → <b>Browser</b>, name it “Scorebug”:</p>
           <ul>
-            <li><b>URL</b> — the link you copied from the game.</li>
-            <li><b>Width 1920 · Height 1080</b>, FPS 30 or 60.</li>
-            <li>Leave <b>Custom CSS</b> alone — the page is already transparent.</li>
-            <li><b>Uncheck “Shutdown source when not visible”</b> — keeps the live connection alive between scenes.</li>
-            <li><b>Page permissions</b> — see “How much OBS access to give” above. Leave it at <b>No access</b> if you only want the scorebug and cards.</li>
-            <li>Check <b>“Control audio via OBS”</b> so overlay sounds reach the stream. In the Audio Mixer, set that source's monitoring to “Monitor and Output” to also hear it in your headphones.</li>
+            <li><b>URL</b> — the overlay link from Setup. <b>Width 1920 · Height 1080</b>, FPS 30.</li>
+            <li>Uncheck <b>“Shutdown source when not visible”</b>.</li>
+            <li>Check <b>“Control audio via OBS”</b> so the sounds reach the stream.</li>
+            <li><b>Page permissions</b> decide how much of OBS the pad may run: <b>No access</b> — everything on the overlay; <b>Basic</b> — plus 🎞️ Replay; <b>Advanced</b> — plus 🎥 Cameras and the replay buffer; <b>Full</b> — plus Go live and Record.</li>
           </ul>
-          <p class="help-tip">Size and place the bug from <b>🎨 Appearance</b> (3×3 position grid + scale) instead of resizing the source — the source should stay 1920×1080.</p>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>📡 Running the stream from the pad</summary>
-        <div class="panel-body help-body">
-          <p>With the overlay source set to <b>Page permissions: “Full access to OBS”</b>, <b>📡 Stream &amp; record</b> on the game screen runs the broadcast:</p>
-          <ul>
-            <li><b>🔴 Go Live / ⏹ End Stream</b> — starts and stops the stream itself.</li>
-            <li><b>⏺ Record / ⏹ Stop Rec</b> — the local recording.</li>
-            <li><b>🎞️ Buffer On / Off</b> — the replay buffer, so you can start it from the field when the pad warns it isn't running. This one only needs “Advanced”.</li>
-          </ul>
-          <p>Each button shows what OBS is actually doing, not what you last pressed — OBS reports every one of these changes, so starting a recording at the machine lights the button here too.</p>
-          <p class="help-tip"><b>Stopping takes two taps.</b> The first arms the button (“Tap again to end”) and it disarms itself after five seconds, so a pocket tap can't end your broadcast. Starting is a single tap.</p>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>🎥 Switching cameras</summary>
-        <div class="panel-body help-body">
-          <p>OBS can't show or hide one source from a web page, so a camera change is a <b>scene</b> change. Build it like this:</p>
-          <ol>
-            <li>One scene per camera — “Center Field”, “Backstop”, and so on, each with just that camera in it.</li>
-            <li>Add the scorebug to the second scene with <b>+ → Browser → “Add Existing” → Scorebug</b>. Do <i>not</i> create a second browser source.</li>
-            <li>On that source, set <b>Page permissions: “Advanced access to OBS”</b> — a step above what clips need.</li>
-          </ol>
-          <p>Then <b>🎥 Cameras</b> on the game screen lists your scenes, highlights the one on air, and cuts to whichever you tap using your configured transition. Switch at the OBS machine instead and the pad follows along.</p>
-          <p class="help-tip"><b>“Add Existing” matters.</b> A duplicate browser source is a second overlay: doubled audio, and one Clip press saving two files. If you ever do need a second copy, add <b>&amp;obs=0</b> to its URL so only one of them talks to OBS.</p>
+          <p>Place and size the bug from <b>Setup → Theme, position &amp; sound</b>, not by resizing the source.</p>
+          <p class="help-tip">For a laptop at the field: 1920×1080 at 30 FPS, the hardware encoder (Apple VT or NVENC), CBR 6000 kbps, and recording set to <b>“Same as stream”</b> so the game isn’t encoded twice. Every extra camera costs more than everything else combined.</p>
         </div>
       </details>
 
       <details class="panel" id="help-replay">
-        <summary>🎞️ Instant replay clips</summary>
-        <div class="panel-body help-body">
-          <p>One-time OBS setup:</p>
-          <ul>
-            <li>Settings → <b>Output</b> → enable the <b>Replay Buffer</b> and set it to <b>90 seconds</b>.</li>
-            <li>Settings → <b>General</b> → Output → <b>“Automatically start replay buffer when streaming”</b>.</li>
-            <li>The buffer has to be <i>started</i>, not just enabled — the pad warns you if it isn't.</li>
-          </ul>
-          <p>Then, during the game:</p>
-          <ul>
-            <li><b>🎞️ Replay</b> on the bottom bar saves the buffer right now. A message says what actually happened — clip saved, buffer not running, or permissions too low — and the drawer's OBS tab keeps the status line.</li>
-            <li><b>Auto-clip big plays</b> clips home runs, walk-offs, double plays, big plays, touchdowns, and goals on its own.</li>
-            <li>Auto-clips <b>wait out the celebration</b> before saving (40s on a home run), because the buffer only records backward — that's how the clip gets the swing <i>and</i> the mob at the plate. Tap Replay during the countdown to take it early.</li>
-            <li>Clips land in the same folder as your OBS recordings.</li>
-          </ul>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>🎬 Cards &amp; full-screen takeovers</summary>
-        <div class="panel-body help-body">
-          <p>Everything under <b>🎬 On Air</b> on the bottom bar stays up until you tap it again, or tap <b>✕</b> on the red chip in the header.</p>
-          <ul>
-            <li><b>Corner cards</b> float over the video: Matchup, Final, Sponsor, and live Batting order / Defense. Who is due up is on Mid-Inning.</li>
-            <li><b>Full-screen takeovers</b> hide the scorebug and cover the camera: <b>🕐 Starting Soon</b> (countdown to first pitch — set <i>First pitch</i> in Setup), <b>🔁 Mid-Inning</b> (the scoreboard during the change, and it stays live), and <b>🏁 Final (full)</b>.</li>
-            <li>Your camera keeps running behind a takeover, so crowd noise carries through and you never have to switch scenes in OBS.</li>
-          </ul>
-        </div>
-      </details>
-
-      <details class="panel">
-        <summary>⚾ Running the game</summary>
+        <summary>🎞️ Replay &amp; cameras</summary>
         <div class="panel-body help-body">
           <ul>
-            <li>The main pad is game flow — balls, strikes, fouls, outs, hits. Runs come from the plays that score them. Runs, strikeouts, and walks fire their own stinger. The third out ends the half on its own; <b>End half-inning</b> is in the Situation sheet for the rare one that ends another way.</li>
-            <li><b>IN PLAY</b> asks what happened: a hit, an error or fielder's choice, or the kind of out. For outs and errors, tap who fielded it — SS on a ground out records <b>Groundout 6-3</b>, CF on a fly out <b>Flyout F8</b>. With runners on, the last step asks where everyone ended up, already filled in with the likely result. With nobody on, it skips that step. <b>Just an out</b> skips all of it.</li>
-            <li>Missed that the catcher dropped strike three? The strikeout message has <b>Dropped 3rd?</b> for a few seconds.</li>
-            <li>The <b>diamond</b> on the pad shows who's on. Tap a runner for a steal, caught stealing, pickoff, or a wild pitch / passed ball. The count and the batter stay. <b>Batter’s interference</b> is there too: the batter is out and runners go back — unless it was a play at home with fewer than 2 outs, when the runner is out and the batter stays up.</li>
-            <li><b>MORE</b> holds the rare ways to first base: hit by pitch, catcher’s interference, intentional walk — and <b>Balk</b>, which moves every runner up (with nobody on, it counts as a ball).</li>
-            <li>A run with no play behind it goes in with <b>+1 run</b> in the Situation sheet.</li>
-            <li><b>↶ Undo</b> reverses the last action.</li>
-            <li><b>✏️ Manual adjust</b> is for corrections when the board drifts from the field.</li>
-            <li><b>Moments</b> in <b>🎬 On Air</b> fire the big animations with sound. <b>Rally</b> and <b>🎺 Charge!</b> are there for atmosphere.</li>
-            <li>Tap the batter line under the count for the <b>Lineup</b> sheet: number, name and position on every row, and saved teams to reuse next game.</li>
+            <li><b>Replay</b>: in OBS, Settings → Output → enable the <b>Replay Buffer</b> at 90 seconds, and Settings → General → start it automatically when streaming. <b>🎞️ Replay</b> on the bottom bar saves a clip; <b>Auto-clip big plays</b> (Setup → OBS) waits out the celebration first.</li>
+            <li><b>Cameras</b>: one OBS scene per camera. Add the scorebug to each with <b>+ → Browser → “Add Existing”</b> — never a second browser source. <b>🎥 Cameras</b> on the bottom bar then cuts between them.</li>
+            <li>No OBS? Turn off <b>Show OBS buttons</b> in Setup → OBS and those buttons get out of the way.</li>
           </ul>
         </div>
       </details>
 
       <details class="panel" id="help-trouble">
-        <summary>🔧 Troubleshooting</summary>
+        <summary>🔧 Troubleshooting &amp; privacy</summary>
         <div class="panel-body help-body">
           <ul>
-            <li><b>Overlay looks stale after an update</b> — right-click the source → Refresh. OBS caches page files hard.</li>
+            <li><b>Overlay looks stale after an update</b> — right-click the source → Refresh. OBS caches hard.</li>
             <li><b>Only part of the bug shows</b> — the source has to be 1920×1080.</li>
-            <li><b>No overlay sound on the stream</b> — check “Control audio via OBS” on the source.</li>
-            <li><b>“Replay buffer isn't running”</b> — start it in the main OBS window, below Start Streaming.</li>
-            <li><b>Nothing is updating</b> — watch the dot in the game header: green is synced, red is reconnecting. It heals itself when the network comes back, and the overlay never blanks out in the meantime.</li>
+            <li><b>No sound on the stream</b> — check “Control audio via OBS” on the source.</li>
+            <li><b>Nothing is updating</b> — the dot in the game header is green when synced, red while reconnecting. It heals itself, and the overlay never blanks.</li>
+            <li><b>The overlay link is a password.</b> It can read your lineups. If it leaks, <b>🔑 Rotate link</b> on the Overlay link screen kills every old link, and you paste the new one into OBS. The <b>recap link</b> is safe to share: score and line score only.</li>
           </ul>
         </div>
       </details>
-      </div><!-- /#help-list -->
     </div>
 
     <!-- Support. One home, at the bottom of the lobby where nothing live is
@@ -335,7 +179,6 @@
       <b id="gm-num" class="gm-num sport-only" data-sport="baseball"></b>
       <span class="gm-who"><span id="gm-hitter" class="gm-hitter"></span><span id="gm-vs" class="gm-vs"></span></span>
       <span class="gm-p sport-only" data-sport="baseball"><small>PITCHER</small><b id="gm-pitch"></b></span>
-      <span id="g-batting" class="tag">Batting: —</span>
     </button>
 
     <!-- What the last tap recorded, in words, until the next one. You look away
@@ -700,7 +543,7 @@
 
       <p class="air-why sport-only" data-sport="baseball"><span class="sugg-dot" aria-hidden="true"></span>Outlined = good right now <em id="air-why"></em></p>
 
-      <label class="air-text">Card text <em>optional — type before tapping a card</em>
+      <label class="air-text">Card text <em>optional — goes on the next card you raise</em>
         <input id="card-text" placeholder="Sponsor / matchup subtitle…" />
       </label>
 
@@ -710,7 +553,6 @@
         <button id="card-def-auto" class="fxbtn sport-only" data-sport="baseball" type="button" data-card="defense">Defense</button>
         <button class="fxbtn" type="button" data-card="matchup">Matchup</button>
         <button class="fxbtn" type="button" data-card="sponsor">Sponsor</button>
-        <button class="fxbtn" type="button" data-card="final">Final score</button>
       </div>
 
       <span class="sublabel">Full screen <em>hides the scorebug</em></span>
@@ -720,10 +562,13 @@
         <button class="fxbtn takeover" type="button" data-card="finalfull">Final screen</button>
       </div>
 
+      <details class="sit-more air-delay" id="air-delay">
+        <summary>Delays &amp; announcements <em id="air-delay-state"></em></summary>
+        <div class="sit-more-body">
       <!-- Game paused: the weather-stop takeover. Pick the reason, set how long
            the countdown runs, Show. While it is up the minutes field is the
            time left, so any edit + Update moves the restart time. -->
-      <span class="sublabel">Game paused <em id="pz-state">off</em></span>
+      <span class="sublabel">Game paused card <em id="pz-state">off</em></span>
       <div class="pz-box">
         <div class="pz-reasons" role="group" aria-label="Reason">
           <button type="button" class="pz-r" data-reason="lightning" data-mins="30" aria-pressed="true">⚡ Lightning</button>
@@ -768,20 +613,19 @@
         </div>
       </div>
 
-      <span class="sublabel">Moments <em>play once</em></span>
+        </div>
+      </details>
+
+      <span class="sublabel">Moments <em>strikeouts, walks, hits and runs fire their own</em></span>
       <div class="fx-grid">
-        <button id="fx-k" class="fxbtn moment sport-only" data-sport="baseball" type="button">K</button>
-        <button id="fx-klook" class="fxbtn moment sport-only" data-sport="baseball" type="button">ꓘ Looking</button>
-        <button id="fx-dp" class="fxbtn moment sport-only" data-sport="baseball" type="button">Double Play</button>
-        <button id="fx-sb" class="fxbtn moment sport-only" data-sport="baseball" type="button">Stolen Base</button>
         <button id="fx-walkoff" class="fxbtn moment sport-only" data-sport="baseball" type="button">Walk-Off</button>
         <button id="fx-turnover" class="fxbtn moment sport-only" data-sport="football" type="button" hidden>Turnover</button>
         <button id="fx-bigplay" class="fxbtn moment sport-only" data-sport="football" type="button" hidden>Big Play</button>
         <button id="fx-bigplay-bk" class="fxbtn moment sport-only" data-sport="basketball" type="button" hidden>🏀 Big Play</button>
         <button id="fx-charge" class="fxbtn moment charge" type="button">🎺 Charge!</button>
+        <button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button>
       </div>
-      <span class="sublabel">Mode</span>
-      <div class="fx-grid"><button id="fx-rally" class="fxbtn rally-toggle" type="button">Rally: OFF</button></div>
+      <p class="hint">Rally puts a glow around the scorebug until you turn it off.</p>
 
     </div>
   </div>
@@ -917,43 +761,6 @@
     </div>
   </div>
 
-  <!-- WALK SHEET -->
-  <div id="walk-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="walk-title" tabindex="-1" hidden>
-    <div class="sheet-card confirm-card">
-      <span class="grab"></span>
-      <h3 id="walk-title">Walk</h3>
-      <p class="confirm-copy">Forced advance is pre-filled. Tap a base to override, then set the runs that scored.</p>
-      <div class="walk-bases">
-        <button id="w1" class="base-btn">1B</button>
-        <button id="w2" class="base-btn">2B</button>
-        <button id="w3" class="base-btn">3B</button>
-      </div>
-      <div class="runs-stepper">
-        <button id="w-runs-dn" class="step">–</button>
-        <b id="w-runs">0</b>
-        <button id="w-runs-up" class="step">+</button>
-      </div>
-      <button id="walk-confirm" class="confirm-go walk">Confirm walk</button>
-      <button id="walk-cancel" class="ghost">Cancel</button>
-    </div>
-  </div>
-
-  <!-- HOME RUN SHEET -->
-  <div id="hr-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="hr-title" tabindex="-1" hidden>
-    <div class="sheet-card confirm-card">
-      <span class="grab"></span>
-      <h3 id="hr-title">Home run</h3>
-      <p class="confirm-copy" id="hr-copy">Batter plus every runner scores and the bases clear. Adjust if the total is wrong.</p>
-      <div class="runs-stepper big">
-        <button id="hr-runs-dn" class="step">–</button>
-        <b id="hr-runs">1</b>
-        <button id="hr-runs-up" class="step">+</button>
-      </div>
-      <button id="hr-confirm" class="confirm-go">💥 Confirm home run</button>
-      <button id="hr-cancel" class="ghost">Cancel</button>
-    </div>
-  </div>
-
   <!-- SETUP SCREEN -->
   <!-- Was a slide-up drawer with tabs, one of which held a single button that
        opened a modal sheet with its own Close/Save footer. Now it is a screen
@@ -967,6 +774,16 @@
     </div>
 
     <section class="sv-pane" data-pane="home" data-title="Setup">
+      <div class="set-sec">
+        <span class="set-head">Overlay</span>
+        <div class="set-card">
+          <button class="set-row" type="button" data-go="link">
+            <span class="set-lab">Overlay link for OBS<span class="set-sub" id="sv-link-sub">Paste it into OBS once — it follows the game you open</span></span>
+            <span class="set-go">›</span>
+          </button>
+        </div>
+      </div>
+
       <div class="set-sec">
         <span class="set-head">Teams</span>
         <div class="set-card">
@@ -997,19 +814,23 @@
       </div>
 
       <div class="set-sec">
-        <span class="set-head">Look</span>
+        <span class="set-head">Look &amp; sound</span>
         <div class="set-card">
-          <button class="set-row" type="button" id="sv-look">
-            <span class="set-lab">Theme &amp; position</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
+          <button class="set-row" type="button" data-go="look">
+            <span class="set-lab">Theme, position &amp; sound</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
+          </button>
+          <button class="set-row" type="button" data-go="sponsors">
+            <span class="set-lab">Sponsors</span><span class="set-val" id="sv-sponsors-val">—</span><span class="set-go">›</span>
           </button>
         </div>
+        <p class="set-note">New games start with this game's look, sound, sponsors and overlay switches.</p>
       </div>
 
       <div class="set-sec">
         <span class="set-head">OBS</span>
         <div class="set-card">
-          <button class="set-row" type="button" id="sv-obs">
-            <span class="set-lab">Clips &amp; cameras</span><span class="set-tag" id="sv-obs-tag">not connected</span><span class="set-go">›</span>
+          <button class="set-row" type="button" data-go="obs">
+            <span class="set-lab">Replay, stream &amp; record</span><span class="set-tag" id="sv-obs-tag">not connected</span><span class="set-go">›</span>
           </button>
         </div>
       </div>
@@ -1196,97 +1017,42 @@
       </div>
     </section>
 
-    <section class="sv-pane" data-pane="look" data-title="Look" hidden>
+    <section class="sv-pane" data-pane="look" data-title="Look &amp; sound" hidden>
       <div class="set-sec">
+        <span class="set-head">Theme</span>
         <div class="set-card">
-          <button class="set-row" type="button" data-go="look-0"><span class="set-lab">🎨 Appearance</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="look-1"><span class="set-lab">🔊 Sound</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="look-2"><span class="set-lab">💵 Sponsors</span><span class="set-go">›</span></button>
+          <label class="set-row field"><span class="set-lab">Theme</span><select class="set-input" id="theme-sel">
+                  <optgroup label="Your own">
+                    <option value="custom">✦ Custom (your colours)</option>
+                  </optgroup>
+                  <optgroup label="Clean">
+                    <option value="nightgame">Midnight</option>
+                    <option value="espn">Broadcast Minimal</option>
+                    <option value="green">Classic Green</option>
+                    <option value="carbon">Carbon</option>
+                    <option value="royal">Royal</option>
+                    <option value="gold">Gold</option>
+                    <option value="ice">Ice (light)</option>
+                  </optgroup>
+                  <optgroup label="Bold">
+                    <option value="neon">Neon</option>
+                    <option value="volt">Volt (electric)</option>
+                    <option value="blueprint">Blueprint</option>
+                    <option value="foil">Holo Foil (refractor)</option>
+                    <option value="jumbotron">Jumbotron (LED)</option>
+                  </optgroup>
+                  <optgroup label="Throwback">
+                    <option value="retro">Retro 8-bit</option>
+                    <option value="chalkboard">Chalkboard (sandlot)</option>
+                    <option value="americana">Americana (bunting)</option>
+                  </optgroup>
+                </select></label>
+          <button class="set-row" type="button" id="sv-custom" data-go="look-custom" hidden><span class="set-lab">Custom colours</span><span class="set-go">›</span></button>
         </div>
       </div>
 
-
-            
-            
-            <!-- Set once before the game, so it lives with the rest of the look;
-                 raising a sponsor card is On Air's job. -->
-    </section>
-
-    <section class="sv-pane" data-pane="look-0" data-title="Appearance" hidden>
-      <div class="set-sec">
-        <div class="set-card">
-          <button class="set-row" type="button" data-go="look-0-0"><span class="set-lab">Saved looks</span><span class="set-val" id="sv-presets-val">—</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="look-0-1"><span class="set-lab">Theme</span><span class="set-val" id="sv-theme-val">—</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="look-0-2"><span class="set-lab">Position &amp; size</span><span class="set-val" id="sv-pos-val">—</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="look-0-3"><span class="set-lab">Custom theme<span class="set-sub">Only shows on the Custom theme</span></span><span class="set-go">›</span></button>
-        </div>
-      </div>
-    </section>
-
-    <section class="sv-pane" data-pane="look-0-0" data-title="Saved looks" hidden>
-      <div class="set-sec">
-        <span class="set-head">A whole look, under a name</span>
-
-                <div class="set-card">
-                  <label class="set-row field"><span class="set-lab">Preset</span><select class="set-input" id="preset-sel"><option value="">— none saved —</option></select></label>
-                  <button id="preset-apply" class="fxbtn">Apply</button>
-                </div>
-                <input id="preset-name" placeholder="Name this look…" />
-                <div class="shared-fx">
-                  <button id="preset-save" class="fxbtn">💾 Save current</button>
-                  <button id="preset-del" class="fxbtn cardclear">Delete</button>
-                </div>
-        <p class="set-note">A look is the theme, style, position, scale, sound and every customization — saved together and applied to any game in one tap.</p>
-      </div>
-    </section>
-
-    <section class="sv-pane" data-pane="look-0-1" data-title="Theme" hidden>
-      <div class="set-sec">
-<div class="set-card">
-                  <label class="set-row field"><span class="set-lab">Theme</span><select class="set-input" id="theme-sel">
-                      <option value="custom">✦ Custom (your colors)</option>
-                      <option value="nightgame">Midnight</option>
-                      <option value="espn">Broadcast Minimal</option>
-                      <option value="retro">Retro 8-bit</option>
-                      <option value="green">Classic Green</option>
-                      <option value="neon">Neon</option>
-                      <option value="sunset">Sunset</option>
-                      <option value="ice">Ice (light)</option>
-                      <option value="mono">Newsprint</option>
-                      <option value="gold">Gold</option>
-                      <option value="carbon">Carbon</option>
-                      <option value="vapor">Vaporwave</option>
-                      <option value="royal">Royal</option>
-                      <option value="volt">Volt (electric)</option>
-                      <option value="ember">Ember (molten)</option>
-                      <option value="blueprint">Blueprint</option>
-                      <option value="bubblegum">Bubblegum</option>
-                      <option value="cosmic">Cosmic</option>
-                      <option value="sunrise">Sunrise (light)</option>
-                      <option value="jumbotron">Jumbotron (LED)</option>
-                      <option value="crt">CRT (amber)</option>
-                      <option value="neonsign">Neon Sign</option>
-                      <option value="chrome">Chrome (metal)</option>
-                      <option value="ticker">Ticker (thin)</option>
-                      <option value="outline">Outline (frosted)</option>
-                      <option value="stack">Stack (modules)</option>
-                      <option value="chalkboard">Chalkboard (sandlot)</option>
-                      <option value="monster">Green Monster (painted)</option>
-                      <option value="marquee">Marquee (bulbs)</option>
-                      <option value="comic">Comic (pop art)</option>
-                      <option value="americana">Americana (bunting)</option>
-                      <option value="foil">Holo Foil (refractor)</option>
-                      <option value="dugout">Dugout (woodgrain)</option>
-                    </select>
-                  </label>
-                </div>
-      </div>
-    </section>
-
-    <section class="sv-pane" data-pane="look-0-2" data-title="Position &amp; size" hidden>
       <div class="set-sec">
         <span class="set-head">Where the bug sits on the 1080p frame</span>
-
                 <div class="pos-row">
                 <div class="pos-grid" id="pos-grid">
                   <button data-pos="top-left" title="Top-left">↖</button>
@@ -1307,123 +1073,61 @@
                 </div>
                 <label class="set-row"><span class="set-lab">Scale</span><input id="scale-sel" type="range" min="0.6" max="1.5" step="0.05" /><b class="set-val" id="scale-val">1.0×</b></label>
       </div>
+
+      <div class="set-sec">
+        <span class="set-head">Sound</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Pack</span><select class="set-input" id="sound-pack">
+              <option value="bigleague">Big League (organ)</option>
+              <option value="organ">Pipe Organ</option>
+              <option value="modern">Modern (hits/whooshes)</option>
+              <option value="sandlot">Sandlot (playful)</option>
+              <option value="airhorn">Stadium (air horns)</option>
+            </select>
+          </label>
+          <label class="set-row"><span class="set-lab">Volume</span><input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
+          <div class="set-row"><span class="set-lab">Everything off</span><button id="mute-btn" class="fxbtn mute">Mute</button></div>
+        </div>
+        <p class="set-note">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
+      </div>
     </section>
 
-    <section class="sv-pane" data-pane="look-0-3" data-title="Custom theme" hidden>
-
-                  
-                <p class="set-note">These edits show up only on the <b>Custom</b> theme — pick it under Look &amp; position → Theme. The built-in themes stay exactly as designed.</p>
-
-                <span class="set-head">Row fills</span>
-                <div class="fill-row"><span class="fill-label">Away (row 1)</span>
-                  <select id="cust-awaytype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-awayc1" type="color" /><input id="cust-awayc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Home (row 2)</span>
-                  <select id="cust-hometype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-homec1" type="color" /><input id="cust-homec2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Details (bottom)</span>
-                  <select id="cust-sittype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-sitc1" type="color" /><input id="cust-sitc2" type="color" />
-                </div>
-                <div class="fill-row"><span class="fill-label">Panel (behind)</span>
-                  <select id="cust-paneltype"><option value="">—</option><option value="solid">Solid</option><option value="gradient">Grad</option></select>
-                  <input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" />
-                </div>
-                <label class="set-row"><span class="set-lab">Gradient angle</span><input id="cust-angle" type="range" min="0" max="360" step="15" /><b class="set-val" id="cust-angle-val">180°</b></label>
-
-                <span class="set-head">Text &amp; accents</span>
-                <div class="set-card">
-                  <div class="set-row"><span class="set-lab">Text</span><input id="cust-text" type="color" /></div>
-                  <div class="set-row"><span class="set-lab">Accent</span><input id="cust-accent" type="color" /></div>
-                  <div class="set-row"><span class="set-lab">Highlight</span><input id="cust-steel" type="color" /></div>
-                  <div class="set-row"><span class="set-lab">Border</span><input id="cust-line" type="color" /></div>
-                </div>
-
-                <span class="set-head">Type &amp; layout</span>
-                <div class="set-card">
-                  <label class="set-row field"><span class="set-lab">Font</span><select class="set-input" id="cust-font">
-                      <option value="">Default</option>
-                      <option value="condensed">Condensed</option>
-                      <option value="clean">Clean sans</option>
-                      <option value="mono">Monospace</option>
-                      <option value="serif">Serif</option>
-                      <option value="system">System</option>
-                    </select>
-                  </label>
-                  <label class="set-row field"><span class="set-lab">Corners</span><select class="set-input" id="cust-radius">
-                      <option value="">Default</option>
-                      <option value="16">Round</option>
-                      <option value="8">Soft</option>
-                      <option value="0">Sharp</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="set-card">
-                  <label class="set-row field"><span class="set-lab">Logo size</span><select class="set-input" id="cust-logosize">
-                      <option value="">Default</option>
-                      <option value="sm">Small</option>
-                      <option value="lg">Large</option>
-                    </select>
-                  </label>
-                  <label class="set-row field"><span class="set-lab">Border</span><select class="set-input" id="cust-border">
-                      <option value="">Default</option>
-                      <option value="0">None</option>
-                      <option value="2">Thick</option>
-                      <option value="3">Bold</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="toggles">
-                  <div class="set-row"><span class="set-lab">Team color bars</span><label class="set-switch"><input type="checkbox" id="cust-teambars" /><i></i></label></div>
-                  <div class="set-row"><span class="set-lab">Team-color fill</span><label class="set-switch"><input type="checkbox" id="cust-teamfill" /><i></i></label></div>
-                  <div class="set-row"><span class="set-lab">Hide logos</span><label class="set-switch"><input type="checkbox" id="cust-logos" /><i></i></label></div>
-                  <div class="set-row"><span class="set-lab">Hide detail line</span><label class="set-switch"><input type="checkbox" id="cust-detail" /><i></i></label></div>
-                  <div class="set-row"><span class="set-lab">No shadow</span><label class="set-switch"><input type="checkbox" id="cust-shadow" /><i></i></label></div>
-                  <div class="set-row"><span class="set-lab">Uppercase</span><label class="set-switch"><input type="checkbox" id="cust-uppercase" /><i></i></label></div>
-                </div>
-
-                    <button id="cust-reset" class="fxbtn">Reset customizations</button>
-
-
-        </section>
-
-<section class="sv-pane" data-pane="look-1" data-title="Sound" hidden>
-
-              <div class="set-sec">
-                <div class="set-card">
-                  <label class="set-row field"><span class="set-lab">Pack</span><select class="set-input" id="sound-pack">
-                      <option value="bigleague">Big League (organ)</option>
-                      <option value="modern">Modern (hits/whooshes)</option>
-                      <option value="sandlot">Sandlot (playful)</option>
-                      <option value="arcade">Arcade (chiptune)</option>
-                      <option value="cinematic">Cinematic (orchestral)</option>
-                      <option value="airhorn">Stadium (air horns)</option>
-                      <option value="chill">Chill (bells)</option>
-                      <option value="organ">Pipe Organ</option>
-                      <option value="radio">Vintage Radio</option>
-                      <option value="edm">EDM (drops)</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-
-              <div class="set-sec">
-                <span class="set-head">Volume</span>
-                <div class="set-card">
-                  <label class="set-row"><span class="set-lab">Master</span><input id="vol-master" type="range" min="0" max="1" step="0.05" /></label>
-                  <label class="set-row"><span class="set-lab">Moments</span><input id="vol-moments" type="range" min="0" max="1" step="0.05" /></label>
-                  <label class="set-row"><span class="set-lab">Organ</span><input id="vol-organ" type="range" min="0" max="1" step="0.05" /></label>
-                  <div class="set-row"><span class="set-lab">Everything off</span><button id="mute-btn" class="fxbtn mute">Mute</button></div>
-                </div>
-                <p class="set-note">Sound plays on the overlay so OBS captures it. When testing in a browser, click the overlay once to unlock audio.</p>
-              </div>
+    <section class="sv-pane" data-pane="look-custom" data-title="Custom colours" hidden>
+      <div class="set-sec">
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Background</span>
+            <select class="set-input" id="cust-paneltype"><option value="">Theme default</option><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+          </label>
+          <div class="set-row"><span class="set-lab">Colours</span><input id="cust-panelc1" type="color" /><input id="cust-panelc2" type="color" /></div>
+          <div class="set-row"><span class="set-lab">Text</span><input id="cust-text" type="color" /></div>
+          <div class="set-row"><span class="set-lab">Accent</span><input id="cust-accent" type="color" /></div>
+          <div class="set-row"><span class="set-lab">Fill team rows with team colours</span><label class="set-switch"><input type="checkbox" id="cust-teamfill" /><i></i></label></div>
+        </div>
+      </div>
+      <div class="set-sec">
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Font</span><select class="set-input" id="cust-font">
+              <option value="">Default</option>
+              <option value="condensed">Condensed</option>
+              <option value="clean">Clean sans</option>
+              <option value="mono">Monospace</option>
+              <option value="serif">Serif</option>
+            </select>
+          </label>
+          <label class="set-row field"><span class="set-lab">Corners</span><select class="set-input" id="cust-radius">
+              <option value="">Default</option>
+              <option value="16">Round</option>
+              <option value="8">Soft</option>
+              <option value="0">Sharp</option>
+            </select>
+          </label>
+        </div>
+        <button id="cust-reset" class="fxbtn">Reset custom colours</button>
+      </div>
     </section>
 
-    <section class="sv-pane" data-pane="look-2" data-title="Sponsors" hidden>
-
-              <div class="set-sec">
+    <section class="sv-pane" data-pane="sponsors" data-title="Sponsors" hidden>
+      <div class="set-sec">
                 <div id="sponsor-list"></div>
                 <button id="sponsor-add" class="fxbtn">+ Add sponsor</button>
                 <label class="sp-toggle"><input type="checkbox" id="sponsor-rotate" /> Rotate on the overlay during play</label>
@@ -1435,72 +1139,51 @@
               </div>
     </section>
 
-
     <section class="sv-pane" data-pane="obs" data-title="OBS" hidden>
       <div class="set-sec">
         <div class="set-card">
-          <button class="set-row" type="button" data-go="obs-0"><span class="set-lab">🎥 Cameras</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="obs-1"><span class="set-lab">📡 Stream &amp; record</span><span class="set-go">›</span></button>
-          <button class="set-row" type="button" data-go="obs-2"><span class="set-lab">🔗 Overlay link &amp; practice</span><span class="set-go">›</span></button>
+          <div class="set-row"><span class="set-lab">Show OBS buttons on this device<span class="set-sub">Replay and Cameras on the bottom bar</span></span>
+            <label class="set-switch"><input type="checkbox" id="obs-ui" checked /><i></i></label></div>
         </div>
       </div>
-
-
-            <div class="pad-opt">
-              <span class="pad-opt-lab">🎛️ OBS controls</span>
-              <label class="switch" title="Hide the OBS panels if you don't use OBS">
-                <input type="checkbox" id="obs-ui" checked />
-                <span class="track"><span class="knob"></span></span>
-              </label>
-            </div>
-            <div class="obs-only">
-              <div class="obs-tier">
-                <span class="ot-lab">Page permissions: <b id="obs-tier">—</b></span>
-                <button id="obs-tier-help" class="ghost small">What this unlocks</button>
-              </div>
-              <p id="obs-tier-note" class="hint" hidden></p>
-              <span class="set-head">Instant replay</span>
-              <p class="set-note">Clip with <b>🎞️ Replay</b> on the bottom bar. The line below says whether OBS is ready for it.</p>
-              <div class="replay-row">
-                <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
-                <p id="replay-hint" class="hint replay-hint" hidden></p>
-              </div>
-            </div>
-            
-            
-            
-            <p class="set-note">Keyboard (desktop): B S F O = ball/strike/foul/out · 1 2 3 H = 1B/2B/3B/HR · R run · E error · A advance · C clear · N next batter · U undo</p>
+      <div class="obs-only">
+        <div class="set-sec">
+          <div class="obs-tier">
+            <span class="ot-lab">OBS page permissions: <b id="obs-tier">—</b></span>
+            <button id="obs-tier-help" class="ghost small">What this unlocks</button>
+          </div>
+          <p id="obs-tier-note" class="hint" hidden></p>
+        </div>
+        <div class="set-sec">
+          <span class="set-head">Instant replay</span>
+          <div class="replay-row">
+            <label class="replay-auto"><span class="switch"><input type="checkbox" id="replay-auto" /><span class="track"><span class="knob"></span></span></span> Auto-clip big plays</label>
+            <p id="replay-hint" class="hint replay-hint" hidden></p>
+          </div>
+        </div>
+        <div class="set-sec">
+          <span class="set-head">Stream &amp; record</span>
+          <div class="obs-row">
+            <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
+            <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
+            <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
+          </div>
+          <p id="obs-hint" class="hint"></p>
+        </div>
+      </div>
+      <p class="set-note">Keyboard (desktop): B S F = ball/strike/foul · I = in play · 1 2 3 H = 1B/2B/3B/HR · E error · M more · N runners · A advance all · C clear bases · U undo</p>
     </section>
 
-    <section class="sv-pane" data-pane="obs-0" data-title="Cameras" hidden>
-
-              <div class="set-sec">
-                <div id="scene-list" class="scene-list"></div>
-                <p id="scene-hint" class="hint"></p>
-              </div>
-    </section>
-
-    <section class="sv-pane" data-pane="obs-1" data-title="Stream &amp; record" hidden>
-
-              <div class="set-sec">
-                <div class="obs-row">
-                  <button id="obs-stream" class="fxbtn obsbtn">🔴 Go Live</button>
-                  <button id="obs-record" class="fxbtn obsbtn">⏺ Record</button>
-                  <button id="obs-buffer" class="fxbtn obsbtn">🎞️ Buffer</button>
-                </div>
-                <p id="obs-hint" class="hint"></p>
-              </div>
-    </section>
-
-    <section class="sv-pane" data-pane="obs-2" data-title="Overlay link &amp; practice" hidden>
-
-              <div class="set-sec">
+    <section class="sv-pane" data-pane="link" data-title="Overlay link" hidden>
+      <div class="set-sec">
                 <div class="urlbar">
                   <input id="overlay-url" readonly />
                   <button id="copy-url-btn" class="ghost small">Copy</button>
                   <button id="open-url-btn" class="ghost small">Open ▸</button>
                 </div>
-                <p class="set-note">Add this URL to OBS as a Browser Source (1920×1080). It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <p class="set-note">Add this URL to OBS once, as a Browser Source (1920×1080). It is yours, not this game's: it shows whichever game you open here, so it never needs pasting again. It carries a key that lets the overlay read your lineups — treat it like a password.</p>
+                <p class="set-note" id="link-note" aria-live="polite"></p>
+                <button id="link-here" class="fxbtn" type="button" hidden>📺 Show this game on the overlay</button>
                 <button id="rotate-url-btn" class="fxbtn cardclear">🔑 Rotate link (revokes old ones)</button>
 
                 <span class="set-head">Share the recap</span>
@@ -1531,18 +1214,10 @@
           <option value="basketball">Basketball</option>
         </select>
       </label>
-      <label class="sel" style="margin-top:12px">Scorebug style
-        <select id="ng-style">
-          <option value="scorebox">Scorebox (full broadcast)</option>
-          <option value="bar">Bar (wide strip)</option>
-          <option value="bug">Bug (stacked)</option>
-          <option value="minimal">Minimal (slim)</option>
-          <option value="lowerthird">Lower-third</option>
-        </select>
-      </label>
-      <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Game setup</em>
+      <label class="sel" style="margin-top:12px">Start time <em class="opt">optional — change it later in Setup</em>
         <input id="ng-startsat" type="datetime-local" />
       </label>
+      <p class="set-note">The look, sound, sponsors and overlay switches come from your last game. Change any of them in Setup.</p>
       <div class="sheet-actions">
         <button id="ng-cancel" class="ghost">Cancel</button>
         <button id="ng-create" class="primary">Create Game</button>

@@ -1,10 +1,9 @@
 import { supabase, db } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USER_EMAIL_DOMAIN } from './config.js';
 import * as L from './logic.js';
-import * as F from './football.js';
 import * as S from './soccer.js';
-import * as V from './volleyball.js';
-import * as B from './basketball.js';
+import { createSports } from './pads.js';
+import { createObs } from './obs-pad.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
@@ -74,12 +73,12 @@ async function refreshSession() {
       show('game'); renderGame();
       await subscribe(game.id);
       queue.drain();
-      await loadPresets(); await loadTeams();
+      await loadTeams();
       return;
     }
     resumeGameId = null;
     // Paint the lobby before waiting on the lists, as it always has.
-    show('lobby'); await loadGames(); await loadPresets(); await loadTeams();
+    show('lobby'); await loadGames(); await loadTeams();
   }
   else { show('auth'); if ($('username').value) $('pin').focus(); } // returning user lands on the PIN
 }
@@ -219,14 +218,8 @@ function timeAgo(iso) {
 // "live" tells you nothing when you're picking between two games; where the game
 // actually stands does.
 function situationLabel(g) {  // ordinal() is defined further down; both run after load
-  const st = g.state || {};
-  switch (g.sport || 'baseball') {
-    case 'football': return `Q${st.quarter || 1}`;
-    case 'basketball': return `Q${st.period || 1}`;
-    case 'soccer': return (st.half || 1) === 1 ? '1st half' : '2nd half';
-    case 'volleyball': return `Set ${st.set || 1}`;
-    default: return `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
-  }
+  const sp = SPORTS[g.sport];
+  return sp ? sp.lobby(g.state || {}) : `${g.half === 'bottom' ? 'Bot' : 'Top'} ${ordinal(g.inning || 1)}`;
 }
 // Nothing moves a game out of 'live' (there is no end-game step), so the status
 // alone would badge every game ever made. LIVE means touched in the last 3 hours.
@@ -291,40 +284,33 @@ function gameRow(g) {
   return open;
 }
 
-// Help: four shortcut tiles over the same accordion, with the other ten folded
-// away. Opening a tile reveals the list so "back" is just scrolling.
-function openHelp(id) {
-  $('help-list').hidden = false;
-  $('help-all').setAttribute('aria-expanded', 'true');
-  const d = $(id);
-  if (!d) return;
-  d.open = true;
-  d.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-$('help-all').onclick = () => {
-  const list = $('help-list');
-  list.hidden = !list.hidden;
-  $('help-all').setAttribute('aria-expanded', String(!list.hidden));
-  $('help-all').textContent = list.hidden ? 'All 14 help topics ▸' : 'Hide help topics ▾';
-};
-document.querySelector('.help-tiles').addEventListener('click', (e) => {
-  const t = e.target.closest('.help-tile');
-  if (t) openHelp(t.dataset.help);
-});
-
-// New game: pick sport + style first, then create with the right initial state.
+// New game: pick the sport, then create with the right initial state; the rest
+// comes from your last game.
 $('new-game-btn').addEventListener('click', () => { $('ng-startsat').value = ''; openSheet('newgame-sheet'); });
 $('ng-cancel').onclick = () => closeSheet('newgame-sheet');
+// What a new game takes from your last one: how the broadcast looks and
+// sounds, and the house rules. Not the teams (home and away change every game;
+// saved teams load them in one pick) and not the venue (away games move it).
+const CARRY = ['style', 'theme', 'scorebug_position', 'scorebug_scale', 'sound_pack', 'audio', 'look', 'sponsors',
+  'show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule', 'auto_clip'];
+const CARRY_SAME_SPORT = ['regulation_innings', 'time_limit_seconds'];
+async function lastGameSettings(sport) {
+  const { data } = await db.from('games').select([...CARRY, ...CARRY_SAME_SPORT, 'sport'].join(','))
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (!data) return { style: 'scorebox' };
+  const out = {};
+  for (const k of CARRY) if (data[k] != null) out[k] = data[k];
+  if (data.sport === sport) for (const k of CARRY_SAME_SPORT) if (data[k] != null) out[k] = data[k];
+  return out;
+}
+const sportState = (sport) => (SPORTS[sport] ? SPORTS[sport].init() : null);
 $('ng-create').onclick = async () => {
-  const sport = $('ng-sport').value, style = $('ng-style').value;
+  const sport = $('ng-sport').value;
   // Every game opens on Starting Soon: a real card, so it can be taken down by
   // hand like any other. Starting the clock or the first play also drops it.
-  const row = { status: 'setup', sport, style, starts_at: fromLocalInput($('ng-startsat').value),
+  const row = { ...(await lastGameSettings(sport)), status: 'setup', sport, starts_at: fromLocalInput($('ng-startsat').value),
     card: { type: 'starting', meta: {}, nonce: nextNonce() } };   // 'live' on the first play
-  if (sport === 'football') row.state = F.fbState({});
-  else if (sport === 'soccer') row.state = S.scState({});
-  else if (sport === 'volleyball') row.state = V.vbState({});
-  else if (sport === 'basketball') row.state = B.bkState({});
+  const st = sportState(sport); if (st) row.state = st;
   const { data, error } = await db.from('games').insert(row).select().single();
   if (error) return alert(error.message);
   closeSheet('newgame-sheet');
@@ -385,16 +371,12 @@ async function loadRoster(id) {
 // innings produced the same number and one edit left the overlay pointing at a
 // revision it thought it already had. The returned value is authoritative.
 //
-// One save in flight at a time. Every call carries the whole roster, so a
-// burst of edits between innings (a drag, then a position, then a name) used
-// to send three overlapping writes, and on field LTE the last to land was not
-// always the last made: the pad showed one order while the server, and so the
-// overlay, kept an older one. Now a save made while another is out waits, and
-// only the newest waiting roster is sent.
-// The lineup screen says which it is — Saving…, ✓ Saved, or Not saved — and a
-// failed save tries again on its own (the newest roster, every few seconds)
-// until it lands or a newer edit replaces it.
-let rosterSending = false, rosterNext = null, rosterRetry = null;
+// A roster rides the write queue like every other change (kind 'roster'):
+// in order, one at a time, retried until it lands. Every save carries the whole
+// roster, so a burst of edits between innings collapses to the newest one
+// instead of racing — the queue keeps only the latest waiting roster per game.
+// The lineup screen says which it is — Saving…, ✓ Saved, or Not saved.
+const rosterQueued = (id) => queue.entriesFor(id).some((w) => w.kind === 'roster');
 function luStatus(state) {
   const el = $('lu-status'); if (!el) return;
   el.textContent = { saving: 'Saving…', saved: '✓ Saved', failed: '⚠ Not saved yet — retrying' }[state];
@@ -425,31 +407,11 @@ function wipeRefused(lineups, allowClear) {
   } finally { wipeGuarding = false; }
   return true;
 }
-async function saveRoster(lineups, { allowClear = false } = {}) {
-  if (wipeRefused(lineups, allowClear)) return;
+function saveRoster(lineups, { allowClear = false } = {}) {
+  if (wipeRefused(lineups, allowClear)) return Promise.resolve();
   game = { ...game, lineups };
-  rosterNext = { id: game.id, lineups };
-  clearTimeout(rosterRetry);
   luStatus('saving');
-  if (rosterSending) return;
-  rosterSending = true;
-  try {
-    while (rosterNext) {
-      const { id, lineups: data } = rosterNext;
-      rosterNext = null;
-      const res = await db.rpc('save_roster', { p_game: id, p_data: data });
-      if (res.error) {
-        if (!rosterNext) {
-          luStatus('failed');
-          showToast(`⚠️ Lineup not saved yet — retrying`, 3000);
-          rosterRetry = setTimeout(() => { if (game && game.id === id && !rosterNext) saveRoster(game.lineups); }, 4000);
-        }
-        continue;
-      }
-      if (!rosterNext) luStatus('saved');
-      if (game && game.id === id) { game = { ...game, roster_rev: Math.max(game.roster_rev | 0, res.data | 0) }; rosterHave = game.roster_rev; }
-    }
-  } finally { rosterSending = false; }
+  return queue.enqueue({ kind: 'roster', gameId: game.id, lineups });
 }
 // Another device (or this one after a reload elsewhere) saved a roster: the
 // row's roster_rev has moved past the one we hold. Re-read it, unless we have a
@@ -457,11 +419,11 @@ async function saveRoster(lineups, { allowClear = false } = {}) {
 // A save started while the read was out also wins over the read.
 let rosterHave = 0;
 async function syncRoster(id, rev) {
-  if (!game || game.id !== id || rev <= rosterHave || rosterSending || rosterNext) return;
+  if (!game || game.id !== id || rev <= rosterHave || rosterQueued(id)) return;
   rosterHave = rev;
   const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
   if (error) { rosterHave = 0; return; }   // try again on the next row
-  if (!game || game.id !== id || rosterSending || rosterNext) return;
+  if (!game || game.id !== id || rosterQueued(id)) return;
   const incoming = L.normalizeRoster((data && data.data) || {});
   // The same rule as saveRoster, on the way in: a read that comes back empty
   // against a roster we are holding is a bad answer, not an edit somebody made.
@@ -490,8 +452,11 @@ function foldBadge(state, label, title) {
   b.textContent = label;
   b.title = title;
 }
+// A developer's instrument, not an operator's: it downloads the whole log, so
+// it runs — and its badge shows — only on a pad opened with ?debug.
+const FOLD_ON = new URLSearchParams(location.search).has('debug');
 async function shadowFold(why = 'auto') {
-  if (!game || foldBusy) return;
+  if (!FOLD_ON || !game || foldBusy) return;
   const id = game.id;
   foldBusy = true;
   foldBadge('busy', '◌', 'Rebuilding from the event log…');
@@ -527,7 +492,7 @@ async function shadowFold(why = 'auto') {
 }
 // After a burst of taps, once — not per pitch, which would be a select per
 // pitch on a phone on venue LTE.
-const foldSoon = () => { clearTimeout(foldTimer); foldTimer = setTimeout(() => shadowFold('after taps'), 20000); };
+const foldSoon = () => { if (!FOLD_ON) return; clearTimeout(foldTimer); foldTimer = setTimeout(() => shadowFold('after taps'), 20000); };
 $('fold-badge').onclick = () => {
   if (foldLast && foldLast.diffs.length) {
     const lines = foldLast.diffs.map((d) => `${d.field}: log says ${JSON.stringify(d.folded)}, pad says ${JSON.stringify(d.row)}`);
@@ -537,7 +502,36 @@ $('fold-badge').onclick = () => {
   shadowFold('tap');
 };
 
-const overlayUrl = () => `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`;
+// One link per account: OBS keeps it forever and it shows whichever game the
+// pad opened last (see resolve_channel). The per-game form is only the fallback
+// for a moment when the account link hasn't loaded.
+let channelToken = null;     // this account's permanent overlay link
+let channelGame = null;      // the game that link is showing, as far as this pad knows
+async function loadChannel() {
+  if (channelToken) return;
+  const { data } = await db.rpc('channel_token');
+  channelToken = data || null;
+}
+// Opening a game puts it on the overlay link — unless it is already over, so
+// looking back at last week's final does not take tonight's game off the air.
+async function putOnLink(id, force = false) {
+  if (!force && game && game.status === 'final') return renderLinkNote();
+  const { error } = await db.rpc('set_channel_game', { p_game: id });
+  if (!error) channelGame = id;
+  renderLinkNote();
+}
+function renderLinkNote() {
+  const n = $('link-note'); if (!n || !game) return;
+  const here = channelGame === game.id;
+  n.textContent = here ? '✓ The overlay link is showing this game.' : 'The overlay link is showing a different game.';
+  $('link-here').hidden = here;
+}
+const overlayUrl = () => (channelToken
+  ? `${location.origin}/overlay?ch=${channelToken}`
+  : `${location.origin}/overlay?game=${game.id}${overlayToken ? `&t=${overlayToken}` : ''}`);
+const LINK_COPIED = 'sb:linkCopied';
+const linkCopied = () => { try { return localStorage.getItem(LINK_COPIED) === channelToken && !!channelToken; } catch { return false; } };
+function markLinkCopied() { try { if (channelToken) localStorage.setItem(LINK_COPIED, channelToken); } catch {} overlayCopied = true; }
 
 async function openGame(id) {
   guideCollapsed = true;   // per game, not per session — a fresh game re-opens it explicitly
@@ -552,7 +546,9 @@ async function openGame(id) {
   $('lu-status').textContent = 'saves as you type'; delete $('lu-status').dataset.state;
   // Before the first nonce of this game, not after: a nonce minted on an
   // uncorrected clock is one the other device can never beat.
-  const [, lineups] = await Promise.all([syncClock(), loadRoster(id)]);
+  const [, lineups] = await Promise.all([syncClock(), loadRoster(id), loadChannel()]);
+  overlayCopied = linkCopied();
+  putOnLink(id);
   game.lineups = lineups;
   rosterHave = game.roster_rev | 0;
   // The saved-team pickers are a one-shot action, not a label. Left showing the
@@ -663,6 +659,15 @@ const queue = createQueue({
     db.rpc('apply_event', { p_game: gameId, p_type: type, p_new: patch, p_payload: payload }),
   updateFields: (gameId, patch) =>
     db.from('games').update(patch).eq('id', gameId).select().maybeSingle(),
+  saveRoster: (gameId, lineups) => db.rpc('save_roster', { p_game: gameId, p_data: lineups }),
+  // The rev comes back from the database, so our own save doesn't send us to
+  // re-read a roster we just wrote.
+  onRosterSaved: (gameId, rev, settled) => {
+    if (!game || game.id !== gameId) return;
+    game = { ...game, roster_rev: Math.max(game.roster_rev | 0, rev) };
+    rosterHave = game.roster_rev;
+    if (settled) luStatus('saved');
+  },
   onPending: renderPending,
   // The row is only authoritative for the screen once the server has seen
   // everything we sent FOR THIS GAME, and it carries no roster — keep ours.
@@ -682,6 +687,7 @@ const queue = createQueue({
 });
 
 function renderPending(n, err) {
+  if (err && game && rosterQueued(game.id)) luStatus('failed');
   const el = $('pending-badge'); if (!el) return;
   el.hidden = !n;
   if (!n) return;
@@ -851,7 +857,7 @@ function undoQueued() {
 }
 
 // Buttons
-$('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? openWalkSheet(r) : commit(r); };
+$('btn-ball').onclick    = () => { const r = L.onBall(game); r.sheet === 'walk' ? recordWalk() : commit(r); };
 // Strike three asks how: swinging, looking, or dropped. It used to record a
 // swinging K on the spot and offer "Dropped 3rd?" on a toast, so a called
 // third strike went into the book and onto the stream as the wrong K.
@@ -997,10 +1003,14 @@ $('fv-numbers').onclick = (e) => {
   const o = e.target.closest('.fv-num'); if (!o) return;
   const side = fieldSide, pos = fieldPick, i = +o.dataset.i;
   const lineups = game.lineups || {};
+  const before = L.normalizeTeam(lineups[side] || {}).positions.P || null;
   const { team, moved } = L.assignSpot(lineups[side] || {}, pos, i);
   haptic();
   fieldPick = null;
   saveRoster({ ...lineups, [side]: team });
+  // A new arm on the mound gets his own pitch count.
+  const pc = L.onPitcherChange(game, side, before, L.normalizeTeam(team).positions.P || null);
+  if (pc) { if (game.status === 'setup') writeField({ state: pc.patch.state }); else commit(pc); }
   const who = (b) => (b && b.num ? '#' + b.num : shortName(b));
   const bs = teamOf(side).batters;
   showToast(`✓ ${who(bs[i])} to ${pos}` + (moved ? (moved.to ? ` · ${who(bs[moved.idx])} to ${moved.to}` : ` · ${who(bs[moved.idx])} to bench`) : ''), 3000);
@@ -1045,147 +1055,6 @@ $('undo-btn').onclick    = doUndo;
 // An action that cannot know who to credit returns null rather than guessing.
 // A tap that quietly does nothing is its own bug, so say what is missing.
 const commitOrAsk = (r, msg) => (r ? commit(r) : showToast(msg, 2600));
-const NEED_BALL = 'Set possession first — tap Away ball or Home ball';
-
-// Football buttons
-$('fb-poss-away').onclick = () => commit(F.setPossession(game, 'away'));
-$('fb-poss-home').onclick = () => commit(F.setPossession(game, 'home'));
-$('fb-down-1').onclick = () => commit(F.setDown(game, 1));
-$('fb-down-2').onclick = () => commit(F.setDown(game, 2));
-$('fb-down-3').onclick = () => commit(F.setDown(game, 3));
-$('fb-down-4').onclick = () => commit(F.setDown(game, 4));
-$('fb-dist-dn').onclick = () => commit(F.distanceDelta(game, -1));
-$('fb-dist-up').onclick = () => commit(F.distanceDelta(game, 1));
-$('fb-goal').onclick = () => commit(F.setGoal(game));
-$('fb-firstdown').onclick = () => commit(F.firstDown(game));
-$('fb-td').onclick = () => commitOrAsk(F.touchdown(game), NEED_BALL);
-$('fb-fg').onclick = () => commitOrAsk(F.fieldGoal(game), NEED_BALL);
-$('fb-xp').onclick = () => commitOrAsk(F.extraPoint(game), NEED_BALL);
-$('fb-2pt').onclick = () => commitOrAsk(F.twoPoint(game), NEED_BALL);
-$('fb-safety').onclick = () => commitOrAsk(F.safety(game), NEED_BALL);
-$('fb-nextq').onclick = () => commit(F.nextQuarter(game));
-$('fb-away-dn').onclick = () => commit(F.manualScore(game, 'away', -1));
-$('fb-away-up').onclick = () => commit(F.manualScore(game, 'away', 1));
-$('fb-home-dn').onclick = () => commit(F.manualScore(game, 'home', -1));
-$('fb-home-up').onclick = () => commit(F.manualScore(game, 'home', 1));
-$('fb-to-away').onclick = () => commit(F.timeout(game, 'away'));
-$('fb-to-home').onclick = () => commit(F.timeout(game, 'home'));
-$('fb-to-reset').onclick = () => commit(F.resetTimeouts(game));
-$('fb-to-away-up').onclick = () => commit(F.adjustTimeouts(game, 'away', 1));
-$('fb-to-home-up').onclick = () => commit(F.adjustTimeouts(game, 'home', 1));
-$('fb-q-dn').onclick = () => commit(F.adjustQuarter(game, -1));
-$('fb-q-up').onclick = () => commit(F.adjustQuarter(game, 1));
-$('fb-kickoff').onclick = () => commit(F.kickoff(game));
-$('fx-turnover').onclick = () => commit(F.turnover(game));
-$('fx-bigplay').onclick = () => fireAnim('bigplay');
-
-// Soccer buttons
-$('sc-goal-away').onclick = () => commit(S.goal(game, 'away'));
-$('sc-goal-home').onclick = () => commit(S.goal(game, 'home'));
-$('sc-half-1').onclick = () => commit(S.setHalf(game, 1));
-$('sc-half-2').onclick = () => commit(S.setHalf(game, 2));
-$('sc-stop-dn').onclick = () => commit(S.stoppageDelta(game, -1));
-$('sc-stop-up').onclick = () => commit(S.stoppageDelta(game, 1));
-$('sc-yc-away').onclick = () => commit(S.card(game, 'away', 'y'));
-$('sc-rc-away').onclick = () => commit(S.card(game, 'away', 'r'));
-$('sc-yc-home').onclick = () => commit(S.card(game, 'home', 'y'));
-$('sc-rc-home').onclick = () => commit(S.card(game, 'home', 'r'));
-$('sc-away-dn').onclick = () => commit(S.manualScore(game, 'away', -1));
-$('sc-away-up').onclick = () => commit(S.manualScore(game, 'away', 1));
-$('sc-home-dn').onclick = () => commit(S.manualScore(game, 'home', -1));
-$('sc-home-up').onclick = () => commit(S.manualScore(game, 'home', 1));
-
-// Volleyball buttons
-$('vb-point-away').onclick = () => commit(V.point(game, 'away'));
-$('vb-point-home').onclick = () => commit(V.point(game, 'home'));
-$('vb-serve-away').onclick = () => commit(V.setServe(game, 'away'));
-$('vb-serve-home').onclick = () => commit(V.setServe(game, 'home'));
-$('vb-target').onclick = () => commit(V.cycleTarget(game));
-$('vb-endset').onclick = () => commitOrAsk(V.endSet(game), 'Tied — score the deciding point first');
-$('vb-set-dn').onclick = () => commit(V.adjustSet(game, -1));
-$('vb-set-up').onclick = () => commit(V.adjustSet(game, 1));
-$('vb-sets-away-dn').onclick = () => commit(V.adjustSets(game, 'away', -1));
-$('vb-sets-away-up').onclick = () => commit(V.adjustSets(game, 'away', 1));
-$('vb-sets-home-dn').onclick = () => commit(V.adjustSets(game, 'home', -1));
-$('vb-sets-home-up').onclick = () => commit(V.adjustSets(game, 'home', 1));
-$('vb-away-dn').onclick = () => commit(V.manualScore(game, 'away', -1));
-$('vb-home-dn').onclick = () => commit(V.manualScore(game, 'home', -1));
-$('vb-away-up').onclick = () => commit(V.manualScore(game, 'away', 1));
-$('vb-home-up').onclick = () => commit(V.manualScore(game, 'home', 1));
-$('fx-ace').onclick = () => commitOrAsk(V.ace(game), 'Set the serving team first');
-
-// Basketball buttons
-$('bk-away-1').onclick = () => commit(B.score(game, 'away', 1));
-$('bk-away-2').onclick = () => commit(B.score(game, 'away', 2));
-$('bk-away-3').onclick = () => commit(B.score(game, 'away', 3));
-$('bk-home-1').onclick = () => commit(B.score(game, 'home', 1));
-$('bk-home-2').onclick = () => commit(B.score(game, 'home', 2));
-$('bk-home-3').onclick = () => commit(B.score(game, 'home', 3));
-$('bk-away-dn').onclick = () => commit(B.score(game, 'away', -1));
-$('bk-home-dn').onclick = () => commit(B.score(game, 'home', -1));
-$('bk-period-dn').onclick = () => commit(B.adjustPeriod(game, -1));
-$('bk-period-up').onclick = () => commit(B.adjustPeriod(game, 1));
-$('bk-nextperiod').onclick = () => commit(B.nextPeriod(game));
-$('bk-foul-away').onclick = () => commit(B.foul(game, 'away', 1));
-$('bk-foul-away-dn').onclick = () => commit(B.foul(game, 'away', -1));
-$('bk-foul-home').onclick = () => commit(B.foul(game, 'home', 1));
-$('bk-foul-home-dn').onclick = () => commit(B.foul(game, 'home', -1));
-$('bk-to-away').onclick = () => commit(B.timeout(game, 'away'));
-$('bk-to-home').onclick = () => commit(B.timeout(game, 'home'));
-$('bk-to-reset').onclick = () => commit(B.resetTimeouts(game));
-// The sheet's + are corrections: one point or one foul (only +3 has a stinger).
-$('bk-away-up').onclick = () => commit(B.score(game, 'away', 1));
-$('bk-home-up').onclick = () => commit(B.score(game, 'home', 1));
-$('bk-foul-away-up').onclick = () => commit(B.foul(game, 'away', 1));
-$('bk-foul-home-up').onclick = () => commit(B.foul(game, 'home', 1));
-$('bk-to-away-up').onclick = () => commit(B.adjustTimeouts(game, 'away', 1));
-$('bk-to-home-up').onclick = () => commit(B.adjustTimeouts(game, 'home', 1));
-$('fx-bigplay-bk').onclick = () => fireAnim('bigplay');
-
-// Look presets (per-user saved bundles of presentation settings)
-async function loadPresets() {
-  if (!user) return;
-  const { data, error } = await db.from('presets').select('id,name,settings').eq('owner_id', user.id).order('name');
-  const sel = $('preset-sel');
-  sel.innerHTML = '<option value="">— saved looks —</option>';
-  if (error) return;
-  for (const p of data || []) {
-    const o = document.createElement('option');
-    o.value = p.id; o.textContent = p.name; o.dataset.settings = JSON.stringify(p.settings || {});
-    sel.appendChild(o);
-  }
-}
-const currentLookBundle = () => ({
-  theme: game.theme, style: game.style, scorebug_position: game.scorebug_position,
-  scorebug_scale: game.scorebug_scale, sound_pack: game.sound_pack, look: game.look || {},
-});
-$('preset-save').onclick = async () => {
-  const name = $('preset-name').value.trim();
-  if (!name) return alert('Name the preset first.');
-  const { error } = await db.from('presets').insert({ name, settings: currentLookBundle() });
-  if (error) return alert(error.message);
-  $('preset-name').value = '';
-  await loadPresets();
-  showToast('💾 Preset saved');
-};
-$('preset-apply').onclick = async () => {
-  const opt = $('preset-sel').selectedOptions[0];
-  if (!opt || !opt.value) return;
-  const s = JSON.parse(opt.dataset.settings || '{}');
-  await writeField({
-    theme: s.theme || 'nightgame', style: s.style || 'bar',
-    scorebug_position: s.scorebug_position || 'bottom-bar', scorebug_scale: s.scorebug_scale || 1,
-    sound_pack: s.sound_pack || 'bigleague', look: s.look || {},
-  });
-  showToast(`🎨 Applied "${opt.textContent}"`);
-};
-$('preset-del').onclick = async () => {
-  const opt = $('preset-sel').selectedOptions[0];
-  if (!opt || !opt.value) return;
-  await db.from('presets').delete().eq('id', opt.value);
-  await loadPresets();
-  showToast('Preset deleted');
-};
 
 // ---- Saved teams (reusable rosters) ---------------------------------------
 // A team = identity (name/abbr/color/logo) + roster (a lineups[side] blob).
@@ -1264,7 +1133,8 @@ $('team-swap').onclick = async () => {
     away_abbr: game.home_abbr, home_abbr: game.away_abbr,
     away_color: game.home_color, home_color: game.away_color,
     away_logo_url: game.home_logo_url, home_logo_url: game.away_logo_url,
-    state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 } },
+    state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 },
+      pitchLog: { away: (st.pitchLog || {}).home || {}, home: (st.pitchLog || {}).away || {} } },
   });
   fillSetup();
   renderTeamCards();
@@ -1378,14 +1248,14 @@ $('sponsor-secs').onchange = (e) => saveSponsors({ ...spCfg(), secs: Math.max(3,
 // 🎬 On Air sheet. Tap a card to raise it, tap the card that's up to take it
 // down, or ✕ on the header chip, which is on screen whatever else is open.
 const CARD_LABEL = {
-  dueup: 'Due Up', lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
+  lineup: 'Batting order', defense: 'Defense', matchup: 'Matchup', sponsor: 'Sponsor',
   final: 'Final', starting: 'Starting Soon', midinning: 'Mid-Inning', finalfull: 'Final (full)', paused: 'Paused',
 };
 const cardLabel = (type) => CARD_LABEL[type] || type;
 async function showCard(type) {
   const meta = {};
   const text = $('card-text').value.trim();
-  if (text) meta.text = text;
+  if (text) { meta.text = text; $('card-text').value = ''; }   // spent on this card, not the next one too
   // Defense card always tracks the fielding team live (resolved in the overlay);
   // the lineup card tracks the batting side the same way.
   if (type === 'lineup') meta.auto = true;
@@ -1465,6 +1335,15 @@ function renderPaused() {
   $('pz-show').classList.toggle('live', up);
   $('pz-hide').hidden = !up;
   $('pz-restart').hidden = !(up && pzReason === 'lightning');
+  renderDelayState();
+}
+// The pause card and the ticker share one folded section; it says, and opens
+// to show, whichever of them is on air.
+function renderDelayState() {
+  const on = [pausedUp() && 'pause card', tickerUp() && 'ticker'].filter(Boolean);
+  $('air-delay-state').textContent = on.length ? `· ${on.join(' + ')} on air` : '';
+  $('air-delay-state').classList.toggle('on', on.length > 0);
+  if (on.length) $('air-delay').open = true;
 }
 function pausedMeta(mins) {
   const meta = { reason: pzReason };
@@ -1523,6 +1402,7 @@ function renderTicker() {
   $('tk-show').textContent = up ? 'Update' : 'Show';
   $('tk-show').classList.toggle('live', up);
   $('tk-hide').hidden = !up;
+  renderDelayState();
 }
 async function showTicker() {
   const text = $('tk-text').value.replace(/\s+/g, ' ').trim();
@@ -1590,10 +1470,6 @@ function renderOnAir() {
 }
 
 // Moments / FX
-$('fx-k').onclick       = () => fireAnim('strikeout');
-$('fx-klook').onclick   = () => fireAnim('strikeoutlooking');
-$('fx-dp').onclick      = () => fireAnim('doubleplay');
-$('fx-sb').onclick      = () => fireAnim('stolenbase');
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 $('fx-rally').onclick   = () => writeField({ rally_mode: !game.rally_mode });
 function renderRally() {
@@ -1602,322 +1478,10 @@ function renderRally() {
   b.classList.toggle('on', !!game.rally_mode);
 }
 
-// ---- Show/hide the OBS controls ------------------------------------------
-// Plenty of people want the scorebug and nothing else — a browser source in
-// other software, or a scoreboard on a TV. Clip, Cameras and Stream & record
-// are dead weight for them, so the whole group slides away. A device
-// preference, not a game one: the same game may be run from an OBS laptop and a
-// phone that has never seen OBS.
-const OBS_UI = 'sb:obsUi';
-function applyObsUi(on) {
-  document.body.classList.toggle('no-obs', !on);
-  const box = $('obs-ui');
-  if (box) box.checked = on;
-}
-$('obs-ui').onchange = (e) => {
-  applyObsUi(e.target.checked);
-  try { localStorage.setItem(OBS_UI, e.target.checked ? '1' : '0'); } catch {}
-  showToast(e.target.checked ? '🎛️ OBS controls shown' : '🎛️ OBS controls hidden');
-};
-try { applyObsUi(localStorage.getItem(OBS_UI) !== '0'); } catch { applyObsUi(true); }
-
-// ---- OBS permission tiers -------------------------------------------------
-// The overlay's page permissions decide how much of OBS the pad may drive. Every
-// tier is a legitimate way to run the app: at "no access" the scorebug, cards,
-// takeovers, moments and sound all work exactly the same — that's the whole
-// product for most people. So a feature you haven't unlocked reads as muted
-// information, never as a warning; amber is kept for things that are actually
-// misconfigured, like a replay buffer that isn't running.
-const OBS_TIER = { 3: 'Basic', 4: 'Advanced', 5: 'Full' };
-// Any of the three reporters carries the level; take the freshest one we have.
-function obsLevel() {
-  if (!game) return null;
-  const src = [game.obs_status, game.obs_scenes, game.replay_ack]
-    .filter((o) => o && typeof o.level === 'number')
-    .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))[0];
-  return src ? src.level | 0 : null;
-}
-// The one sentence explaining why a locked feature is locked.
-function needNote(need) {
-  const lvl = obsLevel();
-  if (lvl === null) return { tone: 'off', text: 'Open the overlay in OBS to use this.' };
-  return { tone: 'off', text: `Needs Page permissions “${OBS_TIER[need]} access to OBS” on the overlay source — you're on “${OBS_TIER[lvl] || 'No access'}”. Everything else keeps working.` };
-}
-// The OBS tab leads with the tier it is actually running at, so a disabled
-// control reads as "not unlocked" rather than "broken".
-function renderObsTier() {
-  const lvl = obsLevel();
-  $('obs-tier').textContent = lvl === null ? 'Not connected' : (OBS_TIER[lvl] || 'No access');
-}
-$('obs-tier-help').onclick = () => {
-  const n = $('obs-tier-note');
-  n.textContent = obsLevel() === null
-    ? 'Add the overlay to OBS as a Browser Source and open it — the pad reads its permission level from there. Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording.'
-    : 'Set it on the Browser Source: Page permissions → Basic runs the scorebug, cards, moments and sound; Advanced adds replay clips and camera switching; Full adds going live and recording. Everything below your level keeps working.';
-  n.hidden = !n.hidden;
-};
-
-function setNeedBadge(id, need) {
-  const el = $(id); if (!el) return;
-  const lvl = obsLevel();
-  el.textContent = lvl !== null && lvl >= need ? '' : `needs ${OBS_TIER[need]}`;
-}
-
-// ---- OBS stream / record / replay buffer ----------------------------------
-// Ending a stream from a phone in your pocket has to be hard to do by accident,
-// but a modal would freeze the pad mid-broadcast (the same reason commit() never
-// alerts). So stopping arms on the first tap and fires on the second, and the
-// arm expires on its own.
-const OBS_BTN = {
-  stream: { el: 'obs-stream', need: 5, on: 'streaming', start: 'stream_start', stop: 'stream_stop',
-            idle: '🔴 Go Live', live: '⏹ End Stream', arm: 'Tap again to end', danger: true },
-  record: { el: 'obs-record', need: 5, on: 'recording', start: 'record_start', stop: 'record_stop',
-            idle: '⏺ Record', live: '⏹ Stop Rec', arm: 'Tap again to stop', danger: true },
-  buffer: { el: 'obs-buffer', need: 4, on: 'buffer', start: 'buffer_start', stop: 'buffer_stop',
-            idle: '🎞️ Buffer On', live: '🎞️ Buffer Off', arm: null, danger: false },
-};
-let obsArmed = null;      // key of the button waiting for its second tap
-let obsArmTimer = null;
-let obsWaiting = null;    // {key, at} — command sent, watching for OBS to actually change
-let obsNote = null;
-
-function disarmObs() { obsArmed = null; clearTimeout(obsArmTimer); obsArmTimer = null; }
-
-async function sendObsCmd(action) {
-  if (!game) return;
-  const obs_cmd = { nonce: nextNonce(), action };
-  const { error } = await db.from('games').update({ obs_cmd }).eq('id', game.id);
-  if (error) { obsWaiting = null; obsNote = `⚠️ ${error.message}`; renderObs(); }
-}
-function tapObs(key) {
-  const cfg = OBS_BTN[key], st = (game && game.obs_status) || {};
-  if (!game || (st.level | 0) < cfg.need) return;
-  haptic();
-  const running = !!st[cfg.on];
-  if (running && cfg.arm && obsArmed !== key) { // first tap on a stop: arm only
-    disarmObs();
-    obsArmed = key;
-    obsArmTimer = setTimeout(() => { disarmObs(); renderObs(); }, 5000);
-    return renderObs();
-  }
-  disarmObs();
-  obsWaiting = { key, at: Date.now() };
-  obsNote = null;
-  renderObs();
-  setTimeout(() => { if (obsWaiting && obsWaiting.key === key) { obsWaiting = null; obsNote = '⚠️ OBS didn\'t respond.'; renderObs(); } }, 8000);
-  sendObsCmd(running ? cfg.stop : cfg.start);
-}
-for (const key of Object.keys(OBS_BTN)) $(OBS_BTN[key].el).onclick = () => tapObs(key);
-
-let lastObsStatusAt = null;
-function renderObs() {
-  renderObsTier();
-  if (!game) return;
-  const st = game.obs_status || {};
-  const level = st.level | 0;
-  // A fresh report from OBS is the answer to whatever we sent.
-  if (st.at && st.at !== lastObsStatusAt) { lastObsStatusAt = st.at; obsWaiting = null; obsNote = null; }
-  for (const [key, cfg] of Object.entries(OBS_BTN)) {
-    const b = $(cfg.el); if (!b) continue;
-    const running = !!st[cfg.on];
-    b.disabled = !game.obs_status || level < cfg.need;
-    b.textContent = obsArmed === key ? cfg.arm : obsWaiting && obsWaiting.key === key ? '…' : running ? cfg.live : cfg.idle;
-    b.classList.toggle('on', running && !cfg.danger);
-    b.classList.toggle('live', running && cfg.danger);
-    b.classList.toggle('armed', obsArmed === key);
-  }
-  setNeedBadge('obs-need', 5);
-  const hint = $('obs-hint'); if (!hint) return;
-  if (obsNote) { hint.dataset.tone = 'warn'; hint.textContent = obsNote; return; }
-  if (level < 5) {
-    const note = needNote(5);
-    hint.dataset.tone = note.tone;
-    hint.textContent = level >= 4 ? `Replay buffer only. ${note.text}` : note.text;
-    return;
-  }
-  const bits = [st.streaming ? 'live' : 'off air', st.recording ? (st.paused ? 'recording paused' : 'recording') : null,
-                st.buffer ? 'buffer on' : 'buffer off'].filter(Boolean);
-  hint.dataset.tone = st.streaming ? 'ok' : 'off';
-  hint.textContent = `OBS: ${bits.join(' · ')}`;
-}
-
-// ---- OBS scenes (camera switching) ----------------------------------------
-// One scene per camera in OBS, the scorebug source shared into each; tapping a
-// name cuts to it through whatever transition OBS is set to. The list is
-// whatever the overlay reports seeing, so it can't drift from reality.
-async function switchScene(name) {
-  if (!game) return;
-  haptic();
-  const scene_cmd = { nonce: nextNonce(), name };
-  const { error } = await db.from('games').update({ scene_cmd }).eq('id', game.id);
-  if (error) showToast(`⚠️ ${error.message}`, 3000);
-}
-function renderScenes() {
-  const list = $('scene-list'), hint = $('scene-hint');
-  if (!list || !game) return;
-  const obs = game.obs_scenes;
-  const names = (obs && Array.isArray(obs.list) ? obs.list : []).filter((n) => typeof n === 'string');
-  const level = obs ? obs.level | 0 : -1;
-  // The drawer panel and the bottom-bar sheet show the same buttons.
-  for (const [l, h] of [[list, hint], [$('cam-list'), $('cam-hint')]]) {
-    l.innerHTML = '';
-    for (const name of names) {
-      const b = document.createElement('button');
-      b.className = 'fxbtn scene' + (name === obs.current ? ' on' : '');
-      b.textContent = name;
-      b.onclick = () => switchScene(name);
-      b.disabled = level < 4;
-      l.appendChild(b);
-    }
-    if (level < 4) {
-      const note = needNote(4);
-      h.dataset.tone = note.tone; h.textContent = note.text;
-    } else if (!names.length) {
-      h.dataset.tone = 'off'; h.textContent = 'OBS reported no scenes.';
-    } else {
-      h.dataset.tone = 'ok'; h.textContent = `On air: ${obs.current || '—'}`;
-    }
-  }
-  setNeedBadge('scene-need', 4);
-  // Only a door worth having once OBS has told us what there is to cut to.
-  $('cam-open').hidden = !names.length;
-}
-$('cam-open').onclick = () => openSheet('cam-sheet');
-$('cam-done').onclick = () => closeSheet('cam-sheet');
-
-// ---- OBS replay buffer ----------------------------------------------------
-// This pad has no window.obsstudio, so we can't clip directly: we stamp a nonce
-// and the overlay browser source (which IS inside OBS) calls saveReplayBuffer()
-// and acks back. Everything shown here comes from that ack — including whether
-// the buffer is even running, which is the thing you want to know before first
-// pitch rather than after the play.
-const REPLAY_FAIL = {
-  noperm: { tone: 'off', text: 'Clips need Page permissions “Basic access to OBS” on the overlay source.' },
-  nobuffer: { tone: 'bad', text: '⚠️ Replay buffer isn’t running in OBS.' },
-  failed: { tone: 'bad', text: '⚠️ OBS refused the clip.' },
-  noconfirm: { tone: 'warn', text: '🎞️ Sent, but OBS didn’t confirm — check your replay folder.' },
-};
-// The buffer is retroactive: saving captures the N seconds BEFORE the save, and
-// nothing after. So a home run clip taken at the swing ends while he's rounding
-// second. We wait out the trot and the celebration, then save — the buffer
-// reaches back and picks up the pitch. Needs an OBS buffer at least
-// delay + ~20s (90s covers everything here).
-const CLIP_DELAY_MS = {
-  homerun: 40000,     // trot plus the mob at the plate
-  walkoff: 60000,     // dogpiles run long
-  touchdown: 30000,
-  goal: 30000,
-  doubleplay: 10000,  // the play is already over
-  bigplay: 12000,
-};
-
-let replayPending = new Map(); // nonce -> {deadline, timer} for clips in flight
-let replayNote = null;         // {tone, text} verdict from the last clip
-let replayTick = null;
-let lastHelloAt = null;        // 'at' of the last status report we folded in
-
-const soonestDeadline = () => Math.min(...[...replayPending.values()].map((p) => p.deadline));
-
-async function saveReplay(auto = false, delayMs = 0) {
-  if (!game) return;
-  if (!auto) haptic();
-  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), auto, delay_ms: delayMs };
-  // The overlay answers late by design, so allow delay + slack before giving up.
-  replayPending.set(replay_cmd.nonce, {
-    deadline: Date.now() + delayMs,
-    timer: setTimeout(() => {
-      if (!replayPending.delete(replay_cmd.nonce)) return;
-      replayNote = { tone: 'bad', text: '⚠️ No answer from the overlay — is the browser source loaded in OBS?' };
-      renderReplay();
-    }, delayMs + 10000),
-  });
-  renderReplay();
-  const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
-  if (error) {
-    dropPending(replay_cmd.nonce);
-    replayNote = { tone: 'bad', text: `⚠️ ${error.message}` };
-    return renderReplay();
-  }
-  if (delayMs) showToast(`🎞️ Clip in ${Math.round(delayMs / 1000)}s`, 2200);
-}
-function dropPending(nonce) {
-  const p = replayPending.get(nonce);
-  if (p) { clearTimeout(p.timer); replayPending.delete(nonce); }
-}
-// Tapping the button while a delayed clip is waiting means "don't wait, take it
-// now" — the overlay fires everything it has scheduled instead of queuing more.
-async function flushReplay() {
-  const replay_cmd = { nonce: nextNonce(), at: new Date().toISOString(), flush: true };
-  const { error } = await db.from('games').update({ replay_cmd }).eq('id', game.id);
-  if (error) showToast(`⚠️ ${error.message}`, 3000);
-}
-$('fx-replay').onclick = () => {
-  if (!game) return;
-  haptic();
-  if (replayPending.size && soonestDeadline() > Date.now()) return flushReplay();
-  saveReplay(false, 0);
-};
-
-// Auto-clip: opt-in per game, so a big play lands on disk while both your thumbs
-// are still on the scoring pad.
-$('replay-auto').onchange = async (e) => {
-  const auto_clip = e.target.checked;
-  await writeField({ auto_clip });   // queued: no need to roll back on a blip
-  showToast(auto_clip ? '🎞️ Auto-clip on for big plays' : 'Auto-clip off');
-};
-
-function renderReplay() {
-  const b = $('fx-replay'); if (!b) return;
-  const ack = game && game.replay_ack;
-  const nonce = ack && Number(ack.nonce);
-  if (ack && replayPending.has(nonce)) {
-    if (ack.code === 'armed') {
-      // Not an outcome — the overlay is holding it. Keep waiting, keep counting.
-    } else {
-      dropPending(nonce);
-      replayNote = ack.ok
-        ? { tone: 'ok', text: '🎞️ Clip saved to your replay folder.' }
-        : (REPLAY_FAIL[ack.code] || { tone: 'bad', text: '⚠️ Clip failed.' });
-      showToast(ack.ok ? '🎞️ Clip saved' : replayNote.text, ack.ok ? 1600 : 4000);
-      // Successes fade back to the live status line; anything else stays put,
-      // since it's the only place you'd read what to go fix in OBS.
-      if (ack.ok) setTimeout(() => { if (replayNote && replayNote.tone === 'ok') { replayNote = null; renderReplay(); } }, 12000);
-    }
-  }
-  // A fresh status report (overlay reloaded, or the buffer started/stopped)
-  // clears a stale verdict so the line reflects OBS as it is right now.
-  if (ack && ack.code === 'hello' && ack.at !== lastHelloAt) { lastHelloAt = ack.at; replayNote = null; }
-
-  const waiting = replayPending.size ? Math.round((soonestDeadline() - Date.now()) / 1000) : 0;
-  // Short enough for a quarter of the bottom bar on a 375pt phone.
-  b.innerHTML = '<i aria-hidden="true">🎞️</i>' + (!replayPending.size ? 'Replay' : waiting > 0 ? `${waiting}s` : 'Saving…');
-  b.classList.toggle('busy', !!replayPending.size);
-  const auto = $('replay-auto');
-  if (auto) auto.checked = !!(game && game.auto_clip);
-  // A 1Hz tick only while something is in flight — the pad idles the rest of the game.
-  if (replayPending.size && !replayTick) replayTick = setInterval(renderReplay, 1000);
-  if (!replayPending.size && replayTick) { clearInterval(replayTick); replayTick = null; }
-
-  const hint = $('replay-hint');
-  if (!hint) return;
-  const note = replayPending.size
-    ? (waiting > 0 ? { tone: 'ok', text: 'Waiting out the celebration — tap Clip to take it now.' } : null)
-    : (replayNote || replayStatus(ack));
-  hint.hidden = !note;
-  if (note) { hint.textContent = note.text; hint.dataset.tone = note.tone; }
-}
-// Idle line: what the overlay last told us about itself.
-function replayStatus(ack) {
-  if (!ack) return { tone: 'off', text: 'Open the overlay in OBS to enable clips.' };
-  if (!ack.ok && ack.code === 'hello') return REPLAY_FAIL.noperm;
-  if (ack.buffering === false) return REPLAY_FAIL.nobuffer;
-  return { tone: 'ok', text: '🎞️ OBS link ready.' };
-}
-function resetReplayUi() {
-  for (const nonce of [...replayPending.keys()]) dropPending(nonce);
-  replayNote = null; lastHelloAt = null;
-  if (replayTick) { clearInterval(replayTick); replayTick = null; }
-}
+// ---- OBS -------------------------------------------------------------------
+// Stream, record, scenes and replay clips live in js/obs-pad.js.
+const { OBS_TIER, CLIP_DELAY_MS, obsLevel, renderObs, renderScenes, renderReplay, resetReplayUi, disarmObs, saveReplay } =
+  createObs({ $, db, haptic, nextNonce, showToast, openSheet, closeSheet, writeField, game: () => game });
 
 // ---- Sheets ---------------------------------------------------------------
 // The five sheets are divs, not <dialog>. showModal() is iOS 15.4+ — the same
@@ -1968,7 +1532,7 @@ function requestCloseSheet(id) {
   if (guard && guard() === false) return;
   closeSheet(id);
 }
-for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'walk-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'hr-sheet', 'newgame-sheet']) {
+for (const id of ['sit-sheet', 'onair-sheet', 'play-sheet', 'lineup-sheet', 'k3-sheet', 'more-sheet', 'runners-sheet', 'newgame-sheet', 'cam-sheet']) {
   $(id).addEventListener('click', (e) => { if (e.target === $(id)) requestCloseSheet(id); });
 }
 // Escape closes the innermost sheet; Tab cycles inside it and cannot get out.
@@ -2023,6 +1587,7 @@ function svGo(pane) {
   $('setup-title').textContent = title;
   $('setup-view').scrollTop = 0;
   if (pane === 'home') renderSetupRows();
+  if (pane === 'link') renderLinkNote();
   if (pane.startsWith('teams')) renderTeamCards();
 }
 $('setup-open').onclick = openSetup;
@@ -2055,19 +1620,13 @@ function renderSetupRows() {
   // The theme's own name, as its option reads it — no second list to drift.
   const opt = $('theme-sel').querySelector(`option[value="${game.theme || 'nightgame'}"]`);
   const themeName = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game.theme || 'Midnight');
-  $('sv-look-val').textContent = themeName;
-  $('sv-theme-val').textContent = themeName;
-  const presets = $('preset-sel').options.length - 1;   // minus the "— none saved —" row
-  $('sv-presets-val').textContent = presets > 0 ? `${presets} saved` : 'None saved';
   const pos = (POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center').replace('-', ' ');
-  $('sv-pos-val').textContent = `${pos} · ${(game.scorebug_scale || 1).toFixed(2)}×`;
+  $('sv-look-val').textContent = `${themeName} · ${pos}`;
+  const sp = spCfg();
+  $('sv-sponsors-val').textContent = sp.list.length ? `${sp.list.length}${sp.rotate ? ' · rotating' : ''}` : 'None';
   const lvl = obsLevel();
   $('sv-obs-tag').textContent = lvl === null ? 'not connected' : (OBS_TIER[lvl] || 'no access');
 }
-// Look and OBS still live in the drawer until their panes are built; the row
-// opens the drawer on that tab rather than pretending the section is missing.
-$('sv-look').onclick = () => svGo('look');
-$('sv-obs').onclick = () => svGo('obs');
 $('sv-lineups').onclick = () => { closeSetup(); openLineupSheet(); };
 
 $('delete-game').onclick = async () => {
@@ -2095,13 +1654,10 @@ $('reset-game').onclick = async () => {
   };
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
-    bases: { first: false, second: false, third: false }, pitch_count: 0,
-    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 } },
+    bases: { first: false, second: false, third: false },
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {} },
   });
-  else if (sport === 'football') patch.state = F.fbState({});
-  else if (sport === 'soccer') patch.state = S.scState({});
-  else if (sport === 'volleyball') patch.state = V.vbState({});
-  else if (sport === 'basketball') patch.state = B.bkState({});
+  else if (SPORTS[sport]) patch.state = SPORTS[sport].init();
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
   await db.from('plays').delete().eq('game_id', game.id);  // and the recap's play-by-play
   closeSetup();
@@ -2110,15 +1666,9 @@ $('reset-game').onclick = async () => {
 };
 // The same column is a game time limit, a quarter, or a half depending on the
 // sport. Say which, so nobody has to guess what soccer does with it.
-const SU_TIME_LABEL = {
-  baseball: 'Time limit — minutes (0 = none)',
-  football: 'Quarter length — minutes (0 = none)',
-  basketball: 'Period length — minutes (0 = none)',
-  soccer: 'Half length — minutes (blank = 45)',
-  volleyball: 'Time limit — minutes (0 = none)',
-};
 function renderSetupTimeLabel() {
-  $('su-time-label').textContent = SU_TIME_LABEL[$('su-sport').value] || SU_TIME_LABEL.baseball;
+  const sp = SPORTS[$('su-sport').value];
+  $('su-time-label').textContent = sp ? sp.timeLabel : 'Time limit — minutes (0 = none)';
 }
 $('su-sport').addEventListener('change', renderSetupTimeLabel);
 
@@ -2222,10 +1772,8 @@ $('su-time').addEventListener('change', () => {
 $('su-sport').addEventListener('change', () => {
   const sport = $('su-sport').value;
   const patch = { sport };
-  if (sport === 'football' && !(game.state && game.state.quarter)) patch.state = F.fbState(game);
-  if (sport === 'soccer' && !(game.state && game.state.half)) patch.state = S.scState(game);
-  if (sport === 'volleyball' && !(game.state && game.state.sets)) patch.state = V.vbState(game);
-  if (sport === 'basketball' && !(game.state && game.state.period)) patch.state = B.bkState(game);
+  const sp = SPORTS[sport];
+  if (sp && !sp.started(game.state)) patch.state = sp.init(game);
   writeField(patch);
   renderSetupTimeLabel();
   renderSetupRows();
@@ -2309,22 +1857,32 @@ function stopDemo() {
   if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
   paintDemoBtn();
 }
-$('demo-btn').onclick = () => {
-  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
-  else demoTimer = setInterval(demoStep, 1800);
+// Demo scores a fake game, so it never runs on a real one: it makes a practice
+// game with this game's look, opens it (the overlay link follows), and plays
+// there. Delete the practice game from the list when you are done with it.
+$('demo-btn').onclick = async () => {
+  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; return paintDemoBtn(); }
+  if (!(game.state && game.state.practice)) {
+    if (!confirm('Demo plays a fake game. It runs in a new practice game, so this one stays clean — and the overlay link switches to the practice game while you watch.\n\nStart it?')) return;
+    const row = { status: 'setup', sport: game.sport || 'baseball', away_name: 'Practice', away_abbr: 'PRAC', home_name: 'Demo', home_abbr: 'DEMO',
+      state: { ...(sportState(game.sport || 'baseball') || {}), practice: true } };
+    for (const k of CARRY) if (game[k] != null) row[k] = game[k];
+    const { data, error } = await db.from('games').insert(row).select().single();
+    if (error) return showToast(`⚠️ ${error.message}`, 3000);
+    closeSetup();
+    await openGame(data.id);
+  }
+  demoTimer = setInterval(demoStep, 1800);
   paintDemoBtn();
 };
 function demoStep() {
   if (!game) return stopDemo(); // game closed under us
   const sport = game.sport || 'baseball';
-  if (sport === 'football') return demoStepFootball();
-  if (sport === 'soccer') return demoStepSoccer();
-  if (sport === 'volleyball') return demoStepVolleyball();
-  if (sport === 'basketball') return demoStepBasketball();
+  if (SPORTS[sport]) return SPORTS[sport].demo(game);
   const r = Math.random();
   if (r < 0.10) return fireAnim(['homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase'][Math.floor(Math.random() * 5)]);
   if (r < 0.34) { // ball, but auto-resolve a walk instead of opening the sheet
-    if ((game.balls | 0) >= 3) { const w = L.computeWalk(game.bases); commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }), payload: { runs: w.runs, bases: w.bases }, anim: 'webgem' }); }
+    if ((game.balls | 0) >= 3) recordWalk();
     else commit({ type: 'ball', patch: L.withPitch(game, { balls: (game.balls | 0) + 1 }) });
     return;
   }
@@ -2335,58 +1893,9 @@ function demoStep() {
   return commit(L.onAdvance(game));
 }
 
-function demoStepFootball() {
-  // Nothing scores until somebody has the ball, so give it to one of them first.
-  if (!F.fbState(game).possession) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
-  const r = Math.random();
-  if (r < 0.14) return fireAnim(['touchdown', 'fieldgoal', 'turnover', 'bigplay'][Math.floor(Math.random() * 4)]);
-  if (r < 0.28) return commit(F.touchdown(game));
-  if (r < 0.38) return commit(F.fieldGoal(game));
-  if (r < 0.54) return commit(F.setDown(game, (F.fbState(game).down % 4) + 1));
-  if (r < 0.70) return commit(F.distanceDelta(game, Math.random() < 0.5 ? -3 : 3));
-  if (r < 0.82) return commit(F.firstDown(game));
-  if (r < 0.93) return commit(F.setPossession(game, Math.random() < 0.5 ? 'home' : 'away'));
-  return commit(F.nextQuarter(game));
-}
-
-function demoStepVolleyball() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.10) { const a = V.ace(game); return a && commit(a); }
-  if (r < 0.85) return commit(V.point(game, team()));
-  return commit(V.setServe(game, team()));
-}
-
-function demoStepBasketball() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.45) return commit(B.score(game, team(), 2));
-  if (r < 0.62) return commit(B.score(game, team(), 3));
-  if (r < 0.74) return commit(B.score(game, team(), 1));
-  if (r < 0.92) return commit(B.foul(game, team(), 1));
-  return commit(B.timeout(game, team()));
-}
-
-function demoStepSoccer() {
-  const r = Math.random();
-  const team = () => (Math.random() < 0.5 ? 'home' : 'away');
-  if (r < 0.14) return fireAnim('goal');
-  if (r < 0.22) return commit(S.goal(game, team()));
-  if (r < 0.36) return commit(S.card(game, team(), Math.random() < 0.85 ? 'y' : 'r'));
-  if (r < 0.52) return commit(S.stoppageDelta(game, Math.random() < 0.5 ? -1 : 1));
-  if (r < 0.58) return commit(S.setHalf(game, S.scState(game).half === 1 ? 2 : 1));
-  // otherwise idle; the match clock keeps ticking if running
-}
-
 $('preview-fx-btn').onclick = async () => {
-  const sets = {
-    baseball: ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'],
-    football: ['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'charge'],
-    soccer: ['goal', 'charge'],
-    volleyball: ['ace', 'setwin', 'charge'],
-    basketball: ['three', 'bigplay', 'charge'],
-  };
-  const types = sets[game.sport || 'baseball'] || sets.baseball;
+  const sp = SPORTS[game.sport];
+  const types = sp ? sp.fx : ['run', 'homerun', 'strikeout', 'doubleplay', 'webgem', 'stolenbase', 'walkoff', 'charge'];
   for (const t of types) { fireAnim(t); await new Promise((r) => setTimeout(r, 2600)); }
 };
 
@@ -2411,8 +1920,16 @@ const POS_ALIAS = { 'bottom-bar': 'bottom-center', 'top-bar': 'top-center' };
 const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-right': 'Top-right',
   'mid-left': 'Middle-left', 'mid-center': 'Centre', 'mid-right': 'Middle-right',
   'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
+// Themes retired from the picker still paint for the games that use them; the
+// picker names the one in use rather than showing a blank.
 function renderLook() {
-  $('theme-sel').value = game.theme || 'nightgame';
+  const sel = $('theme-sel'), th = game.theme || 'nightgame';
+  sel.querySelector('option[data-retired]')?.remove();
+  if (![...sel.options].some((o) => o.value === th)) {
+    const o = new Option(`${th.charAt(0).toUpperCase() + th.slice(1)} (retired)`, th);
+    o.dataset.retired = '1'; sel.prepend(o);
+  }
+  sel.value = th;
   const cur = POS_ALIAS[game.scorebug_position] || game.scorebug_position || 'bottom-center';
   document.querySelectorAll('#pos-grid button').forEach((b) => b.classList.toggle('on', b.dataset.pos === cur));
   const sc = game.scorebug_scale || 1;
@@ -2429,76 +1946,36 @@ function renderLook() {
   renderCustomize();
 }
 
-// ---- Customize (freeform `look` overrides on top of the theme) ------------
+// ---- Custom colours (the `look` overrides, applied on the Custom theme only) --
 const lookOf = () => game.look || {};
 async function writeLook(patch) {
-  const look = { ...lookOf(), ...patch };
+  const look = Object.fromEntries(Object.entries({ ...lookOf(), ...patch }).filter(([k]) => LOOK_KEYS.includes(k)));
   for (const k of Object.keys(look)) if (look[k] === '' || look[k] === false || look[k] == null) delete look[k];
   await writeField({ look });
 }
-$('cust-accent').addEventListener('change', (e) => writeLook({ accent: e.target.value }));
-$('cust-font').addEventListener('change', (e) => writeLook({ font: e.target.value }));
-$('cust-radius').addEventListener('change', (e) => writeLook({ radius: e.target.value }));
-$('cust-logos').addEventListener('change', (e) => writeLook({ hideLogos: e.target.checked }));
-$('cust-detail').addEventListener('change', (e) => writeLook({ hideDetail: e.target.checked }));
-$('cust-shadow').addEventListener('change', (e) => writeLook({ noShadow: e.target.checked }));
-$('cust-uppercase').addEventListener('change', (e) => writeLook({ uppercase: e.target.checked }));
-$('cust-logosize').addEventListener('change', (e) => writeLook({ logoSize: e.target.value }));
-$('cust-border').addEventListener('change', (e) => writeLook({ border: e.target.value }));
-$('cust-teambars').addEventListener('change', (e) => writeLook({ teamBars: e.target.checked }));
-// Per-row fills (away / home / details / panel) + one shared gradient angle.
-$('cust-awaytype').addEventListener('change', (e) => writeLook({ awayType: e.target.value }));
-$('cust-awayc1').addEventListener('change', (e) => writeLook({ awayC1: e.target.value }));
-$('cust-awayc2').addEventListener('change', (e) => writeLook({ awayC2: e.target.value }));
-$('cust-hometype').addEventListener('change', (e) => writeLook({ homeType: e.target.value }));
-$('cust-homec1').addEventListener('change', (e) => writeLook({ homeC1: e.target.value }));
-$('cust-homec2').addEventListener('change', (e) => writeLook({ homeC2: e.target.value }));
-$('cust-sittype').addEventListener('change', (e) => writeLook({ sitType: e.target.value }));
-$('cust-sitc1').addEventListener('change', (e) => writeLook({ sitC1: e.target.value }));
-$('cust-sitc2').addEventListener('change', (e) => writeLook({ sitC2: e.target.value }));
-$('cust-paneltype').addEventListener('change', (e) => writeLook({ panelType: e.target.value }));
-$('cust-panelc1').addEventListener('change', (e) => writeLook({ panelC1: e.target.value }));
-$('cust-panelc2').addEventListener('change', (e) => writeLook({ panelC2: e.target.value }));
-$('cust-angle').addEventListener('input', (e) => { $('cust-angle-val').textContent = e.target.value + '°'; });
-$('cust-angle').addEventListener('change', (e) => writeLook({ angle: +e.target.value }));
-$('cust-text').addEventListener('change', (e) => writeLook({ text: e.target.value }));
-$('cust-steel').addEventListener('change', (e) => writeLook({ steel: e.target.value }));
-$('cust-line').addEventListener('change', (e) => writeLook({ line: e.target.value }));
-$('cust-teamfill').addEventListener('change', (e) => writeLook({ teamFill: e.target.checked }));
+// The custom editor is eight keys. Older looks carried more (row fills, bars,
+// borders…); the first edit here drops them, so what the overlay paints is
+// always what this screen shows.
+const LOOK_KEYS = ['accent', 'font', 'radius', 'teamFill', 'panelType', 'panelC1', 'panelC2', 'text'];
+for (const [id, key] of [
+  ['cust-accent', 'accent'], ['cust-font', 'font'], ['cust-radius', 'radius'], ['cust-text', 'text'],
+  ['cust-paneltype', 'panelType'], ['cust-panelc1', 'panelC1'], ['cust-panelc2', 'panelC2'], ['cust-teamfill', 'teamFill'],
+]) $(id).addEventListener('change', (e) => writeLook({ [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 $('cust-reset').onclick = async () => {
   await writeField({ look: {} });
-  showToast('Customize reset');
+  showToast('Custom colours reset');
 };
 function renderCustomize() {
   const L = lookOf();
   $('cust-accent').value = L.accent || '#e8b23a';
   $('cust-font').value = L.font || '';
   $('cust-radius').value = L.radius != null ? String(L.radius) : '';
-  $('cust-logos').checked = !!L.hideLogos;
-  $('cust-detail').checked = !!L.hideDetail;
-  $('cust-shadow').checked = !!L.noShadow;
-  $('cust-uppercase').checked = !!L.uppercase;
-  $('cust-logosize').value = L.logoSize || '';
-  $('cust-border').value = L.border != null ? String(L.border) : '';
-  $('cust-teambars').checked = !!L.teamBars;
   $('cust-teamfill').checked = !!L.teamFill;
-  $('cust-awaytype').value = L.awayType || '';
-  $('cust-awayc1').value = L.awayC1 || '#7a8794';
-  $('cust-awayc2').value = L.awayC2 || '#0e1421';
-  $('cust-hometype').value = L.homeType || '';
-  $('cust-homec1').value = L.homeC1 || '#1b2a41';
-  $('cust-homec2').value = L.homeC2 || '#0e1421';
-  $('cust-sittype').value = L.sitType || '';
-  $('cust-sitc1').value = L.sitC1 || '#0e1421';
-  $('cust-sitc2').value = L.sitC2 || '#1b2a41';
   $('cust-paneltype').value = L.panelType || '';
   $('cust-panelc1').value = L.panelC1 || '#1b2a41';
   $('cust-panelc2').value = L.panelC2 || '#0e1421';
-  $('cust-angle').value = L.angle ?? 180;
-  $('cust-angle-val').textContent = (L.angle ?? 180) + '°';
   $('cust-text').value = L.text || '#f4f7fb';
-  $('cust-steel').value = L.steel || '#8fb6de';
-  $('cust-line').value = L.line || '#2a3550';
+  $('sv-custom').hidden = (game.theme || 'nightgame') !== 'custom';
 }
 
 // ---- Sound settings (written to game.audio / game.sound_pack, synced to overlay)
@@ -2510,16 +1987,14 @@ async function writeAudio(patch) {
   await writeField({ audio: { ...cur, ...patch, cats: { ...cur.cats, ...(patch.cats || {}) } } });
 }
 $('mute-btn').onclick = () => writeAudio({ muted: !audioOf().muted });
-$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value }));
-$('vol-moments').addEventListener('change', (e) => writeAudio({ cats: { moments: +e.target.value } }));
-$('vol-organ').addEventListener('change', (e) => writeAudio({ cats: { organ: +e.target.value } }));
+// One volume. The per-category levels it replaced go back to full, so a slider
+// that is no longer on screen can't be what keeps the overlay quiet.
+$('vol-master').addEventListener('change', (e) => writeAudio({ master: +e.target.value, cats: { moments: 1, organ: 1 } }));
 $('sound-pack').addEventListener('change', (e) => writeField({ sound_pack: e.target.value }));
 
 function renderAudio() {
   const a = audioOf();
   $('vol-master').value = a.master ?? 0.8;
-  $('vol-moments').value = a.cats?.moments ?? 1;
-  $('vol-organ').value = a.cats?.organ ?? 1;
   $('mute-btn').classList.toggle('on', !!a.muted);
   $('mute-btn').textContent = a.muted ? 'Muted' : 'Mute';
   $('sound-pack').value = game.sound_pack || 'bigleague';
@@ -2584,10 +2059,11 @@ function pickResult(kind) {
   if (why) return showToast(why, 3200);
   if (kind === 'HR') {
     if (!$('play-sheet').hidden) closeSheet('play-sheet');
-    // Solo shot: nothing to confirm. With runners on, confirm the run count.
-    if (basesEmpty()) return commit({ type: 'homerun', patch: L.homeRunPatch(game, 1),
-      payload: { runs: 1, play: L.playNote(game, 'HR', { runs: 1 }) }, anim: 'homerun' });
-    return openHrSheet();
+    // Everyone on base scores with the batter — the rulebook leaves nothing to
+    // confirm. A run that should not count is an Undo or a Situation fix.
+    const runs = L.computeHomeRun(game.bases).runs;
+    return commit({ type: 'homerun', patch: L.homeRunPatch(game, runs),
+      payload: { runs, play: L.playNote(game, 'HR', { runs }) }, anim: 'homerun' });
   }
   if (!NEEDS_FIELDER.has(kind)) return startPlay(kind, null, 'result');
   playType = kind;
@@ -2732,25 +2208,6 @@ function recordPlay() {
 // Home-run sheet ------------------------------------------------------------
 // Batter + every runner scores and the bases clear; the sheet just confirms the
 // run total (pre-filled from who's on base) before committing + firing the anim.
-let hrRuns = 1;
-function paintHr() { $('hr-runs').textContent = hrRuns; }
-function openHrSheet() {
-  hrRuns = L.computeHomeRun(game.bases).runs;
-  // Describes the bases, not the number — it has to stay true after a nudge.
-  const on = hrRuns - 1;
-  $('hr-copy').textContent = on
-    ? `${on === 1 ? 'One runner' : on + ' runners'} on — the batter and ${on === 1 ? 'that runner' : 'all of them'} score, and the bases clear.`
-    : 'Nobody on — a solo shot. The batter scores.';
-  paintHr(); openSheet('hr-sheet');
-}
-$('hr-runs-up').onclick = () => { hrRuns = Math.min(hrRuns + 1, 4); paintHr(); };
-$('hr-runs-dn').onclick = () => { hrRuns = Math.max(hrRuns - 1, 1); paintHr(); };
-$('hr-cancel').onclick = () => closeSheet('hr-sheet');
-$('hr-confirm').onclick = () => {
-  closeSheet('hr-sheet');
-  commit({ type: 'homerun', patch: L.homeRunPatch(game, hrRuns),
-    payload: { runs: hrRuns, play: L.playNote(game, 'HR', { runs: hrRuns }) }, anim: 'homerun' });
-};
 
 // Pitch-count stepper (baseball) --------------------------------------------
 $('pc-dn').onclick = () => commit(L.adjustPitch(game, -1));
@@ -2787,10 +2244,13 @@ const endGameClick = () => {
     // Same confirm as ending: the button flips in place, so a second tap (or a
     // second device that just ended it) must not quietly reopen the game.
     if (!confirm('Reopen this game? It goes back to live in your games and on the recap page.')) return;
+    putOnLink(game.id, true);
     return commit({ type: 'reopen_game', patch: { status: 'live' } });
   }
   if (!confirm(`End the game at ${game.away_abbr || 'AWAY'} ${game.away_score | 0} – ${game.home_abbr || 'HOME'} ${game.home_score | 0}?\n\nIt shows as Final in your games and on the recap page. Undo or Reopen puts it back.`)) return;
   commit({ type: 'end_game', patch: { status: 'final', clock_running: false } });
+  // The stream's last word: the Final screen goes up with the result.
+  writeField({ card: { type: 'finalfull', meta: {}, nonce: nextNonce() } });
   closeSheet('sit-sheet');
 };
 document.querySelectorAll('.end-game').forEach((b) => { b.onclick = endGameClick; });
@@ -3069,32 +2529,18 @@ function renderLineups() {
 // The drag-onto-a-diamond Defense panel lived here until v3.62. Positions are
 // set on the Field screen (openField / L.assignSpot); lineup rows show them read-only.
 
-// Walk sheet ----------------------------------------------------------------
-let wState = { first: false, second: false, third: false, runs: 0 };
-function paintWalk() {
-  $('w1').classList.toggle('on', wState.first);
-  $('w2').classList.toggle('on', wState.second);
-  $('w3').classList.toggle('on', wState.third);
-  $('w-runs').textContent = wState.runs;
-}
-function openWalkSheet(r) {
-  const b = r.patch.bases;
-  wState = { first: b.first, second: b.second, third: b.third, runs: r.payload.runs | 0 };
-  paintWalk(); openSheet('walk-sheet');
-}
-$('w1').onclick = () => { wState.first = !wState.first; paintWalk(); };
-$('w2').onclick = () => { wState.second = !wState.second; paintWalk(); };
-$('w3').onclick = () => { wState.third = !wState.third; paintWalk(); };
-$('w-runs-up').onclick = () => { wState.runs = Math.min(wState.runs + 1, 4); paintWalk(); };
-$('w-runs-dn').onclick = () => { wState.runs = Math.max(wState.runs - 1, 0); paintWalk(); };
-$('walk-cancel').onclick = () => closeSheet('walk-sheet');
-$('walk-confirm').onclick = () => {
-  closeSheet('walk-sheet');
-  const bases = { first: wState.first, second: wState.second, third: wState.third };
+// Walk ----------------------------------------------------------------------
+// Ball four puts the batter on first and pushes the forced runners, in one tap.
+// A runner who took an extra base on it is a fix in the Situation sheet, which
+// the toast opens.
+function recordWalk() {
+  const w = L.computeWalk(game.bases);
   // anim: the WALK reveal fires automatically, like run/strikeout do.
-  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases, ...L.runsPatch(game, wState.runs) }),
-    payload: { runs: wState.runs, bases, play: L.playNote(game, 'BB', { runs: wState.runs }) }, anim: 'webgem' });
-};
+  commit({ type: 'walk', patch: L.endPA(game, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(game, w.runs) }),
+    payload: { runs: w.runs, bases: w.bases, play: L.playNote(game, 'BB', { runs: w.runs }) }, anim: 'webgem' });
+  showToast(w.runs ? `Walk · ${w.runs} run${w.runs > 1 ? 's' : ''} forced in` : 'Walk', 4000,
+    { label: 'Fix runners', run: () => openSheet('sit-sheet') });
+}
 
 // Render --------------------------------------------------------------------
 const ordinal = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || n + 'th');
@@ -3130,7 +2576,6 @@ function showSport(sport) {
   // Every sport has a Situation sheet now, and the bar already says what the
   // batter line used to repeat for the other sports, so that line is baseball's.
   $('sit-btn').disabled = false;
-  $('g-batting').hidden = true;
   $('gm-batter').disabled = sport !== 'baseball';   // the lineup sheet is baseball's
   if (sport !== 'baseball') {
     $('gm-batter').hidden = true;
@@ -3182,10 +2627,7 @@ function renderGame() {
   ctrlScorePop('away', g.away_score, 'g-away-runs');
   ctrlScorePop('home', g.home_score, 'g-home-runs');
   renderScoreLabel(g);
-  if (sport === 'football') renderFootballControl();
-  else if (sport === 'soccer') renderSoccerControl();
-  else if (sport === 'volleyball') renderVolleyballControl();
-  else if (sport === 'basketball') renderBasketballControl();
+  if (SPORTS[sport]) SPORTS[sport].render(g);
   else renderBaseballControl();
   renderClock();   // already guards its own DOM writes, and ticks at 4Hz anyway
   // The on-air chip is part of the shell for every sport; the suggestions read the at-bat.
@@ -3220,7 +2662,7 @@ function setupSteps() {
 const setupAllDone = () => setupSteps().every(([, ok]) => ok);
 // Any pitch, out, run or half-inning on the board means first pitch has been thrown.
 const gameStarted = () => !!game && ((game.home_score | 0) + (game.away_score | 0) + (game.balls | 0) + (game.strikes | 0)
-  + (game.outs | 0) + (game.pitch_count | 0) > 0 || (game.inning | 0) > 1 || game.half === 'bottom');
+  + (game.outs | 0) + L.pitchCount(game) > 0 || (game.inning | 0) > 1 || game.half === 'bottom');
 function renderSetupGuide() {
   const el = $('setup-guide'); if (!el || !game) return;
   // Once every step is done it is a finished list sitting on top of the pad, and
@@ -3247,33 +2689,14 @@ function renderSetupGuide() {
 function openSetupGuide() { guideCollapsed = false; renderSetupGuide(); }
 $('sg-head').onclick = () => { guideCollapsed = !guideCollapsed; renderSetupGuide(); };
 
-// The setup checklist says "go here" — now a pane on the Setup screen rather
-// than a tab in a drawer that no longer exists.
-const PANEL_PANE = { 'panel-appearance': 'look', 'panel-cameras': 'obs', 'panel-obs': 'obs', 'panel-overlay': 'obs' };
-function jumpPanel(id) {
-  const p = $(id); if (!p) return;
-  openSetup();
-  svGo(PANEL_PANE[id] || 'home');
-  p.open = true;
-  requestAnimationFrame(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-}
-
-// Accordion: opening a top-level panel closes the others, so the page never
-// grows past one open panel. Nested sub-panels (lineups, custom theme) are
-// exempt. 'toggle' doesn't bubble — listen in the capture phase.
-const isTopPanel = (el) => el instanceof HTMLDetailsElement && el.classList.contains('panel') && !el.parentElement.closest('details.panel');
-document.addEventListener('toggle', (e) => {
-  if (!isTopPanel(e.target) || !e.target.open) return;
-  document.querySelectorAll('details.panel[open]').forEach((o) => {
-    if (o !== e.target && isTopPanel(o)) o.open = false;
-  });
-}, true);
 $('setup-guide').addEventListener('click', (e) => {
   const b = e.target.closest('.sg-go'); if (!b) return;
   const go = b.dataset.go;
   if (go === 'teams') { openSetup(); svGo('teams'); }
-  else if (go === 'lineups' || go === 'defense') openLineupSheet(L.battingSide(game));
-  else if (go === 'overlay') { jumpPanel('panel-overlay'); overlayCopied = true; renderSetupGuide(); }
+  else if (go === 'lineups') openLineupSheet(L.battingSide(game));
+  else if (go === 'defense') openField();
+  // Opens the link; the step ticks when Copy or Open is actually pressed.
+  else if (go === 'overlay') { openSetup(); svGo('link'); }
 });
 
 // The bar itself is dots and a diamond — shape, not text, and marked
@@ -3316,7 +2739,6 @@ function renderBaseballControl() {
       '<span class="mb mh"></span>' +
     '</span>';
   setSitLabel(L.situationSentence(game) + '. Edit the situation.');
-  $('g-batting').hidden = true;   // the batter strip names the hitter; the bold abbreviation up top says which team
   $('g-away-name').classList.toggle('bat', game.half === 'top');
   $('g-home-name').classList.toggle('bat', game.half === 'bottom');
   renderBatterLine();
@@ -3356,67 +2778,14 @@ function renderBatterLine() {
   $('gm-batter').hidden = false;
 }
 
-function renderFootballControl() {
-  const st = F.fbState(game);
-  const dd = st.distance === 'goal' ? `${ordinal(st.down)} & Goal` : `${ordinal(st.down)} & ${st.distance}`;
-  const abbr = (t) => (t === 'home' ? (game.home_abbr || 'HOME') : (game.away_abbr || 'AWAY'));
-  const poss = st.possession === 'away' ? `◄ ${esc(abbr('away'))} ball` : st.possession === 'home' ? `${esc(abbr('home'))} ball ►` : 'no ball set';
-  $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.quarter}</span><span class="sc-count">${dd}</span><span class="sc-outs">${poss}</span>`;
-  setSitLabel(`Quarter ${st.quarter}, ${dd}` +
-    (st.possession ? `, ${st.possession === 'home' ? game.home_name : game.away_name} ball` : ', possession not set'));
-  $('g-batting').textContent = st.possession ? `Ball: ${st.possession === 'home' ? game.home_name : game.away_name}` : 'Possession: —';
-  $('fb-dist-val').textContent = st.distance === 'goal' ? 'Goal' : st.distance;
-  $('fbs-away').textContent = game.away_score | 0; $('fbs-home').textContent = game.home_score | 0;
-  $('fb-q-val').textContent = st.quarter;
-  $('fb-to-away-val').textContent = st.away_timeouts; $('fb-to-home-val').textContent = st.home_timeouts;
-  $('fb-poss-away').classList.toggle('on', st.possession === 'away');
-  $('fb-poss-home').classList.toggle('on', st.possession === 'home');
-  for (const d of [1, 2, 3, 4]) $('fb-down-' + d).classList.toggle('on', st.down === d);
-}
-function renderSoccerControl() {
-  const st = S.scState(game);
-  $('sc-mid').innerHTML = `<span class="sc-inning">${st.half === 2 ? '2nd' : '1st'} Half</span>` +
-    `<span class="sc-count">⚽</span><span class="sc-outs">${st.stoppage ? '+' + st.stoppage : ''}</span>`;
-  setSitLabel(`${st.half === 2 ? 'Second' : 'First'} half` + (st.stoppage ? `, plus ${st.stoppage} minutes stoppage` : ''));
-  $('g-batting').textContent = 'Soccer';
-  $('sc-stop-val').textContent = '+' + st.stoppage;
-  $('scs-away').textContent = game.away_score | 0; $('scs-home').textContent = game.home_score | 0;
-  $('sc-half-1').classList.toggle('on', st.half === 1);
-  $('sc-half-2').classList.toggle('on', st.half === 2);
-}
-function renderVolleyballControl() {
-  const st = V.vbState(game);
-  const serve = st.serve === 'away' ? '◄ serve' : st.serve === 'home' ? 'serve ►' : 'serve: —';
-  $('sc-mid').innerHTML = `<span class="sc-inning">SET ${st.set}</span>` +
-    `<span class="sc-count">${st.sets.away}–${st.sets.home}</span><span class="sc-outs">${serve}</span>`;
-  setSitLabel(`Set ${st.set}, sets ${st.sets.away} to ${st.sets.home}` +
-    (st.serve ? `, ${st.serve === 'home' ? game.home_name : game.away_name} serving` : ', server not set'));
-  $('g-batting').textContent = st.serve ? `Serving: ${st.serve === 'home' ? game.home_name : game.away_name}` : 'Serving: —';
-  $('vb-set-val').textContent = st.set;
-  $('vbs-away').textContent = game.away_score | 0; $('vbs-home').textContent = game.home_score | 0;
-  $('vb-sets-away-val').textContent = st.sets.away; $('vb-sets-home-val').textContent = st.sets.home;
-  $('vb-target').textContent = 'To ' + st.target;
-  $('vb-serve-away').classList.toggle('on', st.serve === 'away');
-  $('vb-serve-home').classList.toggle('on', st.serve === 'home');
-}
-function renderBasketballControl() {
-  const st = B.bkState(game);
-  const bonus = [B.bonusOf(st, 'away') && 'AWAY ' + B.bonusOf(st, 'away'), B.bonusOf(st, 'home') && 'HOME ' + B.bonusOf(st, 'home')].filter(Boolean).join(' · ');
-  $('sc-mid').innerHTML = `<span class="sc-inning">Q${st.period}</span>` +
-    `<span class="sc-count">Fouls ${st.fouls.away}–${st.fouls.home}</span><span class="sc-outs">${bonus}</span>`;
-  setSitLabel(`Quarter ${st.period}, fouls ${st.fouls.away} to ${st.fouls.home}` + (bonus ? `, ${bonus}` : ''));
-  $('g-batting').textContent = `Q${st.period}` + (bonus ? ` · ${bonus}` : '');
-  $('bk-period-val').textContent = st.period;
-  $('bks-away').textContent = game.away_score | 0; $('bks-home').textContent = game.home_score | 0;
-  $('bk-foul-away-val').textContent = st.fouls.away; $('bk-foul-home-val').textContent = st.fouls.home;
-  $('bk-to-away-val').textContent = st.timeouts.away; $('bk-to-home-val').textContent = st.timeouts.home;
-}
-
 $('rotate-url-btn').onclick = async () => {
   if (!confirm('Rotate the overlay link?\n\nEvery link you have shared stops working, including the one in OBS — you will need to paste the new one into your Browser Source.')) return;
-  const { data, error } = await db.rpc('rotate_overlay_token', { p_game: game.id });
+  const { data, error } = await db.rpc('rotate_channel_token');
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
-  overlayToken = data;
+  channelToken = data;
+  const t = await db.rpc('overlay_token', { p_game: game.id });   // every game's key turned too
+  overlayToken = t.data || null;
+  overlayCopied = false; renderSetupGuide();
   $('overlay-url').value = overlayUrl();
   showToast('🔑 New link — update OBS');
 };
@@ -3426,9 +2795,10 @@ $('copy-recap-btn').onclick = async () => {
 };
 $('copy-url-btn').onclick = async () => {
   try { await navigator.clipboard.writeText($('overlay-url').value); $('copy-url-btn').textContent = 'Copied!'; showToast('🔗 Overlay URL copied'); setTimeout(() => ($('copy-url-btn').textContent = 'Copy'), 1200); } catch {}
-  overlayCopied = true; renderSetupGuide();
+  markLinkCopied(); renderSetupGuide();
 };
-$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); overlayCopied = true; renderSetupGuide(); };
+$('open-url-btn').onclick = () => { const u = $('overlay-url').value; if (u) window.open(u, '_blank', 'noopener'); markLinkCopied(); renderSetupGuide(); };
+$('link-here').onclick = () => game && putOnLink(game.id, true);
 
 // Keyboard shortcuts (desktop control): ignore while typing in a field.
 document.addEventListener('keydown', (e) => {
@@ -3438,6 +2808,9 @@ document.addEventListener('keydown', (e) => {
   // dialog you were looking at. defaultPrevented covers the same key being
   // spent by the sheet handler above — one Escape should close one thing.
   if (sheetOpen() || e.defaultPrevented) return;
+  // Setup and Field are full screens, not sheets, but the pad is just as
+  // hidden behind them: a key must not score a play you cannot see.
+  if (!$('setup-view').hidden || !$('field-view').hidden) return;
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
@@ -3453,5 +2826,8 @@ document.addEventListener('keydown', (e) => {
     if (map[k]) { e.preventDefault(); $(map[k]).click(); }
   }
 });
+
+// The other four sports' pads, wired now that every helper they borrow exists.
+const SPORTS = createSports({ $, esc, ordinal, setSitLabel, commit, commitOrAsk, fireAnim, game: () => game });
 
 refreshSession();

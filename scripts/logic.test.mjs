@@ -1186,3 +1186,31 @@ test('batter’s interference with 2 outs ends the half on the batter, and no ru
   assert.equal(r.patch.half, 'bottom');
   assert.equal(r.patch.away_score, undefined);
 });
+
+// ---------------------------------------------------------------------------
+// A pitching change: each arm keeps his own count
+// ---------------------------------------------------------------------------
+test('a new pitcher starts at zero and the old one’s count is kept', () => {
+  const g = G({ state: { pitches: { home: 42 } } });
+  const r = L.onPitcherChange(g, 'home', 'bA', 'bB');
+  assert.equal(r.patch.state.pitches.home, 0);
+  assert.equal(r.patch.state.pitchLog.home.bA, 42);
+  assert.equal(L.pitchCount({ ...g, ...r.patch }), 0);
+});
+
+test('a pitcher who comes back picks up his own count', () => {
+  const g = G({ state: { pitches: { home: 12 }, pitchLog: { home: { bA: 42 } } } });
+  const r = L.onPitcherChange(g, 'home', 'bB', 'bA');
+  assert.equal(r.patch.state.pitches.home, 42);
+  assert.equal(r.patch.state.pitchLog.home.bB, 12);
+});
+
+test('no change when the same pitcher is put back, or nothing was thrown', () => {
+  assert.equal(L.onPitcherChange(G({ state: { pitches: { home: 9 } } }), 'home', 'bA', 'bA'), null);
+  assert.equal(L.onPitcherChange(G(), 'home', null, 'bA'), null);
+});
+
+test('a pitching change leaves the other team’s count alone', () => {
+  const r = L.onPitcherChange(G({ state: { pitches: { home: 30, away: 17 } } }), 'home', 'bA', 'bB');
+  assert.equal(r.patch.state.pitches.away, 17);
+});

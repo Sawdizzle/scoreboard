@@ -279,12 +279,8 @@ export function currentPitcher(g) {
   return filled(p) ? p : null;
 }
 // ---- Defensive positions --------------------------------------------------
-// The 9 field spots. P is always the team's pitcher; the other 8 map to a
-// batting-order index via lineups[side].positions = { C: idx, '1B': idx, ... }.
+// The 9 field spots; lineups[side].positions maps each to a player's bid.
 export const FIELD_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
-export function teamPositions(g, side) {
-  return (g.lineups && g.lineups[side] && g.lineups[side].positions) || {};
-}
 // Resolve a position to its {num,name}, or null if unset.
 export function fielderAt(g, side, pos) {
   const t = normalizeTeam((g.lineups || {})[side] || {});
@@ -406,10 +402,6 @@ export function swapBatters(team, a, b) {
 // ---- Positions from the field screen ---------------------------------------
 // Every spot on the diamond, P included, is positions[pos] = the bid of the
 // player standing there.
-export function pitcherIdx(team) {
-  const t = normalizeTeam(team);
-  return slotOfBid(t, t.positions.P);
-}
 // What a batting-order slot plays: 'P', a field spot, or '' (not in the field).
 export function positionOf(team, idx) {
   const t = normalizeTeam(team);
@@ -551,6 +543,26 @@ export function withPitch(g, patch) {
   const cur = (g.state && g.state.pitches) || {};
   const baseState = patch.state || (g.state || {});
   return { ...patch, state: { ...baseState, pitches: { ...cur, [side]: (cur[side] | 0) + 1 } } };
+}
+// A new pitcher starts from his own count, not the last one's. state.pitches
+// stays the count of whoever is on the mound (the overlay reads it as a
+// number); state.pitchLog keeps every pitcher's tally by roster id, so a
+// pitcher who comes back picks up where he left off. Null when nothing moves.
+export function onPitcherChange(g, side, fromBid, toBid) {
+  if (fromBid === toBid) return null;
+  const st = g.state || {};
+  const cur = st.pitches || {};
+  const log = st.pitchLog || {};
+  const mine = { ...(log[side] || {}) };
+  const now = cur[side] | 0;
+  if (fromBid) mine[fromBid] = now;
+  const next = toBid ? (mine[toBid] | 0) : 0;
+  if (now === next && !(fromBid && now)) return null;
+  return {
+    type: 'pitcher', text: 'New pitcher',
+    patch: { state: { ...st, pitches: { ...cur, [side]: next }, pitchLog: { ...log, [side]: mine } } },
+    payload: { inputs: { side, from: fromBid || null, to: toBid || null } },
+  };
 }
 export function adjustPitch(g, d) {
   const side = fieldingSide(g);

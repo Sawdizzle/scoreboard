@@ -20,6 +20,9 @@
 // What it carries, and what it must not:
 //   kind 'event' — a play, through apply_event (snapshots prev_state, undoable)
 //   kind 'field' — a direct games UPDATE: setup, look, audio, sponsors, cards
+//   kind 'roster' — the whole lineup blob for a game, through save_roster. Only
+//                   the newest one matters, so a roster queued behind another
+//                   for the same game replaces it instead of queueing twice.
 // Transient triggers stay OUT on purpose: replaying a stinger, a clip request,
 // a scene cut or "go live" minutes late would fire it over the wrong moment of
 // the game. Those are fire-and-forget by design, and always were.
@@ -37,6 +40,8 @@ const AUTH_ERROR = /jwt|token|401|not authenticated|unauthorized/i;
 // io — the whole boundary. Everything is required except `now`.
 //   applyEvent(gameId, type, patch, payload) -> {data, error}   the apply_event RPC
 //   updateFields(gameId, patch)             -> {data, error}    a plain games UPDATE
+//   saveRoster(gameId, lineups)             -> {data, error}    save_roster; data = the new roster_rev
+//   onRosterSaved(gameId, rev, settled)  a roster landed; `settled` when no newer one is queued
 //   onPending(count, errMessage)   the ⏳ badge; errMessage set only while failing
 //   onAccepted(row, gameId, settled)  a write landed. `settled` is true when it
 //                                     was the LAST one queued for that game, i.e.
@@ -52,8 +57,8 @@ const AUTH_ERROR = /jwt|token|401|not authenticated|unauthorized/i;
 // at construction instead — which happens as control.js evaluates, so the page
 // fails loudly on load rather than the queue misbehaving on a bad connection.
 // `now` is deliberately not on the list: it defaults to Date.now.
-export const IO_KEYS = ['applyEvent', 'updateFields', 'onPending', 'onAccepted',
-  'onToast', 'onAuthError', 'isPaused', 'retry'];
+export const IO_KEYS = ['applyEvent', 'updateFields', 'saveRoster', 'onPending', 'onAccepted',
+  'onRosterSaved', 'onToast', 'onAuthError', 'isPaused', 'retry'];
 
 export function createQueue(io) {
   for (const k of IO_KEYS) {
@@ -63,6 +68,7 @@ export function createQueue(io) {
   let draining = false;
   let inflight = null;         // so drain() can be awaited to "the queue is idle"
   let failing = false;         // so a lost network toasts once, not every retry
+  let sending = null;          // the entry on the wire, which a newer roster must not replace
   // The last row the server confirmed, and the base a local undo replays from.
   // It advances with each accepted write, NOT only when the queue empties.
   let baseline = null;
@@ -77,9 +83,15 @@ export function createQueue(io) {
   const entriesFor = (gameId) => pending.filter((w) => w.gameId === gameId);
 
   function enqueue(entry) {
+    if (entry.kind === 'roster') {
+      // A roster is the whole thing, not a change to it: the newest waiting one
+      // is all that needs to go. One already on the wire is left alone.
+      const i = pending.findIndex((w) => w.kind === 'roster' && w.gameId === entry.gameId && w !== sending);
+      if (i >= 0) { pending[i] = { ...entry, at: now() }; badge(); return drain(); }
+    }
     pending.push({ ...entry, at: now() });
     badge();
-    drain();
+    return drain();
   }
 
   // Everything hopeful calls this — enqueue, 'online', the tab coming back, the
@@ -101,14 +113,16 @@ export function createQueue(io) {
   async function sendAll() {
     while (pending.length) {
       const w = pending[0];
-      let patch = w.patch;
+      let patch = w.patch || {};
       if (patch.current_animation && now() - w.at > STALE_ANIM_MS) {
         patch = { ...patch };
         delete patch.current_animation;        // the play is still good; the stinger is not
       }
-      const { data, error } = w.kind === 'field'
-        ? await io.updateFields(w.gameId, patch)
+      sending = w;
+      const { data, error } = w.kind === 'roster' ? await io.saveRoster(w.gameId, w.lineups)
+        : w.kind === 'field' ? await io.updateFields(w.gameId, patch)
         : await io.applyEvent(w.gameId, w.type, patch, w.payload);
+      sending = null;
       if (error) {
         badge(error.message);
         // Say it once. Silence here is what made a dropped Setup save invisible.
@@ -118,6 +132,11 @@ export function createQueue(io) {
         return;
       }
       pending.shift();
+      if (w.kind === 'roster') {
+        io.onRosterSaved(w.gameId, data | 0, !pending.some((x) => x.kind === 'roster' && x.gameId === w.gameId));
+        badge();
+        continue;
+      }
       // Each accepted write moves the baseline, even mid-queue: a local undo
       // replays what is STILL queued on top of this, so it has to be current.
       if (data) {

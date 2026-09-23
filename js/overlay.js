@@ -8,7 +8,32 @@ import { setStorm, strike } from './storm.js';
 import { serverNow, syncClock, clockSkewMs } from './clock.js';
 
 const params = new URLSearchParams(location.search);
-const gameId = params.get('game');
+// The account link (?ch=) names no game: it asks which game the pad last
+// opened, and reloads itself when that changes, so OBS keeps one URL forever.
+// The older per-game link (?game=&t=) still works on its own.
+const linkKey = params.get('ch');
+const linked = linkKey ? await resolveLink() : null;
+const gameId = linked ? linked.game_id : params.get('game');
+async function resolveLink() {
+  for (let wait = 2000; ; wait = Math.min(wait * 2, 30000)) {
+    const { data, error } = await db.rpc('resolve_channel', { p_token: linkKey });
+    if (!error) {
+      if (!data || !data.length) console.warn('Scoreboard: this overlay link has been replaced — copy it again from the pad.');
+      return (data && data[0]) || { game_id: null, token: null };
+    }
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+if (linkKey) {
+  // Cheap: one tiny RPC every few seconds. A change of game is a reload, which
+  // starts everything — roster, realtime, OBS relay — cleanly on the new game.
+  setInterval(async () => {
+    const { data, error } = await db.rpc('resolve_channel', { p_token: linkKey });
+    if (error) return;
+    const now = (data && data[0]) || { game_id: null };
+    if ((now.game_id || null) !== (gameId || null)) location.reload();
+  }, 5000);
+}
 if (params.get('debug')) {
   document.body.classList.add('debug'); window.__audio = audio;
   // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
@@ -17,7 +42,7 @@ if (params.get('debug')) {
 // The roster lives in an owner-only table (it has kids' names in it), so the
 // overlay reads it through a token that travels only in this URL. No token, no
 // lineup or defense cards — everything else still runs.
-const rosterToken = params.get('t');
+const rosterToken = linked ? linked.token : params.get('t');
 // Writing back to the game row -- the OBS status, scene and clip-ack relay --
 // is gated on that same token, so a link someone found can't drive the pad's
 // OBS panel. A URL without &t= still runs the whole overlay; it just can't
@@ -421,16 +446,16 @@ function updateDetail(s) {
     if (h) parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')}</span>${h}</span>`);
     return paintDetail(parts.join(''));
   }
-  // Batter/pitcher prefer the live lineup (at-bat hitter, fielding-team pitcher),
-  // falling back to the hand-typed fields when a team has no lineup entered.
+  // Batter and pitcher come from the lineup: the hitter at bat, the fielding
+  // team's pitcher.
   const lb = currentBatter(s);
-  const batName = lb ? lb.name : s.batter_name, batNum = lb ? lb.num : s.batter_number;
+  const batName = lb ? lb.name : '', batNum = lb ? lb.num : '';
   if (s.show_batter && (batName || batNum)) {
     const num = batNum ? `#${batNum} ` : '';
     parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(batName || '')}</span>`);
   }
   const lp = currentPitcher(s);
-  const pitName = lp ? lp.name : s.pitcher_name, pitNum = lp ? lp.num : '';
+  const pitName = lp ? lp.name : '', pitNum = lp ? lp.num : '';
   if (s.show_pitcher && (pitName || pitNum)) {
     const num = pitNum ? `#${pitNum} ` : '';
     parts.push(`<span><span class="k">P</span>${num}${escapeHtml(pitName || '')}</span>`);
@@ -521,13 +546,6 @@ function cardSig(c, s) {
     const side = fieldingSide(s);
     return `${side}:${rosterGen}`;
   }
-  // Due Up follows the order while it is up: a new hitter at bat, the half
-  // rolling to the other team, or the roster being re-pulled all repaint it.
-  if (c.type === 'dueup') {
-    const side = battingSide(s);
-    const idx = ((s.state && s.state.batIdx) || {})[side] | 0;
-    return `${side}:${idx}:${rosterGen}:${s.away_abbr}:${s.home_abbr}`;
-  }
   // A break card can be up while you fix a score or roll the inning — keep it live.
   if (c.type === 'midinning') {
     return `${s.away_score}:${s.home_score}:${s.inning}:${s.half}:${JSON.stringify(s.line_score || [])}:${JSON.stringify(s.state || {})}:${recapPlays ? recapPlays.length : '-'}:${rosterGen}`;
@@ -554,11 +572,10 @@ function renderCard(s) {
   layer.classList.toggle('takeover', full);
   document.body.classList.toggle('takeover', full);
   if (remount) cdPainted = null; // a rebuilt card starts with placeholder text
-  if (!key) { layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('lower'); return; }
+  if (!key) { layer.hidden = true; layer.innerHTML = ''; return; }
   const html = buildCard(c, s);
   const cur = layer.querySelector('.card');
   if (remount || !cur) {
-    layer.classList.toggle('lower', c.type === 'dueup');
     layer.innerHTML = html; // fresh card → play the entrance animation
     fitStartingNames(layer);
     paintWeather();
@@ -923,25 +940,6 @@ function buildCard(c, s) {
         <div class="side"><span class="n">${hAbbr}</span><span class="r">${s.home_score | 0}</span></div>
       </div>${ls}</div>`;
   }
-  if (c.type === 'dueup') {
-    // Live from the roster: the hitter at bat, then who follows. Typed text still
-    // wins when the operator wrote the card by hand, and an old card that carried
-    // its own snapshot still shows it.
-    let body;
-    if (meta.text) body = `<span>${escapeHtml(meta.text)}</span>`;
-    else if (Array.isArray(meta.lines) && meta.lines.length) {
-      body = `<div class="du-list">${meta.lines.map((n) => `<span>${escapeHtml(n)}</span>`).join('')}</div>`;
-    } else if (rosterBad) body = `<span class="du-empty">${LINK_STALE}</span>`;
-    else {
-      const up = dueUpCard(s, battingSide(s), 3);
-      body = up.length
-        ? `<div class="du-list">${up.map((b) =>
-            `<span class="${b.current ? 'du-cur' : ''}">${b.num ? `<i>#${escapeHtml(b.num)}</i> ` : ''}${escapeHtml(b.name || '')}</span>`).join('')}</div>`
-        : '<span class="du-empty">No lineup set</span>';
-    }
-    const team = escapeHtml(battingSide(s) === 'home' ? (s.home_abbr || s.home_name || 'Home') : (s.away_abbr || s.away_name || 'Visitor'));
-    return `<div class="card lower-card"><b>Due Up · ${team}</b>${body}</div>`;
-  }
   if (c.type === 'lineup') {
     const side = meta.auto ? battingSide(s) : (meta.side || battingSide(s));
     const teamName = escapeHtml(side === 'home' ? (s.home_name || 'Home') : (s.away_name || 'Visitor'));
@@ -1271,7 +1269,9 @@ addEventListener('online', () => { syncClock(); fetchState(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { syncClock(); fetchState(); } });
 
 if (!gameId) {
-  el.bug.innerHTML = '<div class="err">Add ?game=&lt;id&gt; to the URL</div>';
+  // An account link with no game yet stays clear until the pad opens one.
+  if (!linkKey) el.bug.innerHTML = '<div class="err">Add ?game=&lt;id&gt; to the URL</div>';
+  else el.bug.hidden = true;
   el.bug.dataset.ready = '1';
 } else {
   // Not awaited: the clock repaints at 4Hz so it corrects itself the moment

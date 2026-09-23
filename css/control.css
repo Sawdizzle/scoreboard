@@ -256,7 +256,7 @@ button { font-family: var(--disp); font-weight: 700; border: none; border-radius
 /* Mouse and trackpad get hover feedback; touch devices must never keep a stuck
    hover state after a tap, so this is gated rather than applied globally. */
 @media (hover: hover) and (pointer: fine) {
-  .key:hover, .base-btn:hover, .fxbtn:hover, .step:hover, .game-row:hover, .help-tile:hover,
+  .key:hover, .base-btn:hover, .fxbtn:hover, .step:hover, .game-row:hover,
   .primary:hover, .ghost:hover, .panel > summary:hover { filter: brightness(1.18); }
   .fxbtn:disabled:hover, .obsbtn:disabled:hover { filter: none; }
 }
@@ -432,16 +432,8 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 /* Confirming a play is never a dialog — it is a sheet with the number big
    enough to read at a glance and one button that does the thing. */
 .confirm-copy { margin: 0; font-size: 14px; line-height: 1.55; color: var(--body); text-wrap: pretty; }
-.walk-bases { display: flex; gap: 10px; margin-top: 16px; }
-.walk-bases .base-btn { flex: 1; height: 64px; font-size: 16px; font-weight: 800; border-radius: 18px; }
-.runs-stepper { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 22px 0; }
-.runs-stepper .step { width: 64px; height: 64px; font-size: 28px; border-radius: 18px; }
-.runs-stepper b { font-family: var(--num); font-size: 54px; font-weight: 600; color: var(--chalk); min-width: 1.4ch; text-align: center; }
-.runs-stepper.big { margin: 26px 0 24px; }
-.runs-stepper.big b { font-size: 68px; line-height: 1; }
 .confirm-go { width: 100%; padding: 20px; font-size: 18px; font-weight: 800; letter-spacing: 0.04em;
   color: #fff; background: var(--hr-grad); border: 1px solid var(--hr-line); border-radius: 16px; }
-.confirm-go.walk { background: var(--run); border-color: var(--run); letter-spacing: 0; }
 .confirm-go:active { filter: brightness(1.15); transform: translateY(2px); }
 .confirm-card .ghost { border-radius: 14px; padding: 14px; font-size: 14px; }
 .step { width: 48px; height: 48px; font-size: 24px; background: var(--card); border: 1px solid var(--line-2); color: var(--chalk); border-radius: 13px; }
@@ -463,7 +455,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .fx-pad { margin-top: 16px; }
 .fxbtn { padding: 15px 6px; font-size: 14px; font-weight: 700; background: var(--bg-2); border: 1px solid var(--line); color: var(--chalk); border-radius: 12px; }
 .fxbtn:active { filter: brightness(1.15); transform: translateY(1px); }
-.fxbtn.hr { width: 100%; margin-bottom: 8px; padding: 20px; font-size: 19px; letter-spacing: 0.05em; color: #fff; background: var(--hr-grad); border-color: var(--hr-line); }
 .fx-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 /* An authored display: beats the UA [hidden] rule, so .sport-only could not
    hide this one — Batting order + Defense showed on football and soccer. */
@@ -481,10 +472,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .slider { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); margin-top: 12px; }
 .slider input[type="range"] { flex: 1; height: 30px; accent-color: var(--steel); }
 .slider b { font-family: var(--num); font-size: 18px; color: var(--chalk); min-width: 3.5ch; text-align: right; }
-.fill-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.fill-row .fill-label { flex: 1; font-size: 13px; color: var(--muted); }
-.fill-row select { padding: 8px; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; color: var(--chalk); font-size: 16px; }
-.fill-row input[type="color"] { width: 34px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
 .sublabel { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 14px 0 8px; }
 .pos-row { display: flex; align-items: flex-start; gap: 14px; }
 .pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; flex: 0 0 auto; width: 176px; }
@@ -501,13 +488,10 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 /* Football control */
 .fb-dist { align-self: center; font-family: var(--num); font-size: 20px; min-width: 2.5ch; text-align: center; }
 .fb-score { margin-top: 8px; }
-.shared-fx { display: flex; gap: 12px; margin-top: 16px; }
-.shared-fx .fxbtn, .shared-fx .fxbtn.cardclear { flex: 1; width: auto; margin-top: 0; } /* keep the row's baselines even */
 /* A button beside a labelled select lines up with the select, not the label. */
 .audio-row > .fxbtn { align-self: flex-end; padding: 13px 16px; margin: 0; }
 .audio-row > .sel { margin-bottom: 0; }
 .audio-row { margin-bottom: 12px; }
-.shared-fx + .audio-row, .panel-body > input + .shared-fx { margin-top: 14px; }
 .replay-row { margin-top: 10px; }
 .replay-auto { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--chalk); }
 .replay-auto .switch .track { width: 46px; height: 28px; }
@@ -644,11 +628,7 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 @media (max-height: 500px) and (orientation: landscape) and (prefers-reduced-motion: reduce) {
 }
 
-/* The OBS on/off switch, and everything it hides */
-.pad-opt { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 14px; margin-bottom: 10px; background: var(--card);
-  border: 1px solid var(--line); border-radius: 12px; }
-.pad-opt-lab { font-size: 14px; font-weight: 700; color: var(--chalk); }
+/* The switch on the replay row, and everything the OBS toggle hides */
 .switch { display: inline-flex; margin: 0; cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch .track { width: 52px; height: 31px; border-radius: 999px; background: var(--bg-2);
@@ -659,8 +639,6 @@ body.in-game .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
 .switch input:checked + .track .knob { transform: translateX(21px); background: #fff; }
 .switch input:focus-visible + .track { outline: 2px solid var(--steel); outline-offset: 2px; }
 
-body.no-obs #panel-obs,
-body.no-obs #panel-cameras,
 body.no-obs .obs-only { display: none; }
 
 /* OBS stream / record / buffer */
@@ -684,13 +662,6 @@ body.no-obs .obs-only { display: none; }
 /* Lobby help / setup instructions */
 .help { margin-top: 22px; }
 .help-h { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 9px 2px; }
-.help-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-.help-tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 15px;
-  font-size: 13px; font-weight: 700; color: var(--chalk); text-align: left; }
-.help-tile:active { filter: brightness(1.2); }
-.ht-emoji { display: block; font-size: 17px; line-height: 1; margin-bottom: 6px; }
-.help-all { padding: 14px; font-size: 13px; font-weight: 700; border-radius: 14px; margin-top: 9px; }
-.help-list[hidden] { display: none; }
 
 /* Support footer (lobby) */
 .support { margin: 26px 0 8px; text-align: center; }
@@ -849,9 +820,6 @@ body.no-obs .obs-only { display: none; }
 .colorlab input[type="color"] { width: 48px; height: 34px; background: none; border: 1px solid var(--line); border-radius: 8px; }
 .fld { display: block; font-size: 13px; color: var(--muted); margin: 12px 0; }
 .fld input { width: 100%; margin-top: 6px; padding: 12px; font-size: 16px; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; color: var(--chalk); }
-.toggles { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 8px 0 4px; }
-.toggles label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--chalk); }
-.toggles input { width: 20px; height: 20px; accent-color: var(--steel); }
 
 .urlbar { display: flex; gap: 8px; margin-top: 16px; }
 .urlbar input { font-family: var(--mono); font-size: 16px; }
