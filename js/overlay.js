@@ -446,16 +446,16 @@ function updateDetail(s) {
     if (h) parts.push(`<span><span class="k">${escapeHtml(s.home_abbr || 'HOME')}</span>${h}</span>`);
     return paintDetail(parts.join(''));
   }
-  // Batter/pitcher prefer the live lineup (at-bat hitter, fielding-team pitcher),
-  // falling back to the hand-typed fields when a team has no lineup entered.
+  // Batter and pitcher come from the lineup: the hitter at bat, the fielding
+  // team's pitcher.
   const lb = currentBatter(s);
-  const batName = lb ? lb.name : s.batter_name, batNum = lb ? lb.num : s.batter_number;
+  const batName = lb ? lb.name : '', batNum = lb ? lb.num : '';
   if (s.show_batter && (batName || batNum)) {
     const num = batNum ? `#${batNum} ` : '';
     parts.push(`<span><span class="k">AB</span>${num}${escapeHtml(batName || '')}</span>`);
   }
   const lp = currentPitcher(s);
-  const pitName = lp ? lp.name : s.pitcher_name, pitNum = lp ? lp.num : '';
+  const pitName = lp ? lp.name : '', pitNum = lp ? lp.num : '';
   if (s.show_pitcher && (pitName || pitNum)) {
     const num = pitNum ? `#${pitNum} ` : '';
     parts.push(`<span><span class="k">P</span>${num}${escapeHtml(pitName || '')}</span>`);
