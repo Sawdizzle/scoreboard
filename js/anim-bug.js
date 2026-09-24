@@ -88,5 +88,9 @@ export function syncAnimBug(s, anim) {
   return true;
 }
 
+// The files the animated bug on screen loads, for the release check before a
+// reload (overlay.js). None when no animated bug is up.
+export const animBugFiles = () => (slug ? [`/bugs/${slug}`, '/bugs/kit.js'] : []);
+
 // Whether the overlay should still play this stinger itself.
 export const overlayPlays = (anim, onScreen) => !onScreen || !OWN.has(anim && anim.type);
