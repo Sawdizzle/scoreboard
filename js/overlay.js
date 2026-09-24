@@ -262,6 +262,8 @@ function render(s) {
 
   updateClock();
   updateDetail(s);
+  // Elevated also restyles the ticker and the sponsor bug (css/scenes-elevated.css).
+  document.body.classList.toggle('scenes-el', sceneStyle(s) === 'elevated');
   renderCard(s);
   el.bug.dataset.ready = '1';
 

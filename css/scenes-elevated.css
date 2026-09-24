@@ -327,7 +327,37 @@ body[data-pos^="bottom"] .card.el.el-lower, body.anim[data-pos^="bottom"] .card.
 .card.el.enter.el-sponsor { animation: el-wipe-l .7s var(--e-out) both; }
 .card.el.enter .el-sp { animation: el-rise .5s .35s var(--e-out) both; }
 
+/* ---- The ticker and the sponsor bug, in the package (body.scenes-el) --------- */
+body.scenes-el #ticker { font-family: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif; border-top: 0;
+  background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 3px 0 #ffcf3a, 0 -12px 30px rgba(0, 0, 0, .45); }
+body.scenes-el #ticker .tk-lab { padding: 0 44px 0 30px; background: #ffcf3a; color: #1b1300; font-weight: 700; font-size: 26px; letter-spacing: .16em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%); }
+body.scenes-el #ticker.up .tk-lab { animation: el-tk-lab .6s .3s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes el-tk-lab { from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%); } }
+body.scenes-el #ticker .tk-run { font-weight: 700; font-size: 32px; letter-spacing: .04em; text-transform: uppercase; }
+body.scenes-el #ticker .tk-item::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 70px; vertical-align: 5px;
+  transform: rotate(45deg); background: #ffcf3a; opacity: .9; }
+body.scenes-el #ticker.alert { background: linear-gradient(180deg, #2c1b08, #150c04); box-shadow: inset 0 3px 0 #f0a52c, 0 -12px 30px rgba(0, 0, 0, .45); }
+body.scenes-el #ticker.alert .tk-lab { color: #1a0f02; background: repeating-linear-gradient(-45deg, #f0a52c 0 14px, #ffcf6e 14px 28px); background-size: 39.6px 39.6px;
+  animation: el-tk-lab .6s .3s cubic-bezier(.16, 1, .3, 1) both, el-tk-stripes 1.2s linear infinite; }
+@keyframes el-tk-stripes { to { background-position: 39.6px 0; } }
+body.scenes-el #ticker.alert .tk-item::after { background: #f0a52c; }
+
+body.scenes-el #sponsor-bug { flex-direction: row; align-items: stretch; gap: 0; padding: 0; border: 0; border-radius: 10px; overflow: hidden;
+  background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 16px 36px rgba(0, 0, 0, .5);
+  font-family: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif; color: #fff;
+  opacity: 1; transform: none; clip-path: inset(0 0 0 100%); transition: clip-path .7s cubic-bezier(.16, 1, .3, 1); }
+body.scenes-el #sponsor-bug.on { clip-path: inset(0 0 0 0); }
+body.scenes-el #sponsor-bug::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .22) 50%, transparent 60%); transform: translateX(-100%); }
+body.scenes-el #sponsor-bug.on::after { animation: el-sheen 6s 1s ease-in-out infinite; }
+body.scenes-el #sponsor-bug .sp-kicker { display: flex; align-items: center; max-width: 118px; padding: 0 16px; background: #ffcf3a; color: #1b1300;
+  font-weight: 700; font-size: 16px; letter-spacing: .14em; line-height: 1.15; text-align: left; }
+body.scenes-el #sponsor-bug img { max-width: 200px; max-height: 84px; margin: 14px 8px 14px 20px; align-self: center; }
+body.scenes-el #sponsor-bug .sp-name { display: flex; align-items: center; padding: 0 28px 0 20px; font-weight: 700; font-size: 36px;
+  letter-spacing: .04em; text-transform: uppercase; }
+
 @media (prefers-reduced-motion: reduce) {
-  .el-bg i, .el-sheen, .el-ring, .el-sp-gleam, .el-hazard::before, .el-hazard::after, .card.el-pause.pz-lightning .el-tag { animation: none !important; }
+  .el-bg i, .el-sheen, .el-ring, .el-sp-gleam, body.scenes-el #sponsor-bug.on::after, body.scenes-el #ticker.alert .tk-lab, .el-hazard::before, .el-hazard::after, .card.el-pause.pz-lightning .el-tag { animation: none !important; }
   .card.el.enter *, .card.el.enter .el-well b::after { animation-duration: 0.01s !important; animation-delay: 0s !important; }
 }

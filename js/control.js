@@ -930,7 +930,9 @@ $('team-swap').onclick = async () => {
     away_color: game.home_color, home_color: game.away_color,
     away_logo_url: game.home_logo_url, home_logo_url: game.away_logo_url,
     state: { ...st, batIdx: { away: bi.home | 0, home: bi.away | 0 }, pitches: { away: pi.home | 0, home: pi.away | 0 },
-      pitchLog: { away: (st.pitchLog || {}).home || {}, home: (st.pitchLog || {}).away || {} } },
+      pitchLog: { away: (st.pitchLog || {}).home || {}, home: (st.pitchLog || {}).away || {} },
+      ks: { away: (st.ks || {}).home | 0, home: (st.ks || {}).away | 0 },
+      kLog: { away: (st.kLog || {}).home || {}, home: (st.kLog || {}).away || {} } },
   });
   fillSetup();
   renderTeamCards();
@@ -1432,7 +1434,7 @@ $('reset-game').onclick = async () => {
   if (sport === 'baseball') Object.assign(patch, {
     inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0,
     bases: { first: false, second: false, third: false },
-    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {} },
+    state: { ...(game.state || {}), batIdx: { away: 0, home: 0 }, pitches: { away: 0, home: 0 }, pitchLog: {}, ks: {}, kLog: {} },
   });
   else if (SPORTS[sport]) patch.state = SPORTS[sport].init();
   await db.from('events').delete().eq('game_id', game.id); // wipe undo history
@@ -1603,12 +1605,17 @@ function renderScorebugPick() {
   const opt = $('su-style').querySelector(`option[value="${style}"]`);
   const anim = style.startsWith('anim-');
   const name = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : '';
-  $('theme-head').textContent = anim ? 'Cards theme' : 'Theme';
+  // What the theme still paints depends on both choices: an animated bug and
+  // the Elevated scenes (with their ticker and sponsor bug) each bring their own look.
+  const bugOwn = anim && baseball, elevated = game.scene_style === 'elevated';
+  $('theme-head').textContent = bugOwn && !elevated ? 'Cards theme' : 'Theme';
   const note = $('theme-note');
-  note.textContent = !anim ? ''
-    : baseball ? `${name} brings its own look. The theme colours the Starting Soon, lineup and Final cards and the ticker.`
-    : `Animated scorebugs are baseball only, so this game shows the Bar layout in this theme.`;
-  note.hidden = !anim;
+  note.textContent = anim && !baseball ? 'Animated scorebugs are baseball only, so this game shows the Bar layout in this theme.'
+    : bugOwn && elevated ? `${name} and the Elevated scenes bring their own look, so nothing on screen uses the theme right now. It comes back if you pick a layout or Simple scenes.`
+    : bugOwn ? `${name} brings its own look. The theme colours the Simple scenes (Starting Soon, Mid-Inning, Final and the smaller cards), the ticker and the sponsor bug.`
+    : elevated ? 'The theme paints the scorebug. The Elevated scenes, the ticker and the sponsor bug use the network-TV look.'
+    : '';
+  note.hidden = !note.textContent;
 }
 
 // ---- Custom colours (the `look` overrides, applied on the Custom theme only) --

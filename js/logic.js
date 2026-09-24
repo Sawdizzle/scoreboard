@@ -114,7 +114,7 @@ export function onStrike(g, { looking = false } = {}) {
   if (strikes >= 3) {
     const res = outResult(g, 'strikeout');
     const side = battingSide(g);
-    return { ...res, patch: endPA(g, res.patch), payload: { ...(res.payload || {}), inputs, play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
+    return { ...res, patch: withK(g, endPA(g, res.patch)), payload: { ...(res.payload || {}), inputs, play: playNote(g, looking ? 'KL' : 'K', { outs: 1 }) },
       anim: looking ? 'strikeoutlooking' : 'strikeout', animMeta: { side, idx: currentBatterIdx(g, side) } };
   }
   return { type: 'strike', patch: withPitch(g, { strikes }), payload: { inputs } };
@@ -350,6 +350,19 @@ export function withPitch(g, patch) {
   const baseState = patch.state || (g.state || {});
   return { ...patch, state: { ...baseState, pitches: { ...cur, [side]: (cur[side] | 0) + 1 } } };
 }
+// Strikeouts by the pitcher on the mound, the way state.pitches holds his pitch
+// count: state.ks[side] is the fielding side's current pitcher, and state.kLog
+// keeps every pitcher's by roster id across a change (onPitcherChange). On the
+// game row so an overlay reload, or an undo, has the true number. `patch` is
+// the play's own patch, whose state (the batting order moving on) it keeps.
+export function withK(g, patch) {
+  const side = fieldingSide(g);
+  const st = patch.state || g.state || {};
+  const ks = st.ks || {};
+  return { ...patch, state: { ...st, ks: { ...ks, [side]: (ks[side] | 0) + 1 } } };
+}
+export const strikeoutsFor = (g, side) => (((g.state && g.state.ks) || {})[side] | 0);
+
 // A new pitcher starts from his own count, not the last one's. state.pitches
 // stays the count of whoever is on the mound (the overlay reads it as a
 // number); state.pitchLog keeps every pitcher's tally by roster id, so a
@@ -363,10 +376,17 @@ export function onPitcherChange(g, side, fromBid, toBid) {
   const now = cur[side] | 0;
   if (fromBid) mine[fromBid] = now;
   const next = toBid ? (mine[toBid] | 0) : 0;
-  if (now === next && !(fromBid && now)) return null;
+  // Strikeouts travel the same way: banked for the pitcher leaving, restored for one coming back.
+  const ks = st.ks || {}, kLog = st.kLog || {};
+  const myK = { ...(kLog[side] || {}) };
+  const kNow = ks[side] | 0;
+  if (fromBid) myK[fromBid] = kNow;
+  const kNext = toBid ? (myK[toBid] | 0) : 0;
+  if (now === next && kNow === kNext && !(fromBid && (now || kNow))) return null;
   return {
     type: 'pitcher', text: 'New pitcher',
-    patch: { state: { ...st, pitches: { ...cur, [side]: next }, pitchLog: { ...log, [side]: mine } } },
+    patch: { state: { ...st, pitches: { ...cur, [side]: next }, pitchLog: { ...log, [side]: mine },
+      ks: { ...ks, [side]: kNext }, kLog: { ...kLog, [side]: myK } } },
     payload: { inputs: { side, from: fromBid || null, to: toBid || null } },
   };
 }
@@ -632,7 +652,7 @@ export function onPlay(g, { kind, pos = null, dest }) {
   const side = battingSide(g);
   return {
     type: 'play',
-    patch: endPA(g, patch),
+    patch: kind === 'K3' ? withK(g, endPA(g, patch)) : endPA(g, patch),
     payload: { inputs: { kind, pos, dest }, runs, play: playNote(g, kind, { pos, code, outs: r.outs, runs }) },
     anim: kind === 'DP' ? 'doubleplay' : kind === 'H3' ? 'bigplay' : 'play',
     animMeta: { text, side, idx: currentBatterIdx(g, side), runs },
