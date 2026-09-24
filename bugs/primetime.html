@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Prime Time</title>
+<link rel="preload" href="../fonts/barlow-condensed-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air. */
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:swap;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:swap;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   PRIME TIME — the network-television scorebug.
+   Dark glass rail, team-colour blocks, rolling numerals, a lit
+   bases diamond, a context strip for the at-bat, and lower-third
+   moments that wipe out of the bug the way a TV package does.
+   ============================================================ */
+:root{
+  --glass-1:#1d2638; --glass-2:#0b111c; --well:#070b13;
+  --ink:#ffffff; --dim:#9aa6bb; --rule:rgba(255,255,255,.10);
+  --gold:#ffcf3a; --red:#ff3b46; --green:#35d07f; --amber:#ffab2e;
+  --font:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-in:cubic-bezier(.7,0,.84,0);
+}
+body{--demo-accent:var(--gold)}
+body.preview{background:
+  radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.06),transparent 55%),
+  linear-gradient(160deg,#2f5a34 0%,#23452a 38%,#6b4f35 70%,#3d2c1e 100%)}
+#stage{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ---------- Bug: the rail, and the strip under (or over) it ---------- */
+#bug{display:flex;flex-direction:column;align-items:stretch;gap:0;filter:drop-shadow(0 12px 26px rgba(0,0,0,.5))}
+body[data-pos^="b"] #bug{flex-direction:column-reverse}
+
+.rail{position:relative;display:flex;align-items:stretch;height:68px;border-radius:7px;overflow:hidden;
+  background:linear-gradient(180deg,var(--glass-1),var(--glass-2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.6)}
+/* a slow sheen that crosses the whole rail on big moments */
+.rail::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);transform:translateX(-110%)}
+.rail.sheen::after{animation:sheen 1.1s var(--ease-out)}
+@keyframes sheen{to{transform:translateX(110%)}}
+
+/* team block: colour slab with the abbreviation, then the score well */
+.team{position:relative;display:flex;align-items:stretch}
+.team + .team{box-shadow:-1px 0 0 rgba(0,0,0,.55)}
+.slab{position:relative;display:flex;align-items:center;justify-content:center;min-width:118px;padding:0 16px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 86%,#fff 14%) 0%,var(--tc) 45%,color-mix(in srgb,var(--tc) 72%,#000 28%) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.slab::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 9px)}
+.ab{position:relative;font-weight:700;font-size:34px;letter-spacing:.045em;line-height:1;text-transform:uppercase;
+  text-shadow:0 2px 3px rgba(0,0,0,.45);white-space:nowrap}
+.score{position:relative;display:flex;align-items:center;justify-content:center;width:70px;background:var(--well);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.score .roll{font-weight:700;font-size:46px;line-height:1;font-variant-numeric:tabular-nums}
+/* batting marker: a bright bar along the foot of the batting team */
+.team::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:#fff;
+  box-shadow:0 0 12px rgba(255,255,255,.8);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s var(--ease-out)}
+.team.bat::after{transform:scaleX(1)}
+.team[data-t="home"]::after{transform-origin:100% 50%}
+/* a run: the slab flares and the score well flashes gold */
+.team.flash .slab{animation:flare 1.2s var(--ease-out)}
+@keyframes flare{0%{filter:brightness(2.2) saturate(1.3)}100%{filter:none}}
+.team.flash .score{animation:wellFlash 1.4s var(--ease-out)}
+@keyframes wellFlash{0%,22%{background:var(--gold);color:#1a1300;box-shadow:0 0 22px rgba(255,207,58,.9)}100%{background:var(--well);color:#fff}}
+
+/* rolling numerals: every value stacks in one grid cell and slides */
+.roll{position:relative;display:inline-grid;overflow:hidden;vertical-align:bottom}
+.roll > b{grid-area:1/1;font-weight:inherit;text-align:center}
+
+/* situation box */
+.sit{display:flex;align-items:center;gap:18px;padding:0 20px 0 18px;border-left:1px solid var(--rule)}
+.inn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:44px;height:52px;perspective:220px}
+.inn .face{display:flex;flex-direction:column;align-items:center;gap:3px;transform-origin:50% 50%;backface-visibility:hidden}
+.inn .arr{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;opacity:.25;transition:opacity .3s}
+.inn .up{border-bottom:9px solid var(--gold)} .inn .dn{border-top:9px solid var(--gold)}
+.inn .arr.on{opacity:1;filter:drop-shadow(0 0 5px rgba(255,207,58,.7))}
+.inn .n{font-weight:700;font-size:30px;line-height:.9}
+.inn .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:700;line-height:.9;transform:rotateX(90deg);backface-visibility:hidden;color:var(--gold)}
+.inn .mid small{font-size:15px;letter-spacing:.08em} .inn .mid b{font-size:28px}
+.inn.flip .face{animation:flipOut .7s var(--ease-in) forwards}
+.inn.flip .mid{animation:flipIn .7s .7s var(--ease-out) forwards}
+.inn.flipback .face{animation:flipIn .6s var(--ease-out) forwards}
+.inn.flipback .mid{animation:flipOut .5s var(--ease-in) forwards;transform:rotateX(0)}
+@keyframes flipOut{from{transform:rotateX(0)}to{transform:rotateX(-90deg)}}
+@keyframes flipIn{from{transform:rotateX(90deg)}to{transform:rotateX(0)}}
+
+.dia{width:62px;height:52px;overflow:visible}
+.dia .b{fill:rgba(255,255,255,.04);stroke:rgba(255,255,255,.38);stroke-width:2.2;transform-box:fill-box;transform-origin:50% 50%;
+  transition:fill .3s,stroke .3s}
+.dia .b.on{fill:var(--gold);stroke:#fff3c2;filter:drop-shadow(0 0 6px rgba(255,207,58,.8))}
+.dia .b.pop{animation:basePop .55s var(--ease-out)}
+@keyframes basePop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+.cnt{display:flex;flex-direction:column;align-items:center;gap:6px}
+.bs{font-weight:700;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:1px}
+.bs .dash{opacity:.55;margin:0 1px}
+.outs{display:flex;gap:6px}
+.outs i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.16);box-shadow:inset 0 1px 1px rgba(0,0,0,.5);transition:background .25s,box-shadow .25s}
+.outs i.on{background:var(--gold);box-shadow:0 0 8px rgba(255,207,58,.8)}
+.outs i.pop{animation:basePop .5s var(--ease-out)}
+.cnt .lab{font-weight:600;font-size:13px;letter-spacing:.14em;color:var(--dim);line-height:1}
+
+/* ---------- Context strip: the at-bat, and play tags ---------- */
+.strip{position:relative;height:36px;margin:0 8px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(9,14,23,.94),rgba(4,7,12,.94));
+  border-radius:0 0 6px 6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+body[data-pos^="b"] .strip{border-radius:6px 6px 0 0}
+.line{position:absolute;inset:0;display:flex;align-items:center;gap:12px;padding:0 14px;white-space:nowrap}
+.line .tag{flex:0 0 auto;padding:3px 8px 2px;border-radius:3px;font-weight:700;font-size:17px;letter-spacing:.08em;line-height:1;
+  background:rgba(255,255,255,.12);color:var(--ink)}
+.line .tag.gold{background:var(--gold);color:#1b1300}
+.line .tag.red{background:var(--red);color:#fff}
+.line .tag.green{background:var(--green);color:#03170b}
+.line .tag.amber{background:var(--amber);color:#1c0e00}
+.line .txt{font-weight:700;font-size:22px;letter-spacing:.03em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis}
+.line .side{margin-left:auto;font-weight:600;font-size:19px;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
+.line .side b{color:var(--ink);font-weight:700;margin-left:6px}
+.line.in{animation:lineIn .42s .14s var(--ease-out) both}
+.line.out{animation:lineOut .3s var(--ease-in) both}
+@keyframes lineIn{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes lineOut{from{transform:none;opacity:1}to{transform:translateY(-100%);opacity:0}}
+
+/* ---------- Strikeout flag, out the side of the rail ---------- */
+.kflag{position:absolute;top:0;left:calc(100% + 10px);display:flex;align-items:stretch;height:68px;border-radius:7px;overflow:hidden;
+  background:linear-gradient(180deg,var(--glass-1),var(--glass-2));box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  clip-path:inset(0 100% 0 0);visibility:hidden;white-space:nowrap}
+body[data-pos$="r"] .kflag{left:auto;right:calc(100% + 10px);clip-path:inset(0 0 0 100%)}
+body[data-pos^="b"] .kflag{top:auto;bottom:0}
+.kflag .k{display:flex;align-items:center;justify-content:center;width:68px;background:linear-gradient(180deg,#ff5a62,#c4121d);
+  font-weight:700;font-size:58px;line-height:1;text-shadow:0 2px 3px rgba(0,0,0,.4)}
+.kflag.looking .k span{display:inline-block;transform:scaleX(-1)}
+.kflag .kt{display:flex;flex-direction:column;justify-content:center;padding:0 18px 0 14px;gap:3px}
+.kflag .kt b{font-weight:700;font-size:28px;line-height:1;letter-spacing:.03em;text-transform:uppercase}
+.kflag .kt small{font-weight:600;font-size:17px;line-height:1;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.kflag .kt small em{font-style:normal;color:var(--gold)}
+.kflag.play{visibility:visible;animation:flagIn 3.4s var(--ease-out) forwards}
+body[data-pos$="r"] .kflag.play{animation-name:flagInR}
+.kflag.play .k span{display:inline-block;animation:kSlam .5s .15s var(--ease-out) both}
+.kflag.play.looking .k span{animation-name:kSlamL}
+@keyframes flagIn{0%{clip-path:inset(0 100% 0 0)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@keyframes flagInR{0%{clip-path:inset(0 0 0 100%)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 100% 0 0)}}
+@keyframes kSlam{from{transform:scale(2.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes kSlamL{from{transform:scaleX(-1) scale(2.2);opacity:0}to{transform:scaleX(-1) scale(1);opacity:1}}
+
+/* ---------- Home run: a lower-third band wipes out of the bug ---------- */
+.hr{position:absolute;left:0;bottom:calc(100% + 16px);display:flex;align-items:stretch;height:118px;min-width:760px;
+  border-radius:8px;overflow:hidden;visibility:hidden;filter:drop-shadow(0 16px 30px rgba(0,0,0,.55));
+  background:linear-gradient(180deg,var(--glass-1),var(--glass-2));box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+body[data-pos^="t"] .hr{bottom:auto;top:calc(100% + 16px)}
+body[data-pos$="r"] .hr{left:auto;right:0}
+.hr .hslab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:170px;padding:0 14px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 86%,#fff 14%),var(--tc) 50%,color-mix(in srgb,var(--tc) 70%,#000 30%))}
+.hr .hslab::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 2px,transparent 2px 9px)}
+.hr .hab{position:relative;font-weight:700;font-size:40px;letter-spacing:.05em;line-height:1;text-transform:uppercase;text-shadow:0 2px 4px rgba(0,0,0,.45)}
+.hr .hsc{position:relative;font-weight:700;font-size:22px;letter-spacing:.06em;line-height:1;opacity:.9}
+.hr .hbody{position:relative;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:0 34px 0 28px;flex:1}
+.hr .t1{overflow:hidden;line-height:1}
+.hr .t1 span{display:inline-block;font-weight:700;font-size:64px;letter-spacing:.02em;line-height:.95;text-transform:uppercase;
+  transform:skewX(-8deg);background:linear-gradient(180deg,#fff 40%,#d9e2f2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hr .t2{overflow:hidden;display:flex;align-items:baseline;gap:14px;white-space:nowrap}
+.hr .t2 b{font-weight:700;font-size:30px;letter-spacing:.03em;text-transform:uppercase}
+.hr .t2 span{font-weight:600;font-size:22px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.hr .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--tc);box-shadow:0 0 14px var(--tc)}
+.hr .gleam{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.35) 50%,transparent 62%);transform:translateX(-120%)}
+.hr.play{visibility:visible;animation:hrWipe 4.6s var(--ease-out) forwards}
+body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
+.hr.play .hslab{animation:slabIn .5s var(--ease-out) both}
+.hr.play .t1 span{animation:rise .55s .28s var(--ease-out) both}
+.hr.play .t2 > *{animation:riseFlat .5s .5s var(--ease-out) both}
+.hr.play .t2 span{animation-delay:.62s}
+.hr.play .bar{animation:barGrow .9s .2s var(--ease-out) both}
+.hr.play .gleam{animation:gleam 1.2s .8s var(--ease-out)}
+@keyframes hrWipe{0%{clip-path:inset(0 100% 0 0)}10%,88%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@keyframes hrWipeR{0%{clip-path:inset(0 0 0 100%)}10%,88%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 100% 0 0)}}
+@keyframes slabIn{from{transform:translateX(-40px);filter:brightness(2)}to{transform:none;filter:none}}
+@keyframes rise{from{transform:translateY(110%) skewX(-8deg)}to{transform:translateY(0) skewX(-8deg)}}
+@keyframes riseFlat{from{transform:translateY(110%)}to{transform:none}}
+@keyframes barGrow{from{transform:scaleX(0);transform-origin:0 50%}to{transform:scaleX(1);transform-origin:0 50%}}
+@keyframes gleam{to{transform:translateX(120%)}}
+
+/* ---------- First paint: the package builds itself ---------- */
+#bug.intro .team,#bug.intro .sit{animation:build .6s var(--ease-out) both}
+#bug.intro .team[data-t="home"]{animation-delay:.08s}
+#bug.intro .sit{animation-delay:.16s}
+#bug.intro .strip{animation:lineIn .5s .3s var(--ease-out) both}
+@keyframes build{from{clip-path:inset(0 100% 0 0);transform:translateX(-12px)}to{clip-path:inset(0 0 0 0);transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .hr.play,.kflag.play{animation-duration:3s}
+  .rail.sheen::after,.hr.play .gleam,.dia .b.pop,.outs i.pop,#bug.intro *{animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="rail">
+      <div class="team" data-t="away"><div class="slab"><span class="ab"></span></div><div class="score"><span class="roll" data-k="away"></span></div></div>
+      <div class="team" data-t="home"><div class="slab"><span class="ab"></span></div><div class="score"><span class="roll" data-k="home"></span></div></div>
+      <div class="sit">
+        <div class="inn">
+          <div class="face"><i class="arr up"></i><span class="n roll" data-k="inning"></span><i class="arr dn"></i></div>
+          <div class="mid"><small>MID</small><b>1</b></div>
+        </div>
+        <svg class="dia" viewBox="0 0 62 52" aria-hidden="true">
+          <g class="b" data-b="2"><rect x="22" y="3" width="17" height="17" transform="rotate(45 30.5 11.5)"/></g>
+          <g class="b" data-b="3"><rect x="5" y="22" width="17" height="17" transform="rotate(45 13.5 30.5)"/></g>
+          <g class="b" data-b="1"><rect x="39" y="22" width="17" height="17" transform="rotate(45 47.5 30.5)"/></g>
+        </svg>
+        <div class="cnt">
+          <div class="bs"><span class="roll" data-k="balls"></span><span class="dash">-</span><span class="roll" data-k="strikes"></span></div>
+          <div class="outs"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="kflag"><div class="k"><span>K</span></div><div class="kt"><b></b><small></small></div></div>
+    <div class="strip"></div>
+    <div class="hr">
+      <div class="hslab"><span class="hab"></span><span class="hsc"></span></div>
+      <div class="hbody"><div class="t1"><span>Home run</span></div><div class="t2"><b></b><span></span></div></div>
+      <i class="bar"></i><i class="gleam"></i>
+    </div>
+  </div>
+</div>
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam } = BugKit;
+  const bug = $("#bug"), rail = $(".rail"), strip = $(".strip"), hr = $(".hr"), kflag = $(".kflag"), inn = $(".inn");
+  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const up = (t) => String(t ?? "").toUpperCase();
+  const words = (n) => String(n || "").trim().split(/\s+/).filter(Boolean);
+  const surname = (n) => { const w = words(n); return w.length ? w[w.length - 1] : ""; };
+  const ordinal = (n) => { const s = ["TH", "ST", "ND", "RD"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const abbrOf = (S, t) => up(S[t].abbr || S[t].name);
+  const team = (t) => $(`.team[data-t="${t}"]`);
+  let cur = null, pos = "tl", flipTimer = null;
+  const ks = new Map();   // strikeouts by pitcher, this broadcast
+
+  /* ---------- Rolling numerals ---------- */
+  function roll(el, val, instant) {
+    const v = String(val);
+    if (el.dataset.v === v) return;
+    const from = Number(el.dataset.v);
+    el.dataset.v = v;
+    const old = el.lastElementChild;
+    if (instant || !old) { el.innerHTML = `<b>${esc(v)}</b>`; return; }
+    const d = Number.isFinite(from) && Number(v) < from ? -1 : 1;   // a count clearing rolls back down
+    const nu = document.createElement("b");
+    nu.textContent = v;
+    el.appendChild(nu);
+    old.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: `translateY(${-90 * d}%)`, opacity: 0 }],
+      { duration: 300, easing: "cubic-bezier(.7,0,.84,0)", fill: "forwards" }).onfinish = () => old.remove();
+    nu.animate([{ transform: `translateY(${90 * d}%)`, opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+      { duration: 420, delay: 90, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
+  }
+
+  /* ---------- The strip: the at-bat, or a play tag for a moment ---------- */
+  let holdUntil = 0, holdTimer = null, lastSay = { at: 0 };
+  function setLine(main, side, animate) {
+    const old = strip.querySelector(".line:not(.out)");
+    if (old && old.dataset.main === main) {            // same at-bat: just refresh the pitch count
+      const sd = old.querySelector(".side");
+      if (sd && sd.innerHTML !== side) sd.innerHTML = side;
+      return;
+    }
+    const nu = document.createElement("div");
+    nu.className = "line";
+    nu.dataset.main = main;
+    nu.innerHTML = main + (side != null ? `<span class="side">${side}</span>` : "");
+    if (old) {
+      if (animate) { old.classList.add("out"); setTimeout(() => old.remove(), 320); nu.classList.add("in"); }
+      else old.remove();
+    }
+    strip.appendChild(nu);
+  }
+  function atBat(S, animate) {
+    const pc = S.pitchCount ? `<b>${S.pitchCount}</b>` : "";
+    const side = S.pitcher ? `P · ${esc(up(surname(S.pitcher)))}${pc}` : pc ? `Pitches${pc}` : "";
+    setLine(`<span class="tag">AB</span><span class="txt">${esc(up(S.batter))}</span>`, side, animate);
+  }
+  function say(tag, cls, text, ms = 2800) {
+    lastSay = { tag, cls, text, at: Date.now() };
+    holdUntil = Date.now() + ms;
+    setLine(`<span class="tag ${cls}">${esc(tag)}</span><span class="txt">${esc(up(text))}</span>`, null, true);
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => { holdUntil = 0; if (cur) atBat(cur, true); }, ms);
+  }
+
+  /* ---------- Paint ---------- */
+  BugKit.start({
+    name: "Prime Time",
+    hrDelay: 2300,
+    place(p) { pos = p; },
+    render(S, prev, first) {
+      cur = S;
+      for (const t of ["away", "home"]) {
+        const el = team(t);
+        el.style.setProperty("--tc", S[t].color);
+        $(".ab", el).textContent = abbrOf(S, t);
+        roll($(".score .roll", el), S[t].r, first);
+        el.classList.toggle("bat", battingTeam(S) === t);
+      }
+      roll($(".inn .n"), S.inning, first);
+      $(".inn .up").classList.toggle("on", S.half === "top");
+      $(".inn .dn").classList.toggle("on", S.half !== "top");
+      $$(".dia .b").forEach((g) => {
+        const i = +g.dataset.b - 1, on = !!S.bases[i];
+        if (on && !g.classList.contains("on") && !first) restart(g, "pop");
+        g.classList.toggle("on", on);
+      });
+      // a TV count never reads four balls or three strikes; the play says that
+      roll($('.roll[data-k="balls"]'), Math.min(S.balls, 3), first);
+      roll($('.roll[data-k="strikes"]'), Math.min(S.strikes, 2), first);
+      $$(".outs i").forEach((d, i) => {
+        const on = i < S.outs;
+        if (on && !d.classList.contains("on") && !first) restart(d, "pop");
+        d.classList.toggle("on", on);
+      });
+      if (first) { atBat(S, false); restart(bug, "intro"); }
+      else if (Date.now() > holdUntil) atBat(S, true);
+    },
+    fx: {
+      run({ team: t, runs = 1, hr: homer }, S) {
+        t ||= battingTeam(S);
+        const el = team(t);
+        restart(el, "flash");
+        restart(rail, "sheen");
+        if (homer) return;                                   // the banner already said it
+        const scored = runs === 1 ? "Run scores" : `${runs} runs score`;
+        if (Date.now() - lastSay.at < 250) say(lastSay.tag, lastSay.cls, `${lastSay.text} · ${scored}`);
+        else say("RUN", "gold", `${scored} · ${abbrOf(S, t)} ${S[t].r}`);
+      },
+      hr({ runs = 1, batter, team: t }, S) {
+        t ||= battingTeam(S);
+        hr.style.setProperty("--tc", S[t].color);
+        $(".hab", hr).textContent = abbrOf(S, t);
+        $(".hsc", hr).textContent = `${S.half === "top" ? "TOP" : "BOT"} ${ordinal(S.inning)}`;
+        $(".t1 span", hr).textContent = runs === 4 ? "Grand slam" : "Home run";
+        $(".t2 b", hr).textContent = batter || S.batter || "";
+        $(".t2 span", hr).textContent = runs === 4 ? "Four runs score" : runs === 1 ? "Solo homer" : `${runs}-run homer`;
+        restart(hr, "play");
+        restart(rail, "sheen");
+        say("HR", "gold", `${batter || S.batter} · ${runs === 1 ? "solo" : runs === 4 ? "grand slam" : runs + "-run"}`, 5200);
+      },
+      k({ looking, batter }, S) {
+        const who = S.pitcher || abbrOf(S, S.half === "top" ? "home" : "away");
+        ks.set(who, (ks.get(who) || 0) + 1);
+        const n = ks.get(who);
+        kflag.classList.toggle("looking", !!looking);
+        $(".kt b", kflag).textContent = looking ? "Called strike three" : "Strikes out swinging";
+        $(".kt small", kflag).innerHTML = `${esc(up(surname(batter || S.batter)))} · ${esc(up(surname(who)))} <em>${n}K</em>`;
+        restart(kflag, "play");
+        say(looking ? "ꓘ" : "K", "red", `${batter || S.batter} ${looking ? "caught looking" : "strikes out"}`);
+      },
+      hit({ bases = 1, batter }) { say(["SINGLE", "DOUBLE", "TRIPLE"][bases - 1] || "HIT", "gold", batter || ""); },
+      walk({ batter }) { say("WALK", "green", `${batter || ""} takes first`); },
+      error({ team: t }, S) { say("E", "amber", `Error · ${abbrOf(S, t || (S.half === "top" ? "home" : "away"))}`); },
+      out({ batter }) { say("OUT", "", batter || "", 1800); },
+      half({ inning, half }, S) {
+        const was = half === "bot" ? inning : inning - 1;          // the half that just ended
+        $(".inn .mid small").textContent = half === "bot" ? "MID" : "END";
+        $(".inn .mid b").textContent = was;
+        inn.classList.remove("flipback");
+        restart(inn, "flip");
+        clearTimeout(flipTimer);
+        flipTimer = setTimeout(() => { inn.classList.remove("flip"); restart(inn, "flipback"); }, 2600);
+        say(`${half === "bot" ? "MID" : "END"} ${ordinal(was)}`, "gold", `${abbrOf(S, battingTeam(S))} coming to bat`, 2600);
+      },
+      reset() { ks.clear(); restart(bug, "intro"); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
