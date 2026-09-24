@@ -20,6 +20,8 @@
      k     {looking, batter}
      half  {inning, half}
      reset
+   Order: a play's moments fire BEFORE render() paints the new state,
+   so a moment sees the old DOM and the new S (passed as 2nd arg).
 
    Public API (same on every bug, so the live overlay needs one adapter):
      Scoreboard.set({ home:{ r:3 }, outs:2 })
@@ -39,6 +41,7 @@
     inning: 1, half: "top", balls: 0, strikes: 0, outs: 0,
     bases: [false, false, false], batter: "Carter Hayes", pitcher: "Wes Moreno", pitchCount: 0
   };
+  const PITCHERS = { home: "Wes Moreno", away: "Dale Ruiz" }; // keyed by fielding team
   const HITTERS = ["Carter Hayes", "Mason Pruitt", "Eli Navarro", "Jace Whitfield", "Rowan Diaz", "Luke Tran", "Theo Banks", "Cruz Molina", "Nate Oduya"];
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -159,9 +162,12 @@
       S.outs++;
       if (S.outs >= 3 && !rolling) { rolling = true; later(1100, () => { rolling = false; nextHalf(); }); }
     }
+    const pitches = { home: 0, away: 0 };
     function nextHalf() {
+      pitches[fieldingTeam(S)] = S.pitchCount;
       S.outs = 0; S.balls = 0; S.strikes = 0; S.bases = [false, false, false];
       if (S.half === "top") S.half = "bot"; else { S.half = "top"; S.inning++; }
+      S.pitcher = PITCHERS[fieldingTeam(S)]; S.pitchCount = pitches[fieldingTeam(S)];
       const t = battingTeam(S);
       if (S[t].line[S.inning - 1] == null) S[t].line[S.inning - 1] = 0;
       emit("half", { inning: S.inning, half: S.half });
@@ -215,7 +221,7 @@
       klook() { S.pitchCount++; strikeout(true); },
       half() { nextHalf(); },
       pos() { pos = POS[(POS.indexOf(pos) + 1) % POS.length]; place(); },
-      reset() { timers.forEach(clearTimeout); timers.clear(); rolling = false; S = clone(DEFAULT); hi = 0; emit("reset"); }
+      reset() { timers.forEach(clearTimeout); timers.clear(); rolling = false; S = clone(DEFAULT); hi = 0; pitches.home = pitches.away = 0; emit("reset"); }
     };
     function act(a) { if (ACT[a]) { ACT[a](); render(); } }
 
