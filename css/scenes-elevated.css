@@ -19,19 +19,25 @@
 @keyframes el-fade { from { opacity: 0; } to { opacity: 1; } }
 /* the simple scenes' generic rise-in; every elevated part has its own entrance */
 .card.takeover-card.el.enter > * { animation: none; }
+/* The simple scenes' own ambient light (a blended flare and a sheen on #card)
+   would run underneath ours; the elevated backdrop replaces it. */
+#card.el-scene::before, #card.el-scene::after { display: none; }
 
 /* ---- Backdrop -------------------------------------------------------------- */
 .el-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .el-bg i { position: absolute; display: block; will-change: transform, opacity; }
-.el-pool { width: 1400px; height: 1400px; top: -160px; border-radius: 50%; opacity: 0.55; filter: blur(40px); }
-.el-pool.a { left: -760px; background: radial-gradient(closest-side, var(--away-tc, #3a4658), transparent 72%); animation: el-drift-a 22s ease-in-out infinite alternate; }
-.el-pool.h { right: -760px; background: radial-gradient(closest-side, var(--home-tc, #3a4658), transparent 72%); animation: el-drift-h 26s ease-in-out infinite alternate; }
+/* The pools are soft by their own gradient: a CSS blur here was a full-frame
+   filter pass on every composited frame, for the look the gradient already has. */
+.el-pool { width: 1400px; height: 1400px; top: -160px; border-radius: 50%; opacity: 0.55; }
+.el-pool.a { left: -760px; background: radial-gradient(closest-side, var(--away-tc, #3a4658), color-mix(in srgb, var(--away-tc, #3a4658) 35%, transparent) 40%, transparent 78%); animation: el-drift-a 22s ease-in-out infinite alternate; }
+.el-pool.h { right: -760px; background: radial-gradient(closest-side, var(--home-tc, #3a4658), color-mix(in srgb, var(--home-tc, #3a4658) 35%, transparent) 40%, transparent 78%); animation: el-drift-h 26s ease-in-out infinite alternate; }
 @keyframes el-drift-a { from { transform: translate3d(0, -40px, 0) scale(1); } to { transform: translate3d(160px, 120px, 0) scale(1.15); } }
 @keyframes el-drift-h { from { transform: translate3d(0, 80px, 0) scale(1.1); } to { transform: translate3d(-160px, -60px, 0) scale(0.95); } }
 /* a stadium light raking down from above */
 .el-ray { left: 50%; top: -420px; width: 900px; height: 1500px; margin-left: -450px; transform-origin: 50% 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), transparent 70%);
-  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%); opacity: 0.55; animation: el-sway 18s ease-in-out infinite alternate; }
+  /* a beam drawn by the gradient itself, not a clip mask over a moving layer */
+  background: radial-gradient(ellipse 34% 88% at 50% 0%, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04) 55%, transparent 80%);
+  opacity: 0.6; animation: el-sway 18s ease-in-out infinite alternate; }
 @keyframes el-sway { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
 .el-lines { inset: -60px; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 14px);
   animation: el-crawl 30s linear infinite; }
