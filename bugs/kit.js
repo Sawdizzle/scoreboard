@@ -67,6 +67,67 @@
   const battingTeam = (S) => (S.half === "top" ? "away" : "home");
   const fieldingTeam = (S) => (S.half === "top" ? "home" : "away");
 
+  /* ---------- Reading a play off the game row (pure) ---------- */
+  const PLAY_MOMENT = [
+    [/^single/i, "hit", { bases: 1 }], [/^double(?! play)/i, "hit", { bases: 2 }], [/^triple/i, "hit", { bases: 3 }],
+    [/walk|hit by pitch|catcher/i, "walk"], [/error/i, "error"], [/dropped 3rd/i, "k"],
+    [/out|pop-up|choice|double play|sac |caught|picked/i, "out"]
+  ];
+  const forward = (a, b) => b.inning > a.inning || (b.inning === a.inning && a.half === "top" && b.half !== "top");
+
+  function momentFor(prev, next, anim) {
+    const t = anim && anim.type, bt = battingTeam(prev), ft = fieldingTeam(prev);
+    const batter = prev.batter;
+    if (t === "strikeout" || t === "strikeoutlooking") return ["k", { looking: t === "strikeoutlooking", batter }];
+    if (t === "doubleplay") return ["out", { batter }];
+    if (t === "bigplay" && next[bt].h > prev[bt].h) return ["hit", { bases: 3, batter }];
+    if (t === "play" || t === "bigplay") {
+      const text = (anim.meta && anim.meta.text) || "";
+      for (const [re, name, extra] of PLAY_MOMENT) if (re.test(text)) return [name, { ...extra, batter, team: ft }];
+      return null;
+    }
+    if (t === "webgem") return ["walk", { batter }];              // the pad's walk stinger
+    if (t && t !== "run" && t !== "walkoff") return null;
+    // No stinger (or just "a run scored"): read the play off the row.
+    if (forward(next, prev)) return null;                   // an undo across the half
+    const rolled = forward(prev, next);
+    const onBase = (x) => x.bases.filter(Boolean).length;
+    if (next[bt].h > prev[bt].h) return ["hit", { bases: 1, batter }];
+    if (next[ft].e > prev[ft].e) return ["error", { team: ft }];
+    if (rolled || next.outs > prev.outs) return ["out", { batter }];
+    if (prev.balls === 3 && next.balls === 0 && next.strikes === 0 && next.bases[0] &&
+        (onBase(next) > onBase(prev) || next[bt].r > prev[bt].r)) return ["walk", { batter }];
+    if (rolled) return null;
+    if (next.balls > prev.balls) return ["ball", {}];
+    if (next.strikes > prev.strikes) return ["strike", {}];
+    return null;
+  }
+
+  // What a new game row means, given the row on screen: the moments to play,
+  // in order, and how to stage them. Pure (no DOM, no timers), so
+  // scripts/bugkit.test.mjs can replay a whole game through it.
+  //   kind "hr"    — a home run: the runs wait behind the bug's banner
+  //   kind "roll"  — a third out: show it on the old half, then roll
+  //   kind "plain" — everything else
+  function decide(prev, next, anim) {
+    const bt = battingTeam(prev);
+    const runs = Math.max(0, next[bt].r - prev[bt].r);
+    if (anim && anim.type === "homerun") {
+      return { kind: "hr", bt, runs, moments: [["hr", { runs: runs || 1, batter: prev.batter, team: bt }]] };
+    }
+    const m = momentFor(prev, next, anim);
+    const moments = m ? [m] : [];
+    if (forward(prev, next) && m && (m[0] === "out" || m[0] === "k")) {
+      if (runs) moments.push(["run", { team: bt, runs }]);
+      return { kind: "roll", bt, runs, moments };
+    }
+    if (runs) moments.push(["run", { team: bt, runs }]);
+    if (anim && anim.type === "walkoff") moments.push(["walkoff", { team: bt, runs, batter: prev.batter }]);
+    if (!m && forward(prev, next)) moments.push(["half", { inning: next.inning, half: next.half }]);
+    return { kind: "plain", bt, runs, moments };
+  }
+
+
   const BASE_CSS = `
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{width:100%;height:100%;overflow:hidden;background:transparent}
@@ -183,40 +244,6 @@
     let hold = null;   // {team, runs}: home run runs kept off the board until the banner lands
     let roll = null;   // the half-roll waiting behind a third out
     let liveTimer = null;
-    const PLAY_MOMENT = [
-      [/^single/i, "hit", { bases: 1 }], [/^double(?! play)/i, "hit", { bases: 2 }], [/^triple/i, "hit", { bases: 3 }],
-      [/walk|hit by pitch|catcher/i, "walk"], [/error/i, "error"], [/dropped 3rd/i, "k"],
-      [/out|pop-up|choice|double play|sac |caught|picked/i, "out"]
-    ];
-    const forward = (a, b) => b.inning > a.inning || (b.inning === a.inning && a.half === "top" && b.half !== "top");
-
-    function momentFor(prev, next, anim) {
-      const t = anim && anim.type, bt = battingTeam(prev), ft = fieldingTeam(prev);
-      const batter = prev.batter;
-      if (t === "strikeout" || t === "strikeoutlooking") return ["k", { looking: t === "strikeoutlooking", batter }];
-      if (t === "doubleplay") return ["out", { batter }];
-      if (t === "bigplay" && next[bt].h > prev[bt].h) return ["hit", { bases: 3, batter }];
-      if (t === "play" || t === "bigplay") {
-        const text = (anim.meta && anim.meta.text) || "";
-        for (const [re, name, extra] of PLAY_MOMENT) if (re.test(text)) return [name, { ...extra, batter, team: ft }];
-        return null;
-      }
-      if (t && t !== "run" && t !== "walkoff") return null;
-      // No stinger (or just "a run scored"): read the play off the row.
-      if (forward(next, prev)) return null;                   // an undo across the half
-      const rolled = forward(prev, next);
-      const onBase = (x) => x.bases.filter(Boolean).length;
-      if (next[bt].h > prev[bt].h) return ["hit", { bases: 1, batter }];
-      if (next[ft].e > prev[ft].e) return ["error", { team: ft }];
-      if (rolled || next.outs > prev.outs) return ["out", { batter }];
-      if (prev.balls === 3 && next.balls === 0 && next.strikes === 0 && next.bases[0] &&
-          (onBase(next) > onBase(prev) || next[bt].r > prev[bt].r)) return ["walk", { batter }];
-      if (rolled) return null;
-      if (next.balls > prev.balls) return ["ball", {}];
-      if (next.strikes > prev.strikes) return ["strike", {}];
-      return null;
-    }
-
     function flushRoll() {
       if (!roll) return;
       clearTimeout(liveTimer);
@@ -245,34 +272,26 @@
       if (hold && anim && anim.type === "homerun") flushHold();   // back-to-back homers
       const prev = S, bt = battingTeam(prev);
       if (hold) next[hold.team].r -= hold.runs;               // still behind the banner
-      const runs = Math.max(0, next[bt].r - prev[bt].r);
-
-      if (anim && anim.type === "homerun") {
-        const n = runs || 1;
-        next[bt].r -= runs;
+      const d = decide(prev, next, anim);
+      if (d.kind === "hr") {
+        next[bt].r -= d.runs;
         S = next;
-        emit("hr", { runs: n, batter: prev.batter, team: bt });
+        d.moments.forEach(([n, o]) => emit(n, o));
         render();
-        hold = { team: bt, runs, timer: setTimeout(flushHold, theme.hrDelay ?? 1800) };
+        hold = { team: bt, runs: d.runs, timer: setTimeout(flushHold, theme.hrDelay ?? 1800) };
         return;
       }
-
-      const m = momentFor(prev, next, anim);
-      if (forward(prev, next) && m && (m[0] === "out" || m[0] === "k")) {
+      if (d.kind === "roll") {
         // Show the third out on the old half, then roll.
         S = { ...clone(prev), outs: 3, balls: 0, strikes: 0, away: next.away, home: next.home };
-        emit(m[0], m[1]);
-        if (runs) emit("run", { team: bt, runs });
+        d.moments.forEach(([n, o]) => emit(n, o));
         render();
         roll = { next };
         liveTimer = setTimeout(() => { flushRoll(); }, 1100);
         return;
       }
       S = next;
-      if (m) emit(m[0], m[1]);
-      if (runs) emit("run", { team: bt, runs });
-      if (anim && anim.type === "walkoff") emit("walkoff", { team: bt, runs, batter: prev.batter });
-      if (!m && forward(prev, next)) emit("half", { inning: S.inning, half: S.half });
+      d.moments.forEach(([n, o]) => emit(n, o));
       render();
     }
 
@@ -409,5 +428,5 @@
     script.forEach((a, i) => setTimeout(() => act(a), 400 + i * gap));
   }
 
-  window.BugKit = { start, $, $$, restart, battingTeam, fieldingTeam, params };
+  window.BugKit = { start, decide, $, $$, restart, battingTeam, fieldingTeam, params };
 })();

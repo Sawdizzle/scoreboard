@@ -41,7 +41,7 @@ function team(s, side) {
 // The game row in the bug's shape. An animated bug is built around the at-bat,
 // so it always names the batter (just "Batter" without a lineup); the pitch
 // count follows its Show on overlay switch.
-function bugState(s) {
+export function bugState(s) {
   const b = safeBases(s.bases);
   const lb = currentBatter(s), lp = currentPitcher(s);
   return {
