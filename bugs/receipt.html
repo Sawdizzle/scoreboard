@@ -4,9 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scoreboard Theme: Play-by-Play Printer</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+<link rel="preload" href="../fonts/bugs/jetbrains-mono-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/bugs/vt323-400.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air.
+   Licenses: /fonts/bugs/LICENSES.md */
+@font-face{font-family:'JetBrains Mono';font-weight:500 800;font-display:swap;src:url('../fonts/bugs/jetbrains-mono-var.woff2') format('woff2')}
+@font-face{font-family:'VT323';font-weight:400;font-display:swap;src:url('../fonts/bugs/vt323-400.woff2') format('woff2')}
+</style>
 <style>
 /* ============================================================
    PLAY-BY-PLAY PRINTER — the scorebug is a thermal receipt printer.

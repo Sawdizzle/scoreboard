@@ -4,9 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scoreboard Theme: Ka-Pow</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+<link rel="preload" href="../fonts/bugs/bangers-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/bugs/luckiest-guy-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/bugs/comic-neue-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air.
+   Licenses: /fonts/bugs/LICENSES.md */
+@font-face{font-family:'Bangers';font-weight:400;font-display:swap;src:url('../fonts/bugs/bangers-400.woff2') format('woff2')}
+@font-face{font-family:'Luckiest Guy';font-weight:400;font-display:swap;src:url('../fonts/bugs/luckiest-guy-400.woff2') format('woff2')}
+@font-face{font-family:'Comic Neue';font-weight:700;font-display:swap;src:url('../fonts/bugs/comic-neue-700.woff2') format('woff2')}
+</style>
 <style>
 /* ============================================================
    KA-POW — the scorebug as a comic-book panel strip.

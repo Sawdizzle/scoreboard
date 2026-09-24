@@ -178,6 +178,7 @@ There is no build step, so nothing compiles these files before a browser does. T
 | `css/overlay.css`, `css/styles.css`, `css/themes.css` | Scorebug base, the five layouts, the themes |
 | `css/cards.css`, `css/anim.css` | Broadcast cards and animations |
 | `css/recap.css`, `css/fonts.css` | Recap page; self-hosted Barlow Condensed |
+| `fonts/bugs/` | The animated scorebugs' fonts, self-hosted (licenses in `LICENSES.md`) |
 | `bugs/`, `js/anim-bug.js` | Animated scorebugs: one page per bug on a shared `bugs/kit.js`; the overlay loads the chosen one in a frame and feeds it the game |
 
 Debugging: `/overlay?…&debug=1` paints a checkerboard behind the transparent overlay and exposes `__sb.render(patch)` to preview a what-if over the live row without writing it. `/control?debug` shows the badge that checks the game on screen against a rebuild from its own event log.

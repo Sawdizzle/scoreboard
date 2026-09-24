@@ -4,9 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scoreboard Theme: Classic Green</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;800;900&family=Big+Shoulders+Stencil:wght@800;900&display=swap" rel="stylesheet">
+<link rel="preload" href="../fonts/bugs/big-shoulders-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/bugs/big-shoulders-stencil-var.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air.
+   Licenses: /fonts/bugs/LICENSES.md */
+@font-face{font-family:'Big Shoulders';font-weight:600 900;font-display:swap;src:url('../fonts/bugs/big-shoulders-var.woff2') format('woff2')}
+@font-face{font-family:'Big Shoulders Stencil';font-weight:800 900;font-display:swap;src:url('../fonts/bugs/big-shoulders-stencil-var.woff2') format('woff2')}
+</style>
 <style>
 /* ============================================================
    CLASSIC GREEN — a hand-operated ballpark scoreboard

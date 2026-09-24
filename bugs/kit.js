@@ -116,12 +116,19 @@
     }
   }
 
-  function start(theme) {
+  async function start(theme) {
     let S = clone(DEFAULT);
     let painted = null;
     const style = document.createElement("style");
     style.textContent = BASE_CSS;
     document.head.prepend(style);
+    // The first paint waits for the page's own (self-hosted) fonts, so a bug
+    // never paints in a fallback face and then jumps. Capped, so a missing file
+    // can't keep the bug off air.
+    const fontsReady = Promise.race([
+      Promise.all([...(document.fonts || [])].map((f) => f.load().catch(() => {}))),
+      new Promise((r) => setTimeout(r, 1500))
+    ]);
 
     /* ---------- Stage fit + preview mode ---------- */
     const stage = $("#stage"), bug = $("#bug");
@@ -164,7 +171,7 @@
       const d = e.data || {};
       if (d.type === "scoreboard:set") Scoreboard.set(d.state || {});
       if (d.type === "scoreboard:fire") Scoreboard.fire(d.name, d.opts);
-      if (d.type === "scoreboard:live") live(d.state, d.anim, d.view);
+      if (d.type === "scoreboard:live") fontsReady.then(() => live(d.state, d.anim, d.view));
     });
 
     /* ---------- Live: a new game row, and the stinger that came with it ----------
@@ -376,6 +383,7 @@
     });
 
     if (embed) { demo.remove(); return; }   // the live overlay drives it; the first row paints it
+    await fontsReady;
     render();
     if (params.get("auto") === "1") setAuto(true);
     const script = (params.get("play") || "").split(",").filter(Boolean);
