@@ -5,7 +5,7 @@
 // Baseball only — any other sport keeps the regular bug.
 import { safeBases, currentBatter, currentPitcher, pitchCount } from './logic.js';
 
-export const ANIM_BUGS = ['classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
+export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
 
 // Stingers the animated bug plays itself. The overlay's own version of these
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
