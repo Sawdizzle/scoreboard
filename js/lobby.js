@@ -140,7 +140,7 @@ export function createLobby(ctx) {
   // What a new game takes from your last one: how the broadcast looks and
   // sounds, and the house rules. Not the teams (home and away change every game;
   // saved teams load them in one pick) and not the venue (away games move it).
-  const CARRY = ['style', 'theme', 'scorebug_position', 'scorebug_scale', 'sound_pack', 'audio', 'look', 'sponsors',
+  const CARRY = ['style', 'theme', 'scene_style', 'scorebug_position', 'scorebug_scale', 'sound_pack', 'audio', 'look', 'sponsors',
     'show_clock', 'show_batter', 'show_pitcher', 'show_pitchcount', 'show_rhe', 'show_runrule', 'auto_clip'];
   const CARRY_SAME_SPORT = ['regulation_innings', 'time_limit_seconds'];
   async function lastGameSettings(sport) {
