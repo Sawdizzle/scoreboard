@@ -29,8 +29,20 @@
      postMessage({type:"scoreboard:set", state:{...}})
      postMessage({type:"scoreboard:fire", name:"hr", opts:{...}})
 
+   Live overlay (the app's /overlay, which loads a bug with ?embed=1):
+     postMessage({type:"scoreboard:live", state:{...}, anim:{type, meta}|null,
+                  view:{pos:"bc", scale:1, lift:60}})
+   live() turns each new game row into the right moments: a home run holds
+   the runs back until the bug's banner lands (hrDelay), and a third out
+   shows three outs before the half rolls.
+
+   Positions: tl tc tr / ml mc mr / bl bc br. A bug's own moments only
+   know corners, so place() and body[data-pos] get the nearest corner
+   (a middle row reads as top, a centre column as left).
+
    URL params: ?obs=1 (no panel, transparent)  ?panel=0 (no panel)
-               ?pos=tl|tr|bl|br  ?scale=1.2
+               ?embed=1 (inside the live overlay: waits for live messages)
+               ?pos=tl|tc|…|br  ?scale=1.2
                ?auto=1 (plays a game by itself)
                ?play=single,double,hr&gap=900 (scripted, for screenshots)
    ============================================================ */
@@ -60,11 +72,16 @@
       repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 90px,transparent 90px 180px),
       radial-gradient(ellipse at 50% 110%,#3f7a3c 0%,#23462a 50%,#0f1d12 100%)}
     #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden}
-    #bug{position:absolute}
+    #bug{position:absolute;--lift:0px}
     #bug.pos-tl{left:48px;top:44px;transform-origin:0 0}
+    #bug.pos-tc{left:50%;top:44px;translate:-50% 0;transform-origin:50% 0}
     #bug.pos-tr{right:48px;top:44px;transform-origin:100% 0}
-    #bug.pos-bl{left:48px;bottom:44px;transform-origin:0 100%}
-    #bug.pos-br{right:48px;bottom:44px;transform-origin:100% 100%}
+    #bug.pos-ml{left:48px;top:50%;translate:0 -50%;transform-origin:0 50%}
+    #bug.pos-mc{left:50%;top:50%;translate:-50% -50%;transform-origin:50% 50%}
+    #bug.pos-mr{right:48px;top:50%;translate:0 -50%;transform-origin:100% 50%}
+    #bug.pos-bl{left:48px;bottom:calc(44px + var(--lift));transform-origin:0 100%}
+    #bug.pos-bc{left:50%;bottom:calc(44px + var(--lift));translate:-50% 0;transform-origin:50% 100%}
+    #bug.pos-br{right:48px;bottom:calc(44px + var(--lift));transform-origin:100% 100%}
     #demo{position:fixed;right:16px;bottom:16px;z-index:50;display:none;width:min(360px,calc(100vw - 32px));padding:14px;border-radius:12px;
       background:rgba(18,18,20,.93);border:1px solid rgba(255,255,255,.12);font:600 14px/1.3 system-ui,sans-serif;color:#eee;
       box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(8px)}
@@ -108,21 +125,24 @@
 
     /* ---------- Stage fit + preview mode ---------- */
     const stage = $("#stage"), bug = $("#bug");
-    const inOBS = !!window.obsstudio || params.get("obs") === "1";
+    const embed = params.get("embed") === "1";
+    const inOBS = embed || !!window.obsstudio || params.get("obs") === "1";
     if (!inOBS) document.body.classList.add("preview");
     if (!inOBS && params.get("panel") !== "0") document.body.classList.add("panel");
     const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; };
     addEventListener("resize", fit); fit();
 
-    const POS = ["tl", "tr", "bl", "br"];
+    const POS = ["tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"];
+    const DEMO_POS = ["tl", "tr", "bl", "br"];
     let pos = POS.includes(params.get("pos")) ? params.get("pos") : "tl";
-    const scale = parseFloat(params.get("scale")) || 1;
+    let scale = parseFloat(params.get("scale")) || 1;
+    const corner = (p) => (p[0] === "b" ? "b" : "t") + (p[1] === "r" ? "r" : "l");
     const place = () => {
       POS.forEach((p) => bug.classList.remove("pos-" + p));
       bug.classList.add("pos-" + pos);
       bug.style.scale = scale;
-      document.body.dataset.pos = pos;
-      theme.place?.(pos);
+      document.body.dataset.pos = corner(pos);
+      theme.place?.(corner(pos));
     };
     place();
 
@@ -144,7 +164,105 @@
       const d = e.data || {};
       if (d.type === "scoreboard:set") Scoreboard.set(d.state || {});
       if (d.type === "scoreboard:fire") Scoreboard.fire(d.name, d.opts);
+      if (d.type === "scoreboard:live") live(d.state, d.anim, d.view);
     });
+
+    /* ---------- Live: a new game row, and the stinger that came with it ----------
+       The row already holds the result of the play, so the moment is worked out
+       by comparing it with what is on screen now. */
+    let hold = null;   // {team, runs}: home run runs kept off the board until the banner lands
+    let roll = null;   // the half-roll waiting behind a third out
+    let liveTimer = null;
+    const PLAY_MOMENT = [
+      [/^single/i, "hit", { bases: 1 }], [/^double(?! play)/i, "hit", { bases: 2 }], [/^triple/i, "hit", { bases: 3 }],
+      [/walk|hit by pitch|catcher/i, "walk"], [/error/i, "error"], [/dropped 3rd/i, "k"],
+      [/out|pop-up|choice|double play|sac |caught|picked/i, "out"]
+    ];
+    const forward = (a, b) => b.inning > a.inning || (b.inning === a.inning && a.half === "top" && b.half !== "top");
+
+    function momentFor(prev, next, anim) {
+      const t = anim && anim.type, bt = battingTeam(prev), ft = fieldingTeam(prev);
+      const batter = prev.batter;
+      if (t === "strikeout" || t === "strikeoutlooking") return ["k", { looking: t === "strikeoutlooking", batter }];
+      if (t === "doubleplay") return ["out", { batter }];
+      if (t === "bigplay" && next[bt].h > prev[bt].h) return ["hit", { bases: 3, batter }];
+      if (t === "play" || t === "bigplay") {
+        const text = (anim.meta && anim.meta.text) || "";
+        for (const [re, name, extra] of PLAY_MOMENT) if (re.test(text)) return [name, { ...extra, batter, team: ft }];
+        return null;
+      }
+      if (t && t !== "run" && t !== "walkoff") return null;
+      // No stinger (or just "a run scored"): read the play off the row.
+      if (forward(next, prev)) return null;                   // an undo across the half
+      const rolled = forward(prev, next);
+      const onBase = (x) => x.bases.filter(Boolean).length;
+      if (next[bt].h > prev[bt].h) return ["hit", { bases: 1, batter }];
+      if (next[ft].e > prev[ft].e) return ["error", { team: ft }];
+      if (rolled || next.outs > prev.outs) return ["out", { batter }];
+      if (prev.balls === 3 && next.balls === 0 && next.strikes === 0 && next.bases[0] &&
+          (onBase(next) > onBase(prev) || next[bt].r > prev[bt].r)) return ["walk", { batter }];
+      if (rolled) return null;
+      if (next.balls > prev.balls) return ["ball", {}];
+      if (next.strikes > prev.strikes) return ["strike", {}];
+      return null;
+    }
+
+    function flushRoll() {
+      if (!roll) return;
+      clearTimeout(liveTimer);
+      const r = roll; roll = null;
+      S = r.next; emit("half", { inning: S.inning, half: S.half }); render();
+    }
+    function flushHold() {
+      if (!hold) return;
+      const h = hold; hold = null;
+      clearTimeout(h.timer);
+      S[h.team].r += h.runs; emit("run", { team: h.team, runs: h.runs, hr: true }); render();
+    }
+
+    function live(next, anim, view) {
+      if (view) {
+        if (POS.includes(view.pos)) pos = view.pos;
+        scale = +view.scale || 1;
+        bug.style.setProperty("--lift", (parseFloat(view.lift) || 0) + "px");
+        place();
+      }
+      if (!next) return;
+      next = clone(next);
+      if (painted === null) { S = next; render(); return; }   // first paint: no moments
+      flushRoll();
+      if (hold && anim && anim.type === "homerun") flushHold();   // back-to-back homers
+      const prev = S, bt = battingTeam(prev);
+      if (hold) next[hold.team].r -= hold.runs;               // still behind the banner
+      const runs = Math.max(0, next[bt].r - prev[bt].r);
+
+      if (anim && anim.type === "homerun") {
+        const n = runs || 1;
+        next[bt].r -= runs;
+        S = next;
+        emit("hr", { runs: n, batter: prev.batter, team: bt });
+        render();
+        hold = { team: bt, runs, timer: setTimeout(flushHold, theme.hrDelay ?? 1800) };
+        return;
+      }
+
+      const m = momentFor(prev, next, anim);
+      if (forward(prev, next) && m && (m[0] === "out" || m[0] === "k")) {
+        // Show the third out on the old half, then roll.
+        S = { ...clone(prev), outs: 3, balls: 0, strikes: 0, away: next.away, home: next.home };
+        emit(m[0], m[1]);
+        if (runs) emit("run", { team: bt, runs });
+        render();
+        roll = { next };
+        liveTimer = setTimeout(() => { flushRoll(); }, 1100);
+        return;
+      }
+      S = next;
+      if (m) emit(m[0], m[1]);
+      if (runs) emit("run", { team: bt, runs });
+      if (!m && forward(prev, next)) emit("half", { inning: S.inning, half: S.half });
+      render();
+    }
 
     /* ---------- Demo game logic (preview only) ---------- */
     let hi = 0, rolling = false;
@@ -220,7 +338,7 @@
       kswing() { S.pitchCount++; strikeout(false); },
       klook() { S.pitchCount++; strikeout(true); },
       half() { nextHalf(); },
-      pos() { pos = POS[(POS.indexOf(pos) + 1) % POS.length]; place(); },
+      pos() { pos = DEMO_POS[(DEMO_POS.indexOf(pos) + 1) % DEMO_POS.length]; place(); },
       reset() { timers.forEach(clearTimeout); timers.clear(); rolling = false; S = clone(DEFAULT); hi = 0; pitches.home = pitches.away = 0; emit("reset"); }
     };
     function act(a) { if (ACT[a]) { ACT[a](); render(); } }
@@ -257,6 +375,7 @@
       act(a);
     });
 
+    if (embed) { demo.remove(); return; }   // the live overlay drives it; the first row paints it
     render();
     if (params.get("auto") === "1") setAuto(true);
     const script = (params.get("play") || "").split(",").filter(Boolean);

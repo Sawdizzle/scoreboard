@@ -144,8 +144,8 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
 /* ---------- Hung K card ---------- */
-#kcard{position:absolute;top:0;left:760px;width:190px;transform-origin:50% 0;visibility:hidden}
-#kcard .rope{width:3px;height:90px;margin:0 auto;background:linear-gradient(#8a7555,#5d4a30)}
+#kcard{position:absolute;top:0;left:760px;width:190px;transform-origin:50% 0;visibility:hidden;--rope:90px;--up:calc(-1 * (var(--rope) + 260px))}
+#kcard .rope{width:3px;height:var(--rope);margin:0 auto;background:linear-gradient(#8a7555,#5d4a30)}
 #kcard .card{position:relative;height:240px;background:linear-gradient(180deg,#f7f2e3,#e9e1ca);border-radius:6px;
   box-shadow:0 18px 30px rgba(0,0,0,.45),inset 0 0 0 4px #fff,inset 0 0 0 6px rgba(0,0,0,.08);
   display:flex;align-items:center;justify-content:center}
@@ -156,13 +156,13 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
 #kcard .kl{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-weight:800;font-size:22px;color:#6b5a3e}
 #kcard.play{visibility:visible;animation:kSwing 3.2s forwards}
 @keyframes kSwing{
-  0%{transform:translateY(-420px) rotate(0)}
+  0%{transform:translateY(var(--up)) rotate(0)}
   16%{transform:translateY(0) rotate(14deg)}
   30%{transform:rotate(-9deg)}
   44%{transform:rotate(5deg)}
   56%{transform:rotate(-2deg)}
   66%,84%{transform:rotate(0)}
-  100%{transform:translateY(-420px) rotate(0)}
+  100%{transform:translateY(var(--up)) rotate(0)}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -316,7 +316,8 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
         // hang the card just right of the scorebug
         const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width/1920;
         kcard.style.left = (pos.endsWith("r") ? (r.left - s.left)/k - 230 : (r.right - s.left)/k + 40) + "px";
-        kcard.style.top = pos.startsWith("b") ? "560px" : "0px";
+        // it always hangs from the top edge; a lower bug gets a longer rope
+        kcard.style.setProperty("--rope", Math.max(90, (r.top - s.top)/k - 270) + "px");
         restart(kcard, "play");
       }
     }

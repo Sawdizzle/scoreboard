@@ -1,6 +1,7 @@
 import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
+import { syncAnimBug, overlayPlays } from './anim-bug.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
 import { fetchWeather } from './weather.js';
@@ -238,8 +239,15 @@ function render(s) {
   // and because nonces are timestamps, an undo restoring an older one won't fire.
   const a = s.current_animation;
   const nonce = (a && Number(a.nonce)) || 0;
+  let fresh = null;
   if (!animPrimed) { animPrimed = true; lastAnimNonce = nonce; } // first paint: adopt, don't play
-  else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; playAnimation(withBatterName(a, s)); audio.play(soundFor(a)); }
+  else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; fresh = a; }
+  // An animated bug (style 'anim-…') replaces the bug and plays its own stingers.
+  const animBug = syncAnimBug(s, fresh);
+  if (fresh) {
+    if (overlayPlays(fresh, animBug)) playAnimation(withBatterName(fresh, s));
+    audio.play(soundFor(fresh));
+  }
 
   syncWeather(s);
   syncTicker(s);
