@@ -35,6 +35,29 @@ if (linkKey) {
     if ((now.game_id || null) !== (gameId || null)) location.reload();
   }, 5000);
 }
+// A new release. A browser source runs the page it loaded until someone
+// refreshes it, so after a deploy OBS would go on painting the old code. Each
+// deploy writes its commit to /version.txt (vercel.json); once that changes,
+// the overlay reloads itself — but only between plays, with realtime up, so a
+// reload never cuts a stinger or lands in an outage. No version.txt (a local
+// server) means no check.
+const VERSION_EVERY_MS = 60000, QUIET_MS = 20000;
+let bootVersion = null, newVersion = false, lastActivity = Date.now(), realtimeUp = false;
+async function checkVersion() {
+  try {
+    const r = await fetch('/version.txt', { cache: 'no-store' });
+    const v = r.ok ? (await r.text()).trim() : '';
+    if (!v || v.length > 80) return;
+    if (bootVersion === null) bootVersion = v;
+    else if (v !== bootVersion) newVersion = true;
+  } catch { /* offline: try again next time */ }
+}
+checkVersion();
+setInterval(checkVersion, VERSION_EVERY_MS);
+setInterval(() => {
+  if (newVersion && Date.now() - lastActivity > QUIET_MS && (realtimeUp || !gameId)) location.reload();
+}, 2000);
+
 if (params.get('debug')) {
   document.body.classList.add('debug'); window.__audio = audio;
   // Paint a local what-if over the live row (card, ticker, venue…) without writing it.
@@ -124,6 +147,7 @@ const el = {
 
 let last = null; // keep last-known state; never blank on disconnect
 let lastAnimNonce = 0; // only play strictly-newer triggers (reload/undo never replay)
+let lastCardNonce = null; // a card going up or down counts as activity for the release reload
 let animPrimed = false; // set on the first render, so a game whose trigger is still
                         // null doesn't swallow its very first stinger
 
@@ -244,6 +268,8 @@ function render(s) {
   else if (nonce > lastAnimNonce) { lastAnimNonce = nonce; fresh = a; }
   // An animated bug (style 'anim-…') replaces the bug and plays its own stingers.
   const animBug = syncAnimBug(s, fresh);
+  const cardNonce = (s.card && s.card.nonce) || null;
+  if (fresh || cardNonce !== lastCardNonce) { lastActivity = Date.now(); lastCardNonce = cardNonce; }
   if (fresh) {
     if (overlayPlays(fresh, animBug)) playAnimation(withBatterName(fresh, s));
     audio.play(soundFor(fresh));
@@ -1227,6 +1253,7 @@ let reconnectTimer = null;
 let subGen = 0;
 
 function teardown() {
+  realtimeUp = false;
   if (channel) { const c = channel; channel = null; supabase.removeChannel(c); }
 }
 
@@ -1240,7 +1267,7 @@ function subscribe() {
       (payload) => render(payload.new))
     .subscribe((status) => {
       if (myGen !== subGen) return; // ignore callbacks from a superseded channel
-      if (status === 'SUBSCRIBED') { backoff = 1000; fetchState(); }
+      if (status === 'SUBSCRIBED') { backoff = 1000; realtimeUp = true; fetchState(); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') scheduleReconnect();
     });
 }

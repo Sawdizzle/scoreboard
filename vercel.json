@@ -1,4 +1,6 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "buildCommand": "echo \"${VERCEL_GIT_COMMIT_SHA:-$(date +%s)}\" > version.txt",
+  "outputDirectory": "."
 }

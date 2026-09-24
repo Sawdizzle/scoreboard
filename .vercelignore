@@ -1,0 +1,3 @@
+# The site is served from the repo root (vercel.json outputDirectory "."), so
+# keep git internals out of it the way the no-build deploys always did.
+.git
