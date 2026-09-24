@@ -11,8 +11,9 @@ export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboa
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
 // or a card still plays over the top as usual.
 const OWN = new Set(['run', 'homerun', 'play', 'strikeout', 'strikeoutlooking', 'doubleplay', 'bigplay', 'stolenbase', 'webgem']);
-// Bugs with a walk-off of their own. For the rest the overlay's celebration plays.
-const OWN_WALKOFF = new Set(['primetime']);
+// Bugs with a walk-off of their own (all of them, since v4.31). One left out of
+// this list gets the overlay's own celebration instead.
+const OWN_WALKOFF = new Set(ANIM_BUGS);
 const plays = (type) => OWN.has(type) || (type === 'walkoff' && OWN_WALKOFF.has(slug));
 
 const POS = {
@@ -38,10 +39,10 @@ function team(s, side) {
   };
 }
 
-// The game row in the bug's shape. An animated bug is built around the at-bat,
-// so it always names the batter (just "Batter" without a lineup); the pitch
-// count follows its Show on overlay switch.
-function bugState(s) {
+// The game row in the bug's shape. The batter is named whenever the lineup
+// knows him and left empty otherwise — each bug has a way to say a play
+// without a name. The pitch count follows its Show on overlay switch.
+export function bugState(s) {
   const b = safeBases(s.bases);
   const lb = currentBatter(s), lp = currentPitcher(s);
   return {
@@ -49,7 +50,7 @@ function bugState(s) {
     inning: s.inning | 0 || 1, half: s.half === 'bottom' ? 'bot' : 'top',
     balls: s.balls | 0, strikes: s.strikes | 0, outs: s.outs | 0,
     bases: [!!b.first, !!b.second, !!b.third],
-    batter: (lb && lb.name) || 'Batter',
+    batter: (lb && lb.name) || '',
     pitcher: (lp && lp.name) || '',
     pitchCount: s.show_pitchcount ? pitchCount(s) : 0,
   };

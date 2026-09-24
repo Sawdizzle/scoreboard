@@ -293,7 +293,11 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
   function atBat(S, animate) {
     const pc = S.pitchCount ? `<b>${S.pitchCount}</b>` : "";
     const side = S.pitcher ? `P · ${esc(up(surname(S.pitcher)))}${pc}` : pc ? `Pitches${pc}` : "";
-    setLine(`<span class="tag">AB</span><span class="txt">${esc(up(S.batter))}</span>`, side, animate);
+    // No lineup, no name: the strip carries where the inning stands instead.
+    const outs = S.outs === 1 ? "1 out" : `${Math.min(S.outs, 2)} outs`;
+    const main = S.batter ? `<span class="tag">AB</span><span class="txt">${esc(up(S.batter))}</span>`
+      : `<span class="tag">${S.half === "top" ? "TOP" : "BOT"} ${S.inning}</span><span class="txt">${esc(up(outs))}</span>`;
+    setLine(main, side, animate);
   }
   function say(tag, cls, text, ms = 2800) {
     lastSay = { tag, cls, text, at: Date.now() };
@@ -358,7 +362,8 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
         hr.classList.remove("wo");
         restart(hr, "play");
         restart(rail, "sheen");
-        say("HR", "gold", `${batter || S.batter} · ${runs === 1 ? "solo" : runs === 4 ? "grand slam" : runs + "-run"}`, 5200);
+        const kind = runs === 1 ? "solo" : runs === 4 ? "grand slam" : runs + "-run";
+        say("HR", "gold", (batter || S.batter) ? `${batter || S.batter} · ${kind}` : `${kind} home run`, 5200);
       },
       k({ looking, batter }, S) {
         const ft = S.half === "top" ? "home" : "away";
@@ -366,17 +371,20 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
         // The live game keeps the pitcher's strikeouts on its row (S[team].k), so a
         // reload keeps the real number; the demo counts them here.
         ks.set(who, (ks.get(who) || 0) + 1);
-        const n = Number.isFinite(S[ft].k) ? S[ft].k : ks.get(who);
+        // 0 at a strikeout means the row isn't tracking yet (a pad from before v4.29)
+        const n = S[ft].k > 0 ? S[ft].k : ks.get(who);
         kflag.classList.toggle("looking", !!looking);
         $(".kt b", kflag).textContent = looking ? "Called strike three" : "Strikes out swinging";
-        $(".kt small", kflag).innerHTML = `${esc(up(surname(batter || S.batter)))} · ${esc(up(surname(who)))} <em>${n}K</em>`;
+        const bat = surname(batter || S.batter);
+        $(".kt small", kflag).innerHTML = `${bat ? esc(up(bat)) + " · " : ""}${esc(up(surname(who)))} <em>${n}K</em>`;
         restart(kflag, "play");
-        say(looking ? "ꓘ" : "K", "red", `${batter || S.batter} ${looking ? "caught looking" : "strikes out"}`);
+        const b = batter || S.batter;
+        say(looking ? "ꓘ" : "K", "red", b ? `${b} ${looking ? "caught looking" : "strikes out"}` : looking ? "Called strike three" : "Strikeout swinging");
       },
-      hit({ bases = 1, batter }) { say(["SINGLE", "DOUBLE", "TRIPLE"][bases - 1] || "HIT", "gold", batter || ""); },
-      walk({ batter }) { say("WALK", "green", `${batter || ""} takes first`); },
+      hit({ bases = 1, batter }) { say(["SINGLE", "DOUBLE", "TRIPLE"][bases - 1] || "HIT", "gold", batter || "Base hit"); },
+      walk({ batter }) { say("WALK", "green", batter ? `${batter} takes first` : "Ball four"); },
       error({ team: t }, S) { say("E", "amber", `Error · ${abbrOf(S, t || (S.half === "top" ? "home" : "away"))}`); },
-      out({ batter }) { say("OUT", "", batter || "", 1800); },
+      out({ batter }, S) { say("OUT", "", batter || (S.outs >= 3 ? "Side retired" : S.outs === 2 ? "Two down" : "One down"), 1800); },
       half({ inning, half }, S) {
         const was = half === "bot" ? inning : inning - 1;          // the half that just ended
         $(".inn .mid small").textContent = half === "bot" ? "MID" : "END";

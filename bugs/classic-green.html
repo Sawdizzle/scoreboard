@@ -148,6 +148,43 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
 #hr.play .hr-sub{animation:fadeUp .5s ease-out 1.75s forwards}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
+/* ---------- Walk-off: the same banner, held longer, with the marquee gone wild ---------- */
+#hr.play.wo{animation:hrDrop 6.6s cubic-bezier(.25,1,.35,1) forwards,woGlow .55s ease-in-out .9s 10 alternate}
+@keyframes woGlow{to{box-shadow:0 0 0 3px var(--brass) inset,0 0 0 4px var(--amber),0 0 60px 14px rgba(255,178,62,.55),0 30px 60px rgba(0,0,0,.55)}}
+#hr.play.wo .mb{animation:wild .3s steps(1) infinite}
+@keyframes wild{0%{background:#fff8dc;box-shadow:0 0 12px 4px var(--bc,var(--amber))}50%,100%{background:#3c3a2e;box-shadow:none}}
+#hr.play.wo .lp span{animation-delay:calc(.45s + var(--i) * .07s)}
+.lp.dash{width:62px}
+.lp.wide{width:140px}
+#hr.wo .hr-who{display:flex;align-items:center;justify-content:center;gap:22px;font-size:66px;color:#fff}
+#hr.wo .hr-who .tc{width:18px;height:48px;border-radius:2px;background:var(--tc,var(--amber));box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+#hr.wo .hr-sub{font-size:34px}
+#hr.play.wo .hr-who{animation-delay:1.35s}
+#hr.play.wo .hr-sub{animation-delay:1.7s}
+/* on the bug: the winners' R plate flashes like a lamp, the count bulbs chase */
+.plate.wo{animation:woPlate .42s steps(1) 12}
+@keyframes woPlate{0%{box-shadow:0 0 0 3px var(--amber),0 0 24px 6px rgba(255,178,62,.8)}50%,100%{box-shadow:0 0 0 3px #fff3c4,0 0 8px 2px rgba(255,178,62,.35)}}
+.plate.wo .v{color:#ffd98a}
+#bug.wo .strip .bulb{animation:wild .3s steps(1) infinite;--bc:var(--amber)}
+#bug.wo .strip .bulb:nth-child(odd){animation-delay:-.15s}
+#bug.wo .grp.balls .bulb{--bc:var(--lime)}
+#bug.wo .grp.outs .bulb{--bc:var(--red)}
+
+/* ---------- Rally: marquee bulbs on the top trim warm up and fade, the rivets glow brass ---------- */
+.rallybulbs{position:absolute;left:22px;right:22px;top:-7px;height:7px;z-index:1;display:flex;justify-content:space-between;align-items:center;
+  opacity:0;transition:opacity .6s;pointer-events:none}
+.rallybulbs.bot{top:auto;bottom:-7px}
+.rallybulbs i{position:relative;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8a7550,#3c3222)}
+.rallybulbs i::after{content:"";position:absolute;inset:-7px;border-radius:50%;
+  background:radial-gradient(circle,#fff6d8 0 30%,var(--amber) 55%,rgba(255,178,62,0) 100%);opacity:.15}
+body.rally .rallybulbs{opacity:1}
+body.rally .rallybulbs i::after{animation:warm 1.8s ease-in-out infinite}
+body.rally .rallybulbs i:nth-child(even)::after{animation-delay:-.9s}
+@keyframes warm{0%,100%{opacity:.1}50%{opacity:1}}
+.board::before,.board::after,.rivets::before,.rivets::after{transition:box-shadow .6s}
+body.rally .board::before,body.rally .board::after,body.rally .rivets::before,body.rally .rivets::after{animation:brass 1.8s ease-in-out infinite}
+@keyframes brass{0%,100%{box-shadow:0 1px 1px rgba(0,0,0,.6)}50%{box-shadow:0 1px 1px rgba(0,0,0,.6),0 0 10px 3px rgba(255,190,90,.7)}}
+
 /* ---------- Hung K card ---------- */
 #kcard{position:absolute;top:0;left:760px;width:190px;transform-origin:50% 0;visibility:hidden;--rope:90px;--up:calc(-1 * (var(--rope) + 260px))}
 #kcard .rope{width:3px;height:var(--rope);margin:0 auto;background:linear-gradient(#8a7555,#5d4a30)}
@@ -173,6 +210,11 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
 @media (prefers-reduced-motion:reduce){
   #hr.play,#kcard.play{animation-duration:2.6s}
   .name.scored::after{animation:none}
+  #hr.play.wo{animation:hrDrop 5s cubic-bezier(.25,1,.35,1) forwards}
+  #hr.play.wo .mb,#bug.wo .strip .bulb{animation:none;background:#fff3c4;box-shadow:0 0 10px 3px var(--amber)}
+  .plate.wo{animation:none;box-shadow:0 0 0 3px var(--amber),0 0 24px 6px rgba(255,178,62,.8)}
+  body.rally .rallybulbs i::after{animation:none;opacity:.85}
+  body.rally .board::before,body.rally .board::after,body.rally .rivets::before,body.rally .rivets::after{animation:none;box-shadow:0 0 8px 2px rgba(255,190,90,.6)}
 }
 </style>
 </head>
@@ -183,6 +225,7 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
   <div id="bug">
     <div class="board">
       <div class="rivets"></div>
+      <div class="rallybulbs"></div><div class="rallybulbs bot"></div>
       <div class="lines">
         <span></span><span></span>
         <span class="col-h">R</span><span class="col-h">H</span><span class="col-h">E</span>
@@ -269,11 +312,28 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
       const b = document.createElement("i"); b.className = "mb";
       b.style.left = (x/W*100)+"%"; b.style.top = (y/H*100)+"%";
       b.style.animationDelay = `${-(i%3)*0.166}s`;
+      b.style.setProperty("--bc", ["var(--amber)","#fff3c4","var(--red)"][i%3]);   // walk-off colours
       m.appendChild(b);
     });
   })();
+  // rally bulbs along the board's top trim
+  $$(".rallybulbs").forEach((r) => { r.innerHTML = "<i></i>".repeat(16); });
 
-  let pos = "tl", runTimer;
+  /* The HR banner's letter plates, spelled out (a space leaves a gap, a dash gets a narrow plate). */
+  function spell(text){
+    const word = $(".hr-word", hr); word.innerHTML = "";
+    [...text].forEach((ch,i) => {
+      if (ch === " ") { word.insertAdjacentHTML("beforeend",'<i class="gap"></i>'); return; }
+      word.insertAdjacentHTML("beforeend", `<div class="lp${ch==="-"?" dash":ch==="W"||ch==="M"?" wide":""}" style="--i:${i}"><span>${ch}</span></div>`);
+    });
+  }
+
+  let pos = "tl", runTimer, woTimer, woPlate;
+  function clearWalkoff(){
+    clearTimeout(woTimer);
+    bug.classList.remove("wo");
+    woPlate?.classList.remove("wo");
+  }
   BugKit.start({
     name: "Classic Green",
     hrDelay: 1800,
@@ -306,15 +366,37 @@ body.preview{background:radial-gradient(ellipse at 50% 120%,#3b6b3f 0%,#1d3322 4
         clearTimeout(runTimer); runTimer = setTimeout(()=>runTab.classList.remove("show"), 2600);
       },
       hr({ runs = 1, batter }, S){
-        const word = $(".hr-word", hr); word.innerHTML = "";
-        [..."HOME RUN"].forEach((ch,i) => {
-          if (ch === " ") { word.insertAdjacentHTML("beforeend",'<i class="gap"></i>'); return; }
-          word.insertAdjacentHTML("beforeend", `<div class="lp" style="--i:${i}"><span>${ch}</span></div>`);
-        });
+        clearWalkoff();
+        hr.classList.remove("wo");
+        spell("HOME RUN");
         $(".hr-who", hr).textContent = batter || S.batter || "";
         $(".hr-sub", hr).textContent = runs===4 ? "Grand slam" : runs===1 ? "Solo shot" : `${runs} runs score`;
         restart(hr, "play");
       },
+      /* Walk-off: WALK-OFF on the letter plates, the marquee goes wild, the winners
+         and the final score underneath, and the winners' R plate flashes on the bug. */
+      walkoff({ team, batter }, S){
+        team ||= battingTeam(S);
+        const other = team === "away" ? "home" : "away";
+        const who = String(S[team].abbr || S[team].name || (team === "home" ? "Home" : "Away")).toUpperCase();
+        clearWalkoff();
+        spell("WALK-OFF");
+        hr.style.setProperty("--tc", S[team].color || "var(--amber)");
+        const line = $(".hr-who", hr); line.textContent = "";
+        const chip = () => Object.assign(document.createElement("i"), { className: "tc" });
+        line.append(chip(), `${who} WIN ${S[team].r}-${S[other].r}`, chip());
+        const name = batter || "";   // no lineup: no name, the moment still reads
+        $(".hr-sub", hr).textContent = name ? `${name} wins it` : "That's the ballgame";
+        hr.classList.add("wo");
+        restart(hr, "play");
+        restart($(`[data-name="${team}"]`), "scored");
+        woPlate = plate(`${team}.r`);
+        woPlate.classList.remove("pop");
+        restart(woPlate, "wo");
+        restart(bug, "wo");
+        woTimer = setTimeout(clearWalkoff, 6000);
+      },
+      reset(){ clearWalkoff(); hr.classList.remove("play","wo"); },
       k({ looking } = {}){
         kcard.classList.toggle("looking", !!looking);
         $(".kl", kcard).textContent = looking ? "Caught looking" : "Strikeout";

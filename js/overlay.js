@@ -646,6 +646,7 @@ function renderCard(s) {
   layer.hidden = false;
   // An elevated side panel or lower third floats over the live picture: no dimming.
   layer.classList.toggle('el-clear', !!layer.querySelector('.el-lower, .el-side-card'));
+  layer.classList.toggle('el-scene', !!layer.querySelector('.card.el.takeover-card'));
   // Final's winner treatment is on the whole frame, not inside the card: the
   // winner's side of the backdrop glows in their colour and the other side goes
   // dark. The card itself is centred, so a wash drawn inside it was clipped to a

@@ -119,7 +119,24 @@ body.preview{background:
 .strip.chase .lamp,.strip.chase .bs,.strip.chase .insw{animation:chase .42s steps(1) infinite;animation-delay:calc(var(--i,0) * -.07s)}
 @keyframes chase{0%{filter:brightness(2.6) drop-shadow(0 0 6px rgba(255,200,120,.9))}50%{filter:brightness(.45)}}
 
+/* RALLY (the pad's Rally switch): a slow chase of lit plastic sweeps the count and base inserts.
+   Only the opacity of a small overlay per lamp animates, so it can run all game. */
+body.rally .lamp::before,body.rally .bs i::before{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;
+  animation:rallyLamp 2.2s linear infinite;animation-delay:calc(var(--i,0) * .2s - 2.2s)}
+body.rally .lamp::before{background:radial-gradient(circle at 50% 38%,#fff 0%,color-mix(in srgb,var(--c) 55%,#fff) 24%,var(--c) 58%,transparent 100%);
+  box-shadow:0 0 10px 2px color-mix(in srgb,var(--c) 60%,transparent)}
+body.rally .bs i::before{animation-delay:calc(var(--i2,0) * .2s - 2.2s);
+  background:radial-gradient(circle at 42% 42%,#fff 0%,#fff3c0 24%,var(--lamp-base) 60%,transparent 100%);
+  box-shadow:0 0 8px 2px rgba(255,210,58,.6)}
+.bs.b2 i{--i2:9}.bs.b3 i{--i2:8}.bs.b1 i{--i2:10}
+body.rally .strip::before{animation:rallyRail 1.1s ease-in-out infinite alternate}
+@keyframes rallyLamp{0%{opacity:.9}16%{opacity:.4}30%,100%{opacity:0}}
+@keyframes rallyRail{from{opacity:.45}to{opacity:1}}
+.strip.chase .lamp::before,.strip.chase .bs i::before{display:none}
+
 @media (prefers-reduced-motion:reduce){
+  body.rally .lamp::before,body.rally .bs i::before{animation:none;opacity:.35}
+  body.rally .strip::before{animation:none}
   .strip.chase .lamp,.strip.chase .bs,.strip.chase .insw{animation-duration:1.4s}
   .lamp.pop,.bs.pop i{animation:none}
 }
@@ -296,7 +313,9 @@ const FONT = { 1: { gap: 1, sp: 3, f: (b) => b }, 2: { gap: 2, sp: 6, f: s2x }, 
 const gcache = {}; let tcache = {}, tcount = 0;
 function glyph(ch, n) {
   const k = n + ch;
-  if (!(k in gcache)) gcache[k] = BASE[ch] ? FONT[n].f(BASE[ch]) : null;
+  if (!(k in gcache)) gcache[k] = !BASE[ch] ? null
+    : n === 4 && "WM".includes(ch) ? s2x(s2x(BASE[ch]))   // bold would fill in W/M's middle stroke
+    : FONT[n].f(BASE[ch]);
   return gcache[k];
 }
 function layout(str, n) {
@@ -574,6 +593,93 @@ function hrScene({ runs = 1, batter } = {}) {
   });
 }
 
+/* WALK-OFF (wizard mode): flash, WALK / OFF slam, WALK-OFF + GAME OVER under a chasing border,
+   the winners' score counts up like a jackpot and locks with a blast, the batter (or FINAL)
+   takes a bow, then the whole display shatters back to the resting screen. ~6.8 s. */
+function chevL(x, y, v, h = 7) { const m = (h - 1) / 2; for (let j = 0; j < h; j++) { const d = m - Math.abs(m - j); for (let k = 0; k < 3; k++) px(x - d - k, y + j, v); } }
+function walkoffScene({ team, batter } = {}, S0) {
+  const S = S0 || state;
+  if (team !== "away" && team !== "home") team = battingTeam(S);
+  const opp = team === "away" ? "home" : "away", wr = S[team].r | 0, lr = S[opp].r | 0;
+  const head = abbr(S[team], 60) + " WIN", hn = textBmp(head, 2).w <= 124 ? 2 : 1;
+  const who = surname(batter ?? (state && state.batter) ?? ""), wn = who && textBmp(who, 2).w <= 124 ? 2 : 1;
+  const fin = `${abbr(S[team], 44)} ${wr}  ${abbr(S[opp], 44)} ${lr}`;
+  shown.away = S.away.r; shown.home = S.home.r; lastRunHR = false;   // the jackpot IS the count-up
+  queue = queue.filter((q) => q.id !== "count" && q.id !== "batter");
+  chase(6900);
+  const C0 = 2550, TK = Math.max(60, Math.min(170, 900 / Math.max(1, wr))), LOCK = C0 + wr * TK;
+  const bow = (u) => {                             // the last frame: who won it, or the final line
+    borderChase(u);
+    if (who) {
+      const hdr = "WALK-OFF HERO", n = Math.min(hdr.length, Math.floor(u / 40));
+      if (n) textL(hdr.slice(0, n), Math.round(64 - textBmp(hdr, 1).w / 2), 2, 1, 10);
+      const nb = textBmp(who, wn), a = seg(u, 300, 620), y = wn === 2 ? 13 : 17;
+      if (a > 0) {
+        const x = Math.round(64 - nb.w / 2 + (1 - eOut(a)) * 140);
+        if (a < 1) smear(nb, x, y, 1, 26 * (1 - a), 6, 2);
+        blit(nb, x, y, 15);
+      }
+    } else {
+      const fb = textBmp("FINAL", 2), d = eBack(seg(u, 0, 320));
+      blit(fb, Math.round(64 - fb.w / 2), 2 - (1 - d) * 20, 15);
+      if (u > 300) text(fin, 64, 22, 1, ((u / 260) | 0) % 2 ? 15 : 9);
+    }
+  };
+  return mk("walkoff", 6800, (t, sc) => {
+    if (t < 250) { if (strobe(t, 0, 250, 80)) fill(15); else if (RM) fill(2); return; }
+    if (t < 1000) {                              // WALK / OFF slam
+      if (t < 620) {
+        const a = seg(t, 250, 480);
+        text("WALK", 64, 2, 4, 15, { scale: 1 + 2.8 * (1 - eOut(a)) });
+        if (a >= 1 && once(sc, "w1")) { shake(260, 2); spark(64, 16, 46, 2.4, 900); }
+      } else {
+        const b = seg(t, 620, 850);
+        text("OFF", 64, 2, 4, 15, { scale: 1 + 3.4 * (1 - eOut(b)) });
+        if (b >= 1 && once(sc, "w2")) { shake(460, 3); spark(30, 16, 44, 2.9, 1000); spark(98, 16, 44, 2.9, 1000); }
+        if (strobe(t, 850, 930, 35)) invert();
+      }
+      return;
+    }
+    if (t < 2200) {                              // WALK-OFF / GAME OVER
+      const u = t - 1000;
+      if (strobe(u, 0, 110, 55)) { fill(15); return; }
+      borderChase(u);
+      text("WALK-OFF", 64, 3, 2, 15);
+      const g = "GAME OVER", n = Math.min(g.length, Math.max(0, Math.floor((u - 250) / 55)));
+      const gx = Math.round(64 - textBmp(g, 1).w / 2);
+      if (n && (n < g.length || ((u / 220) | 0) % 2)) textL(g.slice(0, n), gx, 22, 1, 15);
+      if (n < g.length && u > 250) rect(gx + (n ? textBmp(g.slice(0, n), 1).w + 2 : 0), 22, 4, 7, 15);
+      if (Math.random() < .25) spark(rnd(4, 124), rnd(3, 29), 2, .5, 420, 0);
+      reveal(u, 110, 330);
+      return;
+    }
+    if (t < 4600) {                              // the jackpot: winners' runs count up and lock
+      const u = t - 2200;
+      borderChase(u);
+      const L = layout(head, hn), hx = Math.round(64 - L.w / 2);
+      L.items.forEach((it, i) => {
+        const d = seg(u, i * 35, i * 35 + 260); if (d <= 0) return;
+        blit(it.g, hx + it.x, 1 - (1 - eBack(d)) * 18, 15);
+      });
+      const v = t >= LOCK ? wr : Math.max(0, Math.min(wr, Math.floor((t - C0) / TK))), locked = t >= LOCK;
+      const sn = hn === 2 ? 2 : 3, sy = hn === 2 ? 17 : 10;
+      if (t >= C0 - 150) text(`${v}-${lr}`, 64, sy, sn, locked || ((t / 60) | 0) % 2 ? 15 : 10);
+      if (t >= C0 && !locked && once(sc, "c" + v)) spark(64, sy + 7, 6, 1.2, 380);
+      const step = (u / 110) | 0, cy = sy + (sn === 2 ? 1 : 4);
+      for (let k = 0; k < 2; k++) {
+        const lv = locked ? ((k - step) % 2 + 2) % 2 === 0 ? 15 : 4 : 3;
+        chev(3 + k * 11, cy, lv, 13); chevL(124 - k * 11, cy, lv, 13);
+      }
+      if (locked && once(sc, "lock")) { shake(420, 3); spark(40, cy + 6, 34, 2.6, 1000); spark(88, cy + 6, 34, 2.6, 1000); }
+      if (strobe(t, LOCK, LOCK + 140, 45)) invert(0, sy - 1, W, H - sy + 1);
+      if (locked && Math.random() < .35) spark(rnd(4, 124), rnd(3, 29), 2, .5, 420, 0);
+      return;
+    }
+    if (t < 5850) { bow(t - 4600); reveal(t - 4600, 0, 200); return; }
+    if (once(sc, "shatter")) { bow(9e9); shatter(.06); }
+  });
+}
+
 /* STRIKEOUT: a giant K slams in; swinging = STRIKEOUT pushes it off then shatters into
    falling dots; looking = mirrored K parks left, CAUGHT / LOOKING types in, then shatters. */
 function kScene({ looking, batter } = {}) {
@@ -777,12 +883,14 @@ BugKit.start({
       el.classList.toggle("on", on);
     });
     $(".ab .nm").textContent = S.batter || "";
+    $(".ab").style.visibility = S.batter ? "" : "hidden";   // no lineup: no bare AT BAT
     $(".ab .pc").textContent = S.pitchCount ? `P ${S.pitchCount}` : "";
-    if (!first && S.batter && S.batter !== prev.batter) enqueue(batterScene());
+    if (!first && S.batter && S.batter !== prev.batter && !(cur && cur.id === "walkoff")) enqueue(batterScene());
     kick();                                        // repaint (starts a count-up if a score moved)
   },
   fx: {
     hr(o) { play(hrScene(o)); },
+    walkoff(o, S) { play(walkoffScene(o, S)); },
     k(o) { play(kScene(o)); },
     hit(o) { play(hitScene(o)); },
     walk() { play(walkScene()); },

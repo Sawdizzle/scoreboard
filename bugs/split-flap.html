@@ -121,9 +121,39 @@ body.preview{background:
 .bases .b2{left:17.5px;top:1px}.bases .b1{left:32px;top:16px}.bases .b3{left:3px;top:16px}
 .bases i.on{background:radial-gradient(circle at 40% 35%,#fff4c8,var(--yellow) 55%,#b98200);box-shadow:0 0 10px 2px rgba(255,201,51,.65)}
 
+/* ---------- Rally mode (the pad's Rally): chase lights run along the
+   batting team's status cells, a light slides along the divider rail
+   and the STATUS arrow blinks. Box-shadow on small cells, transform on
+   one tiny gleam — nothing full-frame. ---------- */
+.rule{position:relative;overflow:hidden}
+.rule::after{content:"";position:absolute;inset:0;opacity:0;
+  background:linear-gradient(90deg,transparent 38%,rgba(255,201,51,.95) 47%,#fff4c8 50%,rgba(255,201,51,.95) 53%,transparent 62%)}
+body.rally .rule::after{opacity:1;animation:railGleam 2.6s cubic-bezier(.45,0,.55,1) infinite;will-change:transform}
+@keyframes railGleam{0%{transform:translateX(-62%)}100%{transform:translateX(62%)}}
+body.rally .hdr .lab.dep i{animation:blink .9s steps(1) infinite}
+body.rally .board[data-bat="away"] #rowA .seg-st .fc,
+body.rally .board[data-bat="home"] #rowB .seg-st .fc{animation:chase 2s linear var(--d,0s) infinite}
+.seg-st .fc:nth-child(2){--d:0.12s}.seg-st .fc:nth-child(3){--d:0.24s}.seg-st .fc:nth-child(4){--d:0.36s}.seg-st .fc:nth-child(5){--d:0.48s}.seg-st .fc:nth-child(6){--d:0.60s}
+.seg-st .fc:nth-child(7){--d:0.72s}.seg-st .fc:nth-child(8){--d:0.84s}.seg-st .fc:nth-child(9){--d:0.96s}.seg-st .fc:nth-child(10){--d:1.08s}
+@keyframes chase{
+  0%,40%,100%{box-shadow:0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(0,0,0,.55)}
+  12%{box-shadow:0 0 0 2px var(--yellow),0 0 12px 2px rgba(255,201,51,.6)}}
+
+/* ---------- Walk-off: the housing glows in the winners' colour ---------- */
+.woglow{position:absolute;inset:-3px;border-radius:9px;pointer-events:none;opacity:0;
+  box-shadow:0 0 0 3px var(--yellow),0 0 34px 6px var(--wc,var(--yellow))}
+.woglow.on{animation:woGlow 5.9s ease-out forwards}
+@keyframes woGlow{0%{opacity:0}6%{opacity:1}14%{opacity:.35}22%{opacity:1}30%{opacity:.35}38%{opacity:1}85%{opacity:.8}100%{opacity:0}}
+
 @media (prefers-reduced-motion:reduce){
   .fc.fl span{animation-duration:1s}
   .glow.on{animation:none}
+  .woglow.on{animation:woGlowCalm 5.9s ease-out forwards}
+  @keyframes woGlowCalm{0%,85%{opacity:.85}100%{opacity:0}}
+  body.rally .rule::after,body.rally .hdr .lab.dep i{animation:none}
+  body.rally .rule::after{opacity:.5;background:linear-gradient(90deg,transparent,rgba(255,201,51,.8),transparent)}
+  body.rally .board[data-bat="away"] #rowA .seg-st .fc,
+  body.rally .board[data-bat="home"] #rowB .seg-st .fc{animation:none;box-shadow:0 0 0 2px var(--yellow)}
 }
 </style>
 </head>
@@ -133,6 +163,7 @@ body.preview{background:
     <div class="board">
       <div class="screws"></div>
       <div class="glow"></div>
+      <div class="woglow"></div>
       <div class="row hdr rowT" id="hdr"></div>
       <div class="row rowT" id="rowA"></div>
       <div class="row rowT" id="rowB"></div>
@@ -318,7 +349,7 @@ body.preview{background:
   })();
   rows.A = buildTeamRow("rowA"); rows.B = buildTeamRow("rowB"); rows.C = buildBottom();
   const TEAM_ROW = { away: "A", home: "B" };
-  const board = $(".board"), glow = $(".glow"), lamps = ["b1", "b2", "b3"].map((c) => $(".bases ." + c));
+  const board = $(".board"), glow = $(".glow"), woglow = $(".woglow"), lamps = ["b1", "b2", "b3"].map((c) => $(".bases ." + c));
 
   /* ---------- text helpers ---------- */
   const up = (s) => String(s ?? "").toUpperCase().replace(/[^A-Z0-9&'+\-./·ꓘ●○▲▼ ]/g, "");
@@ -335,6 +366,12 @@ body.preview{background:
   /* A full-width team-row message: swatch + 12-cell line (spans team/R/H/E) + 10-cell status. */
   const msgRow = (sw, text, col, st = "", stCol = col, stFl = false) =>
     [{ ch: sw || " ", col: "W" }, ...cells(padL(text, 12), col), ...cells(padL(st, 10), stCol, stFl)];
+  /* A row whose 22 cells after the swatch read as one line, in coloured parts. */
+  const spanRow = (sw, parts) => {
+    const out = parts.flatMap(([t, col]) => cells(up(t), col)).slice(0, 22);
+    while (out.length < 22) out.push({ ch: " ", col: "W" });
+    return [{ ch: sw || " ", col: "W" }, ...out];
+  };
   const blankRow = (k) => rows[k].cells.map(() => ({ ch: " ", col: "W" }));
 
   /* ---------- state that sits on top of the game ---------- */
@@ -407,6 +444,7 @@ body.preview{background:
   let ovTimers = [];
   function takeover(steps){
     ovTimers.forEach(clearTimeout); ovTimers = [];
+    woglow.classList.remove("on");                 // a new takeover ends a walk-off's glow
     steps.forEach(([at, fn]) => ovTimers.push(setTimeout(fn, at)));
   }
   let hrRunsPending = null;
@@ -416,6 +454,7 @@ body.preview{background:
     hrDelay: 2300,
     render(state, prev, first){
       S = state;
+      board.dataset.bat = battingTeam(S);          // rally chase runs on the batting row
       paint({ instant: first });
     },
     fx: {
@@ -478,6 +517,32 @@ body.preview{background:
           }],
           [2700, () => { boardOv = null; paint({ wave: true, stagger: 22 }); }]
         ]);
+      },
+      /* Walk-off: the whole board cascades to the final. Headline + FINAL,
+         then the winners' line; the status rolls to the batter (or ARRIVED)
+         before the board flips back to the game with the runs lit. */
+      walkoff({ team, batter } = {}, st){
+        S = st; team ||= battingTeam(st);
+        clearRemarks(); hrRunsPending = null;
+        const o = team === "away" ? "home" : "away", T = st[team];
+        const abbr = padL(T.abbr || T.name, 6).trim();
+        const score = `${Math.min(T.r, 99)}-${Math.min(st[o].r, 99)}`;
+        const name = batter ? fitName(batter, 12) : "";
+        const winLine = spanRow(T.color, [[abbr + " ", "W"], ["WIN ", "Y"], [score, "Y"]]);
+        boardOv = { A: msgRow(T.color, "WALK-OFF", "Y", "FINAL", "Y", true), B: winLine, C: blankRow("C") };
+        paint({ wave: true, max: 8, stagger: 22 });
+        alert("Y");
+        takeover([
+          [2700, () => {
+            boardOv = { A: name ? msgRow(T.color, name, "W", "WALK-OFF", "Y", true)
+                                : msgRow(T.color, "WALK-OFF", "Y", "ARRIVED", "G", true),
+                        B: winLine, C: blankRow("C") };
+            paint({ stagger: 24, max: 7 });
+          }],
+          [5500, () => { boardOv = null; paint({ wave: true, stagger: 22 }); lightRuns(team, 700); }]
+        ]);
+        woglow.style.setProperty("--wc", T.color || "#FFC933");
+        restart(woglow, "on");
       },
       reset(o, st){
         S = st; clearRemarks();
