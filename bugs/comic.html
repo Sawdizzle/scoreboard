@@ -331,6 +331,7 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
       });
     }
     setBatter(S.batter || "", first);
+    $(".cap .box").hidden = !S.batter;   // no lineup: no "Now batting…" with nobody after it
     $(".cap .pc").textContent = S.pitchCount ? `P ${S.pitchCount}` : "";
   }
 
@@ -472,7 +473,7 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
     kp.className = looking ? "look" : "";
     kp.innerHTML = `<div class="bigpanel kpan"><div class="fill">${looking ? icicles() : ""}</div></div>
       ${swirl}<div class="bigk"><span>K</span></div>${word}
-      <div class="kcap">${looking ? "Caught looking…" : "Strike three!"}<b>${esc(who)} ${looking ? "never moved" : "goes down swinging"}</b></div>`;
+      <div class="kcap">${looking ? "Caught looking…" : "Strike three!"}<b>${who ? `${esc(who)} ${looking ? "never moved" : "goes down swinging"}` : looking ? "Right down the middle" : "Swung and missed"}</b></div>`;
     // park it beside the scorebug, toward centre stage
     const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width / 1920;
     const bx = (r.left - s.left) / k, bw = r.width / k, by = (r.top - s.top) / k, bh = r.height / k;

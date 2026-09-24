@@ -476,6 +476,8 @@ function paint(S, inst) {
   if (oClear) scrub(fx, 222, CNT_Y - 16, 52, 32, 260);
   OUT_X.forEach((x, i) => setMark("o" + i, i < S.outs, MK.out(x), { instant: inst, quiet: oClear, dur: 200, gap: 170 }));
   write(cells.batter, S.batter, { instant: inst, delay: Math.max(0, holdBatterUntil - now()) });
+  const ab = S.batter ? "AB" : "";   // no lineup: rub out the bare AB label
+  if (cells["lbl.ab"]._val !== ab) write(cells["lbl.ab"], ab, { instant: inst });
   write(cells.pc, S.pitchCount ? "P " + S.pitchCount : "", { instant: inst, quiet: true, eraseDur: 200 });
 }
 function render(S, prev, first) {

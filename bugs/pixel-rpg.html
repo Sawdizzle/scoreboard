@@ -490,7 +490,7 @@ body[data-pos^="b"] #dlg{bottom:calc(100% + 8px);transform-origin:50% 100%}
     $$(".strikes .pip").forEach((p, i) => { const on = i < Math.min(2, S.strikes), was = p.classList.contains("on"); p.classList.toggle("on", on); if (on && !was && !first) restart(p, "pop"); });
     // the duel: pitcher belongs to the fielding team, batter to the batting team
     $(".tico", pitw).style.color = S[fld].color; $(".tico", batw).style.color = S[bat].color;
-    const pn = surname(S.pitcher || "PITCHER"), bn = surname(S.batter);
+    const pn = surname(S.pitcher || "PITCHER"), bn = surname(S.batter || "BATTER");
     if (first || pn !== surname(P.pitcher)) typeName($(".pn"), pn, first);
     if (first || bn !== surname(P.batter)) { typeName($(".bn"), bn, first); if (!first) restart(batw, "enter"); }
     const pc = $(".pcv"); if (pc.textContent !== String(S.pitchCount ?? 0)) pc.textContent = S.pitchCount ?? 0;
@@ -579,13 +579,13 @@ body[data-pos^="b"] #dlg{bottom:calc(100% + 8px);transform-origin:50% 100%}
       foul(){ const r = rectOf(batw); dmg("FOUL", r.x + r.w/2, r.y + 6, "sm", 1150); },
       hit({ bases = 1, batter }, S){
         const word = ["", "SINGLE", "DOUBLE", "TRIPLE"][bases] || "HIT";
-        say([{ t:`${surname(batter || S.batter)} used ${word}!` }], { hold:1300 });
+        say([{ t:`${surname(batter || S.batter || "Batter")} used ${word}!` }], { hold:1300 });
         flashWins([batw]);
         hopDelay = hop(Math.min(3, bases), S[battingTeam(S)].color);
       },
       walk({ batter }, S){
         const p = surname(S.pitcher || "The pitcher");
-        say([{ t:`${p}'s control wavers...`, hold:600 }, `${surname(batter || S.batter)} takes 1st.`], { hold:1200 });
+        say([{ t:`${p}'s control wavers...`, hold:600 }, `${surname(batter || S.batter || "Batter")} takes 1st.`], { hold:1200 });
         wobble(pitw, 5, 900);
         hopDelay = hop(1, S[battingTeam(S)].color, true);
       },
@@ -595,11 +595,11 @@ body[data-pos^="b"] #dlg{bottom:calc(100% + 8px);transform-origin:50% 100%}
         hopDelay = hop(1, S[battingTeam(S)].color);
       },
       out({ batter }, S){
-        say([`${surname(batter || S.batter)} is out.`], { hold:1100 });
+        say([`${surname(batter || S.batter || "Batter")} is out.`], { hold:1100 });
         shake(batw, 6, 320);
       },
       k({ looking, batter } = {}, S){
-        const who = surname(batter || S.batter), pit = surname(S.pitcher || "The pitcher");
+        const who = surname(batter || S.batter || "Batter"), pit = surname(S.pitcher || "The pitcher");
         slashes(batw); flashWins([batw]);
         later(300, () => { restart(batw, "blink"); shake(batw, 8, 420); });
         const B = rectOf(cl), x = onLeft() ? B.x + B.w + 44 : B.x - 44 - 150, y = onTop() ? B.y : B.y + B.h - 210;
@@ -618,7 +618,7 @@ body[data-pos^="b"] #dlg{bottom:calc(100% + 8px);transform-origin:50% 100%}
         say([{ t:`${pit} used STRIKEOUT!`, hold:700 }, looking ? { t:`${who} was frozen!`, cls:"ice" } : { t:`${who} is out!` }], { hold:1300 });
       },
       hr({ runs = 1, batter }, S){
-        const who = surname(batter || S.batter);
+        const who = surname(batter || S.batter || "Batter");
         flashStage(); shake(bug, 12, 640);
         flashWins($$(".cluster > .win, .duo .win"));
         launchBall();

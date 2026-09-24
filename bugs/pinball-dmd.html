@@ -777,6 +777,7 @@ BugKit.start({
       el.classList.toggle("on", on);
     });
     $(".ab .nm").textContent = S.batter || "";
+    $(".ab").style.visibility = S.batter ? "" : "hidden";   // no lineup: no bare AT BAT
     $(".ab .pc").textContent = S.pitchCount ? `P ${S.pitchCount}` : "";
     if (!first && S.batter && S.batter !== prev.batter) enqueue(batterScene());
     kick();                                        // repaint (starts a count-up if a score moved)
