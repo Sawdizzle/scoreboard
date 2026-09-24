@@ -54,7 +54,8 @@
     away: { name: "Lakeside Hawks", abbr: "HAWKS", color: "#C8102E", r: 0, h: 0, e: 0, line: [] },
     home: { name: "Blue Steel", abbr: "STEEL", color: "#5B8FC9", r: 0, h: 0, e: 0, line: [] },
     inning: 1, half: "top", balls: 0, strikes: 0, outs: 0,
-    bases: [false, false, false], batter: "Carter Hayes", pitcher: "Wes Moreno", pitchCount: 0
+    bases: [false, false, false], batter: "Carter Hayes", pitcher: "Wes Moreno", pitchCount: 0,
+    sport: "baseball", sit: null   // other sports: sit = { period, periodNo, line, poss, markLabel, marks }
   };
   const PITCHERS = { home: "Wes Moreno", away: "Dale Ruiz" }; // keyed by fielding team
   const HITTERS = ["Carter Hayes", "Mason Pruitt", "Eli Navarro", "Jace Whitfield", "Rowan Diaz", "Luke Tran", "Theo Banks", "Cruz Molina", "Nate Oduya"];
@@ -110,6 +111,7 @@
   //   kind "roll"  — a third out: show it on the old half, then roll
   //   kind "plain" — everything else
   function decide(prev, next, anim) {
+    if (next.sport && next.sport !== "baseball") return decideSport(prev, next, anim);
     const bt = battingTeam(prev);
     const runs = Math.max(0, next[bt].r - prev[bt].r);
     if (anim && anim.type === "homerun") {
@@ -164,6 +166,23 @@
     #demo.min h2{margin:0}
   `;
 
+  // Football, soccer, basketball, volleyball: the pad's stinger names the moment
+  // and the score says who scored. A period that moves forward is its own beat.
+  const SPORT_MOMENT = { touchdown: "td", fieldgoal: "fg", turnover: "turnover", bigplay: "bigplay",
+    goal: "goal", three: "three", ace: "ace", setwin: "setwin" };
+  function decideSport(prev, next, anim) {
+    const moments = [];
+    const t = anim && SPORT_MOMENT[anim.type];
+    if (t) moments.push([t, { ...(anim.meta || {}) }]);
+    for (const team of ["away", "home"]) {
+      const pts = next[team].r - prev[team].r;
+      if (pts > 0) moments.push(["score", { team, pts }]);
+    }
+    const a = (prev.sit && prev.sit.periodNo) | 0, b = (next.sit && next.sit.periodNo) | 0;
+    if (b > a && a) moments.push(["period", { period: next.sit.period }]);
+    return { kind: "plain", bt: null, runs: 0, moments };
+  }
+
   const DEMO_HTML = (name) => `
     <h2><span>${name}</span><span><a href="/bugs">All bugs</a> · <a href="#" data-a="min">hide</a></span></h2>
     <div class="row"><button data-a="ball">Ball</button><button data-a="strike">Strike</button><button data-a="foul">Foul</button><button data-a="out">Out</button></div>
@@ -172,6 +191,56 @@
     <div class="row"><button data-a="run">+1 Run</button><button data-a="half">Next half</button><button data-a="pos">Move bug</button><button data-a="reset">Reset</button></div>
     <div class="row"><button data-a="walkoff">Walk-off</button><button data-a="rally" aria-pressed="false">Rally</button><button data-a="auto" aria-pressed="false">Auto-play a game</button></div>
     <p>Add <b>?obs=1</b> to hide this panel for OBS. <b>?auto=1</b> plays a game by itself.</p>`;
+
+  // Demo pads for the other sports: [label, action key, hot?, (next state) => stinger | null]
+  const other = (t) => (t === "away" ? "home" : "away");
+  const DOWNS = ["1ST & 10", "2ND & 7", "3RD & 4", "4TH & 1"];
+  const SPORT_DEMO = {
+    football: { clock: 12 * 60, down: true,
+      sit: { period: "1ST QTR", periodNo: 1, line: "1ST & 10", poss: "away", markLabel: "TO", marks: { away: "●●●", home: "●●●" } },
+      buttons: [
+        ["Hawks TD", "tda", true, (n) => { n.away.r += 6; return "touchdown"; }], ["Steel TD", "tdh", true, (n) => { n.home.r += 6; return "touchdown"; }],
+        ["Field goal", "fg", false, (n) => { n[n.sit.poss].r += 3; n.sit.poss = other(n.sit.poss); return "fieldgoal"; }],
+        ["Extra point", "xp", false, (n) => { n[n.sit.poss].r += 1; return null; }],
+        ["Safety", "safety", false, (n) => { n[other(n.sit.poss)].r += 2; n.sit.poss = other(n.sit.poss); return "fieldgoal"; }],
+        ["Turnover", "turnover", true, (n) => { n.sit.poss = other(n.sit.poss); n.sit.line = "1ST & 10"; return "turnover"; }],
+        ["Next down", "down", false, (n) => { n.sit.line = DOWNS[(DOWNS.indexOf(n.sit.line) + 1) % 4]; return null; }],
+        ["Big play", "bigplay", false, (n) => { n.sit.line = "1ST & 10"; return { type: "bigplay", meta: { text: "40-yard catch" } }; }],
+        ["Timeout", "to", false, (n) => { const t = n.sit.poss; n.sit.marks[t] = n.sit.marks[t].replace("●", "○").split("").sort().reverse().join(""); return null; }],
+        ["Next quarter", "period", false, (n) => { n.sit.periodNo++; n.sit.period = n.sit.periodNo > 4 ? "OT" : `${["", "1ST", "2ND", "3RD", "4TH"][n.sit.periodNo]} QTR`; return null; }],
+      ] },
+    soccer: { clock: 23 * 60 + 12, down: false,
+      sit: { period: "1ST HALF", periodNo: 1, line: "", poss: null, markLabel: "CARDS", marks: { away: "—", home: "—" } },
+      buttons: [
+        ["Hawks goal", "goala", true, (n) => { n.away.r += 1; return "goal"; }], ["Steel goal", "goalh", true, (n) => { n.home.r += 1; return "goal"; }],
+        ["Yellow card", "card", false, (n) => { n.sit.marks.away = "1Y"; return null; }],
+        ["Stoppage +2", "stop", false, (n) => { n.sit.line = "+2"; return null; }],
+        ["Second half", "period", false, (n) => { n.sit.periodNo = 2; n.sit.period = "2ND HALF"; n.sit.line = ""; return null; }],
+      ] },
+    basketball: { clock: 8 * 60, down: true,
+      sit: { period: "1ST QTR", periodNo: 1, line: "", poss: null, markLabel: "FOULS", marks: { away: "0", home: "0" } },
+      buttons: [
+        ["Hawks 2", "twoa", false, (n) => { n.away.r += 2; return null; }], ["Steel 2", "twoh", false, (n) => { n.home.r += 2; return null; }],
+        ["Hawks 3", "threea", true, (n) => { n.away.r += 3; return "three"; }], ["Steel 3", "threeh", true, (n) => { n.home.r += 3; return "three"; }],
+        ["Free throw", "ft", false, (n) => { n.home.r += 1; return null; }],
+        ["Foul", "foul", false, (n) => { const f = (+n.sit.marks.home || 0) + 1; n.sit.marks.home = String(f); n.sit.line = f >= 7 ? "BONUS · HAWKS" : ""; return null; }],
+        ["Next quarter", "period", false, (n) => { n.sit.periodNo++; n.sit.period = n.sit.periodNo > 4 ? "OT" : `${["", "1ST", "2ND", "3RD", "4TH"][n.sit.periodNo]} QTR`; return null; }],
+      ] },
+    volleyball: { clock: 0, down: false, noClock: true,
+      sit: { period: "SET 1", periodNo: 1, line: "", poss: "away", markLabel: "SETS", marks: { away: "0", home: "0" } },
+      buttons: [
+        ["Hawks point", "pta", false, (n) => { n.away.r += 1; n.sit.poss = "away"; return null; }], ["Steel point", "pth", false, (n) => { n.home.r += 1; n.sit.poss = "home"; return null; }],
+        ["Ace", "ace", true, (n) => { n[n.sit.poss].r += 1; return "ace"; }],
+        ["Set won", "setwin", true, (n) => { const w = n.away.r >= n.home.r ? "away" : "home"; const meta = { away: n.away.r, home: n.home.r };
+          n.sit.marks[w] = String((+n.sit.marks[w] || 0) + 1); n.away.r = 0; n.home.r = 0; n.sit.periodNo++; n.sit.period = `SET ${n.sit.periodNo}`;
+          return { type: "setwin", meta }; }],
+      ] },
+  };
+  const SPORT_DEMO_HTML = (name, sd) => `
+    <h2><span>${name}</span><span><a href="/bugs">All bugs</a> · <a href="#" data-a="min">hide</a></span></h2>
+    <div class="row">${sd.buttons.map(([label, key, hot]) => `<button${hot ? ' class="hot"' : ""} data-a="${key}">${label}</button>`).join("")}</div>
+    <div class="row"><button data-a="pos">Move bug</button><button data-a="rally" aria-pressed="false">Rally</button><button data-a="reset">Reset</button></div>
+    <p>Other sports: <b>?sport=football</b>, <b>soccer</b>, <b>basketball</b>, <b>volleyball</b>.</p>`;
 
   function merge(target, src) {
     for (const k in src) {
@@ -236,6 +305,7 @@
       if (d.type === "scoreboard:set") Scoreboard.set(d.state || {});
       if (d.type === "scoreboard:fire") Scoreboard.fire(d.name, d.opts);
       if (d.type === "scoreboard:live") fontsReady.then(() => live(d.state, d.anim, d.view));
+      if (d.type === "scoreboard:clock") theme.clock?.(d.clock || {});
     });
 
     /* ---------- Live: a new game row, and the stinger that came with it ----------
@@ -405,10 +475,29 @@
       if (b) b.setAttribute("aria-pressed", String(!!on));
     }
 
+    /* ---------- Other sports' demo (?sport=…, for a bug that covers it) ---------- */
+    const demoSport = params.get("sport");
+    const SD = demoSport && demoSport !== "baseball" && (theme.sports || []).includes(demoSport) ? SPORT_DEMO[demoSport] : null;
+    if (SD) {
+      S.sport = demoSport; S.sit = clone(SD.sit);
+      Object.assign(ACT, Object.fromEntries(SD.buttons.map(([, key, , fn]) => [key, () => {
+        const n = clone(S); const anim = fn(n); live(n, anim ? { type: anim.type || anim, meta: anim.meta || {} } : null);
+      }])));
+      ACT.reset = () => { S = clone({ ...DEFAULT, sport: demoSport, sit: clone(SD.sit) }); emit("reset"); };
+      let secs = SD.clock;   // a demo clock, painted the way the overlay paints its own
+      const tickClock = () => {
+        if (SD.noClock) return theme.clock?.({ hidden: true });
+        const t = Math.max(0, secs);
+        theme.clock?.({ hidden: false, text: `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, low: SD.down && t <= 60 && t > 0, zero: SD.down && t <= 0 });
+        secs += SD.down ? -1 : 1;
+      };
+      if (!embed) { tickClock(); setInterval(tickClock, 1000); }
+    }
+
     /* ---------- Demo panel ---------- */
     const demo = document.createElement("div");
     demo.id = "demo"; demo.setAttribute("role", "region"); demo.setAttribute("aria-label", "Demo controls");
-    demo.innerHTML = DEMO_HTML(theme.name);
+    demo.innerHTML = SD ? SPORT_DEMO_HTML(theme.name, SD) : DEMO_HTML(theme.name);
     document.body.appendChild(demo);
     demo.addEventListener("click", (e) => {
       const el = e.target.closest("[data-a]");
@@ -422,7 +511,7 @@
     if (embed) { demo.remove(); return; }   // the live overlay drives it; the first row paints it
     await fontsReady;
     render();
-    if (params.get("auto") === "1") setAuto(true);
+    if (!SD && params.get("auto") === "1") setAuto(true);   // auto-play is baseball's
     const script = (params.get("play") || "").split(",").filter(Boolean);
     const gap = parseInt(params.get("gap")) || 900;
     script.forEach((a, i) => setTimeout(() => act(a), 400 + i * gap));

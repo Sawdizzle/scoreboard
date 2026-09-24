@@ -68,6 +68,21 @@ body[data-pos^="b"] #bug{flex-direction:column-reverse}
 .team.flash .score{animation:wellFlash 1.4s var(--ease-out)}
 @keyframes wellFlash{0%,22%{background:var(--gold);color:#1a1300;box-shadow:0 0 22px rgba(255,207,58,.9)}100%{background:var(--well);color:#fff}}
 
+/* ---------- Other sports: period + clock in the situation box ---------- */
+.sp{display:none;align-items:center;gap:20px}
+body.other .sit > .inn,body.other .sit > .dia,body.other .sit > .cnt{display:none}
+body.other .sp{display:flex}
+.sp .per{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:60px}
+.sp .pn{font-weight:700;font-size:28px;line-height:1;color:var(--gold);letter-spacing:.04em;white-space:nowrap}
+.sp .pn.pop{animation:basePop .55s var(--ease-out)}
+.sp .pl{font-weight:700;font-size:17px;line-height:1;letter-spacing:.08em;color:var(--ink);white-space:nowrap}
+.sp .pl:empty{display:none}
+.sp .clk{font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;min-width:100px;text-align:right}
+.sp .clk[hidden]{display:none}
+.sp .clk.low{color:#ff6b73}
+.sp .clk.zero{color:#ff6b73;animation:clkBlink 1s steps(2,jump-none) infinite}
+@keyframes clkBlink{50%{opacity:.35}}
+
 /* walk-off: the winners' block pulses gold */
 .team.win .slab{animation:winPulse 1.1s ease-in-out 4}
 @keyframes winPulse{50%{box-shadow:inset 0 0 0 4px var(--gold),inset 0 0 30px rgba(255,207,58,.6)}}
@@ -227,6 +242,7 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
           <div class="bs"><span class="roll" data-k="balls"></span><span class="dash">-</span><span class="roll" data-k="strikes"></span></div>
           <div class="outs"><i></i><i></i><i></i></div>
         </div>
+        <div class="sp"><div class="per"><b class="pn"></b><small class="pl"></small></div><div class="clk" hidden></div></div>
       </div>
     </div>
     <div class="kflag"><div class="k"><span>K</span></div><div class="kt"><b></b><small></small></div></div>
@@ -290,7 +306,19 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
     }
     strip.appendChild(nu);
   }
+  // Other sports: down & distance (or bonus) as a tag, who has the ball or the
+  // serve, and each team's timeouts / cards / fouls / sets on the right.
+  function sportLine(S, animate) {
+    const it = S.sit || {};
+    const long = it.line && it.line.length > 6;
+    const who = it.poss ? `${S.sport === "volleyball" ? "Serve" : "Ball"} · ${abbrOf(S, it.poss)}` : it.period || "";
+    const main = (long ? `<span class="tag gold">${esc(it.line)}</span>` : "") + `<span class="txt">${esc(up(who))}</span>`;
+    const m = it.marks || {};
+    const side = it.markLabel ? `${esc(it.markLabel)} · ${esc(abbrOf(S, "away"))}<b>${esc(m.away ?? "")}</b> · ${esc(abbrOf(S, "home"))}<b>${esc(m.home ?? "")}</b>` : "";
+    setLine(main, side, animate);
+  }
   function atBat(S, animate) {
+    if (S.sport && S.sport !== "baseball") return sportLine(S, animate);
     const pc = S.pitchCount ? `<b>${S.pitchCount}</b>` : "";
     const side = S.pitcher ? `P · ${esc(up(surname(S.pitcher)))}${pc}` : pc ? `Pitches${pc}` : "";
     // No lineup, no name: the strip carries where the inning stands instead.
@@ -307,9 +335,39 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
     holdTimer = setTimeout(() => { holdUntil = 0; if (cur) atBat(cur, true); }, ms);
   }
 
+  /* ---------- Other sports: the band, told after the score lands ----------
+     A touchdown, goal or field goal arrives as the stinger and, in the same
+     breath, the score; the band waits a tick so it can say who and how many
+     (a "field goal" worth 2 was a safety). */
+  let lastScore = { at: 0 }, bandPending = false;
+  function whenScored(fn) {
+    bandPending = true;
+    setTimeout(() => { bandPending = false; fn(Date.now() - lastScore.at < 400 ? lastScore : null); }, 0);
+  }
+  function band(S, t, title, who, what) {
+    hr.style.setProperty("--tc", S[t].color);
+    $(".hab", hr).textContent = abbrOf(S, t);
+    $(".hsc", hr).textContent = (S.sit && S.sit.period) || "";
+    $(".t1 span", hr).textContent = title;
+    $(".t2 b", hr).textContent = who;
+    $(".t2 span", hr).textContent = what;
+    hr.classList.remove("wo");
+    restart(hr, "play");
+    restart(rail, "sheen");
+  }
+  const lineOf = (S) => `${abbrOf(S, "away")} ${S.away.r} · ${abbrOf(S, "home")} ${S.home.r}`;
+
   /* ---------- Paint ---------- */
   BugKit.start({
     name: "Prime Time",
+    sports: ["baseball", "football", "soccer", "basketball", "volleyball"],
+    clock(c) {
+      const el = $(".sp .clk");
+      el.hidden = !!c.hidden || !c.text;
+      el.textContent = c.text || "";
+      el.classList.toggle("low", !!c.low);
+      el.classList.toggle("zero", !!c.zero);
+    },
     hrDelay: 2300,
     place(p) { pos = p; },
     render(S, prev, first) {
@@ -319,8 +377,20 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
         el.style.setProperty("--tc", S[t].color);
         $(".ab", el).textContent = abbrOf(S, t);
         roll($(".score .roll", el), S[t].r, first);
-        el.classList.toggle("bat", battingTeam(S) === t);
+        const other = S.sport && S.sport !== "baseball";
+        el.classList.toggle("bat", other ? !!S.sit && S.sit.poss === t : battingTeam(S) === t);   // possession / serve
       }
+      if (S.sport && S.sport !== "baseball") {
+        document.body.classList.add("other");
+        const it = S.sit || {}, pn = $(".sp .pn");
+        if (pn.textContent !== (it.period || "") && !first) restart(pn, "pop");
+        pn.textContent = it.period || "";
+        $(".sp .pl").textContent = it.line && it.line.length <= 6 ? it.line : "";
+        if (first) { atBat(S, false); restart(bug, "intro"); }
+        else if (Date.now() > holdUntil) atBat(S, true);
+        return;
+      }
+      document.body.classList.remove("other");
       roll($(".inn .n"), S.inning, first);
       $(".inn .up").classList.toggle("on", S.half === "top");
       $(".inn .dn").classList.toggle("on", S.half !== "top");
@@ -411,7 +481,52 @@ body[data-pos$="r"] .hr.play{animation-name:hrWipeR}
         restart(team(t), "win");
         say("WALK-OFF", "gold", line, 7000);
       },
-      reset() { ks.clear(); restart(bug, "intro"); }
+      reset() { ks.clear(); restart(bug, "intro"); },
+
+      // ---- Other sports ----
+      score({ team: t, pts }, S) {
+        lastScore = { team: t, pts, at: Date.now() };
+        restart(team(t), "flash");
+        restart(rail, "sheen");
+        if (bandPending || Date.now() - lastSay.at < 250) return;   // the moment already says it
+        say(`+${pts}`, "gold", `${S[t].name} · ${lineOf(S)}`);
+      },
+      td(o, S) {
+        whenScored((sc) => {
+          const t = sc ? sc.team : (S.sit && S.sit.poss) || "home";
+          band(S, t, "Touchdown", S[t].name, sc ? `+${sc.pts} · ${lineOf(S)}` : lineOf(S));
+          say("TD", "gold", `${S[t].name} · ${lineOf(S)}`, 5200);
+        });
+      },
+      fg(o, S) {
+        whenScored((sc) => {
+          const t = sc ? sc.team : "home", safety = sc && sc.pts === 2;
+          band(S, t, safety ? "Safety" : "Field goal", S[t].name, `+${sc ? sc.pts : 3} · ${lineOf(S)}`);
+          say(safety ? "SAFETY" : "FG", "gold", `${S[t].name} · ${lineOf(S)}`, 5200);
+        });
+      },
+      goal(o, S) {
+        whenScored((sc) => {
+          const t = sc ? sc.team : "home";
+          band(S, t, "Goal!", S[t].name, lineOf(S));
+          say("GOAL", "gold", `${S[t].name} · ${lineOf(S)}`, 5200);
+        });
+      },
+      three(o, S) {
+        whenScored((sc) => { if (sc) say("THREE", "gold", `${S[sc.team].name} from deep · ${lineOf(S)}`); });
+      },
+      ace(o, S) { const t = (S.sit && S.sit.poss) || "home"; say("ACE", "gold", `${S[t].name} serve`); },
+      setwin(meta, S) {
+        const w = (meta.away | 0) >= (meta.home | 0) ? "away" : "home", m = (S.sit && S.sit.marks) || {};
+        band(S, w, "Set won", S[w].name, `${Math.max(meta.away | 0, meta.home | 0)}-${Math.min(meta.away | 0, meta.home | 0)} · sets ${m.away ?? 0}-${m.home ?? 0}`);
+        say("SET", "gold", `${S[w].name} take it`, 5200);
+      },
+      turnover(o, S) { const t = S.sit && S.sit.poss; say("TURNOVER", "red", t ? `Ball · ${S[t].name}` : "Change of possession"); },
+      bigplay(meta, S) { say("BIG PLAY", "gold", meta.text || (S.sit && S.sit.line) || ""); },
+      period(o, S) {
+        const it = S.sit || {};
+        say(it.period || "", "gold", S.sport === "soccer" && it.periodNo === 2 ? "Second half under way" : "Under way", 3000);
+      }
     }
   });
 })();

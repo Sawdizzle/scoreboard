@@ -1587,7 +1587,8 @@ function renderLook() {
   const [vy, vx] = cur.split('-');
   const bug = $('pos-bug');
   // The design itself, roughly: an animated bug's thumbnail, or the layout's shape.
-  const slug = (game.style || '').startsWith('anim-') && (game.sport || 'baseball') === 'baseball' ? game.style.slice(5) : '';
+  const pick = $('su-style').querySelector(`option[value="${game.style || 'bar'}"]`);
+  const slug = (game.style || '').startsWith('anim-') && pick && !pick.disabled ? game.style.slice(5) : '';
   bug.classList.toggle('thumb', !!slug);
   bug.style.backgroundImage = slug ? `url(/bugs/thumbs/${slug}.png)` : '';
   bug.dataset.layout = slug ? '' : (game.style || 'bar').startsWith('anim-') ? 'bar' : (game.style || 'bar');   // other sports show the Bar
@@ -1604,18 +1605,21 @@ function renderLook() {
 // that changes nothing on the bug.
 function renderScorebugPick() {
   const style = game.style || 'bar';
-  const baseball = (game.sport || 'baseball') === 'baseball';
+  const sport = game.sport || 'baseball';
+  // An animated design lists the sports it covers (data-sports); the rest are baseball only.
+  const covers = (o) => (o.dataset.sports || 'baseball').split(' ').includes(sport);
   $('su-style').value = style;
-  $('su-style-anim').disabled = !baseball;
+  $('su-style-anim').querySelectorAll('option').forEach((o) => { o.disabled = !covers(o); });
   const opt = $('su-style').querySelector(`option[value="${style}"]`);
   const anim = style.startsWith('anim-');
   const name = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : '';
+  const covered = anim && !!opt && covers(opt);
   // What the theme still paints depends on both choices: an animated bug and
   // the Elevated scenes (with their ticker and sponsor bug) each bring their own look.
-  const bugOwn = anim && baseball, elevated = game.scene_style === 'elevated';
+  const bugOwn = covered, elevated = game.scene_style === 'elevated';
   $('theme-head').textContent = bugOwn && !elevated ? 'Cards theme' : 'Theme';
   const note = $('theme-note');
-  note.textContent = anim && !baseball ? 'Animated scorebugs are baseball only, so this game shows the Bar layout in this theme.'
+  note.textContent = anim && !covered ? `${name || 'This scorebug'} is baseball only, so this game shows the Bar layout in this theme. Prime Time covers every sport.`
     : bugOwn && elevated ? `${name} and the Elevated scenes bring their own look, so nothing on screen uses the theme right now. It comes back if you pick a layout or Simple scenes.`
     : bugOwn ? `${name} brings its own look. The theme colours the Simple scenes (Starting Soon, Mid-Inning, Final and the smaller cards), the ticker and the sponsor bug.`
     : elevated ? 'The theme paints the scorebug. The Elevated scenes, the ticker and the sponsor bug use the network-TV look.'
