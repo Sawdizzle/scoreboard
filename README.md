@@ -138,10 +138,10 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **Teams**: names, abbreviations, colours, logos and rosters; swap home and away. A named team with a lineup saves itself as you edit (keyed by name), so next game it is one pick. **★ My team** marks your own: preselected in New Game, and the setup checklist asks for its positions only; an opponent's are optional.
 - **Lineup**: rows of number, name and position; **⌨ Jersey numbers** for entering a lineup card at game time (tap a number, Next, repeat; ⌫ on an empty keypad takes the last one back), and **📋 Paste a list** for one player per line (`7 Ava Reyes SS`, `#12 Ben Ortiz (P)`, `3 Cy`).
 - **Lineups & positions**: the same screens the batter line and 🧢 Field open.
-- **Sport & scorebug**: sport, and one of five scorebug styles: Scorebox, Bar, Bug, Minimal, Lower-third. Baseball games can pick one of seven **animated** scorebugs instead (Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode). Each brings its own look and plays its own home run, strikeout and hit moments. See them all at `/bugs`.
+- **Sport**: which sport the pad and overlay run.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).
 - **Show on overlay**: clock, batter, pitcher, pitch count, R-H-E on the bug, run-rule watch.
-- **Look & sound**: 16 themes (including Blue Steel) plus Custom colours, the 3×3 position grid, scale, five sound packs, one volume, mute.
+- **Look & sound**: the scorebug design, the theme, the 3×3 position grid, scale, five sound packs, one volume, mute. A design is one of five layouts (Scorebox, Bar, Bug, Minimal, Lower-third), painted by one of 16 themes (including Blue Steel) or Custom colours. Baseball games can instead pick one of seven **animated** scorebugs (Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode), which bring their own look and play their own home run, strikeout and hit moments; the theme then colours only the cards and the ticker. See them all at `/bugs`.
 - **Sponsors**: a list of names and logos, shown as a rotating "brought to you by" corner bug that hides while a full-screen card is up.
 - **OBS**: the OBS-buttons switch, current page-permission level, auto-clip, Go Live / Record / Buffer.
 - **This game**: Reset to 0–0 (keeps teams and look) and Delete (cannot be undone).

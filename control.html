@@ -105,7 +105,7 @@
             <li>Check <b>“Control audio via OBS”</b> so the sounds reach the stream.</li>
             <li><b>Page permissions</b> decide how much of OBS the pad may run: <b>No access</b> — everything on the overlay; <b>Basic</b> — plus 🎞️ Replay; <b>Advanced</b> — plus 🎥 Cameras and the replay buffer; <b>Full</b> — plus Go live and Record.</li>
           </ul>
-          <p>Place and size the bug from <b>Setup → Theme, position &amp; sound</b>, not by resizing the source.</p>
+          <p>Place and size the bug from <b>Setup → Scorebug, theme &amp; sound</b>, not by resizing the source.</p>
           <p class="help-tip">For a laptop at the field: 1920×1080 at 30 FPS, the hardware encoder (Apple VT or NVENC), CBR 6000 kbps, and recording set to <b>“Same as stream”</b> so the game isn’t encoded twice. Every extra camera costs more than everything else combined.</p>
         </div>
       </details>
@@ -833,7 +833,7 @@
         <span class="set-head">Game</span>
         <div class="set-card">
           <button class="set-row" type="button" data-go="game">
-            <span class="set-lab">Sport &amp; scorebug</span><span class="set-val" id="sv-sport-val">Baseball</span><span class="set-go">›</span>
+            <span class="set-lab">Sport</span><span class="set-val" id="sv-sport-val">Baseball</span><span class="set-go">›</span>
           </button>
           <button class="set-row" type="button" data-go="times">
             <span class="set-lab">Times &amp; rules</span><span class="set-val" id="sv-times-val">—</span><span class="set-go">›</span>
@@ -848,7 +848,7 @@
         <span class="set-head">Look &amp; sound</span>
         <div class="set-card">
           <button class="set-row" type="button" data-go="look">
-            <span class="set-lab">Theme, position &amp; sound</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
+            <span class="set-lab">Scorebug, theme &amp; sound</span><span class="set-val" id="sv-look-val">—</span><span class="set-go">›</span>
           </button>
           <button class="set-row" type="button" data-go="sponsors">
             <span class="set-lab">Sponsors</span><span class="set-val" id="sv-sponsors-val">—</span><span class="set-go">›</span>
@@ -992,9 +992,9 @@
     </section>
 
 
-    <section class="sv-pane" data-pane="game" data-title="Sport &amp; scorebug" hidden>
+    <section class="sv-pane" data-pane="game" data-title="Sport" hidden>
       <div class="set-sec">
-        <span class="set-head">Sport &amp; scorebug</span>
+        <span class="set-head">Sport</span>
         <div class="set-card">
           <label class="set-row field"><span class="set-lab">Sport</span>
             <select class="set-input" id="su-sport">
@@ -1005,27 +1005,8 @@
               <option value="basketball">Basketball</option>
             </select>
           </label>
-          <label class="set-row field"><span class="set-lab">Scorebug</span>
-            <select class="set-input" id="su-style">
-              <option value="scorebox">Scorebox (full broadcast)</option>
-              <option value="bar">Bar (wide strip)</option>
-              <option value="bug">Bug (stacked)</option>
-              <option value="minimal">Minimal (slim)</option>
-              <option value="lowerthird">Lower-third</option>
-              <optgroup label="Animated (baseball)">
-                <option value="anim-classic-green">Classic Green (ballpark board)</option>
-                <option value="anim-pinball-dmd">Backglass (pinball display)</option>
-                <option value="anim-chalkboard">Chalk Talk (dugout chalkboard)</option>
-                <option value="anim-comic">Ka-Pow (comic book)</option>
-                <option value="anim-split-flap">Departures (split-flap board)</option>
-                <option value="anim-receipt">Play-by-Play Printer (receipt)</option>
-                <option value="anim-pixel-rpg">Battle Mode (16-bit)</option>
-              </optgroup>
-            </select>
-          </label>
         </div>
         <p class="set-note">Changing sport keeps the score and swaps the pad and the overlay to that sport's controls.</p>
-        <p class="set-note">Animated scorebugs bring their own look and play their own home run, strikeout and hit moments. Theme doesn't change them, and other sports show the Bar instead. Preview them all at <a href="/bugs" target="_blank" rel="noopener">/bugs</a>.</p>
       </div>
     </section>
 
@@ -1060,7 +1041,34 @@
 
     <section class="sv-pane" data-pane="look" data-title="Look &amp; sound" hidden>
       <div class="set-sec">
-        <span class="set-head">Theme</span>
+        <span class="set-head">Scorebug</span>
+        <div class="set-card">
+          <label class="set-row field"><span class="set-lab">Design</span>
+            <select class="set-input" id="su-style">
+              <optgroup label="Layouts (any sport, uses the theme)">
+              <option value="scorebox">Scorebox (full broadcast)</option>
+              <option value="bar">Bar (wide strip)</option>
+              <option value="bug">Bug (stacked)</option>
+              <option value="minimal">Minimal (slim)</option>
+              <option value="lowerthird">Lower-third</option>
+              </optgroup>
+              <optgroup label="Animated (baseball)" id="su-style-anim">
+                <option value="anim-classic-green">Classic Green (ballpark board)</option>
+                <option value="anim-pinball-dmd">Backglass (pinball display)</option>
+                <option value="anim-chalkboard">Chalk Talk (dugout chalkboard)</option>
+                <option value="anim-comic">Ka-Pow (comic book)</option>
+                <option value="anim-split-flap">Departures (split-flap board)</option>
+                <option value="anim-receipt">Play-by-Play Printer (receipt)</option>
+                <option value="anim-pixel-rpg">Battle Mode (16-bit)</option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
+        <p class="set-note" id="su-style-note">A layout is painted by the theme below. An animated scorebug brings its own look and plays its own home run, strikeout and hit moments. Try them all at <a href="/bugs" target="_blank" rel="noopener">/bugs</a>.</p>
+      </div>
+
+      <div class="set-sec">
+        <span class="set-head" id="theme-head">Theme</span>
         <div class="set-card">
           <label class="set-row field"><span class="set-lab">Theme</span><select class="set-input" id="theme-sel">
                   <optgroup label="Your own">
@@ -1070,7 +1078,7 @@
                   <optgroup label="Clean">
                     <option value="nightgame">Midnight</option>
                     <option value="espn">Broadcast Minimal</option>
-                    <option value="green">Classic Green</option>
+                    <option value="green">Ballpark Green</option>
                     <option value="carbon">Carbon</option>
                     <option value="royal">Royal</option>
                     <option value="gold">Gold</option>
@@ -1085,12 +1093,13 @@
                   </optgroup>
                   <optgroup label="Throwback">
                     <option value="retro">Retro 8-bit</option>
-                    <option value="chalkboard">Chalkboard (sandlot)</option>
+                    <option value="chalkboard">Sandlot Slate</option>
                     <option value="americana">Americana (bunting)</option>
                   </optgroup>
                 </select></label>
           <button class="set-row" type="button" id="sv-custom" data-go="look-custom" hidden><span class="set-lab">Custom colours</span><span class="set-go">›</span></button>
         </div>
+        <p class="set-note" id="theme-note" hidden></p>
       </div>
 
       <div class="set-sec">

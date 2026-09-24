@@ -964,6 +964,7 @@ button.set-row, a.set-row { cursor: pointer; }
 button.set-row:active, a.set-row:active { background: var(--bg-2); }
 @media (hover: hover) { button.set-row:hover, a.set-row:hover { background: var(--bg-2); } }
 .set-row[aria-disabled="true"], .set-row:disabled { opacity: 0.45; pointer-events: none; }
+.set-row[hidden] { display: none; }   /* Custom colours only shows on the Custom theme */
 
 /* Toggle row: one switch, everywhere. A real checkbox underneath, so it is
    focusable, announced and togglable from the keyboard. */
@@ -1007,6 +1008,7 @@ button.set-row:active, a.set-row:active { background: var(--bg-2); }
 .set-row input[type="range"] { flex: 1 1 auto; min-width: 0; max-width: 190px; }
 .set-row .fxbtn, .set-row .ghost { flex: 0 0 auto; margin: 0; }
 .set-note { margin: 2px 2px 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.set-note a { color: var(--body); }
 
 /* Batter strip: jersey number first, then name and who follows; pitcher on the right. */
 .gm-num { flex: 0 0 auto; font-family: var(--num); font-size: 40px; font-weight: 700; line-height: 1; color: var(--chalk); }

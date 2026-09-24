@@ -1558,6 +1558,7 @@ async function writeField(patch) {
   queue.enqueue({ kind: 'field', gameId, patch });
   if (Object.keys(patch).some((k) => /^(away|home)_(name|abbr|color|logo_url)$/.test(k))) autoSaveTeamsSoon();
 }
+$('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
 document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
 $('scale-sel').addEventListener('input', (e) => { $('scale-val').textContent = (+e.target.value).toFixed(2) + '×'; });
@@ -1568,6 +1569,7 @@ const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-rig
   'bottom-left': 'Bottom-left', 'bottom-center': 'Bottom-centre', 'bottom-right': 'Bottom-right' };
 // A theme no longer in the picker paints as Midnight, so the picker says so.
 function renderLook() {
+  renderScorebugPick();
   const sel = $('theme-sel');
   sel.value = game.theme || 'nightgame';
   if (!sel.value) sel.value = 'nightgame';
@@ -1585,6 +1587,26 @@ function renderLook() {
   bug.style.transform = `translate(-50%, -50%) scale(${Math.min(Math.max(+sc || 1, 0.6), 1.5)})`;
   $('pos-note').textContent = `${POS_LABEL[cur] || cur}, ${(+sc).toFixed(1)}× — where the bug sits over your camera.`;
   renderCustomize();
+}
+
+// The scorebug and the theme are one decision on one screen. A layout is painted
+// by the theme; an animated scorebug paints itself, so the theme is left to the
+// cards and the ticker, and the screen says so rather than offering a choice
+// that changes nothing on the bug.
+function renderScorebugPick() {
+  const style = game.style || 'bar';
+  const baseball = (game.sport || 'baseball') === 'baseball';
+  $('su-style').value = style;
+  $('su-style-anim').disabled = !baseball;
+  const opt = $('su-style').querySelector(`option[value="${style}"]`);
+  const anim = style.startsWith('anim-');
+  const name = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : '';
+  $('theme-head').textContent = anim ? 'Cards theme' : 'Theme';
+  const note = $('theme-note');
+  note.textContent = !anim ? ''
+    : baseball ? `${name} brings its own look. The theme colours the Starting Soon, lineup and Final cards and the ticker.`
+    : `Animated scorebugs are baseball only, so this game shows the Bar layout in this theme.`;
+  note.hidden = !anim;
 }
 
 // ---- Custom colours (the `look` overrides, applied on the Custom theme only) --
@@ -2353,7 +2375,7 @@ function renderGame() {
   paintIf('scenes', [g.obs_scenes], renderScenes);
   paintIf('obs', [g.obs_status], renderObs);
   paintIf('audio', [g.audio, g.sound_pack], renderAudio);
-  paintIf('look', [g.theme, g.style, g.scorebug_position, g.scorebug_scale, g.look], renderLook);
+  paintIf('look', [g.theme, g.style, g.sport, g.scorebug_position, g.scorebug_scale, g.look], renderLook);
   paintIf('guide', [g.away_name, g.home_name, g.roster_rev, sport], renderSetupGuide);
 }
 
