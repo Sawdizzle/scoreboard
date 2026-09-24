@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Play-by-Play Printer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PLAY-BY-PLAY PRINTER — the scorebug is a thermal receipt printer.
+   Dark plastic housing, backlit LCD score, LED count + bases,
+   and a receipt that feeds out of the slot one play at a time.
+   Top corners: paper hangs down. Bottom corners: paper rises.
+   ============================================================ */
+:root{
+  --ink:#1a1916; --paper:#f4f1e8; --lcd-ink:#16230c; --stamp:#cf1f2a;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --lcdf:"VT323","JetBrains Mono",ui-monospace,monospace;
+}
+body{--demo-accent:#b9d86a}
+#stage{font-family:var(--mono)}
+#bug{z-index:2}
+.unit{position:relative;width:620px;display:flex;flex-direction:column;align-items:center}
+body[data-pos^="b"] .unit{flex-direction:column-reverse}
+.unit.thud{animation:thud .34s cubic-bezier(.3,1.6,.5,1)}
+@keyframes thud{25%{transform:translateY(5px) scale(.996)}60%{transform:translateY(-2px)}100%{transform:none}}
+
+/* ---------- Printer housing ---------- */
+.printer{position:relative;z-index:2;width:620px;height:124px;display:flex;align-items:flex-start;padding:14px 16px 0;
+  border-radius:16px 16px 11px 11px;
+  background:
+    radial-gradient(ellipse at 28% -30%,rgba(255,255,255,.12),transparent 55%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px),
+    linear-gradient(180deg,#3a3c42 0%,#26282c 40%,#1b1c20 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.17),inset 0 -3px 0 rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.04),
+    0 14px 28px rgba(0,0,0,.55),0 3px 6px rgba(0,0,0,.4)}
+body[data-pos^="b"] .printer{border-radius:11px 11px 16px 16px;padding-top:22px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -3px 0 rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.04),0 10px 26px rgba(0,0,0,.55)}
+.printer.overdrive{animation:buzz .07s linear infinite}
+@keyframes buzz{25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px) rotate(.15deg)}75%{transform:translate(1px,1px)}}
+.printer.jolt{animation:jolt .26s ease-out}
+@keyframes jolt{30%{transform:translateY(3px)}70%{transform:translateY(-1px)}}
+.unit.jam .printer{animation:shudder .6s linear}
+@keyframes shudder{10%,50%{transform:translateX(-2px) rotate(-.3deg)}30%,70%{transform:translateX(2px) rotate(.3deg)}90%{transform:none}}
+
+/* team colour keys beside the LCD */
+.keys{display:flex;flex-direction:column;gap:8px;padding-top:6px;margin-right:9px}
+.keys i{width:9px;height:34px;border-radius:3px;background:var(--c,#888);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.6)}
+
+/* backlit LCD */
+.lcd{position:relative;width:344px;height:88px;display:grid;grid-template-columns:1fr 84px;border-radius:6px;overflow:hidden;
+  color:var(--lcd-ink);font-family:var(--lcdf);
+  background:radial-gradient(ellipse at 45% 35%,#cfe78a 0%,#b3d066 55%,#98b64d 100%);
+  box-shadow:0 0 0 4px #0b0c0e,0 0 0 5px rgba(255,255,255,.09),inset 0 3px 7px rgba(0,0,0,.35),0 0 20px rgba(185,220,110,.2)}
+.lcd::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.26),transparent 38%)}
+.lcd::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.3;
+  background:repeating-linear-gradient(90deg,#c6df80 0 1px,transparent 1px 4px),repeating-linear-gradient(0deg,#c6df80 0 1px,transparent 1px 4px)}
+.rows{display:flex;flex-direction:column;justify-content:center;padding:0 10px 0 4px;border-right:2px solid rgba(22,35,12,.3)}
+.lrw{position:relative;display:flex;align-items:center;height:40px;padding-left:22px;border-radius:3px;text-shadow:1px 1px 0 rgba(0,0,0,.13)}
+.lrw .mk{position:absolute;left:5px;top:50%;margin-top:-8px;border-left:12px solid var(--lcd-ink);border-top:8px solid transparent;border-bottom:8px solid transparent;opacity:.1}
+.lrw.bat .mk{opacity:1}
+.lrw .nm{flex:1;font-size:46px;line-height:1;letter-spacing:.03em;white-space:nowrap;overflow:hidden}
+.lrw .sc{font-size:54px;line-height:1;min-width:52px;text-align:right}
+.lrw.flash{animation:lcdFlash .34s steps(1,end) 4}
+@keyframes lcdFlash{0%{background:var(--lcd-ink);color:#c4de78}50%{background:transparent;color:var(--lcd-ink)}}
+.inn{display:flex;flex-direction:column;align-items:center;justify-content:center;text-shadow:1px 1px 0 rgba(0,0,0,.13)}
+.il{display:flex;align-items:center;gap:5px}
+.arr{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:14px solid var(--lcd-ink)}
+.arr.dn{transform:rotate(180deg)}
+.num{font-size:60px;line-height:.85}
+.pc{font-size:22px;line-height:1;opacity:.8;min-height:20px}
+.msgt{position:absolute;inset:0;z-index:2;display:none;align-items:center;justify-content:center;background:inherit;
+  font-size:58px;letter-spacing:.08em;text-shadow:1px 1px 0 rgba(0,0,0,.15)}
+.lcd.msg .msgt{display:flex;animation:lcdBlink .5s steps(1,end) infinite}
+@keyframes lcdBlink{50%{color:rgba(22,35,12,.16);text-shadow:none}}
+
+/* LED panel: count + bases */
+.panel{display:flex;align-items:center;gap:16px;margin-left:20px;height:88px}
+.cnt{display:flex;flex-direction:column;gap:8px}
+.lr{display:flex;align-items:center;gap:7px}
+.lr b{width:19px;font:800 18px/1 var(--mono);color:#a3a9b2}
+.lr i{width:17px;height:17px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3b3d42,#131417 70%);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.07);transition:background .15s,box-shadow .15s}
+.lr i.on{--c:#ffb21e;background:radial-gradient(circle at 40% 35%,#fff 0,var(--c) 45%,color-mix(in srgb,var(--c) 55%,#000) 100%);
+  box-shadow:0 0 10px 2px color-mix(in srgb,var(--c) 65%,transparent),inset 0 -1px 2px rgba(0,0,0,.3)}
+.lr[data-g="b"] i.on{--c:#5fe36b}
+.lr[data-g="o"] i.on{--c:#ff3d30}
+.lr i.blip{animation:blip .4s ease-out}
+@keyframes blip{0%{transform:scale(1.5)}100%{transform:none}}
+.dia{position:relative;width:74px;height:66px}
+.dia i{position:absolute;width:20px;height:20px;transform:rotate(45deg);border-radius:3px;background:#141518;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 0 0 2px #3c3f46;transition:background .25s,box-shadow .25s}
+.dia .b2{left:27px;top:4px}.dia .b3{left:5px;top:26px}.dia .b1{left:49px;top:26px}
+.dia em{position:absolute;left:31px;top:50px;width:12px;height:12px;background:#51555d;clip-path:polygon(0 0,100% 0,100% 50%,50% 100%,0 50%)}
+.dia i.on{background:radial-gradient(circle at 40% 35%,#fff3cf,#ffb21e 55%,#b86f00);box-shadow:0 0 12px 3px rgba(255,178,30,.6),0 0 0 2px #ffcf6e}
+
+.tag{position:absolute;right:18px;top:4px;display:flex;align-items:center;gap:6px;font:700 9px/1 var(--mono);letter-spacing:.28em;color:#61666f}
+body[data-pos^="b"] .tag{top:auto;bottom:5px}
+.act{width:6px;height:6px;border-radius:50%;background:#2c5a2e;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+.printer.printing .act{background:#6cff7a;box-shadow:0 0 6px #6cff7a}
+.printer.jammed .act{background:#ff3d30;box-shadow:0 0 8px #ff3d30;animation:ledBlink .2s steps(1,end) infinite}
+@keyframes ledBlink{50%{opacity:.2}}
+
+/* paper slot, print head and tear bar */
+.slot{position:absolute;left:90px;right:90px;bottom:6px;height:10px;border-radius:4px;background:linear-gradient(#000,#111215);
+  box-shadow:inset 0 2px 3px #000,0 1px 0 rgba(255,255,255,.09)}
+body[data-pos^="b"] .slot{bottom:auto;top:6px}
+.head{position:absolute;left:10px;right:10px;top:4px;height:2px;border-radius:2px;opacity:0;
+  background:linear-gradient(90deg,transparent,#ff9a4a 12%,#fff0c8 50%,#ff9a4a 88%,transparent);box-shadow:0 0 9px 2px rgba(255,140,60,.55)}
+.printer.printing .head{animation:flick .11s steps(2,end) infinite}
+.printer.overdrive .head{animation:flick .05s steps(2,end) infinite}
+@keyframes flick{0%{opacity:.95}100%{opacity:.3}}
+.teeth{position:absolute;z-index:3;left:100px;right:100px;bottom:-5px;height:7px;background:linear-gradient(180deg,#e4e7ec,#868c95);
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50% 100%/8px 100%;
+  mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50% 100%/8px 100%}
+body[data-pos^="b"] .teeth{bottom:auto;top:-5px;background:linear-gradient(0deg,#e4e7ec,#868c95);
+  -webkit-mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50% 0/8px 100%;
+  mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50% 0/8px 100%}
+.teeth.flash{animation:glint .5s ease-out}
+@keyframes glint{0%{filter:brightness(2.2)}100%{filter:none}}
+
+/* ---------- The receipt ---------- */
+.pbox{position:relative;z-index:1;width:620px;margin-top:-8px;display:flex;justify-content:center;
+  clip-path:inset(0 -90px -140px -90px);filter:drop-shadow(0 9px 12px rgba(0,0,0,.5)) drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+body[data-pos^="b"] .pbox{margin:0 0 -8px;clip-path:inset(-140px -90px 0 -90px)}
+.unit.jam .pbox{animation:jam .6s linear}
+@keyframes jam{10%{transform:translateY(-7px) rotate(-.8deg)}20%{transform:translateY(3px) rotate(.6deg)}30%{transform:translateY(-5px)}
+  45%{transform:translateY(2px) rotate(-.4deg)}60%{transform:translateY(-3px)}80%{transform:translateY(1px)}100%{transform:none}}
+.paper{position:relative;width:420px;padding:0 0 20px;
+  background:
+    linear-gradient(90deg,rgba(70,55,30,.2) 0,rgba(70,55,30,0) 6%,rgba(255,255,255,.4) 16%,rgba(255,255,255,0) 30%,rgba(0,0,0,0) 78%,rgba(70,55,30,.16) 100%),
+    linear-gradient(180deg,rgba(40,30,10,.26),rgba(40,30,10,0) 18px),
+    var(--paper);
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50% 100%/16px 100%;
+  mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50% 100%/16px 100%}
+body[data-pos^="b"] .paper{padding:20px 0 0;
+  background:
+    linear-gradient(90deg,rgba(70,55,30,.2) 0,rgba(70,55,30,0) 6%,rgba(255,255,255,.4) 16%,rgba(255,255,255,0) 30%,rgba(0,0,0,0) 78%,rgba(70,55,30,.16) 100%),
+    linear-gradient(0deg,rgba(40,30,10,.26),rgba(40,30,10,0) 18px),
+    var(--paper);
+  -webkit-mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50% 0/16px 100%;
+  mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50% 0/16px 100%}
+.vp{position:relative;height:0;overflow:hidden;display:flex;flex-direction:column}
+body[data-pos^="b"] .vp{justify-content:flex-end}
+.paper.capped .vp{-webkit-mask:linear-gradient(180deg,#000 58%,transparent);mask:linear-gradient(180deg,#000 58%,transparent)}
+body[data-pos^="b"] .paper.capped .vp{-webkit-mask:linear-gradient(0deg,#000 58%,transparent);mask:linear-gradient(0deg,#000 58%,transparent)}
+.roll{flex:none;display:flex;flex-direction:column-reverse;padding-top:14px}
+body[data-pos^="b"] .roll{flex-direction:column;padding:0 0 14px}
+
+/* printed lines */
+.ln{position:relative;padding:0 20px;color:var(--ink);font:600 22px/31px var(--mono);white-space:nowrap}
+.ln .ink{display:flex;align-items:baseline;min-height:31px;text-shadow:0 0 .6px rgba(0,0,0,.45)}
+.ln .c{flex:none;width:4ch;font-weight:800}
+.ln .t{min-width:0;overflow:hidden}
+.ln .lead{flex:1;min-width:16px;margin:0 9px;border-bottom:3px dotted currentColor;transform:translateY(-5px)}
+.ln .r{flex:none;font-weight:800}
+.ln .sm{margin-left:12px;font-size:17px;font-weight:600;color:#5a554b}
+.ln.hit .ink{font-weight:800}
+.ln.ab .ink{color:#6d685d;font-weight:500}
+.ln.ab .c{font-weight:700}
+.ln.err .ink{font-style:italic}
+.ln.inv .ink{margin:3px -8px;padding:0 8px;border-radius:2px;background:var(--ink);color:var(--paper);font-weight:800;text-shadow:none}
+.ln.dbl .ink{font-size:34px;line-height:46px;min-height:46px}
+.ln.hd .ink{justify-content:center;font-weight:800}
+.ln.hd2 .ink{justify-content:center;font-size:19px;color:#4c483f}
+.ln.rule .ink{min-height:16px;background:linear-gradient(90deg,var(--ink) 55%,transparent 0) 0 50%/12px 2px repeat-x}
+.ln.stars .ink{justify-content:center;font-weight:800}
+.ln.big .ink{justify-content:center;margin:3px -8px;font:800 72px/74px var(--mono);letter-spacing:.14em;min-height:74px;padding-left:.14em;
+  background:var(--ink);color:var(--paper);text-shadow:none}
+.ln.who .ink{justify-content:center;font:800 34px/46px var(--mono);letter-spacing:.04em}
+.ln.ctr .ink{justify-content:center;font-weight:800}
+.ln.asc .ink{font:700 17px/21px var(--mono);min-height:21px;white-space:pre}
+.bk{display:inline-block;transform:scaleX(-1)}
+
+/* raster print reveal: dot rows appear as the paper moves past the head */
+.ln.fresh .ink{animation:rasterUp var(--d,.3s) steps(8,end) both}
+body[data-pos^="b"] .ln.fresh .ink{animation-name:rasterDown}
+@keyframes rasterUp{from{clip-path:inset(100% -20px 0 -20px)}to{clip-path:inset(0 -20px 0 -20px)}}
+@keyframes rasterDown{from{clip-path:inset(0 -20px 100% -20px)}to{clip-path:inset(0 -20px 0 -20px)}}
+.ln.fresh::after{content:"";position:absolute;left:14px;right:14px;height:2px;background:rgba(255,150,70,.75);
+  box-shadow:0 0 6px rgba(255,140,60,.8);animation:headUp var(--d,.3s) steps(8,end) both}
+body[data-pos^="b"] .ln.fresh::after{animation-name:headDown}
+@keyframes headUp{from{top:100%;opacity:1}88%{opacity:1}to{top:0;opacity:0}}
+@keyframes headDown{from{top:0;opacity:1}88%{opacity:1}to{top:100%;opacity:0}}
+
+/* ---------- K rubber stamp ---------- */
+.stamp{position:absolute;z-index:2;right:24px;top:4px;width:128px;height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--stamp);border:6px solid currentColor;border-radius:12px;transform:rotate(-9deg);filter:url(#ink);opacity:0;pointer-events:none}
+body[data-pos^="b"] .stamp{top:auto;bottom:4px}
+.stamp.on{opacity:.9}
+.stamp .sk{font:800 92px/80px var(--mono)}
+.stamp.lk .sk{transform:scaleX(-1)}
+.stamp .sc{margin-top:2px;font:800 15px/1 var(--mono);letter-spacing:.2em;padding-left:.2em}
+.stamp .sp{position:absolute;border-radius:50%;background:currentColor;transform:scale(0)}
+.stamp.on .sp{transform:none;transition:transform .12s cubic-bezier(.2,1.8,.4,1)}
+#stamper{position:absolute;left:0;top:0;z-index:5;width:150px;height:140px;border-radius:14px;opacity:0;pointer-events:none;
+  background:repeating-linear-gradient(97deg,rgba(0,0,0,.07) 0 3px,transparent 3px 10px),linear-gradient(135deg,#94623a,#5a381d);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -5px 0 rgba(0,0,0,.35),0 0 0 3px #3a2311,0 0 0 7px #7d1618}
+#stamper::after{content:"";position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;
+  background:radial-gradient(circle at 38% 30%,#f6dbb2,#b77d47 45%,#6a4121 100%);box-shadow:0 8px 14px rgba(0,0,0,.5),inset 0 -3px 4px rgba(0,0,0,.3)}
+
+/* torn-off receipt pieces */
+.piece-hold{position:absolute;z-index:1;transform-origin:0 0;pointer-events:none;filter:drop-shadow(0 12px 16px rgba(0,0,0,.45))}
+
+@media (prefers-reduced-motion:reduce){
+  .printer.overdrive,.unit.thud,.unit.jam .pbox,.unit.jam .printer{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="unit">
+      <div class="printer">
+        <div class="keys"><i data-t="away"></i><i data-t="home"></i></div>
+        <div class="lcd">
+          <div class="rows">
+            <div class="lrw" data-t="away"><i class="mk"></i><span class="nm"></span><span class="sc">0</span></div>
+            <div class="lrw" data-t="home"><i class="mk"></i><span class="nm"></span><span class="sc">0</span></div>
+          </div>
+          <div class="inn"><div class="il"><i class="arr"></i><span class="num">1</span></div><span class="pc"></span></div>
+          <div class="msgt"></div>
+        </div>
+        <div class="panel">
+          <div class="cnt">
+            <div class="lr" data-g="b"><b>B</b><i></i><i></i><i></i></div>
+            <div class="lr" data-g="s"><b>S</b><i></i><i></i></div>
+            <div class="lr" data-g="o"><b>O</b><i></i><i></i></div>
+          </div>
+          <div class="dia"><i class="b2"></i><i class="b3"></i><i class="b1"></i><em></em></div>
+        </div>
+        <div class="tag"><i class="act"></i>PBP-01</div>
+        <div class="slot"><i class="head"></i></div>
+        <div class="teeth"></div>
+      </div>
+      <div class="pbox"><div class="paper"><div class="vp"><div class="roll"></div></div></div></div>
+    </div>
+  </div>
+  <div id="stamper"></div>
+</div>
+
+<!-- rubber-stamp ink texture -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="7" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.45" result="a"/>
+    <feComposite in="SourceGraphic" in2="a" operator="in" result="s"/>
+    <feDisplacementMap in="s" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam, fieldingTeam } = BugKit;
+  const stage = $("#stage"), bug = $("#bug"), unit = $(".unit"), printer = $(".printer");
+  const paper = $(".paper"), vp = $(".vp"), roll = $(".roll");
+  const lcd = $(".lcd"), msgT = $(".msgt"), stamper = $("#stamper");
+  const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const CAP = 172, CAP_HR = 640, MINH = 140;   // visible receipt length (px of print)
+  let cap = CAP, shown = 0, pos = "tl", lastAB = null;
+  const up = () => pos[0] === "b";             // bottom corners: paper rises out of a top slot
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const last = (n) => esc(String(n || "").trim().split(/\s+/).pop().toUpperCase());
+  const other = (t) => (t === "away" ? "home" : "away");
+  const stageK = () => stage.getBoundingClientRect().width / 1920;
+  const bugScale = () => parseFloat(bug.style.scale) || 1;
+
+  /* ---------- Printed lines ---------- */
+  function ln(cls, html) {
+    const d = document.createElement("div");
+    d.className = "ln " + (cls || "");
+    d.innerHTML = `<div class="ink">${html}</div>`;
+    return d;
+  }
+  const row = (code, txt, right, small) =>
+    `<b class="c">${code}</b><span class="t">${txt}</span>` +
+    (right ? `<i class="lead"></i><b class="r">${right}</b>` : "") +
+    (small ? `<span class="sm">${small}</span>` : "");
+  const abLine = (name) => ln("ab", row("AB", esc(String(name).toUpperCase())));
+  const snap = (S) => ({ top: S.half === "top", inning: S.inning, abbr: S[battingTeam(S)].abbr });
+
+  /* Header block, returned in PRINT order: the dashed rule is always printed last so it
+     sits between the header and the plays whichever way the paper travels. */
+  function headerLines(h, ab) {
+    const hd = ln("hd", `BALLPARK TERMINAL 01 · ${h.top ? "▲" : "▼"}${h.inning}`);
+    const hd2 = ln("hd2", `${h.top ? "TOP" : "BOT"} ${h.inning} · ${esc(h.abbr)} AT BAT`);
+    const out = up() ? [hd, hd2, ln("rule", "")] : [hd2, hd, ln("rule", "")];
+    if (ab) out.push(abLine(ab));
+    return out;
+  }
+
+  /* ---------- Print queue: one job at a time, so lines feed in order ---------- */
+  const Q = [];
+  let busy = false;
+  function enqueue(fn) { Q.push(fn); if (!busy) pump(); }
+  async function pump() {
+    busy = true;
+    while (Q.length) { const fn = Q.shift(); try { await fn(); } catch (e) { console.error(e); } }
+    busy = false;
+  }
+  const hurry = () => (Q.length > 2 ? 0.5 : 1);   // catch up if plays pile in
+
+  /* Stepper-motor feed: move, overshoot a hair, settle, hold — n times. */
+  function stepFrames(from, n) {
+    if (Math.abs(from) < 0.5) return null;
+    const dir = -Math.sign(from), f = [{ transform: `translateY(${from}px)`, offset: 0 }];
+    for (let i = 1; i <= n; i++) {
+      const a = from * (1 - (i - 1) / n), b = from * (1 - i / n), t = i / n, t0 = (i - 1) / n;
+      f.push({ transform: `translateY(${a}px)`, offset: t0 + 0.35 / n });
+      f.push({ transform: `translateY(${b + dir * 1.2}px)`, offset: t - 0.2 / n });
+      f.push({ transform: `translateY(${b}px)`, offset: t });
+    }
+    return f;
+  }
+
+  /* Print one or more lines: they appear at the slot, the paper feeds out by their height.
+     The paper itself only grows until it reaches `cap`; after that the roll scrolls inside it
+     and the oldest lines fade toward the torn end. */
+  let printingT;
+  function print(els, o = {}) {
+    els = [].concat(els);
+    const h0 = roll.offsetHeight;
+    els.forEach((e) => roll.appendChild(e));
+    const h1 = roll.offsetHeight, delta = h1 - h0;
+    const target = Math.min(Math.max(h1, MINH), cap);
+    const va = Math.max(shown, Math.min(target, shown >= MINH ? shown + delta : target));
+    const grow = va - shown;
+    shown = va;
+    vp.style.height = va + "px";
+    paper.classList.toggle("capped", h1 > va + 2);
+    while (roll.children.length > 34) roll.firstElementChild.remove();
+    if (o.instant) return Promise.resolve();
+
+    const dur = Math.round((o.dur ?? 300) * hurry()), s = up() ? 1 : -1;
+    const n = RM ? 1 : Math.max(2, Math.min(8, Math.round(delta / 9)));
+    const opt = { duration: dur, easing: "linear" };
+    const rf = stepFrames(s * (delta - grow), n), pf = stepFrames(s * grow, n);
+    if (rf) roll.animate(rf, opt);
+    if (pf) paper.animate(pf, opt);
+    els.forEach((e) => { e.style.setProperty("--d", dur + "ms"); e.classList.add("fresh"); });
+    printer.classList.add("printing");
+    clearTimeout(printingT);
+    printingT = setTimeout(() => printer.classList.remove("printing"), dur + 80);
+    return wait(dur + 30).then(() => els.forEach((e) => e.classList.remove("fresh")));
+  }
+  async function printSeq(lines, dur = 190) { for (const l of lines) await print(l, { dur }); }
+  /* A block given in READING order (top to bottom on screen). Hanging paper shows the
+     newest line nearest the slot (top), so it prints the block bottom-up. */
+  async function printBlock(lines, dur) { await printSeq(up() ? lines : lines.slice().reverse(), dur); }
+
+  /* ---------- Tear the receipt off at the serration; it flutters away ---------- */
+  function zig(w, h, t = 16, d = 8) {
+    const p = [];
+    for (let x = 0, i = 0; x <= w; x += t / 2, i++) p.push(`${x}px ${i % 2 ? 0 : d}px`);
+    for (let x = w, i = 0; x >= 0; x -= t / 2, i++) p.push(`${x}px ${i % 2 ? h : h - d}px`);
+    return `polygon(${p.join(",")})`;
+  }
+  function tear(o = {}) {
+    if (!roll.children.length) return Promise.resolve();
+    roll.getAnimations().forEach((a) => a.finish());
+    paper.getAnimations().forEach((a) => a.finish());
+    const sr = stage.getBoundingClientRect(), k = stageK(), r = paper.getBoundingClientRect();
+    const hold = document.createElement("div");
+    hold.className = "piece-hold";
+    hold.style.left = (r.left - sr.left) / k + "px";
+    hold.style.top = (r.top - sr.top) / k + "px";
+    hold.style.scale = bugScale();
+    const piece = paper.cloneNode(true);
+    piece.querySelectorAll(".fresh").forEach((e) => e.classList.remove("fresh"));
+    piece.style.clipPath = zig(paper.offsetWidth, paper.offsetHeight);
+    hold.appendChild(piece);
+    stage.insertBefore(hold, bug);      // falls behind the printer
+
+    roll.innerHTML = ""; shown = 0; vp.style.height = "0px"; paper.classList.remove("capped");
+    restart(printer, "jolt"); restart($(".teeth"), "flash");
+
+    const big = !!o.big, dir = Math.random() < 0.5 ? -1 : 1, s = up() ? -1 : 1;
+    piece.style.transformOrigin = up() ? "50% 100%" : "50% 0";
+    const frames = RM ? [{ opacity: 1 }, { opacity: 0 }] : [
+      { transform: "translate(0,0) rotate(0)" },
+      { transform: `translate(0,${s * 12}px) rotate(${dir * 1.5}deg)`, offset: 0.08 },
+      { transform: `translate(${dir * 30}px,70px) rotate(${dir * 11}deg)`, offset: 0.2 },
+      { transform: `translate(${-dir * 22}px,240px) rotate(${-dir * 9}deg)`, offset: 0.4 },
+      { transform: `translate(${dir * 60}px,520px) rotate(${dir * 18}deg)`, offset: 0.6 },
+      { transform: `translate(${-dir * 10}px,880px) rotate(${-dir * 6}deg)`, offset: 0.8 },
+      { transform: `translate(${dir * 50}px,1350px) rotate(${dir * 24}deg)`, offset: 1 }
+    ];
+    piece.animate(frames, { duration: RM ? 600 : big ? 2200 : 1900, easing: "linear", fill: "forwards" })
+      .onfinish = () => hold.remove();
+    setTimeout(() => hold.remove(), 4200);   // belt and braces
+    return wait(big ? 520 : 420);
+  }
+  async function newRoll(h, ab, big) { await tear({ big }); await printSeq(headerLines(h, ab)); }
+
+  /* ---------- LCD ---------- */
+  let msgTimer;
+  function lcdMsg(text, ms) {
+    msgT.textContent = text;
+    lcd.classList.add("msg");
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => lcd.classList.remove("msg"), ms);
+  }
+  const blip = (g, n) => { const el = $$(`.lr[data-g="${g}"] i`)[n - 1]; if (el) restart(el, "blip"); };
+
+  /* ---------- Rubber stamp: a wooden stamp slams the K onto the latest line ---------- */
+  function stamp(line, looking) {
+    const st = document.createElement("div");
+    st.className = "stamp" + (looking ? " lk" : "");
+    st.innerHTML = `<div class="sk">K</div><div class="sc">${looking ? "LOOKING" : "SWINGING"}</div>`;
+    for (let i = 0; i < 10; i++) {
+      const d = document.createElement("i"), a = Math.random() * Math.PI * 2, rr = 66 + Math.random() * 34, sz = 3 + Math.random() * 8;
+      d.className = "sp";
+      d.style.cssText = `width:${sz}px;height:${sz}px;left:${58 + Math.cos(a) * rr - sz / 2}px;top:${53 + Math.sin(a) * rr * 0.85 - sz / 2}px`;
+      st.appendChild(d);
+    }
+    line.appendChild(st);
+
+    const sr = stage.getBoundingClientRect(), k = stageK(), r = st.getBoundingClientRect(), sc = bugScale();
+    stamper.style.left = (r.left + r.width / 2 - sr.left) / k - 75 + "px";
+    stamper.style.top = (r.top + r.height / 2 - sr.top) / k - 70 + "px";
+    const R = "rotate(-9deg)", D = RM ? 520 : 980, HIT = 0.38;
+    stamper.animate([
+      { transform: `translate(70px,-280px) ${R} scale(${2.5 * sc})`, opacity: 0, filter: "drop-shadow(60px 90px 30px rgba(0,0,0,0))", easing: "ease-in" },
+      { transform: `translate(24px,-90px) ${R} scale(${1.6 * sc})`, opacity: 1, filter: "drop-shadow(40px 60px 26px rgba(0,0,0,.35))", offset: 0.2, easing: "cubic-bezier(.6,0,1,.6)" },
+      { transform: `translate(0,0) ${R} scale(${0.96 * sc})`, opacity: 1, filter: "drop-shadow(3px 5px 4px rgba(0,0,0,.6))", offset: HIT },
+      { transform: `translate(0,0) ${R} scale(${sc})`, opacity: 1, filter: "drop-shadow(3px 5px 4px rgba(0,0,0,.6))", offset: 0.58, easing: "ease-in" },
+      { transform: `translate(40px,-180px) ${R} scale(${2.1 * sc})`, opacity: 0, filter: "drop-shadow(40px 70px 26px rgba(0,0,0,0))" }
+    ], { duration: D });
+    setTimeout(() => {
+      st.classList.add("on");
+      st.animate([{ transform: "rotate(-9deg) scale(1.14)", opacity: 0.4 }, { transform: "rotate(-9deg) scale(1)", opacity: 0.9 }], { duration: 130, easing: "ease-out" });
+      if (!RM) restart(unit, "thud");
+    }, D * HIT);
+    return wait(D * HIT + 300);
+  }
+
+  /* ---------- Home run banner: long printout in reading order ---------- */
+  function hrLines(name, runs) {
+    const tag = runs === 4 ? "GRAND SLAM" : runs === 1 ? "SOLO SHOT" : "";
+    const star = () => ln("stars", "* ".repeat(13) + "*");
+    const art = [
+      "                . - ~ - .      ",
+      "          . - '           ' o  ",
+      "      . '                   ## ",
+      "   . '                      ## ",
+      " []------------------------ ## "
+    ];
+    return [
+      star(), ln("big", "HOME"), ln("big", "RUN!"), star(),
+      ln("who", name),
+      ln("ctr", `RUNS: ${runs}${tag ? " · " + tag : ""}`),
+      ...art.map((a) => ln("asc", esc(a))),
+      star()
+    ];
+  }
+
+  BugKit.start({
+    name: "Play-by-Play Printer",
+    hrDelay: 3600,
+    place(p) { pos = p; },
+    render(S, prev, first) {
+      for (const t of ["away", "home"]) {
+        const r = $(`.lrw[data-t="${t}"]`);
+        $(".nm", r).textContent = S[t].abbr || S[t].name;
+        $(".sc", r).textContent = S[t].r;
+        r.classList.toggle("bat", battingTeam(S) === t);
+        $(`.keys [data-t="${t}"]`).style.setProperty("--c", S[t].color);
+      }
+      $(".arr").classList.toggle("dn", S.half !== "top");
+      $(".num").textContent = S.inning;
+      $(".pc").textContent = S.pitchCount ? `P${S.pitchCount}` : "";
+      [["b", S.balls], ["s", S.strikes], ["o", S.outs]].forEach(([g, n]) =>
+        $$(`.lr[data-g="${g}"] i`).forEach((el, i) => el.classList.toggle("on", i < n)));
+      ["b1", "b2", "b3"].forEach((b, i) => $(".dia ." + b).classList.toggle("on", !!S.bases[i]));
+
+      if (first) {
+        lastAB = S.batter;
+        headerLines(snap(S), S.batter).forEach((l) => print(l, { instant: true }));
+        return;
+      }
+      if (S.batter && S.batter !== lastAB) {
+        const b = S.batter;
+        lastAB = b;
+        enqueue(() => print(abLine(b), { dur: 240 }));
+      }
+    },
+    fx: {
+      ball(o, S) { const n = S.balls; blip("b", n); enqueue(() => print(ln("", row(`B${n}`, "ball")))); },
+      strike(o, S) { const n = S.strikes; blip("s", n); enqueue(() => print(ln("", row(`S${n}`, "strike")))); },
+      foul(o, S) { const n = S.strikes; enqueue(() => print(ln("", row(`S${n}`, "foul")))); },
+      out({ batter } = {}, S) {
+        const nm = last(batter || S.batter);
+        blip("o", Math.min(3, S.outs + 1));
+        enqueue(() => print(ln("", row("OUT", nm))));
+      },
+      walk() { enqueue(() => print(ln("", row("BB", "take your base")))); },
+      hit({ bases = 1, batter } = {}, S) {
+        const nm = last(batter || S.batter), w = ["", "SINGLE", "DOUBLE", "TRIPLE"][bases] || "HIT";
+        enqueue(() => print(ln("hit", row(`${bases}B`, nm, w)), { dur: 320 }));
+      },
+      error({ team } = {}, S) {
+        const ab = esc(S[team || fieldingTeam(S)]?.abbr || "");
+        enqueue(async () => {
+          lcdMsg("PAPER JAM", 1300);
+          restart(unit, "jam");
+          printer.classList.add("jammed");
+          await wait(RM ? 200 : 620);
+          printer.classList.remove("jammed");
+          await print(ln("err", row("E", "error", null, ab)), { dur: 320 });
+        });
+      },
+      run({ team, runs = 1, hr } = {}, S) {
+        team ||= battingTeam(S);
+        const txt = `${esc(S[team].abbr)} ${S[team].r}-${S[other(team)].r}`;
+        restart($(`.lrw[data-t="${team}"]`), "flash");
+        enqueue(() => print(ln("inv" + (hr || runs > 1 ? " dbl" : ""), row(`+${runs}`, txt)), { dur: 340 }));
+      },
+      hr({ runs = 1, batter } = {}, S) {
+        const nm = last(batter || S.batter), h = snap(S);
+        enqueue(async () => {
+          cap = CAP_HR;
+          printer.classList.add("overdrive");
+          lcdMsg("HOME RUN", 3300);
+          await printBlock(hrLines(nm, runs), 125);
+          await wait(1000);
+          printer.classList.remove("overdrive");
+          await tear({ big: true });
+          cap = CAP;
+          await printSeq(headerLines(h));
+        });
+      },
+      k({ looking, batter } = {}, S) {
+        const nm = last(batter || S.batter);
+        enqueue(async () => {
+          lcdMsg(looking ? "K LOOKING" : "STRIKE 3", 1900);
+          const l = ln("kl", row(looking ? '<span class="bk">K</span>' : "K", nm, null, looking ? "looking" : "swinging"));
+          await print(l, { dur: 280 });
+          await stamp(l, !!looking);
+        });
+      },
+      half(o, S) {
+        const h = snap(S), b = S.batter;
+        lastAB = b;
+        enqueue(async () => { lcdMsg(`${h.top ? "TOP" : "BOT"} ${h.inning}`, 1500); await newRoll(h, b); });
+      },
+      reset(o, S) {
+        Q.length = 0;
+        const h = snap(S), b = S.batter;
+        lastAB = b;
+        enqueue(async () => { lcdMsg("READY", 1000); await newRoll(h, b); });
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
