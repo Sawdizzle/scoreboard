@@ -81,7 +81,10 @@ export function createSetup(ctx) {
     const opt = $('theme-sel').querySelector(`option[value="${game().theme || 'nightgame'}"]`);
     const themeName = opt ? opt.textContent.replace(/\s*\(.*\)$/, '') : (game().theme || 'Midnight');
     const pos = (POS_ALIAS[game().scorebug_position] || game().scorebug_position || 'bottom-center').replace('-', ' ');
-    $('sv-look-val').textContent = `${themeName} · ${pos}`;
+    // An animated scorebug is the look; a layout is only half of it without its theme.
+    const bugOpt = $('su-style').querySelector(`option[value="${game().style || 'bar'}"]`);
+    const bugName = bugOpt ? bugOpt.textContent.replace(/\s*\(.*\)$/, '') : 'Bar';
+    $('sv-look-val').textContent = String(game().style || '').startsWith('anim-') ? `${bugName} · ${pos}` : `${bugName} · ${themeName} · ${pos}`;
     const sp = spCfg();
     $('sv-sponsors-val').textContent = sp.list.length ? `${sp.list.length}${sp.rotate ? ' · rotating' : ''}` : 'None';
     const lvl = obsLevel();
@@ -109,7 +112,6 @@ export function createSetup(ctx) {
   function fillSetup() {
     $('su-sport').value = game().sport || 'baseball';
     renderSetupTimeLabel();
-    $('su-style').value = game().style || 'bar';
     $('su-away-name').value = game().away_name || '';
     $('su-away-abbr').value = game().away_abbr || '';
     $('su-away-logo').value = game().away_logo_url || '';
@@ -160,7 +162,6 @@ export function createSetup(ctx) {
   }
   $('su-away-color').addEventListener('change', (e) => { writeField({ away_color: e.target.value }); renderTeamCards(); });
   $('su-home-color').addEventListener('change', (e) => { writeField({ home_color: e.target.value }); renderTeamCards(); });
-  $('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
   $('su-startsat').addEventListener('change', () => { writeField({ starts_at: fromLocalInput($('su-startsat').value) }); renderSetupRows(); });
   // Venue: looked up once here, so the overlay only ever asks for the forecast.
   // The note under the field says which place it matched — "Aubrey" alone is
