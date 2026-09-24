@@ -39,9 +39,11 @@ function crest(t, big) {
 // A scoreboard row: colour slab (crest, abbreviation, name) and a score well.
 function row(t, score, cls = '', i = 0) {
   return `<div class="el-row ${t.side}${cls}" style="--tc:${attr(t.color)};--i:${i}">
-    <div class="el-slab">${t.logo ? crest(t) : ''}<span class="el-id"><b>${esc(t.abbr)}</b><small>${esc(t.name)}</small></span></div>
+    <div class="el-slab">${t.logo ? crest(t) : ''}<span class="el-id"><b>${esc(t.abbr)}</b>${sameName(t) ? '' : `<small>${esc(t.name)}</small>`}</span></div>
     <div class="el-well"><b style="--to:${score | 0}">${score | 0}</b></div></div>`;
 }
+// "RIVER" over "River" says the same thing twice; the full name only adds something when it differs.
+const sameName = (t) => t.name.trim().toUpperCase() === String(t.abbr).trim().toUpperCase();
 function head(tag, kick, cls = '') {
   return `<div class="el-head${cls}"><span class="el-tag">${tag}</span>${kick ? `<span class="el-kick">${kick}</span>` : ''}</div>`;
 }
