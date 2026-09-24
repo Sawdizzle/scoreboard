@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Chalk Talk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CHALK TALK — the dugout chalkboard
+   Dark slate in a worn wooden frame, chalk ledge underneath.
+   Everything is hand-lettered; every change is erased with a
+   felt eraser and written back in by hand.
+   ============================================================ */
+:root{
+  --slate:#1b2420; --slate-2:#141b18;
+  --chalk:#F4F2E8; --dim:#CFCBBE; --yellow:#FFE36E; --pink:#FF9FC0; --blue:#A9DCFF;
+  --wood:#7a5231; --wood-d:#4f321b; --wood-l:#9a6c43;
+  --hand:"Kalam","Comic Sans MS",cursive;
+  --num:"Cabin Sketch","Kalam",cursive;
+}
+#stage{font-family:var(--hand);color:var(--chalk)}
+body{--demo-accent:var(--yellow)}
+body.preview{background:
+  radial-gradient(ellipse at 70% 115%,#5c4a36 0%,#3a3024 14%,transparent 15%),
+  radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.06),transparent 55%),
+  radial-gradient(ellipse at 50% 110%,#35583a 0%,#1d3024 50%,#0c140f 100%)}
+
+/* ---------- the board ---------- */
+.frame{position:relative;padding:12px;border-radius:6px;
+  background:
+    repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 1px,transparent 1px 5px,rgba(255,220,170,.05) 5px 6px,transparent 6px 13px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 3px,transparent 3px 41px),
+    linear-gradient(180deg,var(--wood-l),var(--wood) 40%,var(--wood-d));
+  box-shadow:0 16px 32px rgba(0,0,0,.5),0 2px 0 rgba(255,255,255,.12) inset,0 -2px 0 rgba(0,0,0,.35) inset}
+/* scuffed paint wear on the frame corners */
+.frame::before{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;
+  background:radial-gradient(circle at 3% 8%,rgba(255,230,190,.18),transparent 7%),radial-gradient(circle at 97% 90%,rgba(0,0,0,.25),transparent 9%)}
+.slate{position:relative;width:720px;height:214px;overflow:hidden;border-radius:2px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='214'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006 .03' numOctaves='3' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 .86 0 0 0 0 .9 0 0 0 0 .88 .6 0 0 0 -.26'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='1' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .35 0 0 0 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 40% 30%,#222d28,var(--slate) 55%,var(--slate-2));
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.7),inset 0 0 0 1px rgba(0,0,0,.6)}
+.ghost{position:absolute;inset:0;pointer-events:none;font-family:var(--hand);color:rgba(230,235,230,.05);filter:blur(.6px)}
+.ghost span{position:absolute;white-space:nowrap}
+.ledge{position:relative;height:16px;margin:-3px -10px 0;border-radius:2px 2px 5px 5px;
+  background:linear-gradient(180deg,var(--wood-l) 0,var(--wood) 35%,var(--wood-d));
+  box-shadow:0 8px 14px rgba(0,0,0,.45),0 -1px 0 rgba(0,0,0,.4) inset}
+.ledge::before{content:"";position:absolute;left:12px;right:12px;top:0;height:4px;background:linear-gradient(90deg,transparent,rgba(240,240,230,.18) 20%,rgba(240,240,230,.1) 60%,transparent)}
+.ledge .stick{position:absolute;top:-5px;width:44px;height:9px;border-radius:4px;background:linear-gradient(180deg,#fff,#dcd8cc);box-shadow:0 2px 2px rgba(0,0,0,.4)}
+.ledge .stick.s1{left:90px;transform:rotate(-3deg)}
+.ledge .stick.s2{left:150px;width:22px;background:linear-gradient(180deg,#fff3b0,#e0c65a)}
+.ledge .felt{position:absolute;left:auto;right:70px;top:-15px;width:70px;height:18px;rotate:-2deg}
+
+/* chalk ink: one filter over everything written */
+.ink{position:absolute;inset:0;filter:url(#chalk)}
+.ink svg{position:absolute;left:0;top:0;overflow:visible}
+.c{position:absolute;display:block;white-space:nowrap;line-height:1}
+.c .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.c.left .v{justify-content:flex-start}
+.c.right .v{justify-content:flex-end}
+.n{font-family:var(--num);font-weight:700}
+.h{font-family:var(--hand);font-weight:700}
+.big{font-size:54px}
+.mid{font-size:44px;color:var(--dim)}
+.lbl{font-size:24px;color:var(--yellow)}
+.nm{font-size:36px}
+.bn{font-size:29px}
+.pc{font-size:26px;color:var(--dim)}
+.yel{color:var(--yellow)}.pnk{color:var(--pink)}.blu{color:var(--blue)}
+.st{fill:none;stroke:var(--chalk);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.st.thin{stroke-width:2.4;opacity:.55}
+.st.y{stroke:var(--yellow)}.st.p{stroke:var(--pink)}.st.b{stroke:var(--blue)}
+.fill{fill:var(--chalk);stroke:none}
+.ghostmark{opacity:.22}
+
+/* smudges left behind where something was erased */
+.smudge{position:absolute;pointer-events:none;border-radius:40%;opacity:0;
+  background:radial-gradient(ellipse at 50% 55%,rgba(225,232,226,.16),rgba(225,232,226,.06) 55%,transparent 72%),
+    repeating-linear-gradient(8deg,rgba(230,236,230,.05) 0 3px,transparent 3px 7px);filter:blur(1.5px)}
+
+/* physical props (no chalk filter) */
+.fx{position:absolute;inset:0;pointer-events:none}
+.magnet{position:absolute;width:22px;height:34px;border-radius:5px;background:
+  linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,0) 40%),linear-gradient(180deg,var(--team,#888),color-mix(in srgb,var(--team,#888) 70%,#000));
+  box-shadow:1px 4px 5px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);transition:background .4s}
+.eraser{position:absolute;left:0;top:0;width:64px;height:26px;border-radius:4px;z-index:5;
+  background:linear-gradient(180deg,#b38552 0,#8b6036 58%,#3f3b39 58%,#57524d 100%);
+  box-shadow:0 6px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.3)}
+.eraser::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;border-radius:0 0 4px 4px;background:rgba(235,235,225,.55);filter:blur(.5px)}
+.tip{position:absolute;left:-2px;top:-28px;width:9px;height:30px;border-radius:3px 3px 2px 2px;z-index:6;
+  background:linear-gradient(90deg,#fff,#e2ded2);box-shadow:3px 4px 5px rgba(0,0,0,.45);transform-origin:50% 100%}
+.dust{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(244,242,232,.9);z-index:7}
+.puff{position:absolute;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;z-index:7;
+  background:radial-gradient(circle,rgba(244,242,232,.5),rgba(244,242,232,.18) 45%,transparent 70%);filter:blur(2px)}
+
+/* ---------- moment boards (HR centre board, K board) ---------- */
+.mboard{position:absolute;z-index:20}
+.mboard .frame{padding:16px}
+.mboard .slate{width:auto;height:auto;background-size:100% 100%,200px 200px,auto}
+.mboard .ink{filter:url(#chalkBig)}
+.mboard .ledge{margin:-3px -12px 0;height:20px}
+#hrb .slate{width:1100px;height:520px}
+#kb .slate{width:340px;height:380px}
+.word{position:absolute;white-space:nowrap;line-height:1}
+.hrw{font-family:var(--num);font-weight:700;font-size:176px;color:var(--chalk)}
+.hrn{font-family:var(--hand);font-weight:700;font-size:64px}
+.hrs{font-family:var(--hand);font-weight:700;font-size:40px;color:var(--yellow)}
+.ball{position:absolute;left:0;top:0;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--chalk);
+  box-shadow:0 0 0 2px rgba(244,242,232,.3)}
+.st.fat{stroke-width:9}.st.fat2{stroke-width:5;opacity:.7}
+
+@media (prefers-reduced-motion:reduce){
+  .dust,.puff,.tip{display:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="chalk" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="4" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3.4 0 0 0 -0.7" result="mask"/>
+    <feComposite in="rough" in2="mask" operator="in"/>
+  </filter>
+  <filter id="chalkBig" x="-4%" y="-6%" width="108%" height="112%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="2" seed="2" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.95 0.5" numOctaves="2" seed="5" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3.6 0 0 0 -0.95" result="mask"/>
+    <feComposite in="rough" in2="mask" operator="in"/>
+  </filter>
+</svg>
+
+<div id="stage">
+  <div id="bug">
+    <div class="frame">
+      <div class="slate">
+        <div class="ghost"></div>
+        <div class="smudges"></div>
+        <div class="ink" id="ink">
+          <svg id="sv" width="720" height="214" viewBox="0 0 720 214"></svg>
+        </div>
+        <div class="fx" id="fx"></div>
+      </div>
+    </div>
+    <div class="ledge"><i class="stick s1"></i><i class="stick s2"></i><i class="eraser felt"></i></div>
+  </div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+const { $, $$, battingTeam } = BugKit;
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const NS = "http://www.w3.org/2000/svg";
+const stage = $("#stage"), bug = $("#bug"), sv = $("#sv"), fx = $("#fx"), smudges = $(".smudges");
+const inkEl = $("#ink");
+
+/* ---------- seeded randomness: the hand-drawn marks look the same every load ---------- */
+let seed = 7;
+const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+const jit = (a) => (rnd() * 2 - 1) * a;
+const f1 = (n) => Math.round(n * 10) / 10;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ---------- hand-drawn path generators ---------- */
+function line(x1, y1, x2, y2, j = 2) { // a slightly bowed stroke
+  const mx = (x1 + x2) / 2 + jit(j), my = (y1 + y2) / 2 + jit(j);
+  return `M${f1(x1 + jit(1))} ${f1(y1 + jit(1))} Q${f1(mx)} ${f1(my)} ${f1(x2 + jit(1.5))} ${f1(y2 + jit(1.5))}`;
+}
+function smooth(pts) { // catmull-rom through points
+  let d = `M${f1(pts[0][0])} ${f1(pts[0][1])}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)} ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)} ${f1(p2[0])} ${f1(p2[1])}`;
+  }
+  return d;
+}
+function loop(cx, cy, rx, ry, j = .05, over = .5) { // a circle that overshoots its own start
+  const a0 = Math.PI * (.9 + jit(.25)), n = 16, pts = [];
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (i / n) * (Math.PI * 2 + over), k = 1 + jit(j) + (i / n) * .07;
+    pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  return smooth(pts);
+}
+function scribble(cx, cy, r, n = 7, tilt = .35) { // back-and-forth hatching filling a diamond
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = -1 + 2 * i / n, w = (1 - Math.abs(t)) * r * .92, y = cy + t * r * .88;
+    pts.push(i % 2 ? [cx + w, y - w * tilt + jit(1)] : [cx - w, y + w * tilt + jit(1)]);
+  }
+  return "M" + pts.map((p) => f1(p[0]) + " " + f1(p[1])).join(" L");
+}
+function hatch(cx, cy, r, n = 6) { // scribble fill for a round count mark
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = -1 + 2 * i / n, w = Math.sqrt(Math.max(0, 1 - t * t)) * r * .9, y = cy + t * r * .82;
+    pts.push(i % 2 ? [cx + w, y - 2 + jit(1)] : [cx - w, y + 2 + jit(1)]);
+  }
+  return "M" + pts.map((p) => f1(p[0]) + " " + f1(p[1])).join(" L");
+}
+function rhombus(cx, cy, r) {
+  return `M${f1(cx + jit(1))} ${f1(cy - r)} L${f1(cx + r)} ${f1(cy + jit(1))} L${f1(cx + jit(1))} ${f1(cy + r)} L${f1(cx - r)} ${f1(cy + jit(1))} L${f1(cx + 2)} ${f1(cy - r + 1)}`;
+}
+function tri(cx, cy, s, up) {
+  const d = up ? 1 : -1;
+  return `M${f1(cx - s)} ${f1(cy + d * s * .7)} L${f1(cx + jit(1))} ${f1(cy - d * s * .85)} L${f1(cx + s)} ${f1(cy + d * s * .7)} Z`;
+}
+function swoosh(x1, x2, y, curl = true) { // underline flourish with a little hook at the end
+  const pts = [[x1, y + jit(1)], [x1 + (x2 - x1) * .35, y + 3 + jit(1)], [x1 + (x2 - x1) * .75, y + 1 + jit(1)], [x2, y - 3]];
+  if (curl) pts.push([x2 + 8, y - 12], [x2 - 2, y - 14]);
+  return smooth(pts);
+}
+
+/* ---------- SVG helpers ---------- */
+function sp(d, cls = "", parent = sv) {
+  const p = document.createElementNS(NS, "path");
+  p.setAttribute("d", d); p.setAttribute("class", "st " + cls); p.setAttribute("pathLength", "1");
+  p.style.strokeDasharray = "1 2";
+  parent.appendChild(p); return p;
+}
+function grp(parent = sv, cls = "") { const g = document.createElementNS(NS, "g"); if (cls) g.setAttribute("class", cls); parent.appendChild(g); return g; }
+/* draw a stroke on like a hand pulling chalk along it */
+function draw(p, dur = 300, delay = 0, easing = "cubic-bezier(.45,.05,.35,1)") {
+  if (RM) return p.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay, fill: "backwards" });
+  return p.animate([{ strokeDashoffset: 1, opacity: 0 }, { strokeDashoffset: .985, opacity: 1, offset: .03 }, { strokeDashoffset: 0, opacity: 1 }],
+    { duration: dur, delay, easing, fill: "backwards" });
+}
+function drawAll(g, dur, delay = 0, gapMs = 60) {
+  [...g.querySelectorAll("path")].forEach((p, i) => draw(p, dur, delay + i * gapMs));
+}
+
+/* ---------- layout (slate coordinates, 720 x 214) ---------- */
+const ROW = { away: 36, home: 96 }, RH = 58;
+const COL = { r: 390, h: 452, e: 514 }, CW = 60;
+const DIA = { x: 648, y: 112, gap: 32, r: 11 };
+const BASE_XY = [[DIA.x + DIA.gap, DIA.y], [DIA.x, DIA.y - DIA.gap], [DIA.x - DIA.gap, DIA.y]];
+const HOME_XY = [DIA.x, DIA.y + DIA.gap];
+const CNT_Y = 187;
+const BALL_X = [46, 74, 102], STRK_X = [152, 180], OUT_X = [234, 262];
+
+const cells = {};
+function cell(key, x, y, w, h, cls) {
+  const c = document.createElement("span");
+  c.className = "c " + cls; c.dataset.k = key;
+  Object.assign(c.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
+  inkEl.appendChild(c); cells[key] = c; c._x = x; c._y = y; c._w = w; c._h = h;
+  return c;
+}
+for (const t of ["away", "home"]) {
+  const y = ROW[t];
+  cell(t + ".name", 72, y, 306, RH, "h nm left");
+  cell(t + ".r", COL.r, y, CW, RH, "n big");
+  cell(t + ".h", COL.h, y, CW, RH, "n mid");
+  cell(t + ".e", COL.e, y, CW, RH, "n mid");
+  const m = document.createElement("i"); m.className = "magnet"; m.dataset.mag = t;
+  Object.assign(m.style, { left: "42px", top: y + 12 + "px", rotate: (t === "away" ? -5 : 4) + "deg" });
+  fx.appendChild(m);
+}
+cell("hdr.r", COL.r, 6, CW, 28, "h lbl"); cell("hdr.h", COL.h, 6, CW, 28, "h lbl"); cell("hdr.e", COL.e, 6, CW, 28, "h lbl");
+cell("inning", 634, 4, 74, 58, "n big left");
+cell("lbl.b", 10, 166, 22, 42, "h lbl"); cell("lbl.s", 118, 166, 22, 42, "h lbl"); cell("lbl.o", 200, 166, 22, 42, "h lbl");
+cell("lbl.ab", 296, 166, 38, 42, "h lbl");
+cell("batter", 338, 164, 222, 46, "h bn left");
+cell("note", 560, 162, 70, 48, "n yel");
+cell("pc", 626, 166, 84, 42, "n pc right");
+
+/* static chalk: grid lines, basepaths, ghosted count marks */
+const gridG = grp(sv, "grid"), marksG = grp(sv), noteG = grp(sv), flashG = grp(sv);
+function buildGrid() {
+  gridG.innerHTML = "";
+  sp(line(586, 10, 584, 152, 2), "thin", gridG);
+  sp(line(12, 157, 708, 159, 3), "thin", gridG);
+  sp(line(388, 34, 576, 35, 1.5), "thin", gridG);
+  sp(line(287, 168, 289, 206, 1.5), "thin", gridG);
+  const [b1, b2, b3] = BASE_XY;
+  const path = sp(`M${HOME_XY[0]} ${HOME_XY[1]} L${b1[0]} ${b1[1]} L${b2[0]} ${b2[1]} L${b3[0]} ${b3[1]} Z`, "thin", gridG);
+  path.style.opacity = ".35";
+  sp(`M${HOME_XY[0] - 7} ${HOME_XY[1] - 4} L${HOME_XY[0] + 7} ${HOME_XY[1] - 4} L${HOME_XY[0] + 7} ${HOME_XY[1] + 2} L${HOME_XY[0]} ${HOME_XY[1] + 8} L${HOME_XY[0] - 7} ${HOME_XY[1] + 2} Z`, "", gridG);
+  BASE_XY.forEach(([x, y]) => sp(rhombus(x, y, DIA.r), "", gridG));
+  BALL_X.concat(STRK_X).forEach((x) => sp(loop(x, CNT_Y, 10, 10, .04, .3), "ghostmark", gridG));
+  OUT_X.forEach((x) => sp(line(x - 8, CNT_Y, x + 8, CNT_Y, 1), "ghostmark", gridG));
+}
+buildGrid();
+
+/* ghost of an old lineup that never quite got erased */
+$(".ghost").innerHTML = [
+  ["LINEUP", 150, 18, 48, -3], ["1. SS  2. CF", 40, 120, 30, 2], ["bunt → 3B", 430, 150, 34, -4],
+  ["hit the cutoff!", 250, 60, 26, 3], ["P", 600, 40, 60, 0]
+].map(([t, x, y, s, r]) => `<span style="left:${x}px;top:${y}px;font-size:${s}px;rotate:${r}deg">${t}</span>`).join("");
+
+/* ---------- chalk dust, puffs, the eraser and the chalk stick ---------- */
+const R = Math.random;
+function dust(host, x, y, n = 4, spread = 10, fall = 40, delay = 0) {
+  if (RM) return;
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("i"), s = 2 + R() * 2.6;
+    d.className = "dust";
+    d.style.cssText = `left:${x + (R() * 2 - 1) * spread}px;top:${y + (R() * 2 - 1) * 3}px;width:${s}px;height:${s}px`;
+    host.appendChild(d);
+    d.animate([{ transform: "translate(0,0)", opacity: .95 }, { transform: `translate(${(R() * 2 - 1) * 12}px,${fall * (.6 + R() * .8)}px)`, opacity: 0 }],
+      { duration: 650 + R() * 650, delay: delay + R() * 140, easing: "cubic-bezier(.4,0,.9,.55)", fill: "backwards" }).onfinish = () => d.remove();
+  }
+}
+function puff(host, x, y, size = 1, delay = 0) {
+  if (RM) return;
+  const p = document.createElement("i"); p.className = "puff";
+  p.style.left = x + "px"; p.style.top = y + "px"; host.appendChild(p);
+  p.animate([{ transform: `scale(${.25 * size})`, opacity: .9 }, { transform: `scale(${1.5 * size}) translateY(-6px)`, opacity: 0 }],
+    { duration: 900, delay, easing: "cubic-bezier(.2,.7,.3,1)", fill: "backwards" }).onfinish = () => p.remove();
+  dust(host, x, y, Math.round(4 * size), 16 * size, 50 * size, delay);
+}
+/* a felt eraser scrubbing left -> right across a box */
+function scrub(host, x, y, w, h, dur = 280, big = 1, passes = 6, ampO) {
+  if (RM) return;
+  const e = document.createElement("i"), ew = 64 * big, eh = 26 * big;
+  e.className = "eraser"; e.style.width = ew + "px"; e.style.height = eh + "px";
+  host.appendChild(e);
+  const x0 = x - ew * .4, x1 = x + w - ew * .6, amp = ampO ?? Math.min(h * .28, 14 * big), yc = y + h / 2 - eh / 2, k = [];
+  for (let i = 0; i <= passes; i++) {
+    const t = i / passes;
+    k.push({ transform: `translate(${x0 + (x1 - x0) * t}px,${yc + (i % 2 ? -amp : amp)}px) rotate(${i % 2 ? -5 : 4}deg)`, opacity: i === 0 || i === passes ? 0 : 1 });
+  }
+  e.animate(k, { duration: dur, easing: "linear" }).onfinish = () => e.remove();
+  dust(host, x + w / 2, y + h * .8, Math.min(9, 3 + Math.round(w / 40)), w / 2, 36, dur * .4);
+}
+/* the chalk stick riding along the leading edge of a line of writing */
+function pen(host, x, y, w, dur, delay = 0, bob = 6, sc = 1) {
+  if (RM) return;
+  const p = document.createElement("i"), k = [], n = Math.max(4, Math.round(w / 22));
+  p.className = "tip"; host.appendChild(p);
+  for (let i = 0; i <= n; i++) k.push({ transform: `translate(${x + w * i / n}px,${y + (i % 2 ? -bob : bob * .6)}px) rotate(${22 + (i % 2) * 6}deg) scale(${sc})`, opacity: i === n ? 0 : 1 });
+  p.animate(k, { duration: dur, delay, easing: "linear", fill: "backwards" }).onfinish = () => p.remove();
+  for (let i = 1; i <= 3; i++) dust(host, x + w * i / 3.2, y + 4, 1 + (i === 3), 4, 30, delay + dur * i / 3.4);
+}
+/* faint haze left where something was rubbed out; one per spot, it lingers */
+const smudgeMap = {};
+function smudge(key, x, y, w, h, parent = smudges) {
+  if (RM) return;
+  let s = smudgeMap[key];
+  if (!s || s.parentNode !== parent) { s = smudgeMap[key] = document.createElement("i"); s.className = "smudge"; parent.appendChild(s); }
+  Object.assign(s.style, { left: x - 6 + "px", top: y + 2 + "px", width: w + 12 + "px", height: h - 4 + "px", opacity: .45 });
+  s.animate([{ opacity: 1 }, { opacity: .45 }], { duration: 2600, easing: "ease-out" });
+}
+
+/* ---------- write / erase a text cell ---------- */
+function ext(c, v) { const t = v.firstChild; return { x: c._x + t.offsetLeft, w: t.offsetWidth || 10 }; }
+function fitText(c, v) {
+  v.style.fontSize = "";
+  const t = v.firstChild, w = t.offsetWidth;
+  if (w > c._w) v.style.fontSize = parseFloat(getComputedStyle(v).fontSize) * (c._w / w) + "px";
+}
+function eraseV(c, v, dur = 260, quiet = false) {
+  if (!v.isConnected || v._gone) return;
+  v._gone = true;
+  v.getAnimations().forEach((a) => a.cancel());
+  if (RM) { v.remove(); return; }
+  const { x, w } = ext(c, v);
+  v.animate([{ clipPath: "inset(-30% -10% -30% -10%)", opacity: 1 }, { clipPath: "inset(-30% -10% -30% 100%)", opacity: .15 }],
+    { duration: dur, easing: "linear", fill: "forwards" }).onfinish = () => v.remove();
+  if (!quiet) scrub(c._host, x, c._y, w, c._h, dur);
+  smudge(c.dataset.k, x, c._y, w, c._h, c._smParent || smudges);
+}
+function reveal(c, v, dur, delay = 0, withPen = true) {
+  const { x, w } = ext(c, v);
+  dur ||= Math.min(1000, 180 + w * 2.4);
+  if (RM) { v.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay, fill: "backwards" }); return dur; }
+  v.animate([
+    { clipPath: "inset(-30% 100% -30% -8%)", transform: "rotate(-1.4deg) translateY(1px)" },
+    { clipPath: "inset(-30% 50% -30% -8%)", transform: "rotate(.8deg) translateY(-1px)", offset: .5 },
+    { clipPath: "inset(-30% -10% -30% -8%)", transform: "rotate(0) translateY(0)" }
+  ], { duration: dur, delay, easing: "linear", fill: "backwards" });
+  if (withPen) pen(c._host, x, c._y + c._h * .78, w, dur, delay, Math.min(9, c._h / 9), c._h > 90 ? 2.2 : c._h > 60 ? 1.4 : 1);
+  return dur;
+}
+/* change a cell: rub the old value out, then write the new one in */
+function write(c, text, o = {}) {
+  text = text == null ? "" : String(text);
+  clearTimeout(c._pend);
+  if (c._val === text && !o.force) return 0;
+  if (o.delay > 0 && !o.instant) { // wait without disturbing whatever is on the board now
+    c._pend = setTimeout(() => write(c, text, { ...o, delay: 0 }), o.delay);
+    return o.delay + 260;
+  }
+  c._val = text;
+  c._host ||= fx;
+  const tok = c._tok = (c._tok || 0) + 1;
+  const olds = [...c.querySelectorAll(".v")].filter((e) => !e._gone);
+  const v = document.createElement("span"), t = document.createElement("span");
+  v.className = "v" + (o.cls ? " " + o.cls : ""); t.textContent = text; v.appendChild(t);
+  if (o.instant) { olds.forEach((e) => e.remove()); c.appendChild(v); fitText(c, v); return 0; }
+  v.style.visibility = "hidden"; c.appendChild(v); fitText(c, v);
+  const shown = olds.filter((e) => e.style.visibility !== "hidden" && e.textContent.trim());
+  olds.filter((e) => !shown.includes(e)).forEach((e) => e.remove());
+  const er = shown.length ? (o.eraseDur || 260) : 0;
+  shown.forEach((e) => eraseV(c, e, er, o.quiet));
+  setTimeout(() => { if (c._tok !== tok) return; v.style.visibility = ""; if (text) reveal(c, v, o.dur); }, er ? er - 30 : 0);
+  return er;
+}
+
+/* ---------- chalk marks (count, bases, arrows): drawn on, rubbed off ---------- */
+const marks = {};
+function eraseMark(key, g, o = {}) {
+  const go = () => {
+    if (!g.isConnected) return;
+    g.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+    if (RM) { g.remove(); return; }
+    const b = g.getBBox(), dur = o.eraseDur || 240;
+    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, fill: "forwards" }).onfinish = () => g.remove();
+    if (!o.quiet) scrub(fx, b.x - 4, b.y - 6, b.width + 8, b.height + 12, dur);
+    smudge("m" + key, b.x - 2, b.y - 6, b.width + 4, b.height + 12);
+  };
+  o.delay ? setTimeout(go, o.delay) : go();
+}
+function setMark(key, on, build, o = {}) {
+  const cur = marks[key];
+  if (!!cur === !!on) return false;
+  if (on) {
+    const g = grp(marksG); build(g); marks[key] = g;
+    if (!o.instant) drawAll(g, o.dur || 260, o.delay || 0, o.gap ?? 110);
+  } else {
+    delete marks[key];
+    o.instant ? cur.remove() : eraseMark(key, cur, o);
+  }
+  return true;
+}
+const MK = {
+  ball: (x) => (g) => { sp(loop(x, CNT_Y, 10, 10), "", g); sp(hatch(x, CNT_Y, 9, 5), "", g).style.strokeWidth = 2.6; },
+  strike: (x) => (g) => { sp(loop(x, CNT_Y, 10, 10), "y", g); sp(hatch(x, CNT_Y, 9, 5), "y", g).style.strokeWidth = 2.6; },
+  out: (x) => (g) => { sp(line(x - 9, CNT_Y - 10, x + 9, CNT_Y + 9, 1.5), "p", g).style.strokeWidth = 4.2; sp(line(x + 9, CNT_Y - 10, x - 9, CNT_Y + 10, 1.5), "p", g).style.strokeWidth = 4.2; },
+  base: ([x, y]) => (g) => { sp(scribble(x, y, DIA.r - 1, 7), "y", g).style.strokeWidth = 3; sp(rhombus(x, y, DIA.r + 1), "y", g).style.strokeWidth = 3.8; },
+  arrow: (y) => (g) => { sp(line(10, y, 33, y + 1, 1), "y", g); sp(`M${26} ${y - 7} L${35} ${y + 1} L${25} ${y + 8}`, "y", g); },
+  half: (up) => (g) => {
+    const cx = 616, cy = up ? 35 : 33;
+    sp(tri(cx, cy, 11, up), "y", g);
+    const pts = []; for (let i = 0; i <= 4; i++) { const t = i / 4, yy = cy + (up ? -8 + t * 14 : 8 - t * 14), w = (up ? t : t) * 8; pts.push(i % 2 ? [cx + w, yy] : [cx - w, yy]); }
+    sp("M" + pts.map((p) => p.join(" ")).join(" L"), "y", g).style.strokeWidth = 3;
+  }
+};
+
+/* ---------- paint the whole state ---------- */
+let latest = null, wiping = false, holdBatterUntil = 0;
+const now = () => performance.now();
+function paint(S, inst) {
+  for (const t of ["away", "home"]) {
+    write(cells[t + ".name"], S[t].name, { instant: inst });
+    $(`[data-mag="${t}"]`).style.setProperty("--team", S[t].color);
+    write(cells[t + ".r"], S[t].r, { instant: inst });
+    write(cells[t + ".h"], S[t].h, { instant: inst, quiet: true });
+    write(cells[t + ".e"], S[t].e, { instant: inst });
+    setMark("bat-" + t, battingTeam(S) === t, MK.arrow(ROW[t] + RH / 2), { instant: inst });
+  }
+  for (const [k, txt] of [["hdr.r", "R"], ["hdr.h", "H"], ["hdr.e", "E"], ["lbl.b", "B"], ["lbl.s", "S"], ["lbl.o", "O"], ["lbl.ab", "AB"]]) write(cells[k], txt, { instant: true });
+  const top = S.half === "top";
+  const hd = setMark("half-top", top, MK.half(true), { instant: inst }) | setMark("half-bot", !top, MK.half(false), { instant: inst, delay: 250 });
+  write(cells.inning, S.inning, { instant: inst, delay: hd ? 120 : 0 });
+  S.bases.forEach((on, i) => setMark("base" + i, !!on, MK.base(BASE_XY[i]), { instant: inst, delay: 180, dur: 320 }));
+  // a whole count rubbed out at once gets one eraser pass, not five
+  const had = BALL_X.some((_, i) => marks["b" + i]) || STRK_X.some((_, i) => marks["s" + i]);
+  const clearing = !inst && had && !S.balls && !S.strikes;
+  if (clearing) scrub(fx, 34, CNT_Y - 16, 162, 32, 320, 1, 8);
+  BALL_X.forEach((x, i) => setMark("b" + i, i < S.balls, MK.ball(x), { instant: inst, quiet: clearing }));
+  STRK_X.forEach((x, i) => setMark("s" + i, i < S.strikes, MK.strike(x), { instant: inst, quiet: clearing }));
+  const oc = OUT_X.filter((_, i) => marks["o" + i]).length, oClear = !inst && oc && !S.outs;
+  if (oClear) scrub(fx, 222, CNT_Y - 16, 52, 32, 260);
+  OUT_X.forEach((x, i) => setMark("o" + i, i < S.outs, MK.out(x), { instant: inst, quiet: oClear, dur: 200, gap: 170 }));
+  write(cells.batter, S.batter, { instant: inst, delay: Math.max(0, holdBatterUntil - now()) });
+  write(cells.pc, S.pitchCount ? "P " + S.pitchCount : "", { instant: inst, quiet: true, eraseDur: 200 });
+}
+function render(S, prev, first) {
+  latest = S;
+  if (wiping) return;          // the post-wipe rewrite will pick up the latest state
+  paint(S, first);
+}
+
+/* ---------- whole-board wipe (half change, reset) ---------- */
+let wipeTok = 0;
+function wipeBoard(delay = 0) {
+  const tok = ++wipeTok;
+  wiping = true;
+  const dur = RM ? 0 : 950;
+  clearNote(true);
+  setTimeout(() => {
+    if (tok !== wipeTok) return;
+    if (!RM) {
+      inkEl.getAnimations().forEach((a) => a.cancel());
+      scrub(fx, 0, 0, 720, 214, dur, 2.3, 11, 72);
+      inkEl.animate([{ clipPath: "inset(-5% -5% -5% -5%)" }, { clipPath: "inset(-5% -5% -5% 104%)" }], { duration: dur, easing: "linear", fill: "forwards" });
+      smudge("wipe", 20, 14, 680, 190);
+    }
+    setTimeout(() => {
+      if (tok !== wipeTok) return;
+      wiping = false;
+      inkEl.getAnimations().forEach((a) => a.cancel());
+      Object.values(marks).forEach((g) => g.remove()); for (const k in marks) delete marks[k];
+      Object.values(cells).forEach((c) => { clearTimeout(c._pend); c._tok = (c._tok || 0) + 1; c.querySelectorAll(".v").forEach((v) => v.remove()); c._val = undefined; });
+      holdBatterUntil = 0;
+      if (latest) paint(latest, true);
+      rewriteAll();
+    }, dur + 60);
+  }, delay);
+}
+/* after a wipe, everything is written back in, in reading order */
+function rewriteAll() {
+  if (RM) return;
+  const list = Object.values(cells).filter((c) => c._val).sort((a, b) => (Math.round(a._y / 50) - Math.round(b._y / 50)) || (a._x - b._x));
+  list.forEach((c, i) => {
+    const v = c.querySelector(".v:last-child");
+    if (v) reveal(c, v, Math.min(420, 140 + ext(c, v).w * 1.6), i * 40, /name|batter|inning/.test(c.dataset.k));
+  });
+  drawAll(gridG, 260, 0, 30);
+  Object.values(marks).forEach((g, i) => drawAll(g, 220, 250 + i * 70, 60));
+}
+
+/* ---------- the batter's note: "1B", "BB", "E", a strike-through ---------- */
+cells.note.style.fontSize = "42px";
+let noteTok = 0;
+function clearNote(instant) {
+  write(cells.note, "", { instant, quiet: true });
+  [...noteG.children].forEach((g, i) => instant || RM ? g.remove() : eraseMark("note" + i, g, { quiet: true }));
+}
+function showNote(S, text, cls, hold, marksFn) {
+  const tok = ++noteTok;
+  let lag = 0;
+  if (holdBatterUntil > now()) {
+    // a note is still up for the last batter: rub it out and bring this batter's name up first
+    holdBatterUntil = 0; clearNote();
+    lag = cells.batter._val !== S.batter ? write(cells.batter, S.batter) + 620 : 300;
+  } else [...noteG.children].forEach((g) => g.remove());
+  holdBatterUntil = now() + lag + hold;
+  setTimeout(() => {
+    if (tok !== noteTok) return;
+    if (text) write(cells.note, text, { cls, dur: 300, force: true });
+    if (marksFn) { const g = grp(noteG); marksFn(g); drawAll(g, 380, 150, 120); }
+  }, lag);
+  setTimeout(() => { if (tok === noteTok) clearNote(); }, lag + hold + 60);
+}
+function flushNote() { if (holdBatterUntil > now()) { holdBatterUntil = 0; noteTok++; clearNote(); } }
+function basePath(k) { // the batter's route round the mini diamond, scorebook style
+  const pts = [HOME_XY, ...BASE_XY.slice(0, k)];
+  return "M" + pts.map(([x, y]) => `${f1(x + jit(1.5))} ${f1(y + jit(1.5))}`).join(" L");
+}
+function runFlourish(team, big) {
+  const y = ROW[team] + RH - 5, x = COL.r + 6;
+  const key = "flo-" + team;
+  flashG.querySelectorAll(`[data-f="${key}"]`).forEach((g) => g.remove());
+  const g = grp(flashG); g.dataset.f = key;
+  sp(swoosh(x, x + 46, y), "y", g).style.strokeWidth = 3.4;
+  if (big) sp(swoosh(x + 2, x + 44, y + 7, false), "y", g).style.strokeWidth = 3;
+  drawAll(g, 300, 520, 160);
+  setTimeout(() => puff(fx, x + 24, y - 20, big ? .9 : .6), 560);
+  setTimeout(() => { if (g.isConnected) eraseMark(key, g, { quiet: true, eraseDur: 400 }); }, 2900);
+}
+function pulseMark(key, delay = 0) { const g = marks[key]; if (g) drawAll(g, 200, delay, 50); }
+
+/* ---------- moment boards: a second slate that comes on for HR and K ---------- */
+let pos = "tl";
+function makeBoard(id, w, h) {
+  document.getElementById(id)?.remove();
+  const b = document.createElement("div");
+  b.id = id; b.className = "mboard";
+  b.innerHTML = `<div class="frame"><div class="slate"><div class="smudges"></div><div class="ink"><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"></svg></div><div class="fx"></div></div></div>` +
+    `<div class="ledge"><i class="stick s1"></i><i class="stick s2"></i><i class="eraser felt"></i></div>`;
+  stage.appendChild(b);
+  const B = { b, w, h, ink: $(".ink", b), svg: $("svg", b), fx: $(".fx", b), sm: $(".smudges", b) };
+  B.at = (ms, fn) => setTimeout(() => { if (b.isConnected) fn(); }, RM ? ms * .6 : ms);
+  return B;
+}
+function bcell(B, x, y, w, h, cls, css = "") {
+  const c = document.createElement("span");
+  c.className = "c " + cls; c.dataset.k = B.b.id + x + "_" + y; c.style.cssText = css;
+  Object.assign(c.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
+  Object.assign(c, { _x: x, _y: y, _w: w, _h: h, _host: B.fx, _smParent: B.sm });
+  B.ink.appendChild(c); return c;
+}
+function wipeMoment(B, dur, big) {
+  if (RM) { B.ink.style.opacity = 0; return; }
+  scrub(B.fx, 0, 0, B.w, B.h, dur, big, 9, B.h * .34);
+  B.ink.animate([{ clipPath: "inset(-5% -5% -5% -5%)" }, { clipPath: "inset(-5% -5% -5% 104%)" }], { duration: dur, easing: "linear", fill: "forwards" });
+  smudge(B.b.id + "w", 40, 40, B.w - 80, B.h - 80, B.sm);
+}
+function boardMove(B, from, dur, out) {
+  const k = out ? [{ transform: "none" }, { transform: from }] : [{ transform: from }, { transform: "translate(0,0) rotate(.6deg)", offset: .75 }, { transform: "none" }];
+  return B.b.animate(k, { duration: RM ? 1 : dur, easing: out ? "cubic-bezier(.5,0,.8,.4)" : "cubic-bezier(.2,.8,.3,1)", fill: "forwards" });
+}
+
+function homeRun({ runs = 1, batter }, S) {
+  flushNote();
+  const B = makeBoard("hrb", 1100, 520), sv2 = B.svg;
+  B.b.style.left = "394px"; B.b.style.top = (pos.startsWith("t") ? 330 : 170) + "px";
+  const from = "translateY(" + (pos.startsWith("t") ? 820 : -820) + "px) rotate(-2deg)";
+  boardMove(B, from, 560);
+  const H = [110, 468], ARC = `M${H[0]} ${H[1] - 6} Q560 -300 1150 380`;
+  // ground, home plate and a little outfield fence
+  const scene = grp(sv2);
+  sp(line(40, 478, 330, 477, 2), "thin", scene); sp(line(850, 476, 1085, 474, 2), "thin", scene);
+  sp(`M${H[0] - 14} ${H[1] - 4} L${H[0] + 14} ${H[1] - 4} L${H[0] + 14} ${H[1] + 4} L${H[0]} ${H[1] + 13} L${H[0] - 14} ${H[1] + 4} Z`, "", scene);
+  sp(line(915, 404, 1090, 398, 2), "", scene);
+  for (let x = 925; x < 1090; x += 22) sp(line(x, 402, x - 2, 474, 1.5), "thin", scene);
+  const arc = sp(ARC, "", sv2); arc.style.strokeWidth = 4;
+  const ball = document.createElement("i"); ball.className = "ball";
+  ball.style.offsetPath = `path("${ARC}")`; ball.style.offsetRotate = "0deg"; ball.style.opacity = 0;
+  B.ink.appendChild(ball);
+  const word = bcell(B, 70, 150, 820, 180, "hrw");
+  const ring = sp(loop(482, 240, 436, 116, .03, .35), "y", sv2); ring.style.strokeWidth = 6;
+  const u1 = sp(swoosh(120, 850, 352), "y", sv2), u2 = sp(swoosh(160, 820, 368, false), "y", sv2);
+  u1.style.strokeWidth = 6; u2.style.strokeWidth = 5;
+  const who = bcell(B, 70, 380, 820, 72, "hrn"), sub = bcell(B, 70, 456, 820, 46, "hrs");
+  [scene, arc, ring, u1, u2].forEach((p) => (p.style.opacity = 0));
+
+  B.at(420, () => { scene.style.opacity = ""; drawAll(scene, 260, 0, 30); });
+  B.at(620, () => {
+    arc.style.opacity = ""; draw(arc, 1050, 0, "cubic-bezier(.35,.15,.55,1)");
+    ball.style.opacity = "";
+    ball.animate([{ offsetDistance: "0%" }, { offsetDistance: "100%" }], { duration: 1050, easing: "cubic-bezier(.35,.15,.55,1)", fill: "forwards" });
+    puff(B.fx, H[0] + 10, H[1] - 10, .8);
+  });
+  B.at(1450, () => puff(B.fx, 1010, 270, 1.1));
+  write(word, "HOME RUN!", { delay: RM ? 0 : 820, dur: 950 });
+  B.at(1850, () => { ring.style.opacity = ""; draw(ring, 560); puff(B.fx, 40, 250, 1); });
+  B.at(2400, () => { u1.style.opacity = ""; draw(u1, 260); });
+  B.at(2640, () => { u2.style.opacity = ""; draw(u2, 230); puff(B.fx, 830, 360, 1); });
+  write(who, batter || S.batter || "", { delay: RM ? 0 : 2560, dur: 620 });
+  write(sub, runs === 4 ? "grand slam!" : runs === 1 ? "solo shot" : `${runs}-run shot`, { delay: RM ? 0 : 3200, dur: 480 });
+  B.at(3900, () => wipeMoment(B, 700, 3));
+  B.at(4620, () => boardMove(B, from, 420, true).onfinish = () => B.b.remove());
+}
+
+function strikeout({ looking, batter } = {}, S) {
+  flushNote();
+  const B = makeBoard("kb", 340, 380), sv2 = B.svg;
+  const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width / 1920;
+  const bw = 372, right = pos.endsWith("r");
+  B.b.style.left = (right ? (r.left - s.left) / k - bw - 34 : (r.right - s.left) / k + 34) + "px";
+  B.b.style.top = (pos.startsWith("t") ? 44 : 1080 - 44 - 436) + "px";
+  const from = `translateY(${pos.startsWith("t") ? -520 : 520}px) rotate(${right ? 3 : -3}deg)`;
+  boardMove(B, from, 420);
+  const K = grp(sv2); if (looking) K.setAttribute("transform", "translate(340,0) scale(-1,1)");
+  const strokes = [[118, 42, 116, 250], [128, 168, 236, 44], [156, 140, 242, 254]].map(([x1, y1, x2, y2], i) => {
+    const g = grp(K);
+    const a = sp(line(x1, y1, x2, y2, 3), "fat", g), b = sp(line(x1 - 5, y1 + 2, x2 - 5, y2, 2), "fat2", g), c = sp(line(x1 + 5, y1, x2 + 5, y2 - 2, 2), "fat2", g);
+    a.style.strokeWidth = 15; g.style.opacity = 0; return { g, end: [x2, y2] };
+  });
+  const ring = sp(loop(174, 150, 132, 124, .03, .4), "y", sv2); ring.style.strokeWidth = 6; ring.style.opacity = 0;
+  const who = bcell(B, 16, 284, 308, 50, "h", "font-size:42px");
+  const how = bcell(B, 16, 332, 308, 40, "h yel", "font-size:32px");
+  [[340, 240], [600, 200], [820, 240]].forEach(([t, d], i) => B.at(t, () => {
+    const { g, end } = strokes[i]; g.style.opacity = "";
+    g.querySelectorAll("path").forEach((p) => draw(p, d, 0, "cubic-bezier(.5,0,.6,1)"));
+    setTimeout(() => puff(B.fx, looking ? 340 - end[0] : end[0], end[1], .7), d);
+  }));
+  B.at(1120, () => { ring.style.opacity = ""; draw(ring, 480); });
+  write(who, batter || S.batter || "", { delay: RM ? 0 : 1500, dur: 520 });
+  write(how, looking ? "caught looking" : "struck out swinging", { delay: RM ? 0 : 1950, dur: 520 });
+  B.at(3050, () => wipeMoment(B, 520, 2));
+  B.at(3620, () => boardMove(B, from, 380, true).onfinish = () => B.b.remove());
+}
+
+/* ---------- wire it up ---------- */
+const markDust = (x, delay = 260) => setTimeout(() => dust(fx, x, CNT_Y + 10, 3, 8, 26), delay);
+BugKit.start({
+  name: "Chalk Talk",
+  hrDelay: 4000,
+  place(p) { pos = p; },
+  render,
+  fx: {
+    ball(o, S) { markDust(BALL_X[Math.max(0, S.balls - 1)]); },
+    strike(o, S) { markDust(STRK_X[Math.max(0, S.strikes - 1)]); },
+    foul(o, S) { pulseMark("s" + (S.strikes - 1), 60); markDust(STRK_X[Math.max(0, S.strikes - 1)], 120); },
+    out(o, S) {
+      showNote(S, "", "", 1300, (g) => {
+        const c = cells.batter, v = c.querySelector(".v:last-child");
+        const { x, w } = v && v.textContent ? ext(c, v) : { x: c._x, w: 120 };
+        const y = c._y + c._h / 2 + 2;
+        sp(line(x - 6, y + 3, x + w + 8, y - 4, 2), "p", g).style.strokeWidth = 4;
+      });
+    },
+    hit({ bases = 1 }, S) { showNote(S, bases + "B", "yel", 1700, (g) => { sp(basePath(bases), "y", g).style.strokeWidth = 3; }); },
+    walk(o, S) { showNote(S, "BB", "blu", 1500, (g) => { sp(basePath(1), "b", g).style.strokeWidth = 3; }); },
+    error(o, S) {
+      const nx = cells.note._x + 12;
+      showNote(S, "E", "pnk", 1700, (g) => {
+        sp(basePath(1), "p", g).style.strokeWidth = 3;
+        sp(`M${nx} ${209} L${nx + 11} ${204} L${nx + 22} ${210} L${nx + 33} ${203} L${nx + 45} ${209}`, "p", g).style.strokeWidth = 3.4;
+      });
+    },
+    run({ team, runs = 1, hr }, S) { runFlourish(team || battingTeam(S), runs > 1 || hr); },
+    hr: homeRun,
+    k: strikeout,
+    half() { wipeBoard(0); },
+    reset() { document.getElementById("hrb")?.remove(); document.getElementById("kb")?.remove(); wipeBoard(0); }
+  }
+});
+document.fonts?.ready.then(() => Object.values(cells).forEach((c) => c.querySelectorAll(".v").forEach((v) => fitText(c, v))));
+})();
+</script>
+</body>
+</html>

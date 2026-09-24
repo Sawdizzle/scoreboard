@@ -145,7 +145,8 @@
 
     /* ---------- Demo game logic (preview only) ---------- */
     let hi = 0, rolling = false;
-    const later = (ms, fn) => setTimeout(() => { fn(); render(); }, ms);
+    const timers = new Set(); // pending demo follow-ups; reset cancels them
+    const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); render(); }, ms); timers.add(t); };
     function nextBatter() { S.balls = 0; S.strikes = 0; hi = (hi + 1) % HITTERS.length; S.batter = HITTERS[hi]; }
     function score(n, extra = {}) {
       if (!n) return;
@@ -214,7 +215,7 @@
       klook() { S.pitchCount++; strikeout(true); },
       half() { nextHalf(); },
       pos() { pos = POS[(POS.indexOf(pos) + 1) % POS.length]; place(); },
-      reset() { S = clone(DEFAULT); hi = 0; emit("reset"); }
+      reset() { timers.forEach(clearTimeout); timers.clear(); rolling = false; S = clone(DEFAULT); hi = 0; emit("reset"); }
     };
     function act(a) { if (ACT[a]) { ACT[a](); render(); } }
 
