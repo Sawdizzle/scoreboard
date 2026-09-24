@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Ka-Pow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   KA-POW — the scorebug as a comic-book panel strip.
+   Inked panels on newsprint, flat print colours, Ben-Day dots,
+   and moments told in SFX lettering, balloons and captions.
+   ============================================================ */
+:root{
+  --ink:#141414; --paper:#FFF4D6; --yel:#FFD93B; --red:#E8262B; --cyan:#19B5E8; --mag:#E6247D; --ice:#9FE3FF;
+  --sfx:"Bangers","Impact",sans-serif;
+  --num:"Luckiest Guy","Bangers","Impact",sans-serif;
+  --cap:"Comic Neue","Comic Sans MS",sans-serif;
+  --dots:radial-gradient(circle,var(--dc,rgba(0,0,0,.3)) 1.7px,transparent 2.1px);
+}
+#stage{font-family:var(--cap);color:var(--ink)}
+body{--demo-accent:var(--yel)}
+body.preview{background:
+  radial-gradient(ellipse at 50% 125%,#6f5236 0%,#4b3a28 16%,transparent 17%),
+  repeating-linear-gradient(112deg,rgba(255,255,255,.04) 0 110px,transparent 110px 220px),
+  radial-gradient(ellipse at 45% 105%,#467a45 0%,#264a2d 48%,#101b14 100%)}
+.stroke{paint-order:stroke fill;-webkit-text-stroke:var(--sw,6px) var(--ink)}
+
+/* ---------- Scorebug ---------- */
+#bug{width:740px;display:flex;flex-direction:column;perspective:1800px}
+.page{position:relative;display:grid;grid-template-columns:440px 264px;grid-template-rows:80px 80px;gap:10px;padding:10px 12px 12px 10px;
+  background:var(--paper);transform:rotate(-1deg);
+  clip-path:polygon(0 1.2%,38% 0,100% .6%,99.6% 98%,61% 100%,.4% 99.2%)}
+.pwrap{position:relative;transform-origin:0 50%}
+.pwrap::before{content:"";position:absolute;inset:0;transform:translate(8px,8px) rotate(-1deg);background:rgba(0,0,0,.55);
+  clip-path:polygon(0 1.2%,38% 0,100% .6%,99.6% 98%,61% 100%,.4% 99.2%)}
+.panel{position:relative;background:var(--ink);clip-path:polygon(var(--q,0 1%,100% 0,99.4% 100%,.5% 98%))}
+.panel>.fill{position:absolute;inset:5px 6px 5px 5px;overflow:hidden;clip-path:polygon(0 0,100% 1.5%,100% 100%,.6% 99%)}
+.panel.away{--q:0 0,100% 2%,99.5% 100%,.3% 97%}
+.panel.home{--q:.4% 2%,99.7% 0,100% 97%,0 100%}
+.panel.situ{grid-row:1/3;grid-column:2;--q:1.5% .5%,100% 0,98.8% 100%,0 99%}
+
+/* team panels: flat team colour + halftone shading, runs sub-panel */
+.team .fill{display:flex;align-items:center;background:var(--team,#888)}
+.team .fill::before{content:"";position:absolute;inset:0;background:var(--dots);background-size:8px 8px;
+  -webkit-mask-image:linear-gradient(100deg,transparent 35%,#000 95%);mask-image:linear-gradient(100deg,transparent 35%,#000 95%)}
+.team .fill::after{content:"";position:absolute;inset:0;--dc:rgba(255,255,255,.28);background:var(--dots);background-size:8px 8px;background-position:3px 2px;
+  -webkit-mask-image:linear-gradient(100deg,#000 0%,transparent 30%);mask-image:linear-gradient(100deg,#000 0%,transparent 30%)}
+.ab{position:relative;z-index:1;width:48px;height:100%;display:flex;align-items:center;justify-content:center}
+.ball{width:34px;height:34px;opacity:0;transform:scale(.2) rotate(-90deg);transition:opacity .25s,transform .45s cubic-bezier(.3,1.7,.5,1)}
+.team.batting .ball{opacity:1;transform:none}
+.abbr{position:relative;z-index:1;flex:1;min-width:0;font-family:var(--sfx);font-size:58px;line-height:1;letter-spacing:.03em;color:#fff;
+  --sw:8px;white-space:nowrap;overflow:hidden;text-overflow:clip;padding:6px 0 0 4px;text-shadow:4px 4px 0 var(--ink)}
+.he{position:relative;z-index:1;display:flex;flex-direction:column;gap:5px;margin-right:10px}
+.he span{display:block;background:#fff;border:3px solid var(--ink);padding:1px 7px 0;font:700 21px/1 var(--cap);white-space:nowrap;box-shadow:2px 2px 0 var(--ink)}
+.he span:first-child{transform:rotate(-2deg)}.he span:last-child{transform:rotate(1.5deg)}
+.he b{font-family:var(--num);font-weight:400;font-size:20px;margin-left:5px}
+.runs{position:relative;z-index:1;align-self:stretch;width:98px;display:flex;align-items:center;justify-content:center;
+  border-left:5px solid var(--ink);background:color-mix(in srgb,var(--team,#888) 70%,#000)}
+.runs::before{content:"";position:absolute;inset:0;--dc:rgba(0,0,0,.35);background:var(--dots);background-size:6px 6px}
+.runs .v{position:relative;font-family:var(--num);font-size:70px;line-height:1;color:var(--yel);--sw:10px;padding-top:8px;
+  text-shadow:-2px -1px 0 rgba(25,181,232,.85),4px 4px 0 var(--ink)}
+
+/* situation panel: inning, inked diamond, count pips */
+.situ .fill{background:#fff;padding:10px 14px 8px}
+.situ .fill::before{content:"";position:absolute;inset:0;--dc:rgba(25,181,232,.22);background:var(--dots);background-size:9px 9px}
+.sit-top{position:relative;display:flex;align-items:center;justify-content:space-between;height:98px}
+.inn{display:flex;flex-direction:column;align-items:center;width:84px}
+.inn .half{display:flex;align-items:center;gap:5px;font-family:var(--sfx);font-size:28px;line-height:1;letter-spacing:.05em}
+.inn .tri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid var(--red)}
+.inn.bot .tri{border-bottom:0;border-top:13px solid var(--red)}
+.inn .v{font-family:var(--num);font-size:64px;line-height:1;color:var(--red);--sw:9px;padding-top:6px;text-shadow:4px 4px 0 var(--ink)}
+.dia{position:relative;width:118px;height:92px}
+.dia .path{position:absolute;left:34px;top:21px;width:50px;height:50px;transform:rotate(45deg);border:3px solid var(--ink);opacity:.55}
+.base{position:absolute;width:30px;height:30px;transform:rotate(45deg);border:4px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink)}
+.base.b2{left:44px;top:4px}.base.b1{left:80px;top:40px}.base.b3{left:8px;top:40px}
+.base.on{background:var(--yel)}
+.base.on::after{content:"";position:absolute;inset:0;--dc:rgba(232,38,43,.55);background:var(--dots);background-size:6px 6px}
+.count{position:relative;display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:9px;border-top:4px solid var(--ink)}
+.grp{display:flex;align-items:center;gap:3px}
+.grp b{font-family:var(--sfx);font-weight:400;font-size:22px;line-height:1;margin-right:3px;padding:3px 5px 1px;background:var(--ink);color:#fff;transform:rotate(-5deg)}
+.pip{width:18px;height:18px;border-radius:50%;border:3px solid var(--ink);background:#fff}
+.pip.on{background:var(--c)}
+.balls{--c:#2FBF55}.strikes{--c:var(--yel)}.outs{--c:var(--red)}
+
+/* narrator caption (batter) */
+.cap{position:relative;z-index:2;align-self:flex-start;margin:-20px 0 0 26px;max-width:640px;display:flex;align-items:stretch;
+  transform:rotate(.9deg);filter:drop-shadow(5px 5px 0 rgba(0,0,0,.55))}
+.cap .box{background:var(--yel);border:4px solid var(--ink);padding:7px 14px 5px;font:700 27px/1 var(--cap);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cap .box small{font-size:20px;margin-right:6px}
+.cap .pc{background:#fff;border:4px solid var(--ink);border-left:0;padding:8px 12px 4px;font:400 24px/1 var(--num);white-space:nowrap}
+.cap .pc:empty{display:none}
+
+/* ---------- shared comic bits ---------- */
+.sfxw{font-family:var(--sfx);line-height:1;letter-spacing:.03em;color:var(--yel);paint-order:stroke fill;-webkit-text-stroke:var(--sw,10px) var(--ink);
+  text-shadow:-4px -3px 0 rgba(25,181,232,.8),4px 3px 0 rgba(230,36,125,.75),7px 7px 0 var(--ink)}
+.burst{position:absolute;display:flex;align-items:center;justify-content:center}
+.burst>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.burst>.w{position:relative}
+.note{position:absolute;z-index:6;background:var(--yel);border:4px solid var(--ink);padding:8px 16px 6px;font:700 30px/1.05 var(--cap);text-transform:uppercase;white-space:nowrap;
+  box-shadow:6px 6px 0 rgba(0,0,0,.55)}
+.note small{display:block;font-size:19px}
+.note b{font:400 40px/1 var(--sfx);letter-spacing:.04em}
+.fxl{position:absolute;z-index:5;pointer-events:none}
+body[data-pos$="l"] .fxl{left:calc(100% + 18px)} body[data-pos$="r"] .fxl{right:calc(100% + 18px)}
+body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
+.turner{position:absolute;left:0;top:0;z-index:4;transform-origin:0 50%;pointer-events:none}
+
+/* ---------- K panel + HR splash (stage level) ---------- */
+#kp,#splash{position:absolute;pointer-events:none;visibility:hidden}
+#kp{width:560px;height:370px}
+#splash{inset:0}
+#kp.on,#splash.on{visibility:visible}
+.bigpanel{position:absolute;background:var(--ink);box-shadow:none}
+.bigpanel>.fill{position:absolute;inset:11px;overflow:hidden}
+.speed{position:absolute;left:50%;top:50%;width:2400px;height:2400px;margin:-1200px 0 0 -1200px;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.6) 0 2.2deg,transparent 2.2deg 7deg);
+  -webkit-mask-image:radial-gradient(circle,transparent 9%,#000 26%);mask-image:radial-gradient(circle,transparent 9%,#000 26%)}
+.dotburst{position:absolute;left:50%;top:50%;width:1400px;height:1400px;margin:-700px 0 0 -700px;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,38,43,.8) 2.6px,transparent 3.2px) 0 0/13px 13px;
+  -webkit-mask-image:radial-gradient(circle,transparent 25%,#000 38%,transparent 60%);mask-image:radial-gradient(circle,transparent 25%,#000 38%,transparent 60%)}
+.half-l,.half-r,.half-l>i,.half-r>i{position:absolute;inset:0}
+#splash.torn .half-l{filter:drop-shadow(5px 0 0 #fff) drop-shadow(3px 0 0 var(--ink))}
+#splash.torn .half-r{filter:drop-shadow(-5px 0 0 #fff) drop-shadow(-3px 0 0 var(--ink))}
+
+/* HR splash choreography (CSS so both torn halves stay in lockstep) */
+#splash .sp{left:340px;top:250px;width:1240px;height:590px;clip-path:polygon(0 1%,100% 0,99.3% 100%,.6% 98.5%);animation:spIn .55s cubic-bezier(.3,1.4,.5,1) both}
+#splash .sp .fill{clip-path:polygon(0 0,100% 1%,100% 100%,0 99%);background:radial-gradient(circle at 50% 50%,#FFF3A8 0%,var(--yel) 22%,#FF9A1F 58%,var(--red) 100%)}
+#splash .speed{animation:spin 9s linear infinite}
+#splash .dotburst{animation:dotBurst 1.3s ease-out .2s both}
+#splash .kb{position:absolute;left:560px;top:300px;width:800px;height:400px;animation:kbIn .6s cubic-bezier(.3,1.5,.5,1) .3s both}
+#splash .kb .sfxw{font-size:176px;--sw:16px;animation:jit .14s steps(1) .9s 14}
+#splash .caps{position:absolute;left:380px;top:730px;display:flex;align-items:flex-end;gap:0}
+#splash .c1{background:var(--yel);border:6px solid var(--ink);padding:12px 26px 8px;font:700 30px/1 var(--cap);text-transform:uppercase;box-shadow:8px 8px 0 var(--ink);
+  animation:capIn .6s cubic-bezier(.2,1.2,.4,1) 1.25s both}
+#splash .c1 b{display:block;font:400 74px/1 var(--sfx);letter-spacing:.03em;color:var(--red);paint-order:stroke fill;-webkit-text-stroke:8px var(--ink);text-shadow:5px 5px 0 var(--ink);margin-top:4px}
+#splash .c1 span{display:block;font-size:44px;margin-top:4px}
+#splash .tag{margin:0 0 -18px -14px;background:var(--red);color:#fff;border:6px solid var(--ink);padding:10px 20px 4px;font:400 54px/1 var(--sfx);letter-spacing:.04em;
+  box-shadow:6px 6px 0 var(--ink);transform:rotate(6deg);animation:tagIn .45s cubic-bezier(.3,1.8,.5,1) 1.8s both}
+#splash .half-l{animation:tearL .7s cubic-bezier(.5,0,.8,.4) 3.9s both}
+#splash .half-r{animation:tearR .7s cubic-bezier(.5,0,.8,.4) 3.9s both}
+.hball{position:absolute;left:0;top:0;width:520px;height:110px;opacity:0;animation:ballFly .75s cubic-bezier(.45,0,.9,.6) .95s forwards}
+.hball .streak{position:absolute;left:0;top:22px;width:440px;height:66px;
+  background:repeating-linear-gradient(180deg,transparent 0 6px,#fff 6px 11px,var(--ink) 11px 14px,transparent 14px 22px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000);mask-image:linear-gradient(90deg,transparent,#000)}
+.hball svg{position:absolute;right:0;top:0;width:110px;height:110px;animation:spin .3s linear infinite}
+@keyframes spIn{0%{transform:scale(.12) rotate(-14deg);opacity:0}15%{opacity:1}60%{transform:scale(1.06) rotate(1.2deg)}80%{transform:scale(.985) rotate(-.6deg)}100%{transform:scale(1) rotate(-1deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dotBurst{0%{transform:scale(.2);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes kbIn{0%{transform:scale(0) rotate(-35deg)}50%{transform:scale(1.25) rotate(-1deg)}72%{transform:scale(.93) rotate(-6deg)}100%{transform:scale(1) rotate(-5deg)}}
+@keyframes jit{0%{translate:0 0}25%{translate:4px -3px}50%{translate:-3px 3px}75%{translate:3px 2px}}
+@keyframes capIn{0%{transform:translateX(-900px) rotate(-8deg)}70%{transform:translateX(24px) rotate(-1deg)}100%{transform:translateX(0) rotate(-2deg)}}
+@keyframes tagIn{0%{transform:scale(0) rotate(-30deg)}100%{transform:scale(1) rotate(6deg)}}
+@keyframes tearL{to{transform:translate(-620px,160px) rotate(-16deg);opacity:0}}
+@keyframes tearR{to{transform:translate(640px,-140px) rotate(13deg);opacity:0}}
+@keyframes ballFly{0%{transform:translate(360px,700px) rotate(-30deg) scale(.6);opacity:1}100%{transform:translate(1900px,-300px) rotate(-30deg) scale(1.25);opacity:1}}
+
+/* K panel */
+#kp .kpan{inset:0;clip-path:polygon(0 1.5%,100% 0,98.8% 100%,1% 98.5%)}
+#kp .kpan .fill{background:radial-gradient(circle at 40% 45%,#fff 0%,#FFF3B0 40%,var(--yel) 100%)}
+#kp .kpan .fill::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(232,38,43,.35) 2px,transparent 2.6px) 0 0/11px 11px;
+  -webkit-mask-image:radial-gradient(circle at 40% 45%,transparent 30%,#000 75%);mask-image:radial-gradient(circle at 40% 45%,transparent 30%,#000 75%)}
+#kp.look .kpan .fill{background:linear-gradient(170deg,#F2FBFF 0%,#BDEBFF 45%,#62C4EE 100%)}
+#kp.look .kpan .fill::before{background:radial-gradient(circle,rgba(255,255,255,.85) 2.2px,transparent 2.8px) 0 0/11px 11px}
+#kp .bigk{position:absolute;z-index:1;left:70px;top:36px;width:260px;text-align:center;font:400 290px/1 var(--num);color:var(--red);paint-order:stroke fill;-webkit-text-stroke:16px var(--ink);
+  text-shadow:-5px -3px 0 rgba(25,181,232,.8),9px 9px 0 var(--ink)}
+#kp.look .bigk{color:#DDF6FF;-webkit-text-stroke-color:#0B3C5D;text-shadow:-5px -3px 0 rgba(255,255,255,.9),9px 9px 0 #0B3C5D}
+#kp.look .bigk span{display:inline-block;transform:scaleX(-1)}
+#kp .swirl{position:absolute;z-index:2;left:10px;top:10px;width:380px;height:330px;overflow:visible}
+#kp .icicles{position:absolute;left:0;top:0;width:100%;height:64px;overflow:visible}
+#kp .kw{position:absolute;z-index:3;right:-40px;top:-50px;width:330px;height:200px}
+#kp .kcap{position:absolute;z-index:3;left:-16px;bottom:-22px;background:var(--yel);border:5px solid var(--ink);padding:10px 20px 7px;font:700 24px/1 var(--cap);text-transform:uppercase;
+  box-shadow:6px 6px 0 rgba(0,0,0,.55);transform:rotate(-2deg);white-space:nowrap}
+#kp .kcap b{display:block;font-size:38px;margin-top:3px}
+#kp.look .kcap{background:#fff}
+
+@media (prefers-reduced-motion:reduce){
+  .jit,.spin{animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- SCOREBUG -->
+  <div id="bug">
+    <div class="pwrap">
+      <div class="page">
+        <div class="panel team away" data-team="away"><div class="fill">
+          <div class="ab"><svg class="ball" viewBox="-20 -20 40 40"><circle r="16" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M-7-13q5 13 0 26M7-13q-5 13 0 26" fill="none" stroke="#E8262B" stroke-width="2.6" stroke-dasharray="3 2"/></svg></div>
+          <div class="abbr stroke"></div>
+          <div class="he"><span>H<b data-k="h">0</b></span><span>E<b data-k="e">0</b></span></div>
+          <div class="runs"><span class="v stroke" data-k="r">0</span></div>
+        </div></div>
+        <div class="panel situ"><div class="fill">
+          <div class="sit-top">
+            <div class="inn"><div class="half"><i class="tri"></i><span class="hl">TOP</span></div><div class="v stroke">1</div></div>
+            <div class="dia"><i class="path"></i><i class="base b2"></i><i class="base b3"></i><i class="base b1"></i></div>
+          </div>
+          <div class="count">
+            <div class="grp balls"><b>B</b><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+            <div class="grp strikes"><b>S</b><i class="pip"></i><i class="pip"></i></div>
+            <div class="grp outs"><b>O</b><i class="pip"></i><i class="pip"></i></div>
+          </div>
+        </div></div>
+        <div class="panel team home" data-team="home"><div class="fill">
+          <div class="ab"><svg class="ball" viewBox="-20 -20 40 40"><circle r="16" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M-7-13q5 13 0 26M7-13q-5 13 0 26" fill="none" stroke="#E8262B" stroke-width="2.6" stroke-dasharray="3 2"/></svg></div>
+          <div class="abbr stroke"></div>
+          <div class="he"><span>H<b data-k="h">0</b></span><span>E<b data-k="e">0</b></span></div>
+          <div class="runs"><span class="v stroke" data-k="r">0</span></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="cap"><div class="box"><small>Now batting…</small><span class="bn"></span></div><div class="pc"></div></div>
+  </div>
+
+  <!-- K PANEL + HOME RUN SPLASH (built per moment) -->
+  <div id="kp"></div>
+  <div id="splash"></div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam } = BugKit;
+  const stage = $("#stage"), bug = $("#bug"), page = $(".page"), pwrap = $(".pwrap");
+  const kp = $("#kp"), splash = $("#splash");
+  const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const POP = "cubic-bezier(.25,1.8,.5,1)";
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  const last = (n) => String(n || "").trim().split(/\s+/).pop();
+  let pos = "tl";
+
+  /* Seeded jagged starburst: alternating outer/inner radii with a little wobble. */
+  function burstPts(n, ro, ri, seed = 1, jit = .18){
+    let s = seed * 9301 + 49297; const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+    const pts = [];
+    for (let i = 0; i < n * 2; i++){
+      const a = (i / (n * 2)) * Math.PI * 2 + (rnd() - .5) * .12;
+      const r = (i % 2 ? ri : ro) * (1 + (rnd() - .5) * jit * 2);
+      pts.push((Math.cos(a) * r).toFixed(1) + "," + (Math.sin(a) * r).toFixed(1));
+    }
+    return pts.join(" ");
+  }
+  /* Two-layer inked burst (colour back plate + inner flat). */
+  function burstSVG({ n = 14, seed = 3, back = "var(--red)", front = "var(--yel)", ri = .62 } = {}){
+    return `<svg viewBox="-100 -100 200 200" preserveAspectRatio="none">
+      <polygon points="${burstPts(n, 100, 100 * ri, seed)}" fill="${back}" stroke="#141414" stroke-width="5" stroke-linejoin="miter"/>
+      <polygon points="${burstPts(n + 3, 78, 78 * ri, seed + 7)}" fill="${front}" stroke="#141414" stroke-width="4"/>
+      <polygon points="${burstPts(n + 3, 78, 78 * ri, seed + 7)}" fill="url(#bd)" opacity=".5"/></svg>`;
+  }
+  /* Shared SVG defs: a Ben-Day dot pattern the bursts can fill with. */
+  document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute"><defs>
+    <pattern id="bd" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.7" fill="#E8262B"/></pattern>
+    <pattern id="bdc" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="4.5" cy="4.5" r="2.4" fill="#19B5E8"/></pattern>
+    <pattern id="bdw" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2.6" fill="#fff"/></pattern></defs></svg>`);
+
+  /* Transient layer helper: make, append, auto-remove. */
+  function spawn(parent, cls, html, life){
+    const el = document.createElement("div");
+    el.className = cls; el.innerHTML = html;
+    parent.appendChild(el);
+    setTimeout(() => el.remove(), life);
+    return el;
+  }
+  /* Only one of each bug-side moment at a time (re-trigger replaces it). */
+  const slots = {};
+  function slot(name, cls, html, life){
+    slots[name]?.remove();
+    const el = spawn(bug, "fxl " + cls, html, life);
+    slots[name] = el;
+    return el;
+  }
+  const pop = (el, from = .3, dur = 420) => el?.animate(
+    [{ transform: `scale(${from}) rotate(-8deg)` }, { transform: "scale(1)" }], { duration: dur, easing: POP });
+
+  /* Numeral change: old ink punches out, new punches in with overshoot. */
+  function setNum(el, val, instant){
+    const next = String(val);
+    if (el.textContent === next) return;
+    el.textContent = next;
+    if (!instant) el.animate([{ transform: "scale(1.9) rotate(-10deg)", opacity: .2 }, { transform: "scale(1)", opacity: 1 }], { duration: 460, easing: POP });
+  }
+
+  /* Caption: new batter slides in with a narrator-box wipe. */
+  function setBatter(name, instant){
+    const bn = $(".cap .bn");
+    if (bn.textContent === name) return;
+    bn.textContent = name;
+    if (!instant) $(".cap .box").animate([
+      { clipPath: "inset(0 100% 0 0)", transform: "translateX(-18px)" },
+      { clipPath: "inset(0 0 0 0)", transform: "none" }], { duration: 480, easing: "cubic-bezier(.2,1,.3,1)" });
+  }
+
+  function render(S, prev, first){
+    for (const t of ["away", "home"]){
+      const p = $(`.panel.${t}`);
+      p.style.setProperty("--team", S[t].color);
+      $(".abbr", p).textContent = (S[t].abbr || S[t].name || "").toUpperCase();
+      setNum($('[data-k="r"]', p), S[t].r, first);
+      setNum($('[data-k="h"]', p), S[t].h, first);
+      setNum($('[data-k="e"]', p), S[t].e, first);
+      p.classList.toggle("batting", battingTeam(S) === t);
+    }
+    setNum($(".inn .v"), S.inning, first);
+    $(".inn").classList.toggle("bot", S.half !== "top");
+    $(".inn .hl").textContent = S.half === "top" ? "TOP" : "BOT";
+    ["b1", "b2", "b3"].forEach((b, i) => {
+      const el = $(".base." + b), on = !!S.bases[i];
+      if (el.classList.contains("on") !== on){
+        el.classList.toggle("on", on);
+        if (!first && on) el.animate([{ transform: "rotate(45deg) scale(2)" }, { transform: "rotate(45deg) scale(1)" }], { duration: 420, easing: POP });
+      }
+    });
+    for (const [g, n] of [["balls", S.balls], ["strikes", S.strikes], ["outs", S.outs]]){
+      $$(`.${g} .pip`).forEach((el, i) => {
+        const on = i < n;
+        if (el.classList.contains("on") !== on){
+          el.classList.toggle("on", on);
+          if (!first && on) el.animate([{ transform: "scale(2.2)", boxShadow: "0 0 0 8px rgba(20,20,20,.35)" }, { transform: "scale(1)", boxShadow: "0 0 0 0 transparent" }], { duration: 380, easing: POP });
+        }
+      });
+    }
+    setBatter(S.batter || "", first);
+    $(".cap .pc").textContent = S.pitchCount ? `P ${S.pitchCount}` : "";
+  }
+
+  /* A punch-in / hold / punch-out life for bug-side moments. */
+  const life = (el, dur, rot = -6) => el.animate([
+    { transform: `scale(.1) rotate(${rot * 3}deg)`, opacity: 0 },
+    { transform: `scale(1.18) rotate(${rot * .5}deg)`, opacity: 1, offset: .1 },
+    { transform: `scale(.96) rotate(${rot}deg)`, offset: .17 },
+    { transform: `scale(1) rotate(${rot}deg)`, offset: .24 },
+    { transform: `scale(1.03) rotate(${rot}deg)`, opacity: 1, offset: .86 },
+    { transform: `scale(.2) rotate(${-rot * 2}deg)`, opacity: 0 }], { duration: dur, easing: "ease-out", fill: "forwards" });
+
+  /* Small SFX burst beside the bug: CRACK! / TINK! */
+  function sfxBurst(name, word, sub, { w = 250, h = 160, size = 70, seed = 5, back, front, dur = 1500, rot = -7 } = {}){
+    const el = slot(name, "burst", burstSVG({ n: 13, seed, back, front }) +
+      `<div class="w" style="text-align:center"><div class="sfxw" style="font-size:${size}px;--sw:9px">${word}</div>${
+        sub ? `<div class="sfxw" style="font-size:${Math.round(size * .42)}px;--sw:6px;color:#fff;margin-top:-2px;text-shadow:3px 3px 0 #141414">${sub}</div>` : ""}</div>`, dur + 50);
+    el.style.width = w + "px"; el.style.height = h + "px";
+    life(el, dur, rot);
+    return el;
+  }
+
+  /* Narrator caption box beside the bug (walk, half). */
+  function note(small, big, dur = 2200){
+    const el = slot("note", "note", `${small ? `<small>${esc(small)}</small>` : ""}<b>${esc(big)}</b>`, dur + 50);
+    const dir = pos.endsWith("r") ? 1 : -1;
+    el.animate([
+      { transform: `translateX(${dir * 60}px) rotate(${dir * -8}deg)`, clipPath: `inset(0 ${dir < 0 ? "100%" : "0"} 0 ${dir < 0 ? "0" : "100%"})` },
+      { transform: "translateX(0) rotate(-1.5deg)", clipPath: "inset(0 0 0 0)", offset: .16 },
+      { transform: "translateX(0) rotate(-1.5deg)", clipPath: "inset(0 0 0 0)", opacity: 1, offset: .86 },
+      { transform: `translateY(-20px) rotate(-4deg)`, opacity: 0 }], { duration: dur, easing: "cubic-bezier(.2,1,.3,1)", fill: "forwards" });
+    return el;
+  }
+
+  /* Speech balloons: round (wobbly OOPS!) or jagged shout (YER OUT!). */
+  function balloon(name, word, { shout = false, dur = 1700, size = 64, sub = "" } = {}){
+    const flip = pos.endsWith("r") ? "" : "scale(-1,1)";
+    const shape = shout
+      ? `<polygon points="${burstPts(22, 96, 80, 11, .08).split(" ").map((p) => { const [x, y] = p.split(","); return `${x},${(y * .62).toFixed(1)}`; }).join(" ")}" fill="#fff" stroke="#141414" stroke-width="5"/>`
+      : `<ellipse rx="96" ry="58" fill="#fff" stroke="#141414" stroke-width="5"/>`;
+    const tail = `<path d="M40 ${shout ? 44 : 48} L88 96 L58 ${shout ? 40 : 44}Z" fill="#fff" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M44 ${shout ? 38 : 42} L60 ${shout ? 36 : 40}" stroke="#fff" stroke-width="7"/>`;
+    const el = slot(name, "burst", `<svg viewBox="-100 -100 200 200" preserveAspectRatio="none" style="transform:${flip}">${tail}${shape}</svg>
+      <div class="w" style="text-align:center;margin-top:-26px"><div class="sfxw" style="font-size:${size}px;--sw:8px;${shout ? "" : "color:var(--red)"}">${word}</div>${
+        sub ? `<div style="font:700 19px/1 var(--cap);text-transform:uppercase;margin-top:2px">${esc(sub)}</div>` : ""}</div>`, dur + 50);
+    el.style.width = "300px"; el.style.height = "190px";
+    life(el, dur, shout ? -4 : 3);
+    if (!shout && !RM) el.firstElementChild.animate([{ transform: `${flip} skewX(0)` }, { transform: `${flip} skewX(7deg) scaleY(.94)` }, { transform: `${flip} skewX(-6deg) scaleY(1.04)` }, { transform: `${flip} skewX(0)` }],
+      { duration: 420, iterations: Math.ceil(dur / 420), easing: "ease-in-out" });
+    return el;
+  }
+
+  /* Run: the team panel punches, BAM! bursts off its runs box. */
+  function runFx({ team, runs = 1, hr }, S){
+    team ||= battingTeam(S);
+    const p = $(`.panel.${team}`);
+    p.animate([{ transform: "scale(1)" }, { transform: "scale(1.045) rotate(-1.2deg)", offset: .25 }, { transform: "scale(.99) rotate(.4deg)", offset: .55 }, { transform: "scale(1)" }], { duration: 560, easing: "ease-out" });
+    slots["bam"]?.remove();
+    const el = spawn(bug, "burst bam", burstSVG({ n: 11, seed: 21, back: "var(--yel)", front: "var(--red)" }) +
+      `<div class="w" style="text-align:center"><div class="sfxw" style="font-size:${hr ? 64 : 58}px;--sw:8px;color:#fff">${hr ? "BAM! BAM!" : "BAM!"}</div>
+       <div class="sfxw" style="font-size:30px;--sw:6px">+${runs} ${runs === 1 ? "RUN" : "RUNS"}</div></div>`, 1700);
+    slots["bam"] = el;
+    Object.assign(el.style, { zIndex: 7, width: (hr ? 260 : 200) + "px", height: "150px", left: (hr ? 110 : 140) + "px", top: (team === "away" ? -40 : 50) + "px" });
+    life(el, 1650, 8);
+  }
+
+  /* Half inning: the whole strip turns like a page; narrator says MEANWHILE… */
+  function pageTurn(small, big){
+    $$(".turner", pwrap).forEach((n) => n.remove());
+    const c = page.cloneNode(true);
+    c.classList.add("turner");
+    pwrap.appendChild(c);
+    const a = c.animate([
+      { transform: "perspective(2600px) rotate(-1deg) rotateY(0)", "--shade": 0 },
+      { transform: "perspective(2600px) rotate(-1.5deg) rotateY(-45deg) skewY(-3deg)", offset: .35 },
+      { transform: "perspective(2600px) rotate(-2deg) rotateY(-86deg) skewY(-5deg)", opacity: 1, offset: .92 },
+      { transform: "perspective(2600px) rotate(-2deg) rotateY(-90deg)", opacity: 0 }], { duration: RM ? 400 : 900, easing: "cubic-bezier(.5,0,.6,1)", fill: "forwards" });
+    c.animate([{ filter: "brightness(1)" }, { filter: "brightness(.55)" }], { duration: RM ? 400 : 900, easing: "ease-in" });
+    a.onfinish = () => c.remove();
+    setTimeout(() => c.remove(), 1200);
+    page.animate([{ transform: "rotate(-1deg) scale(.97)" }, { transform: "rotate(-1deg) scale(1)" }], { duration: 900, easing: "ease-out" });
+    if (big) setTimeout(() => note(small, big, 2400), RM ? 100 : 420);
+  }
+
+  /* ---------- HOME RUN: splash page, then it tears in two ---------- */
+  const zig = (() => { // jagged tear line down the middle of the stage
+    let s = 7, x = 50; const pts = [];
+    for (let y = 0; y <= 100; y += 4){ s = (s * 9301 + 49297) % 233280; x = 50 + ((s / 233280) - .5) * 3.2; pts.push([x.toFixed(2), y]); }
+    return pts;
+  })();
+  const tearL = "polygon(0 0," + zig.map(([x, y]) => `${(+x + .08).toFixed(2)}% ${y}%`).join(",") + ",0 100%)";
+  const tearR = "polygon(100% 0," + zig.map(([x, y]) => `${(x - .08).toFixed(2)}% ${y}%`).join(",") + ",100% 100%)";
+  let hrTimer, tearTimer;
+  function hrFx({ runs = 1, batter }, S){
+    const who = batter || S.batter || "";
+    const tag = runs === 4 ? "GRAND SLAM!" : runs === 1 ? "SOLO SHOT!" : `${runs} RUNS!`;
+    const content = `
+      <div class="bigpanel sp"><div class="fill"><div class="speed spin"></div><div class="dotburst"></div></div></div>
+      <div class="burst kb">${burstSVG({ n: 17, seed: 42, back: "var(--red)", front: "#fff", ri: .7 })}
+        <div class="w"><div class="sfxw jit">KA-BLAMM!</div></div></div>
+      <div class="caps"><div class="c1">It's going… going…<b>HOME RUN!</b><span>${esc(who)}</span></div><div class="tag">${tag}</div></div>`;
+    splash.innerHTML = `<div class="half-l"><i style="clip-path:${tearL}">${content}</i></div><div class="half-r"><i style="clip-path:${tearR}">${content}</i></div>
+      <div class="hball"><div class="streak"></div><svg viewBox="-50 -50 100 100"><circle r="44" fill="#fff" stroke="#141414" stroke-width="7"/>
+        <path d="M-20-38q14 38 0 76M20-38q-14 38 0 76" fill="none" stroke="#E8262B" stroke-width="5" stroke-dasharray="6 5"/></svg></div>`;
+    restart(splash, "on");
+    splash.classList.remove("torn");
+    clearTimeout(hrTimer); clearTimeout(tearTimer);
+    tearTimer = setTimeout(() => splash.classList.add("torn"), 3880);
+    hrTimer = setTimeout(() => { splash.classList.remove("on", "torn"); splash.innerHTML = ""; }, 4700);
+  }
+
+  /* ---------- STRIKEOUT: WHIFF! (swinging) / FROZEN! (looking) ---------- */
+  let kTimer, kAnim;
+  /* Icicles hanging off the top border of the frozen panel. */
+  function icicles(){
+    let s = 17, d = "M0 0 H538 V10";
+    for (let x = 538; x > 0; ){
+      s = (s * 9301 + 49297) % 233280; const r = s / 233280, w = 16 + r * 22, h = 16 + r * 40;
+      d += ` L${(x - w / 2).toFixed(0)} ${(10 + h).toFixed(0)} L${Math.max(0, x - w).toFixed(0)} 10`; x -= w;
+    }
+    return `<svg class="icicles" viewBox="0 0 538 64" preserveAspectRatio="none"><path d="${d} Z" fill="#fff" stroke="#0B3C5D" stroke-width="4" stroke-linejoin="round"/>
+      <path d="${d} Z" fill="none" stroke="#9FE3FF" stroke-width="3" transform="translate(4 -3)" opacity=".8"/></svg>`;
+  }
+  function kFx({ looking, batter } = {}, S){
+    const who = last(batter || S?.batter);
+    const swirl = looking ? "" : `<svg class="swirl" viewBox="0 0 380 330">${[0, 1, 2].map((i) => {
+      // bat-swing whoosh: elliptical arcs wrapping around the K
+      const cx = 190, cy = 175, rx = 185 - i * 26, ry = 88 - i * 12, a0 = 160 * Math.PI / 180, a1 = 380 * Math.PI / 180;
+      const P = (a) => `${(cx + rx * Math.cos(a)).toFixed(1)} ${(cy + ry * Math.sin(a)).toFixed(1)}`;
+      const d = `M${P(a0)} A${rx} ${ry} 0 1 1 ${P(a1)}`;
+      const anim = `<animate attributeName="stroke-dashoffset" values="100;0;0;-100" keyTimes="0;.3;.7;1" dur="1.2s" begin="${.2 + i * .06}s" fill="freeze"/>`;
+      return `<g transform="rotate(-18 ${cx} ${cy})"><path d="${d}" fill="none" stroke="#141414" stroke-width="${13 - i * 3}" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">${anim}</path>
+        <path d="${d}" fill="none" stroke="#fff" stroke-width="${5 - i}" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">${anim}</path></g>`;
+    }).join("")}</svg>`;
+    const word = looking
+      ? `<div class="burst kw"><svg viewBox="-100 -100 200 200" preserveAspectRatio="none"><polygon points="${burstPts(9, 100, 74, 13, .25)}" fill="#DDF6FF" stroke="#0B3C5D" stroke-width="6"/><polygon points="${burstPts(9, 100, 74, 13, .25)}" fill="url(#bdw)"/></svg>
+          <div class="w sfxw" style="font-size:88px;--sw:10px;color:#fff;text-shadow:-4px -3px 0 rgba(25,181,232,.9),6px 6px 0 #0B3C5D;-webkit-text-stroke-color:#0B3C5D">FROZEN!</div></div>`
+      : `<div class="burst kw">${burstSVG({ n: 12, seed: 8, back: "var(--mag)", front: "#fff" })}<div class="w sfxw" style="font-size:92px;--sw:10px">WHIFF!</div></div>`;
+    kp.className = looking ? "look" : "";
+    kp.innerHTML = `<div class="bigpanel kpan"><div class="fill">${looking ? icicles() : ""}</div></div>
+      ${swirl}<div class="bigk"><span>K</span></div>${word}
+      <div class="kcap">${looking ? "Caught looking…" : "Strike three!"}<b>${esc(who)} ${looking ? "never moved" : "goes down swinging"}</b></div>`;
+    // park it beside the scorebug, toward centre stage
+    const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width / 1920;
+    const bx = (r.left - s.left) / k, bw = r.width / k, by = (r.top - s.top) / k, bh = r.height / k;
+    kp.style.left = (pos.endsWith("r") ? bx - 560 - 60 : bx + bw + 50) + "px";
+    kp.style.top = (pos.startsWith("b") ? by + bh - 370 - 10 : by + 30) + "px";
+    restart(kp, "on");
+    kAnim?.cancel();
+    const dur = RM ? 2600 : 3300;
+    kAnim = kp.animate([
+      { transform: "scale(.15) rotate(-16deg)", opacity: 0 },
+      { transform: "scale(1.07) rotate(2deg)", opacity: 1, offset: .1 },
+      { transform: "scale(.98) rotate(-1.5deg)", offset: .15 },
+      { transform: "scale(1) rotate(-1deg)", offset: .2 },
+      { transform: "scale(1) rotate(-1deg)", opacity: 1, offset: .86 },
+      { transform: `translate(${pos.endsWith("r") ? -80 : 80}px,90px) rotate(${pos.endsWith("r") ? -14 : 14}deg) scale(.7)`, opacity: 0 }],
+      { duration: dur, easing: "ease-out", fill: "forwards" });
+    $(".bigk", kp).animate([{ transform: "scale(3) rotate(-20deg)", opacity: 0 }, { transform: "scale(.9) rotate(3deg)", opacity: 1, offset: .7 }, { transform: "scale(1) rotate(-3deg)" }],
+      { duration: 520, delay: 180, easing: "cubic-bezier(.3,1.4,.5,1)", fill: "backwards" });
+    if (looking && !RM) $(".bigk", kp).animate([{ translate: "0 0" }, { translate: "4px 0" }, { translate: "-4px 1px" }, { translate: "3px -1px" }, { translate: "0 0" }],
+      { duration: 240, delay: 900, iterations: 4 });
+    pop($(".kw", kp), .1, 560)?.effect.updateTiming({ delay: 380, fill: "backwards" });
+    $(".kcap", kp).animate([{ transform: "translateX(-60px) rotate(-8deg)", opacity: 0 }, { transform: "rotate(-2deg)", opacity: 1 }], { duration: 420, delay: 650, easing: POP, fill: "backwards" });
+    clearTimeout(kTimer);
+    kTimer = setTimeout(() => { kp.classList.remove("on"); kp.innerHTML = ""; }, dur + 60);
+  }
+
+  const HALF = (h, i) => `${h === "top" ? "TOP" : "BOTTOM"} ${i}`;
+  BugKit.start({
+    name: "Ka-Pow",
+    hrDelay: 2300,
+    place(p){ pos = p; },
+    render,
+    fx: {
+      run: runFx,
+      hr: hrFx,
+      k: kFx,
+      hit({ bases = 1 }){ sfxBurst("hit", "CRACK!", ["", "SINGLE", "DOUBLE!", "TRIPLE!!"][bases] || "", { seed: 5 + bases, rot: -7, w: 260, h: 170 }); },
+      foul(){ sfxBurst("hit", "TINK!", "FOUL BALL", { size: 50, w: 190, h: 120, seed: 31, back: "var(--cyan)", front: "#fff", dur: 1000, rot: 6 }); },
+      walk({ batter } = {}, S){ note("Ball four.", `Take your base… ${last(batter || S.batter)}`, 2300); },
+      out(){ balloon("out", "YER OUT!", { shout: true, size: 60, dur: 1600 }); },
+      error({ team } = {}, S){ balloon("out", "OOPS!", { size: 76, dur: 1900, sub: team && S?.[team] ? `Error, ${S[team].abbr}` : "Error" }); },
+      half({ inning, half }){ pageTurn("Meanwhile…", HALF(half, inning)); },
+      reset(){ pageTurn("Our story begins…", "TOP 1"); }
+    }
+  });
+})();
+</script>
+</body>
+</html>

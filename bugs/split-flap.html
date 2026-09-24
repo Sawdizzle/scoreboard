@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Departures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DEPARTURES — a mechanical split-flap station board.
+   Charcoal housing, rows of individual flap cells. Every change
+   steps through the charset flap by flap, cascading left to right.
+   ============================================================ */
+:root{
+  --housing:#1d1e20;
+  --housing-hi:#2a2b2e;
+  --housing-lo:#141416;
+  --label:#9c968a;
+  --ink:#EDE6D3;          /* off-white glyphs */
+  --yellow:#FFC933;       /* departures yellow */
+  --red:#FF4D3D;
+  --amber:#FF9A1F;
+  --green:#5BE08C;
+  --flap:"Barlow Condensed","Arial Narrow",sans-serif;
+  --gap:3px;
+}
+#stage{font-family:var(--flap);color:var(--ink)}
+body{--demo-accent:var(--yellow)}
+body.preview{background:
+  radial-gradient(ellipse at 70% 115%,#5b4a33 0%,#3c3122 16%,transparent 17%),
+  repeating-linear-gradient(112deg,rgba(255,255,255,.03) 0 110px,transparent 110px 220px),
+  radial-gradient(ellipse at 45% 105%,#3a6b3d 0%,#1f3d25 48%,#0c150e 100%)}
+
+/* ---------- Housing ---------- */
+.board{position:relative;padding:10px 14px 12px;border-radius:7px;
+  background:
+    radial-gradient(ellipse at 20% -10%,rgba(255,255,255,.06),transparent 55%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px),
+    linear-gradient(180deg,var(--housing-hi) 0%,var(--housing) 18%,var(--housing-lo) 100%);
+  box-shadow:
+    0 0 0 2px #0a0a0b,
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -2px 0 rgba(0,0,0,.45),
+    0 16px 34px rgba(0,0,0,.5),0 3px 6px rgba(0,0,0,.4)}
+/* four screws */
+.board::before,.board::after,.screws::before,.screws::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#6d6e72,#2c2d30 60%,#0d0d0e);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.board::before{left:4px;top:4px}.board::after{right:4px;top:4px}
+.screws{position:absolute;inset:0;pointer-events:none}
+.screws::before{left:4px;bottom:4px}.screws::after{right:4px;bottom:4px}
+/* alert glow around the housing for big moments */
+.glow{position:absolute;inset:-2px;border-radius:8px;pointer-events:none;opacity:0;box-shadow:0 0 0 2px var(--gc),0 0 26px 4px var(--gc)}
+.glow.on{animation:alertGlow .52s steps(1) 6}
+@keyframes alertGlow{0%{opacity:.85}50%{opacity:0}}
+
+/* ---------- Rows ---------- */
+.row{display:flex;align-items:center;gap:10px}
+.seg{display:flex;gap:var(--gap)}
+.rowT{--w:29px;--h:48px;--fs:41px;gap:5px}
+.rowT .seg-st,.hdr .lab.dep{margin-left:9px}
+.rowT .seg-sw{margin-right:4px}
+.hdr .lab.sw{margin-right:4px}
+.rowC{--w:23px;--h:34px;--fs:29px}
+#rowB{margin-top:5px}
+.hdr{height:20px;margin-bottom:3px;align-items:flex-end}
+.hdr .lab{font-weight:600;font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--label);line-height:1;white-space:nowrap}
+.hdr .lab.c{text-align:center;letter-spacing:.06em;padding-left:0}
+.hdr .lab.dep{color:var(--yellow)}
+.hdr .lab i{display:inline-block;width:0;height:0;border-left:8px solid var(--yellow);border-top:5px solid transparent;border-bottom:5px solid transparent;margin-right:7px;vertical-align:1px}
+.rule{height:2px;margin:10px -2px 9px;background:linear-gradient(90deg,transparent,#0b0b0c 6%,#0b0b0c 94%,transparent);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.rowC{justify-content:space-between;gap:0}
+.rowC .grp{display:flex;align-items:center;gap:7px}
+.rowC .lab{font-weight:600;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);line-height:1.05;white-space:nowrap}
+.rowC .lab.two{font-size:12px;letter-spacing:.16em}
+
+/* ---------- Flap cell ---------- */
+.fc{position:relative;flex:none;width:var(--w);height:var(--h);perspective:calc(var(--h) * 3.2);border-radius:3px;
+  background:#070708;box-shadow:0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(0,0,0,.55)}
+.fc>div{position:absolute;left:0;right:0;height:calc(50% - .75px);overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.fc>.t{top:0;border-radius:3px 3px 1px 1px;transform-origin:50% calc(100% + .75px);
+  background:linear-gradient(180deg,#2b2b2e 0%,#212124 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.fc>.b{bottom:0;border-radius:1px 1px 3px 3px;transform-origin:50% -.75px;
+  background:linear-gradient(180deg,#171719 0%,#1d1d20 100%);box-shadow:inset 0 -1px 0 rgba(0,0,0,.4)}
+.fc>.flap.t{transform:rotateX(-90deg)}
+.fc>.flap.b{transform:rotateX(90deg)}
+.fc span{position:absolute;left:0;right:0;height:var(--h);text-align:center;
+  font:700 var(--fs)/var(--h) var(--flap);color:var(--ink);letter-spacing:0}
+.fc>.t span{top:0}
+.fc>.b span{bottom:0}
+/* hinge axle pins */
+.fc::after{content:"";position:absolute;left:-1px;right:-1px;top:calc(50% - 1.5px);height:3px;z-index:3;pointer-events:none;
+  background:linear-gradient(90deg,#3b3b3f 0 2px,transparent 2px calc(100% - 2px),#3b3b3f calc(100% - 2px))}
+/* special faces */
+.fc .sw{position:absolute;left:4px;right:4px;top:5px;bottom:5px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.fc .dot{position:absolute;left:50%;top:50%;width:calc(var(--w) * .56);height:calc(var(--w) * .56);border-radius:50%;
+  transform:translate(-50%,-50%);border:2px solid #5d5d63}
+.fc .dot.on{border-color:currentColor;background:currentColor}
+.fc .tri{position:absolute;left:50%;top:50%;width:0;height:0;border-left:calc(var(--w) * .3) solid transparent;border-right:calc(var(--w) * .3) solid transparent}
+.fc .tri.up{border-bottom:calc(var(--w) * .5) solid currentColor;transform:translate(-50%,-55%)}
+.fc .tri.dn{border-top:calc(var(--w) * .5) solid currentColor;transform:translate(-50%,-45%)}
+.fc .rev{display:inline-block;transform:scaleX(-1);font-weight:700}
+/* flashing cells (steady blink, few cycles) + score light */
+.fc.fl span{animation:blink .46s steps(1) infinite}
+@keyframes blink{50%{opacity:.18}}
+.fc.lit{animation:lit 1.6s ease-out}
+@keyframes lit{0%{box-shadow:0 0 0 2px var(--yellow),0 0 18px 3px rgba(255,201,51,.75)}100%{box-shadow:0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(0,0,0,.55)}}
+
+/* ---------- Base lamps ---------- */
+.bases{position:relative;width:50px;height:36px}
+.bases i{position:absolute;width:15px;height:15px;transform:rotate(45deg);border-radius:2px;background:#0b0b0c;
+  box-shadow:inset 0 0 0 2px #45454a;transition:background .2s,box-shadow .2s}
+.bases .b2{left:17.5px;top:1px}.bases .b1{left:32px;top:16px}.bases .b3{left:3px;top:16px}
+.bases i.on{background:radial-gradient(circle at 40% 35%,#fff4c8,var(--yellow) 55%,#b98200);box-shadow:0 0 10px 2px rgba(255,201,51,.65)}
+
+@media (prefers-reduced-motion:reduce){
+  .fc.fl span{animation-duration:1s}
+  .glow.on{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="board">
+      <div class="screws"></div>
+      <div class="glow"></div>
+      <div class="row hdr rowT" id="hdr"></div>
+      <div class="row rowT" id="rowA"></div>
+      <div class="row rowT" id="rowB"></div>
+      <div class="rule"></div>
+      <div class="row rowC" id="rowC"></div>
+    </div>
+  </div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam, fieldingTeam } = BugKit;
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ============================================================
+     Flap — one split-flap cell.
+     Four leaves: static top (shows NEXT top half), static bottom
+     (shows CURRENT bottom half), a falling top leaf (CURRENT top,
+     rotates down over the hinge) and a landing bottom leaf (NEXT
+     bottom, swings from edge-on to flat). Each step is one flap.
+     A cell never jumps: it walks forward through the drum's charset
+     to its target (capped, so it never lags the game).
+     ============================================================ */
+  const DRUM = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789&'+-./·";
+  const DIGITS = "0123456789";
+  const SPECIAL = "●○▲▼";               // painted symbol flaps: one step
+  const COL = { W:"#EDE6D3", D:"#9a958a", Y:"#FFC933", R:"#FF4D3D", A:"#FF9A1F", G:"#5BE08C" };
+  const STEP = REDUCED ? 0 : 64;        // ms per intermediate flap
+  const SETTLE = REDUCED ? 0 : 118;     // last flap lands a little heavier, with a bounce
+
+  const esc = (c) => c === "&" ? "&amp;" : c === "<" ? "&lt;" : c;
+  function glyph(ch){
+    if (!ch || ch === " ") return "";
+    if (ch[0] === "#" && ch.length > 1) return `<i class="sw" style="background:${ch}"></i>`;
+    if (ch === "●") return '<i class="dot on"></i>';
+    if (ch === "○") return '<i class="dot"></i>';
+    if (ch === "▲") return '<i class="tri up"></i>';
+    if (ch === "▼") return '<i class="tri dn"></i>';
+    if (ch === "ꓘ") return '<b class="rev">K</b>';          // backwards K
+    return esc(ch);
+  }
+  const drumIdx = (c) => DRUM.indexOf(c === "ꓘ" ? "K" : c);
+
+  /* The flaps a cell shows on its way from `a` to `b` (ending on b). */
+  function path(a, b, max){
+    if (a === b) return [];
+    if (REDUCED) return [b];
+    if (a[0] === "#" || b[0] === "#" || SPECIAL.includes(a) || SPECIAL.includes(b)) return a === " " || b === " " ? [b] : [" ", b];
+    if (DIGITS.includes(b) && (DIGITS.includes(a) || a === " ")) {        // numerals roll like an odometer
+      const out = []; let i = a === " " ? -1 : DIGITS.indexOf(a);
+      while (DIGITS[i] !== b) { i = (i + 1) % 10; out.push(DIGITS[i]); }
+      return out.slice(-max);
+    }
+    const ia = drumIdx(a), ib = drumIdx(b);
+    if (ia < 0 || ib < 0) return [b];
+    const out = []; let i = ia;
+    while (i !== ib) { i = (i + 1) % DRUM.length; out.push(DRUM[i]); }
+    out[out.length - 1] = b;                                             // keep special glyphs (ꓘ)
+    return out.slice(-max);
+  }
+
+  class Flap {
+    constructor(parent){
+      const el = this.el = document.createElement("div");
+      el.className = "fc";
+      el.innerHTML = '<div class="t"><span></span></div><div class="b"><span></span></div>' +
+                     '<div class="flap t"><span></span></div><div class="flap b"><span></span></div>';
+      parent.appendChild(el);
+      const [ht, hb, ft, fb] = el.children;
+      Object.assign(this, { ht, hb, ft, fb });
+      this.cur = { ch: " ", col: "W" };
+      this.tgt = { ch: " ", col: "W", fl: false };
+      this.queue = []; this.anims = []; this.running = false; this.pending = 0; this.stepT = 0;
+    }
+    face(leaf, st){
+      const s = leaf.firstChild, html = glyph(st.ch);
+      if (s._h !== html) { s.innerHTML = html; s._h = html; }
+      s.style.color = COL[st.col] || st.col;
+    }
+    same(ch, col, fl){ const t = this.tgt; return t.ch === ch && t.col === col && !!t.fl === !!fl; }
+    /* Ask the cell to arrive at ch/col. Retargets smoothly if it's already flipping. */
+    set(ch, col = "W", { delay = 0, max = 5, fl = false, instant = false } = {}){
+      this.tgt = { ch, col, fl }; this.max = max;
+      if (instant) {
+        clearTimeout(this.pending); clearTimeout(this.stepT); this.pending = 0;
+        this.anims.forEach((a) => a.cancel()); this.anims = []; this.queue = []; this.running = false;
+        this.cur = { ch, col }; this.face(this.ht, this.cur); this.face(this.hb, this.cur);
+        this.el.classList.toggle("fl", !!fl);
+        return;
+      }
+      if (this.running) { this.plan(); return; }
+      if (this.pending) return;                        // already waiting its turn; picks up the new target
+      const go = () => { this.pending = 0; this.plan(); this.running = true; this.el.classList.remove("fl"); this.step(); };
+      if (delay > 0) this.pending = setTimeout(go, delay); else go();
+    }
+    plan(){
+      const { ch, col } = this.tgt;
+      this.queue = path(this.cur.ch, ch, this.max).map((c) => ({ ch: c, col }));
+      if (!this.queue.length && this.cur.col !== col) this.queue = [{ ch, col }];
+    }
+    /* A single same-character flap: the foul-ball "tick". */
+    tick(){ if (this.running || this.pending) return; this.queue = [{ ...this.cur }]; this.running = true; this.step(); }
+    step(){
+      if (!this.queue.length) {
+        this.running = false;
+        this.el.classList.toggle("fl", !!this.tgt.fl);
+        return;
+      }
+      const next = this.queue.shift(), last = !this.queue.length;
+      const d = last ? SETTLE : STEP;
+      this.flipTo(next, d, last);
+      this.stepT = setTimeout(() => this.step(), d);
+    }
+    flipTo(next, d, last){
+      const cur = this.cur;
+      this.anims.forEach((a) => a.cancel());
+      this.face(this.ht, next);   // revealed behind the falling leaf
+      this.face(this.ft, cur);    // falling leaf carries the old top
+      this.face(this.hb, cur);    // old bottom stays until covered
+      this.face(this.fb, next);   // landing leaf carries the new bottom
+      this.cur = next;
+      if (!d) { this.face(this.hb, next); this.anims = []; return; }
+      const fall = this.ft.animate(
+        [{ transform: "rotateX(0deg)", filter: "brightness(1)" }, { transform: "rotateX(-90deg)", filter: "brightness(.42)" }],
+        { duration: d * .48, easing: "cubic-bezier(.55,0,1,.6)", fill: "forwards" });
+      const land = this.fb.animate(last
+        ? [{ transform: "rotateX(90deg)", filter: "brightness(.35)" }, { transform: "rotateX(0deg)", filter: "brightness(1.08)", offset: .62 },
+           { transform: "rotateX(16deg)", filter: "brightness(.9)", offset: .8 }, { transform: "rotateX(0deg)", filter: "brightness(1)" }]
+        : [{ transform: "rotateX(90deg)", filter: "brightness(.35)" }, { transform: "rotateX(0deg)", filter: "brightness(1)" }],
+        { duration: d * .52, delay: d * .48, easing: "cubic-bezier(.2,.7,.4,1)", fill: "both" });
+      this.anims = [fall, land];
+    }
+  }
+
+  /* ============================================================
+     Board layout. Team rows: swatch · team · R · H · E · status.
+     Bottom row: now batting · B · S · OUT · base lamps · inning.
+     ============================================================ */
+  const TEAM_SPEC = [["sw", 1], ["nm", 6], ["r", 2], ["h", 2], ["e", 2], ["st", 10]];
+  const HDR = { sw: "", nm: "Team", r: "R", h: "H", e: "E", st: "Status" };
+  const C_SPEC = [
+    ["lab", '<span class="lab two">Now<br>batting</span>'], ["nm", 9],
+    ["lab", '<span class="lab">B</span>'], ["b", 1],
+    ["lab", '<span class="lab">S</span>'], ["s", 1],
+    ["lab", '<span class="lab">Out</span>'], ["o", 3],
+    ["bases", '<div class="bases"><i class="b2"></i><i class="b3"></i><i class="b1"></i></div>'],
+    ["lab", '<span class="lab">Inn</span>'], ["inn", 3]
+  ];
+  const CW = 29, GAP = 3;                         // must match .rowT --w and --gap
+  const rows = {};
+
+  function buildTeamRow(id){
+    const el = $("#" + id), row = { el, cells: [], seg: {} };
+    for (const [k, n] of TEAM_SPEC) {
+      const s = document.createElement("div"); s.className = "seg seg-" + k; el.appendChild(s);
+      row.seg[k] = [];
+      for (let i = 0; i < n; i++) { const f = new Flap(s); row.seg[k].push(f); row.cells.push(f); }
+    }
+    return row;
+  }
+  function buildBottom(){
+    const el = $("#rowC"), row = { el, cells: [], seg: {} };
+    let grp = null;
+    for (const [k, v] of C_SPEC) {
+      if (k === "lab" || k === "bases" || !grp) { grp = document.createElement("div"); grp.className = "grp"; el.appendChild(grp); }
+      if (typeof v === "string") { grp.insertAdjacentHTML("beforeend", v); if (k === "bases") grp = null; continue; }
+      const s = document.createElement("div"); s.className = "seg seg-" + k; grp.appendChild(s);
+      row.seg[k] = [];
+      for (let i = 0; i < v; i++) { const f = new Flap(s); row.seg[k].push(f); row.cells.push(f); }
+    }
+    return row;
+  }
+  (function buildHeader(){
+    const el = $("#hdr");
+    for (const [k, n] of TEAM_SPEC) {
+      const d = document.createElement("div");
+      d.className = "lab " + k + (["r", "h", "e"].includes(k) ? " c" : "") + (k === "st" ? " dep" : "");
+      d.style.width = (n * CW + (n - 1) * GAP) + "px";
+      d.innerHTML = k === "st" ? "<i></i>" + HDR[k] : HDR[k];
+      el.appendChild(d);
+    }
+  })();
+  rows.A = buildTeamRow("rowA"); rows.B = buildTeamRow("rowB"); rows.C = buildBottom();
+  const TEAM_ROW = { away: "A", home: "B" };
+  const board = $(".board"), glow = $(".glow"), lamps = ["b1", "b2", "b3"].map((c) => $(".bases ." + c));
+
+  /* ---------- text helpers ---------- */
+  const up = (s) => String(s ?? "").toUpperCase().replace(/[^A-Z0-9&'+\-./·ꓘ●○▲▼ ]/g, "");
+  const padL = (s, n) => (up(s) + " ".repeat(n)).slice(0, n);
+  const padR = (s, n) => (" ".repeat(n) + up(s)).slice(-n);
+  const surname = (n) => { const p = String(n || "").trim().split(/\s+/); return p[p.length - 1] || ""; };
+  const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "TH" : ["TH", "ST", "ND", "RD"][n % 10] || "TH");
+  function fitName(n, len){
+    const full = up(n).trim(); if (full.length <= len) return full;
+    const p = full.split(/\s+/), s = p[p.length - 1], ini = p[0][0] + ". " + s;
+    return ini.length <= len ? ini : s.slice(0, len);
+  }
+  const cells = (str, col, fl) => [...str].map((ch) => ({ ch, col, fl }));
+  /* A full-width team-row message: swatch + 12-cell line (spans team/R/H/E) + 10-cell status. */
+  const msgRow = (sw, text, col, st = "", stCol = col, stFl = false) =>
+    [{ ch: sw || " ", col: "W" }, ...cells(padL(text, 12), col), ...cells(padL(st, 10), stCol, stFl)];
+  const blankRow = (k) => rows[k].cells.map(() => ({ ch: " ", col: "W" }));
+
+  /* ---------- state that sits on top of the game ---------- */
+  let S = null;
+  let boardOv = null;                     // {A?,B?,C?} full-row takeovers (HR, half change)
+  const statusOv = { away: null, home: null };   // rolling remarks in a team's status column
+
+  function teamRow(t){
+    const T = S[t], bat = battingTeam(S) === t, o = statusOv[t], ph = o && o.phases[o.i];
+    const st = ph ? cells(padL(ph.text, 10), ph.col, ph.fl)
+                  : cells(padL(bat ? "AT BAT" : "IN FIELD", 10), bat ? "Y" : "D");
+    return [{ ch: T.color || "#888", col: "W" },
+      ...cells(padL(T.abbr || T.name, 6), "W"),
+      ...cells(padR(Math.min(T.r, 99), 2), "W"),
+      ...cells(padR(Math.min(T.h, 99), 2), "D"),
+      ...cells(padR(Math.min(T.e, 99), 2), "D"),
+      ...st];
+  }
+  function bottomRow(){
+    const inn = String(Math.min(S.inning, 99)), arrow = S.half === "top" ? "▲" : "▼";
+    const o = Math.min(S.outs, 3);
+    return [...cells(padL(surname(S.batter), 9), "W"),
+      { ch: String(Math.min(S.balls, 4)), col: "Y" }, { ch: String(Math.min(S.strikes, 3)), col: "Y" },
+      ...[0, 1, 2].map((i) => ({ ch: i < o ? "●" : "○", col: "R" })),
+      ...(inn.length > 1 ? [{ ch: arrow, col: "Y" }, ...cells(inn, "W")] : [{ ch: " ", col: "W" }, { ch: arrow, col: "Y" }, { ch: inn, col: "W" }])];
+  }
+  const want = (k) => boardOv?.[k] || (k === "C" ? bottomRow() : teamRow(k === "A" ? "away" : "home"));
+
+  /* Diff every row against what its cells are heading to; changed cells
+     start left-to-right. `wave` staggers the rows too, so a full-board
+     change sweeps diagonally like a real station board. */
+  function paint({ instant = false, wave = false, stagger = 26, max = 5 } = {}){
+    const ROW_OFF = { A: 0, B: wave ? 70 : 0, C: wave ? 140 : 0 };
+    for (const k of ["A", "B", "C"]) {
+      const w = want(k), cs = rows[k].cells;
+      let first = -1;
+      cs.forEach((c, i) => {
+        const d = w[i] || { ch: " ", col: "W" };
+        if (!instant && c.same(d.ch, d.col, d.fl)) return;
+        if (first < 0) first = i;
+        c.set(d.ch, d.col, { instant, fl: d.fl, max, delay: ROW_OFF[k] + (i - first) * (REDUCED ? 0 : stagger) });
+      });
+    }
+    const dark = !!boardOv?.C;
+    lamps.forEach((l, i) => l.classList.toggle("on", !dark && !!S.bases[i]));
+  }
+
+  /* ---------- rolling remarks in a status column ---------- */
+  function remark(t, phases, { append = false } = {}){
+    const o = statusOv[t];
+    if (append && o && performance.now() - o.t0 < 500) { o.phases.push(...phases); return; }
+    if (o) clearTimeout(o.timer);
+    statusOv[t] = { phases, i: 0, t0: performance.now() };
+    advance(t);
+  }
+  function advance(t){
+    const o = statusOv[t]; if (!o) return;
+    paint();
+    clearTimeout(o.timer);
+    o.timer = setTimeout(() => {
+      if (statusOv[t] !== o) return;
+      if (++o.i >= o.phases.length) { statusOv[t] = null; paint(); } else advance(t);
+    }, o.phases[o.i].ms);
+  }
+  function clearRemarks(){ for (const t in statusOv) { if (statusOv[t]) clearTimeout(statusOv[t].timer); statusOv[t] = null; } }
+  function alert(c){ glow.style.setProperty("--gc", COL[c]); restart(glow, "on"); }
+  function lightRuns(team, ms = 0){ setTimeout(() => rows[TEAM_ROW[team]].seg.r.forEach((f) => restart(f.el, "lit")), ms); }
+
+  /* ---------- whole-board takeovers (HR, half change, reset) ---------- */
+  let ovTimers = [];
+  function takeover(steps){
+    ovTimers.forEach(clearTimeout); ovTimers = [];
+    steps.forEach(([at, fn]) => ovTimers.push(setTimeout(fn, at)));
+  }
+  let hrRunsPending = null;
+
+  BugKit.start({
+    name: "Departures",
+    hrDelay: 2300,
+    render(state, prev, first){
+      S = state;
+      paint({ instant: first });
+    },
+    fx: {
+      ball(){}, strike(){},
+      foul(o, st){ S = st; if (st.strikes >= 2) rows.C.seg.s[0].tick(); },
+      out(o, st){
+        S = st;
+        remark(battingTeam(st), [{ text: "OUT", col: "W", ms: 1500 }]);
+      },
+      hit({ bases = 1 }, st){
+        S = st;
+        remark(battingTeam(st), [{ text: ["", "SINGLE", "DOUBLE", "TRIPLE"][bases] || "HIT", col: "Y", ms: 1900 }]);
+      },
+      walk(o, st){
+        S = st;
+        remark(battingTeam(st), [{ text: "WALK · 1ST", col: "G", ms: 1250 }, { text: "BOARDING", col: "G", fl: true, ms: 1350 }]);
+      },
+      error({ team } = {}, st){
+        S = st;
+        remark(team || fieldingTeam(st), [{ text: "DELAYED", col: "A", fl: true, ms: 1300 }, { text: "ERROR", col: "A", ms: 1300 }]);
+        alert("A");
+      },
+      run({ team, runs = 1, hr } = {}, st){
+        S = st; team ||= battingTeam(st);
+        if (hr) { hrRunsPending = team; return; }          // the HR takeover lights it on the way back
+        remark(team, [{ text: runs > 1 ? `SCORED +${runs}` : "SCORED", col: "Y", fl: true, ms: 1800 }], { append: true });
+        lightRuns(team, 380);
+      },
+      k({ looking } = {}, st){
+        S = st;
+        const K = looking ? "ꓘ" : "K", p = surname(st.pitcher);
+        remark(battingTeam(st), [{ text: looking ? "ꓘ LOOKING" : "STRIKEOUT", col: "R", fl: true, ms: 2700 }]);
+        remark(fieldingTeam(st), [{ text: p ? (K + " · " + p).slice(0, 10) : K + " · K · " + K, col: "R", ms: 2700 }]);
+        alert("R");
+      },
+      hr({ runs = 1, batter, team } = {}, st){
+        S = st; team ||= battingTeam(st);
+        clearRemarks(); hrRunsPending = null;
+        const col = st[team].color, name = fitName(batter || st.batter, 12);
+        const tag = runs >= 4 ? "GRAND SLAM" : runs === 1 ? "SOLO SHOT" : `+${runs} RUNS`;
+        boardOv = { A: msgRow(col, "HOME RUN", "Y", tag, "Y", true), B: msgRow(col, name, "W", "DEPARTED", "Y") };
+        paint({ wave: true, max: 7, stagger: 24 });
+        alert("Y");
+        takeover([[4300, () => {
+          boardOv = null; paint({ wave: true, stagger: 24 });
+          if (hrRunsPending) lightRuns(hrRunsPending, 700);
+          hrRunsPending = null;
+        }]]);
+      },
+      half({ inning, half } = {}, st){
+        S = st; clearRemarks();
+        const t = battingTeam(st), T = st[t];
+        boardOv = { A: blankRow("A"), B: blankRow("B"), C: blankRow("C") };
+        paint({ wave: true, stagger: 18, max: 4 });
+        takeover([
+          [850, () => {
+            boardOv = { A: msgRow(" ", (half === "top" ? "TOP " : "BOTTOM ") + ord(inning), "Y"),
+                        B: msgRow(T.color, T.abbr || T.name, "W", "BOARDING", "G", true), C: blankRow("C") };
+            paint({ wave: true, stagger: 24, max: 6 });
+          }],
+          [2700, () => { boardOv = null; paint({ wave: true, stagger: 22 }); }]
+        ]);
+      },
+      reset(o, st){
+        S = st; clearRemarks();
+        boardOv = { A: blankRow("A"), B: blankRow("B"), C: blankRow("C") };
+        paint({ wave: true, stagger: 18, max: 4 });
+        takeover([[850, () => { boardOv = null; paint({ wave: true }); }]]);
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
