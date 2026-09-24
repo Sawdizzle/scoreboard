@@ -2,6 +2,7 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import { syncAnimBug, overlayPlays } from './anim-bug.js';
+import { elevatedScene, rollDigits } from './scenes-elevated.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
 import { fetchWeather } from './weather.js';
@@ -576,7 +577,8 @@ function cardSig(c, s) {
 function renderCard(s) {
   const layer = document.getElementById('card');
   const c = s.card;
-  const key = c && c.type ? `${c.type}:${c.nonce || 0}` : null;
+  // The scene style is part of the key: switching it rebuilds the card.
+  const key = c && c.type ? `${c.type}:${c.nonce || 0}:${sceneStyle(s)}` : null;
   const sig = key ? cardSig(c, s) : null;
   if (key === lastCardKey && sig === lastCardSig) return;
   const remount = key !== lastCardKey;
@@ -594,12 +596,12 @@ function renderCard(s) {
     fitStartingNames(layer);
     paintWeather();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitStartingNames(layer));
-    const fresh = layer.querySelector('.takeover-card');
+    const fresh = layer.querySelector('.takeover-card, .card.el');
     if (fresh) {
       fresh.classList.add('enter');
       // Drop it once it's played, so a later live refresh of the card's children
       // (mid-inning tracking the score) doesn't re-run the stagger.
-      setTimeout(() => fresh.classList.remove('enter'), 1200);
+      setTimeout(() => fresh.classList.remove('enter'), +fresh.dataset.enterMs || 1200);
     }
   } else {
     const tmp = document.createElement('div'); tmp.innerHTML = html;
@@ -619,11 +621,13 @@ function renderCard(s) {
     } else layer.innerHTML = html;
   }
   layer.hidden = false;
+  // An elevated side panel or lower third floats over the live picture: no dimming.
+  layer.classList.toggle('el-clear', !!layer.querySelector('.el-lower, .el-side-card'));
   // Final's winner treatment is on the whole frame, not inside the card: the
   // winner's side of the backdrop glows in their colour and the other side goes
   // dark. The card itself is centred, so a wash drawn inside it was clipped to a
   // box and left the loser's half still tinted in their colour.
-  const finCard = c.type === 'finalfull' ? layer.querySelector('.slab.fin.has-win') : null;
+  const finCard = c.type === 'finalfull' ? layer.querySelector('.slab.fin.has-win, .el-final.has-win') : null;
   let wash = layer.querySelector(':scope > .fin-wash');
   if (finCard) {
     const side = finCard.classList.contains('win-home') ? 'home' : 'away';
@@ -635,7 +639,7 @@ function renderCard(s) {
     // Once per card, for the same reason as the Mid-Inning strip: a score fixed
     // behind it rebuilds these elements without the class and does not replay.
     finalPlayed = key;
-    const card = layer.querySelector('.slab.fin');
+    const card = layer.querySelector('.slab.fin, .el-final');
     if (card) {
       const cells = card.querySelectorAll('.linescore td').length;
       card.style.setProperty('--cells', cells);
@@ -820,7 +824,7 @@ function updateCardCountdown() {
   const txt = ms <= 0 ? (paused ? 'ANY MINUTE' : 'STARTING NOW') : fmtCountdown(ms / 1000);
   if (txt === cdPainted) return;
   cdPainted = txt;
-  el2.textContent = txt;
+  if (el2.hasAttribute('data-roll')) rollDigits(el2, txt); else el2.textContent = txt;
   el2.classList.toggle('now', ms <= 0);
   el2.classList.toggle('soon', ms > 0 && ms <= 60000);
 }
@@ -910,7 +914,16 @@ function pausedCard(meta, s) {
 
 function logoHtml(url) { return url ? `<img src="${escapeAttr(url)}" alt="">` : ''; }
 const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
+// Simple (the original scenes) or Elevated (js/scenes-elevated.js, the Prime
+// Time look). ?scenes= on the overlay link overrides the game's setting.
+const sceneStyle = (s) => (params.get('scenes') || s.scene_style || 'simple') === 'elevated' ? 'elevated' : 'simple';
+const SCENE_HELPERS = { breakLabel, lineScoreHtml, recapStripHtml, midDueUpHtml, finishedHalf, finalStory, standsLabel, PAUSE, NO_CLOCK,
+  battingOrderCard, battingSide, fieldingSide, fielderAt, FIELD_POSITIONS, LINK_STALE, rosterBad: () => rosterBad };
 function buildCard(c, s) {
+  if (sceneStyle(s) === 'elevated') {
+    const el = elevatedScene(c, s, SCENE_HELPERS);
+    if (el) return el;
+  }
   const meta = c.meta || {};
   const aAbbr = escapeHtml(s.away_abbr || s.away_name || 'AWAY');
   const hAbbr = escapeHtml(s.home_abbr || s.home_name || 'HOME');

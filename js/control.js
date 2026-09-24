@@ -1560,6 +1560,7 @@ async function writeField(patch) {
 }
 $('su-style').addEventListener('change', (e) => writeField({ style: e.target.value }));
 $('theme-sel').addEventListener('change', (e) => writeField({ theme: e.target.value }));
+$('scene-sel').addEventListener('change', (e) => writeField({ scene_style: e.target.value }));
 document.querySelectorAll('#pos-grid button').forEach((b) => { b.onclick = () => writeField({ scorebug_position: b.dataset.pos }); });
 $('scale-sel').addEventListener('input', (e) => { $('scale-val').textContent = (+e.target.value).toFixed(2) + '×'; });
 $('scale-sel').addEventListener('change', (e) => writeField({ scorebug_scale: +e.target.value }));
@@ -1570,6 +1571,7 @@ const POS_LABEL = { 'top-left': 'Top-left', 'top-center': 'Top-centre', 'top-rig
 // A theme no longer in the picker paints as Midnight, so the picker says so.
 function renderLook() {
   renderScorebugPick();
+  $('scene-sel').value = game.scene_style === 'elevated' ? 'elevated' : 'simple';
   const sel = $('theme-sel');
   sel.value = game.theme || 'nightgame';
   if (!sel.value) sel.value = 'nightgame';
@@ -2375,7 +2377,7 @@ function renderGame() {
   paintIf('scenes', [g.obs_scenes], renderScenes);
   paintIf('obs', [g.obs_status], renderObs);
   paintIf('audio', [g.audio, g.sound_pack], renderAudio);
-  paintIf('look', [g.theme, g.style, g.sport, g.scorebug_position, g.scorebug_scale, g.look], renderLook);
+  paintIf('look', [g.theme, g.style, g.sport, g.scene_style, g.scorebug_position, g.scorebug_scale, g.look], renderLook);
   paintIf('guide', [g.away_name, g.home_name, g.roster_rev, sport], renderSetupGuide);
 }
 
