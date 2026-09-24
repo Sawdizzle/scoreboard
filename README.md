@@ -37,6 +37,22 @@ The pad's **Invite code** field is optional and ignored while the secret is unse
 
 **Local development**: serve the folder over HTTP (ES modules do not load from `file://`), and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Use a threaded server — `python3 -c "from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; ThreadingHTTPServer(('127.0.0.1', 5173), SimpleHTTPRequestHandler).serve_forever()"` — because `python3 -m http.server` handles one request at a time and a browser asking for every stylesheet, font and module at once can get served a page with no CSS at all. Local pages talk to whatever Supabase project `js/config.js` names, so if that is the project your games run on, test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
 
+## If something is not working
+
+**"This scoreboard is invite-only" on a copy you just deployed.** Your copy is still talking to somebody else's Supabase project. `js/config.js` is committed, so a fresh clone carries the original author's project URL and key until you change them — and that project does not know you. Do steps 1-5 above, put your own URL and publishable key in `js/config.js`, and run `node scripts/check.mjs`, which fails until the three `preconnect` lines agree with it. Signup on your own project is open unless you set an invite code yourself.
+
+**The pad loads but the game list is empty and nothing saves.** Same cause, or the `scoreboard` schema is not exposed. Project Settings → API (Data API) → Exposed schemas must list `scoreboard`. A request to a schema that is not exposed comes back `406`.
+
+**"Could not create account" or a network error on signup.** The signup function is not deployed, or was deployed with JWT verification on. A new user has no JWT to verify, so it has to be `supabase functions deploy signup --no-verify-jwt`. Five sign-ups per address per hour also return an error; that one clears by itself.
+
+**The overlay is a blank browser source.** Check the URL. `/overlay?ch=…` needs clean URLs, which `vercel.json` turns on; a plain static server wants `/overlay.html?ch=…` instead. If the page loads but stays empty, the game is in setup and has nothing to show yet — open it on the pad.
+
+**The overlay shows a different game than the one you are scoring.** The overlay link belongs to your account, not to a game, and follows whichever game you last opened. Open tonight's game on the pad, or use **Show this game on the overlay** on the Overlay link screen.
+
+**Serving it locally renders a page with no styling.** `python3 -m http.server` handles one request at a time, and a browser asking for every stylesheet, font and module at once can be served an unstyled page. Use a threaded server: `python3 -c "from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; ThreadingHTTPServer(('127.0.0.1', 5173), SimpleHTTPRequestHandler).serve_forever()"`.
+
+**Sound never plays in a browser tab.** Browsers block audio until the page is clicked once. OBS does not, so this only affects previewing in a normal tab.
+
 ## Your first game
 
 Open `/control` on your site. On a phone, Safari → Share → **Add to Home Screen** runs it full-screen.
