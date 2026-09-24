@@ -1,7 +1,7 @@
 import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
-import { syncAnimBug, overlayPlays } from './anim-bug.js';
+import { syncAnimBug, overlayPlays, animBugFiles } from './anim-bug.js';
 import { elevatedScene, rollDigits } from './scenes-elevated.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
@@ -55,8 +55,29 @@ async function checkVersion() {
 }
 checkVersion();
 setInterval(checkVersion, VERSION_EVERY_MS);
-setInterval(() => {
-  if (newVersion && Date.now() - lastActivity > QUIET_MS && (realtimeUp || !gameId)) location.reload();
+// version.txt can change a few seconds before every new file reaches this
+// edge (v4.27's new module answered 404 for a moment), and a reload into a
+// missing module leaves the source blank until the next release. So the new
+// page is fetched first and everything it loads — its modules, stylesheets
+// and the animated bug's page — must answer before the reload happens.
+async function releaseReady() {
+  try {
+    const html = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const urls = [...doc.querySelectorAll('link[rel="modulepreload"], link[rel="stylesheet"], script[src]')]
+      .map((n) => n.getAttribute('href') || n.getAttribute('src'))
+      .filter((u) => u && u.startsWith('/'));
+    urls.push(...animBugFiles());
+    const ok = await Promise.all(urls.map((u) => fetch(u, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false)));
+    return ok.length > 0 && ok.every(Boolean);
+  } catch { return false; }
+}
+let reloadTry = 0;
+setInterval(async () => {
+  if (!newVersion || Date.now() - lastActivity <= QUIET_MS || !(realtimeUp || !gameId)) return;
+  if (Date.now() < reloadTry) return;
+  reloadTry = Date.now() + 30000;          // a release still arriving: look again in half a minute
+  if (await releaseReady()) location.reload();
 }, 2000);
 
 if (params.get('debug')) {
