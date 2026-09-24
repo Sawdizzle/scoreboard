@@ -1586,6 +1586,11 @@ function renderLook() {
   // alt-tabbing to OBS to find out what you chose.
   const [vy, vx] = cur.split('-');
   const bug = $('pos-bug');
+  // The design itself, roughly: an animated bug's thumbnail, or the layout's shape.
+  const slug = (game.style || '').startsWith('anim-') && (game.sport || 'baseball') === 'baseball' ? game.style.slice(5) : '';
+  bug.classList.toggle('thumb', !!slug);
+  bug.style.backgroundImage = slug ? `url(/bugs/thumbs/${slug}.png)` : '';
+  bug.dataset.layout = slug ? '' : (game.style || 'bar').startsWith('anim-') ? 'bar' : (game.style || 'bar');   // other sports show the Bar
   bug.style.top = { top: '18%', mid: '50%', bottom: '82%' }[vy] || '82%';
   bug.style.left = { left: '22%', center: '50%', right: '78%' }[vx] || '50%';
   bug.style.transform = `translate(-50%, -50%) scale(${Math.min(Math.max(+sc || 1, 0.6), 1.5)})`;
