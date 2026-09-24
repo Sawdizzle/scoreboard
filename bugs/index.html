@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scorebug Lab</title>
+<style>
+:root{--bg:#0f1012;--card:#18191c;--line:#2a2b30;--ink:#f1f1ef;--dim:#9a9ba2;--acc:#ffb23e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,sans-serif;padding:32px 16px 64px}
+main{max-width:1320px;margin:0 auto}
+header{margin-bottom:28px}
+h1{font-size:28px;letter-spacing:-.01em}
+header p{color:var(--dim);max-width:70ch;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.shot{position:relative;aspect-ratio:16/9;background:#000}
+.shot iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.meta{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+.meta h2{font-size:18px}
+.meta p{color:var(--dim);font-size:14px}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.links a,.links button{font:600 13px system-ui,sans-serif;color:var(--ink);background:#26272c;border:0;border-radius:8px;padding:8px 12px;text-decoration:none;cursor:pointer}
+.links a:hover,.links button:hover{background:#34353c}
+.links a.go{background:var(--acc);color:#1b1206}
+.links button:focus-visible,.links a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Scorebug Lab</h1>
+    <p>Animated scorebug prototypes. Each tile plays a game by itself. Open one to drive it with the demo pad, or copy its OBS link to try it as a Browser Source (1920×1080).</p>
+  </header>
+  <div class="grid" id="grid"></div>
+</main>
+<script type="module">
+const BUGS = [
+  ["classic-green", "Classic Green", "Hand-operated ballpark board: flipping number plates, incandescent count bulbs, a marquee home run banner and a hung K card."],
+  ["pinball-dmd", "Backglass", "Pinball dot-matrix display. Every play gets DMD choreography: slams, dot explosions, jackpot payoffs, chasing insert lamps."],
+  ["chalkboard", "Chalk Talk", "The dugout chalkboard. Values get erased and hand-written in chalk; home runs are scrawled, circled and underlined."],
+  ["comic", "Ka-Pow", "A comic-book panel strip with halftone, starbursts and speech balloons. Home runs get a splash page."],
+  ["split-flap", "Departures", "A split-flap station board. Real flap mechanics cascade through the characters on every change."],
+  ["receipt", "Play-by-Play Printer", "A thermal printer that prints every pitch. Home runs spit a long receipt that tears off and flutters away."],
+  ["pixel-rpg", "Battle Mode", "A 16-bit battle screen: pitcher versus batter, typed dialog, screen flashes and floating damage numbers."],
+];
+const grid = document.getElementById("grid");
+// Show only the bugs that exist yet; the list grows as prototypes land.
+const exists = (slug) => fetch(`/bugs/${slug}`, { method: "HEAD" }).then((r) => r.ok, () => false);
+for (const [slug, name, blurb] of BUGS) {
+  if (!(await exists(slug))) continue;
+  const card = document.createElement("article");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="shot"><iframe loading="lazy" title="${name} preview" src="/bugs/${slug}?panel=0&auto=1"></iframe></div>
+    <div class="meta">
+      <h2>${name}</h2>
+      <p>${blurb}</p>
+      <div class="links">
+        <a class="go" href="/bugs/${slug}">Open with demo pad</a>
+        <button type="button" data-copy="/bugs/${slug}?obs=1">Copy OBS link</button>
+      </div>
+    </div>`;
+  grid.appendChild(card);
+}
+grid.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (!b) return;
+  const url = new URL(b.dataset.copy, location.href).href;
+  try { await navigator.clipboard.writeText(url); b.textContent = "Copied"; }
+  catch { prompt("OBS Browser Source URL", url); }
+  setTimeout(() => (b.textContent = "Copy OBS link"), 1600);
+});
+</script>
+</body>
+</html>

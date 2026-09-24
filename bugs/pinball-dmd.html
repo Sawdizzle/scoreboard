@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Backglass</title>
+<link rel="preload" href="../fonts/bugs/bungee-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air.
+   Licenses: /fonts/bugs/LICENSES.md */
+@font-face{font-family:'Bungee';font-weight:400;font-display:swap;src:url('../fonts/bugs/bungee-400.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:swap;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:swap;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   BACKGLASS — a pinball machine's dot-matrix display.
+   128x32 orange plasma dots in a chrome/black bezel, with a
+   backglass strip of plastic insert lamps under it.
+   ============================================================ */
+:root{
+  --dot:#ff7a1a;
+  --ink:#f3e3cf;
+  --lamp-b:#35d46a;   /* ball inserts */
+  --lamp-s:#ffb21a;   /* strike inserts */
+  --lamp-o:#ff3b2f;   /* out inserts */
+  --lamp-base:#ffd23a;
+  --sign:"Bungee","Impact",sans-serif;
+  --lbl:"Barlow Condensed","Arial Narrow",sans-serif;
+}
+body{--demo-accent:var(--dot)}
+body.preview{background:
+  radial-gradient(ellipse at 22% -10%,rgba(255,236,190,.22),transparent 38%),
+  radial-gradient(ellipse at 80% -12%,rgba(255,236,190,.16),transparent 34%),
+  radial-gradient(ellipse at 50% 135%,#6a4f33 0%,#4a3826 16%,transparent 17%),
+  repeating-linear-gradient(112deg,rgba(255,255,255,.016) 0 110px,transparent 110px 220px),
+  radial-gradient(ellipse at 50% 115%,#3d6a37 0%,#1e3421 46%,#0a100c 100%)}
+#stage{font-family:var(--lbl);color:var(--ink)}
+
+/* ---------- Cabinet: chrome ring, black bezel, the glass ---------- */
+.cab{width:678px;filter:drop-shadow(0 16px 26px rgba(0,0,0,.55)) drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.chrome{position:relative;z-index:2;padding:5px;border-radius:16px;
+  background:linear-gradient(160deg,#fbfbfb 0%,#9a9da3 15%,#eef0f2 31%,#55585e 49%,#d4d7db 67%,#6d7076 84%,#e4e6e9 100%)}
+.bezel{position:relative;padding:14px;border-radius:12px;
+  background:radial-gradient(ellipse at 50% 0%,#28282c,#0b0b0c 70%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 -6px 12px rgba(0,0,0,.7)}
+.screw{position:absolute;width:9px;height:9px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff,#9da0a6 45%,#3a3c40);box-shadow:0 1px 1px rgba(0,0,0,.8)}
+.screw::after{content:"";position:absolute;left:1px;right:1px;top:4px;height:1px;background:#2a2b2e;transform:rotate(var(--r,35deg))}
+.screw.a{left:3px;top:3px}.screw.b{right:3px;top:3px;--r:-20deg}.screw.c{left:3px;bottom:3px;--r:70deg}.screw.d{right:3px;bottom:3px;--r:10deg}
+.glass{position:relative;width:640px;height:160px;border-radius:4px;overflow:hidden;background:#070302;
+  box-shadow:0 0 0 2px #000,0 0 0 3px rgba(255,255,255,.06)}
+#dmd{display:block;width:640px;height:160px;filter:drop-shadow(0 0 2px rgba(255,120,30,.75)) drop-shadow(0 0 7px rgba(255,90,10,.4))}
+.glass::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(112deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,.02) 36%,transparent 36.4%),
+    radial-gradient(ellipse at 50% 50%,transparent 62%,rgba(0,0,0,.38) 100%);
+  box-shadow:inset 0 0 16px rgba(0,0,0,.9)}
+
+/* ---------- Backglass strip of insert lamps ---------- */
+.strip{position:relative;z-index:1;margin:-4px 14px 0;height:78px;display:flex;align-items:center;gap:14px;padding:8px 16px 6px;
+  border-radius:0 0 12px 12px;
+  background:
+    radial-gradient(rgba(255,122,26,.09) 1px,transparent 1.6px) 0 0/6px 6px,
+    linear-gradient(180deg,#1d100a 0%,#120906 55%,#0a0504 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,122,26,.22),inset 0 0 0 4px rgba(0,0,0,.6),inset 0 10px 14px rgba(0,0,0,.6)}
+.strip::before{content:"";position:absolute;left:8px;right:8px;bottom:5px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,122,26,.5) 20%,rgba(243,227,207,.55) 50%,rgba(255,122,26,.5) 80%,transparent)}
+
+/* team inserts: arrow-shaped coloured plastic pointing at the display centre */
+.insw{--c:#888;flex:none;width:118px;height:48px;transition:filter .3s}
+.ins{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding-right:14px;
+  clip-path:polygon(0 0,84% 0,100% 50%,84% 100%,0 100%);
+  background:radial-gradient(ellipse at 40% 35%,color-mix(in srgb,var(--c) 46%,#000),color-mix(in srgb,var(--c) 20%,#000) 78%);
+  font:19px/1 var(--sign);color:rgba(255,255,255,.34);letter-spacing:.02em;white-space:nowrap;transition:color .3s}
+.insw[data-t="home"] .ins{clip-path:polygon(16% 0,100% 0,100% 100%,16% 100%,0 50%);padding:0 0 0 14px}
+.ins::after{content:"";position:absolute;left:14%;right:22%;top:5px;height:12px;border-radius:50%;background:rgba(255,255,255,.16)}
+.insw.on{filter:drop-shadow(0 0 9px color-mix(in srgb,var(--c) 85%,transparent)) drop-shadow(0 0 2px var(--c))}
+.insw.on .ins{color:#fff;text-shadow:0 0 3px rgba(0,0,0,.9),0 1px 2px #000;
+  background:radial-gradient(ellipse at 40% 30%,#fff 0%,color-mix(in srgb,var(--c) 55%,#fff) 16%,var(--c) 52%,color-mix(in srgb,var(--c) 62%,#000) 100%)}
+
+/* count inserts + at-bat line */
+.mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+.count{display:flex;align-items:center;gap:14px}
+.grp{display:flex;align-items:center;gap:5px}
+.grp b{font:13px/1 var(--sign);color:#ff9a4a;margin-right:1px;width:13px}
+.lamp{--c:#888;position:relative;width:18px;height:18px;border-radius:50%;display:block;
+  background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--c) 42%,#000),color-mix(in srgb,var(--c) 16%,#000) 72%);
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.07);transition:background .15s,box-shadow .15s}
+.lamp::after{content:"";position:absolute;left:4px;top:3px;width:6px;height:4px;border-radius:50%;background:rgba(255,255,255,.28)}
+.lamp.on{background:radial-gradient(circle at 50% 38%,#fff 0%,color-mix(in srgb,var(--c) 55%,#fff) 22%,var(--c) 56%,color-mix(in srgb,var(--c) 65%,#000) 100%);
+  box-shadow:0 0 12px 3px color-mix(in srgb,var(--c) 65%,transparent),inset 0 0 0 1px rgba(0,0,0,.3)}
+.g-b .lamp{--c:var(--lamp-b)}.g-s .lamp{--c:var(--lamp-s)}.g-o .lamp{--c:var(--lamp-o)}
+.lamp.pop{animation:lampPop .5s ease-out}
+@keyframes lampPop{0%{transform:scale(1.45);filter:brightness(2.2)}100%{transform:scale(1);filter:none}}
+.grp.flick .lamp{animation:flick .45s steps(1)}
+@keyframes flick{0%,50%{filter:brightness(2.4)}25%,75%{filter:brightness(.4)}}
+.ab{font:700 20px/1 var(--lbl);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.ab b{font:12px/1 var(--sign);color:#ff9a4a;margin-right:7px;vertical-align:2px}
+.ab .pc{color:#b9a58f;margin-left:10px;font-weight:600}
+
+/* bases: diamond inserts */
+.bases{position:relative;flex:none;width:76px;height:60px}
+.bs{position:absolute;width:19px;height:19px;transform:translate(-50%,-50%) rotate(45deg);transition:filter .25s}
+.bs i{position:relative;display:block;width:100%;height:100%;border-radius:3px;
+  background:radial-gradient(circle at 40% 40%,color-mix(in srgb,var(--lamp-base) 40%,#000),color-mix(in srgb,var(--lamp-base) 14%,#000) 80%);
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.bs i::after{content:"";position:absolute;left:3px;top:3px;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.25)}
+.bs.on{filter:drop-shadow(0 0 7px rgba(255,210,58,.9))}
+.bs.on i{background:radial-gradient(circle at 42% 42%,#fff 0%,#fff3c0 22%,var(--lamp-base) 58%,#9a6e05 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
+.bs.pop i{animation:lampPop .5s ease-out}
+.bs.b1{left:62px;top:30px}.bs.b2{left:38px;top:11px}.bs.b3{left:14px;top:30px}
+.plate{position:absolute;left:32px;top:45px;width:12px;height:12px;clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);
+  background:linear-gradient(160deg,#f4f4f4,#8b8e94 50%,#d6d8dc)}
+
+/* HR: every insert chase-flashes */
+.strip.chase .lamp,.strip.chase .bs,.strip.chase .insw{animation:chase .42s steps(1) infinite;animation-delay:calc(var(--i,0) * -.07s)}
+@keyframes chase{0%{filter:brightness(2.6) drop-shadow(0 0 6px rgba(255,200,120,.9))}50%{filter:brightness(.45)}}
+
+@media (prefers-reduced-motion:reduce){
+  .strip.chase .lamp,.strip.chase .bs,.strip.chase .insw{animation-duration:1.4s}
+  .lamp.pop,.bs.pop i{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="cab">
+      <div class="chrome"><div class="bezel">
+        <i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>
+        <div class="glass"><canvas id="dmd" width="640" height="160" aria-label="Scoreboard dot-matrix display"></canvas></div>
+      </div></div>
+      <div class="strip">
+        <div class="insw" data-t="away" style="--i:0"><div class="ins"><span></span></div></div>
+        <div class="mid">
+          <div class="count">
+            <div class="grp g-b"><b>B</b><i class="lamp" style="--i:1"></i><i class="lamp" style="--i:2"></i><i class="lamp" style="--i:3"></i></div>
+            <div class="grp g-s"><b>S</b><i class="lamp" style="--i:4"></i><i class="lamp" style="--i:5"></i></div>
+            <div class="grp g-o"><b>O</b><i class="lamp" style="--i:6"></i><i class="lamp" style="--i:7"></i></div>
+          </div>
+          <div class="ab"><b>AT BAT</b><span class="nm"></span><span class="pc"></span></div>
+        </div>
+        <div class="bases">
+          <div class="bs b2" style="--i:8"><i></i></div><div class="bs b3" style="--i:9"><i></i></div><div class="bs b1" style="--i:10"><i></i></div>
+          <i class="plate"></i>
+        </div>
+        <div class="insw" data-t="home" style="--i:11"><div class="ins"><span></span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+const { $, $$, restart, battingTeam } = BugKit;
+const W = 128, H = 32, P = 5;                 // 128x32 dots at 5px pitch = 640x160
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const cv = $("#dmd"), ctx = cv.getContext("2d");
+const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+const DS = P * DPR;                            // one dot in canvas pixels
+cv.width = W * DS; cv.height = H * DS;
+const buf = new Uint8Array(W * H);             // brightness 0..15 per dot
+
+/* One pre-rendered sprite per brightness level: hot core, orange body, faint unlit dot at 0. */
+const SP = [];
+for (let L = 0; L < 16; L++) {
+  const c = document.createElement("canvas"); c.width = c.height = DS;
+  const g = c.getContext("2d"), r = DS * 0.46, m = DS / 2;
+  if (L === 0) {
+    g.fillStyle = "rgba(255,118,36,.10)"; g.beginPath(); g.arc(m, m, r * .9, 0, 7); g.fill();
+  } else {
+    const k = L / 15;
+    const grd = g.createRadialGradient(m - r * .2, m - r * .25, 0, m, m, r);
+    grd.addColorStop(0, `rgba(255,${Math.round(150 + 90 * k)},${Math.round(70 + 120 * k)},${.3 + .7 * k})`);
+    grd.addColorStop(.55, `rgba(255,${Math.round(96 + 26 * k)},${Math.round(18 + 8 * k)},${.22 + .78 * k})`);
+    grd.addColorStop(1, `rgba(190,62,8,${.18 + .5 * k})`);
+    g.fillStyle = "rgba(255,118,36,.10)"; g.beginPath(); g.arc(m, m, r * .9, 0, 7); g.fill();
+    g.fillStyle = grd; g.beginPath(); g.arc(m, m, r, 0, 7); g.fill();
+  }
+  SP.push(c);
+}
+function paint() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) ctx.drawImage(SP[buf[i]], x * DS, y * DS);
+}
+
+/* ---------- buffer primitives ---------- */
+let CL = 0, CR = W;                            // horizontal clip for wipes
+function px(x, y, v) {
+  x = Math.round(x); y = Math.round(y);
+  if (x < CL || x >= CR || y < 0 || y >= H || v <= 0) return;
+  const i = y * W + x; if (v > 15) v = 15; if (buf[i] < v) buf[i] = v;
+}
+const rect = (x, y, w, h, v) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(x + i, y + j, v); };
+const fill = (v) => buf.fill(v);
+function invert(x0 = 0, y0 = 0, w = W, h = H) {
+  for (let y = Math.max(0, y0); y < Math.min(H, y0 + h); y++)
+    for (let x = Math.max(0, x0); x < Math.min(W, x0 + w); x++) buf[y * W + x] = 15 - buf[y * W + x];
+}
+function clearCols(a, b) {
+  a = Math.max(0, Math.round(a)); b = Math.min(W, Math.round(b));
+  for (let y = 0; y < H; y++) for (let x = a; x < b; x++) buf[y * W + x] = 0;
+}
+function shiftRow(y, s) {
+  const row = buf.slice(y * W, y * W + W);
+  for (let x = 0; x < W; x++) { const sx = x - s; buf[y * W + x] = sx >= 0 && sx < W ? row[sx] : 0; }
+}
+/* left-to-right wipe: everything left of the bar goes dark, bright bar on the edge */
+function wipe(t, a, b) {
+  if (t < a) return;
+  const x = Math.round(Math.min(1, (t - a) / (b - a)) * (W + 3));
+  clearCols(0, x); for (let y = 0; y < H; y++) { px(x, y, 15); px(x + 1, y, 7); }
+}
+/* reveal from the left: everything right of the bar stays dark */
+function reveal(t, a, b) {
+  if (t >= b) return;
+  const x = Math.round(Math.max(0, (t - a) / (b - a)) * (W + 3));
+  clearCols(x, W); for (let y = 0; y < H; y++) { px(x, y, 15); px(x - 1, y, 7); }
+}
+
+/* ---------- hand-made 5x7 dot font ---------- */
+const G5 = {
+  A:"01110 10001 10001 11111 10001 10001 10001", B:"11110 10001 10001 11110 10001 10001 11110",
+  C:"01110 10001 10000 10000 10000 10001 01110", D:"11110 10001 10001 10001 10001 10001 11110",
+  E:"11111 10000 10000 11110 10000 10000 11111", F:"11111 10000 10000 11110 10000 10000 10000",
+  G:"01110 10001 10000 10111 10001 10001 01111", H:"10001 10001 10001 11111 10001 10001 10001",
+  I:"01110 00100 00100 00100 00100 00100 01110", J:"00111 00010 00010 00010 00010 10010 01100",
+  K:"10001 10010 10100 11000 10100 10010 10001", L:"10000 10000 10000 10000 10000 10000 11111",
+  M:"10001 11011 10101 10101 10001 10001 10001", N:"10001 10001 11001 10101 10011 10001 10001",
+  O:"01110 10001 10001 10001 10001 10001 01110", P:"11110 10001 10001 11110 10000 10000 10000",
+  Q:"01110 10001 10001 10001 10101 10010 01101", R:"11110 10001 10001 11110 10100 10010 10001",
+  S:"01111 10000 10000 01110 00001 00001 11110", T:"11111 00100 00100 00100 00100 00100 00100",
+  U:"10001 10001 10001 10001 10001 10001 01110", V:"10001 10001 10001 10001 10001 01010 00100",
+  W:"10001 10001 10001 10101 10101 10101 01010", X:"10001 10001 01010 00100 01010 10001 10001",
+  Y:"10001 10001 01010 00100 00100 00100 00100", Z:"11111 00001 00010 00100 01000 10000 11111",
+  0:"01110 10001 10001 10001 10001 10001 01110", 1:"00100 01100 00100 00100 00100 00100 01110",
+  2:"01110 10001 00001 00010 00100 01000 11111", 3:"11111 00010 00100 00010 00001 10001 01110",
+  4:"00010 00110 01010 10010 11111 00010 00010", 5:"11111 10000 11110 00001 00001 10001 01110",
+  6:"00110 01000 10000 11110 10001 10001 01110", 7:"11111 00001 00010 00100 01000 01000 01000",
+  8:"01110 10001 10001 01110 10001 10001 01110", 9:"01110 10001 10001 01111 00001 00010 01100",
+  "+":"00000 00100 00100 11111 00100 00100 00000", "-":"00000 00000 00000 11111 00000 00000 00000",
+  "!":"00100 00100 00100 00100 00100 00000 00100", ".":"00000 00000 00000 00000 00000 01100 01100",
+  "'":"01100 00100 01000 00000 00000 00000 00000", "?":"01110 10001 00001 00010 00100 00000 00100"
+};
+const BASE = {};
+for (const [ch, s] of Object.entries(G5)) {
+  const rows = s.split(" ");
+  let d = rows.map((r) => [...r].map(Number)), w = 5;
+  if ("!.'".includes(ch)) {                      // trim narrow punctuation
+    const used = [0, 1, 2, 3, 4].filter((x) => d.some((r) => r[x]));
+    d = d.map((r) => used.map((x) => r[x])); w = used.length;
+  }
+  BASE[ch] = { w, h: 7, d: Uint8Array.from(d.flat()) };
+}
+
+/* ---------- Scale2x / Scale3x: smooth big fonts from the 5x7 master ---------- */
+function s2x(b) {
+  const w = b.w * 2, h = b.h * 2, o = new Uint8Array(w * h);
+  const g = (x, y) => (x < 0 || y < 0 || x >= b.w || y >= b.h ? 0 : b.d[y * b.w + x]);
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    const E = g(x, y), B = g(x, y - 1), D = g(x - 1, y), F = g(x + 1, y), Hh = g(x, y + 1);
+    let e0 = E, e1 = E, e2 = E, e3 = E;
+    if (B !== Hh && D !== F) { e0 = D === B ? D : E; e1 = B === F ? F : E; e2 = D === Hh ? D : E; e3 = Hh === F ? F : E; }
+    const i = 2 * y * w + 2 * x; o[i] = e0; o[i + 1] = e1; o[i + w] = e2; o[i + w + 1] = e3;
+  }
+  return { w, h, d: o };
+}
+function s3x(b) {
+  const w = b.w * 3, h = b.h * 3, o = new Uint8Array(w * h);
+  const g = (x, y) => (x < 0 || y < 0 || x >= b.w || y >= b.h ? 0 : b.d[y * b.w + x]);
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    const A = g(x - 1, y - 1), B = g(x, y - 1), C = g(x + 1, y - 1), D = g(x - 1, y), E = g(x, y), F = g(x + 1, y),
+      G = g(x - 1, y + 1), Hh = g(x, y + 1), I = g(x + 1, y + 1);
+    let e = [E, E, E, E, E, E, E, E, E];
+    if (B !== Hh && D !== F) {
+      e = [D === B ? D : E, (D === B && E !== C) || (B === F && E !== A) ? B : E, B === F ? F : E,
+        (D === B && E !== G) || (D === Hh && E !== A) ? D : E, E, (B === F && E !== I) || (Hh === F && E !== C) ? F : E,
+        D === Hh ? D : E, (D === Hh && E !== I) || (Hh === F && E !== G) ? Hh : E, Hh === F ? F : E];
+    }
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) o[(3 * y + j) * w + 3 * x + i] = e[j * 3 + i];
+  }
+  return { w, h, d: o };
+}
+/* bold: thicken every stroke one dot to the right (for the giant slam lettering) */
+function bold(b) {
+  const w = b.w + 1, d = new Uint8Array(w * b.h);
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < w; x++) d[y * w + x] = (x < b.w && b.d[y * b.w + x]) || (x > 0 && b.d[y * b.w + x - 1]) ? 1 : 0;
+  return { w, h: b.h, d };
+}
+/* font sizes: 1 = 5x7, 2 = 10x14, 3 = 15x21, 4 = 24x28 bold */
+const FONT = { 1: { gap: 1, sp: 3, f: (b) => b }, 2: { gap: 2, sp: 6, f: s2x }, 3: { gap: 3, sp: 8, f: s3x }, 4: { gap: 3, sp: 10, f: (b) => s2x(s2x(bold(b))) } };
+const gcache = {}; let tcache = {}, tcount = 0;
+function glyph(ch, n) {
+  const k = n + ch;
+  if (!(k in gcache)) gcache[k] = BASE[ch] ? FONT[n].f(BASE[ch]) : null;
+  return gcache[k];
+}
+function layout(str, n) {
+  const F = FONT[n], items = []; let x = 0;
+  for (const ch of str) {
+    if (ch === " ") { x += F.sp; continue; }
+    const g = glyph(ch, n) || glyph("?", n);
+    items.push({ g, x }); x += g.w + F.gap;
+  }
+  return { items, w: Math.max(1, x - F.gap), h: 7 * n };
+}
+function textBmp(str, n) {
+  const k = n + "|" + str; let b = tcache[k]; if (b) return b;
+  const L = layout(str, n); b = { w: L.w, h: L.h, d: new Uint8Array(L.w * L.h) };
+  for (const it of L.items) for (let y = 0; y < it.g.h; y++) for (let x = 0; x < it.g.w; x++)
+    if (it.g.d[y * it.g.w + x] && it.x + x < b.w) b.d[y * b.w + it.x + x] = 1;
+  if (++tcount > 400) { tcache = {}; tcount = 0; }
+  return (tcache[k] = b);
+}
+/* draw a bitmap; scale zooms about its centre, flip mirrors it */
+function blit(b, x, y, v = 15, o = {}) {
+  const s = o.scale || 1, fl = !!o.flip;
+  if (s === 1) {
+    x = Math.round(x); y = Math.round(y);
+    for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) if (b.d[j * b.w + i]) px(x + (fl ? b.w - 1 - i : i), y + j, v);
+    return;
+  }
+  const w = Math.max(1, Math.round(b.w * s)), h = Math.max(1, Math.round(b.h * s));
+  const x0 = Math.round(x + (b.w - w) / 2), y0 = Math.round(y + (b.h - h) / 2);
+  const ja = Math.max(0, -y0), jb = Math.min(h, H - y0), ia = Math.max(0, -x0), ib = Math.min(w, W - x0);
+  for (let j = ja; j < jb; j++) {
+    const sy = Math.min(b.h - 1, (j / s) | 0);
+    for (let i = ia; i < ib; i++) {
+      const sx = Math.min(b.w - 1, (i / s) | 0);
+      if (b.d[sy * b.w + (fl ? b.w - 1 - sx : sx)]) px(x0 + i, y0 + j, v);
+    }
+  }
+}
+const text = (str, cx, y, n, v = 15, o) => { const b = textBmp(str, n); blit(b, Math.round(cx - b.w / 2), y, v, o); return b; };
+const textL = (str, x, y, n, v = 15, o) => { const b = textBmp(str, n); blit(b, x, y, v, o); return b; };
+
+/* little sprites */
+function ball(x, y, v = 15) {
+  x = Math.round(x) - 2; y = Math.round(y) - 2;
+  ["01110", "11111", "11111", "11111", "01110"].forEach((r, j) => [...r].forEach((c, i) => c === "1" && px(x + i, y + j, (i === 1 && j === 1) ? v : v - 3)));
+}
+/* motion smear: every trailing edge dot drags a fading streak behind it */
+function smear(b, x, y, dir, len, v = 9, every = 1) {
+  x = Math.round(x); y = Math.round(y); len = Math.round(len);
+  if (len < 1) return;
+  for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) {
+    if (j % every || !b.d[j * b.w + i]) continue;
+    const ni = i + dir; if (ni >= 0 && ni < b.w && b.d[j * b.w + ni]) continue;
+    for (let k = 1; k <= len; k++) px(x + i + dir * k, y + j, Math.round(v * (1 - k / (len + 1))));
+  }
+}
+function bigBall(x, y) {                        // 7x7 ball with a dark halo so it reads over text
+  x = Math.round(x); y = Math.round(y);
+  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) {
+    const xx = x + i, yy = y + j;
+    if (i * i + j * j <= 26 && xx >= 0 && xx < W && yy >= 0 && yy < H) buf[yy * W + xx] = 0;
+  }
+  ["0011100", "0111110", "1111111", "1111111", "1111111", "0111110", "0011100"].forEach((r, j) =>
+    [...r].forEach((c, i) => c === "1" && px(x - 3 + i, y - 3 + j, (i + j < 5) ? 15 : 12)));
+}
+function tri(cx, y, dir, h, v) { for (let r = 0; r < h; r++) for (let i = -r; i <= r; i++) px(cx + i, y + r * dir, v); }
+function chev(x, y, v, h = 7) { const m = (h - 1) / 2; for (let j = 0; j < h; j++) { const d = m - Math.abs(m - j); px(x + d, y + j, v); px(x + d + 1, y + j, v); px(x + d + 2, y + j, v); } }
+const PERIM = [];
+for (let x = 0; x < W; x++) PERIM.push([x, 0]);
+for (let y = 1; y < H; y++) PERIM.push([W - 1, y]);
+for (let x = W - 2; x >= 0; x--) PERIM.push([x, H - 1]);
+for (let y = H - 2; y > 0; y--) PERIM.push([0, y]);
+function borderChase(t) { const o = (t * 0.05) | 0; PERIM.forEach(([x, y], i) => px(x, y, (i + o) % 8 < 3 ? 15 : 3)); }
+
+/* ---------- easing ---------- */
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (t) => 1 - Math.pow(1 - clamp(t), 3);
+const eBack = (t) => { t = clamp(t); const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+/* ---------- particles (sparkles, shattered dots) ---------- */
+let parts = [];
+function spark(x, y, n = 20, sp = 1.6, life = 700, g = 0.03) {
+  if (RM) n = Math.ceil(n / 3);
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, 6.283), s = rnd(.25, 1) * sp;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * .7, g, life: rnd(.5, 1) * life, age: 0, b: 1 });
+  }
+}
+function shatter(g = 0.07) {                     // every lit dot on screen becomes a falling particle
+  for (let i = 0; i < buf.length; i++) if (buf[i] > 2)
+    parts.push({ x: i % W, y: (i / W) | 0, vx: rnd(-.55, .55), vy: rnd(-1.3, .1), g: g * rnd(.7, 1.3), life: rnd(700, 1300), age: 0, b: buf[i] / 15 });
+  buf.fill(0);
+}
+function stepParts(dt) {
+  const k = dt / 16.67;
+  for (const p of parts) { p.vy += p.g * k; p.x += p.vx * k; p.y += p.vy * k; p.age += dt; }
+  parts = parts.filter((p) => p.age < p.life && p.x > -2 && p.x < W + 2 && p.y < H + 2);
+}
+function drawParts() { for (const p of parts) px(p.x, p.y, Math.ceil(15 * p.b * (1 - p.age / p.life))); }
+
+/* ---------- screen shake: the whole dot field jumps by whole dots ---------- */
+let NOW = 0, shakeT0 = 0, shakeEnd = 0, shakeAmp = 0;
+function shake(ms, amp) { if (RM) return; shakeT0 = NOW; shakeEnd = NOW + ms; shakeAmp = amp; }
+function doShake(now) {
+  if (now < shakeEnd) {
+    const f = 1 - (now - shakeT0) / (shakeEnd - shakeT0);
+    const dx = Math.round(rnd(-1, 1) * shakeAmp * f) * P, dy = Math.round(rnd(-1, 1) * shakeAmp * f * .6) * P;
+    cv.style.transform = `translate(${dx}px,${dy}px)`;
+  } else if (cv.style.transform) cv.style.transform = "";
+}
+
+/* ---------- names ---------- */
+const clean = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9 +\-!.'?]/g, "").trim();
+const surname = (s) => { const p = clean(s).split(/\s+/); return p[p.length - 1] || ""; };
+function abbr(team, max = 50) {
+  let a = clean(team.abbr || team.name || "");
+  while (a.length > 1 && textBmp(a, 1).w > max) a = a.slice(0, -1);
+  return a;
+}
+
+/* ============================================================
+   Scene engine. A scene = { id, dur, draw(t, sc) }. rAF only runs
+   while a scene, particles or shake are live; idle = one static frame.
+   ============================================================ */
+let state = null, cur = null, queue = [], raf = 0, last = 0;
+const shown = { away: 0, home: 0 };            // scores as painted on the DMD (count up to S)
+const mk = (id, dur, draw) => ({ id, dur, draw, fired: new Set(), t0: null });
+const once = (sc, k) => (sc.fired.has(k) ? false : (sc.fired.add(k), true));
+function play(sc) { cur = sc; parts = []; kick(); }
+function enqueue(sc) {
+  queue = queue.filter((q) => q.id !== sc.id);
+  queue.push(sc); if (queue.length > 4) queue.shift();
+  kick();
+}
+/* rAF, with a timer fallback so moments still finish when rAF is throttled (hidden source, headless) */
+let rafId = 0, toId = 0;
+function tick() { cancelAnimationFrame(rafId); clearTimeout(toId); frame(); }
+function schedule() { raf = 1; rafId = requestAnimationFrame(tick); toId = setTimeout(tick, 50); }
+function kick() {
+  if (raf) return;
+  last = performance.now();
+  frame(last);                                  // paint now; frame() schedules rAF only if something moves
+}
+const needCount = () => state && (shown.away !== state.away.r || shown.home !== state.home.r);
+function nextScene() { return queue.shift() || (needCount() ? countScene() : null); }
+function frame(now) {
+  raf = 0; NOW = now = performance.now();
+  const dt = Math.min(50, Math.max(0, now - last)); last = now;
+  if (!cur) cur = nextScene();
+  while (cur) {
+    if (cur.t0 == null) cur.t0 = now;
+    if (now - cur.t0 < cur.dur) break;
+    cur = nextScene();
+  }
+  buf.fill(0); CL = 0; CR = W;
+  if (cur) cur.draw(now - cur.t0, cur); else drawRest();
+  CL = 0; CR = W;
+  stepParts(dt); drawParts();
+  paint(); doShake(now);
+  if (cur || parts.length || now < shakeEnd) schedule();
+  else cv.style.transform = "";
+}
+
+/* ---------- resting screen ----------
+   [ AWAY name / big score ] : [ arrow / inning / TOP ] : [ HOME name / big score ] */
+const BX = { away: 25, home: 102 };
+function drawRest(o = {}) {
+  const S = state; if (!S) return;
+  const bt = battingTeam(S);
+  for (const t of ["away", "home"]) {
+    const cx = BX[t], bat = bt === t;
+    let nv = bat ? 15 : 6;
+    if (o.pulse === t) nv = ((o.t / 140) | 0) % 2 ? 15 : 5;
+    const nb = text(abbr(S[t]), cx, 1, 1, nv);
+    if (bat) {                                  // batting: a lit ball beside the name
+      const bx = Math.round(cx - nb.w / 2) - 5;
+      px(bx + 1, 3, 15); px(bx, 4, 15); px(bx + 1, 4, 15); px(bx + 2, 4, 15); px(bx + 1, 5, 15);
+    }
+    text(String(shown[t]), cx, 10, 3, 15);
+    if (o.pulse === t && o.flash) invert(cx - 26, 9, 52, 23);
+  }
+  for (let y = 1; y < 31; y += 2) { px(52, y, 3); px(75, y, 3); }
+  const top = S.half === "top";
+  tri(64, top ? 2 : 5, top ? 1 : -1, 4, 15);
+  text(String(S.inning), 64, 9, 2, 15);
+  if (o.pulse) text(o.hr ? "HR" : "RUN", 64, 25, 1, ((o.t / 140) | 0) % 2 ? 15 : 6);
+  else text(top ? "TOP" : "BOT", 64, 25, 1, 7);
+}
+
+/* ---------- run: the score counts up on the resting screen, one sparkle burst per run ---------- */
+let lastRunHR = false;
+function countScene() {
+  let team, from, steps, hr; const STEP = 380;
+  return mk("count", 9e9, (t, sc) => {
+    if (team == null) {                          // read the scores when the scene starts, not when queued
+      team = shown.away !== state.away.r ? "away" : shown.home !== state.home.r ? "home" : battingTeam(state);
+      from = shown[team]; steps = Math.max(0, state[team].r - from);
+      hr = lastRunHR; lastRunHR = false;
+      sc.dur = 450 + Math.max(1, steps) * STEP + 800;
+    }
+    let flash = false;
+    for (let i = 1; i <= steps; i++) {
+      const at = 250 + (i - 1) * STEP;
+      if (t >= at && once(sc, "s" + i)) {
+        shown[team] = from + i;
+        spark(BX[team], 20, 28, 1.9, 850); if (i === steps) spark(BX[team], 20, 18, 2.6, 1000);
+      }
+      if (!RM && t >= at && t < at + 90) flash = true;
+    }
+    drawRest({ pulse: team, t, flash, hr });
+    if (t > 450 + steps * STEP && ((t / 90) | 0) % 5 === 0 && Math.random() < .5) spark(rnd(4, 124), rnd(2, 30), 2, .5, 400);
+  });
+}
+
+/* ============================================================
+   Moments
+   ============================================================ */
+const strip = $(".strip"); let chaseTimer;
+function chase(ms) { restart(strip, "chase"); clearTimeout(chaseTimer); chaseTimer = setTimeout(() => strip.classList.remove("chase"), ms); }
+const strobe = (t, a, b, step = 70) => !RM && t >= a && t < b && (((t - a) / step) | 0) % 2 === 0;
+
+/* HOME RUN: flash, HOME / RUN slam with shake + explosions, a ball arcs over the fence,
+   then the payoff lettering drops in under a chasing border while the name scrolls in. */
+const BX0 = (u) => -3 + 134 * u, BY0 = (u) => 28 - 94 * u + 85 * u * u;
+function hrScene({ runs = 1, batter } = {}) {
+  const pay = runs >= 4 ? "GRAND SLAM" : runs <= 1 ? "SOLO SHOT" : `+${runs} RUNS`;
+  const who = clean(batter || state.batter || "");
+  chase(4800);
+  return mk("hr", 4700, (t, sc) => {
+    if (t < 240) { if (strobe(t, 0, 240, 80)) fill(15); else if (RM) fill(2); return; }
+    if (t < 1150) {
+      if (t < 700) {
+        const a = seg(t, 240, 500);
+        text("HOME", 64, 2, 4, 15, { scale: 1 + 2.8 * (1 - eOut(a)) });
+        if (a >= 1 && once(sc, "h1")) { shake(260, 2); spark(64, 16, 46, 2.4, 900); }
+      } else {
+        const b = seg(t, 700, 940);
+        text("RUN", 64, 2, 4, 15, { scale: 1 + 3.2 * (1 - eOut(b)) });
+        if (b >= 1 && once(sc, "h2")) { shake(420, 3); spark(34, 16, 40, 2.8, 1000); spark(94, 16, 40, 2.8, 1000); }
+        if (strobe(t, 940, 1010, 35)) invert();
+      }
+      return;
+    }
+    if (t < 2380) {                              // the ball leaves the yard
+      const u = seg(t, 1200, 2250);
+      text("HOME RUN", 64, 3, 2, 4);
+      for (let x = 90; x < 128; x += 2) px(x, 23, 7);
+      for (let x = 90; x < 128; x += 6) { px(x, 24, 7); px(x, 25, 7); px(x, 26, 7); }
+      for (let x = 1; x < 128; x += 3) px(x, 31, 3);
+      if (t >= 1200 && u < 1) {
+        for (let k = 14; k >= 1; k--) { const uu = u - k * .014; if (uu > 0) { px(BX0(uu), BY0(uu), Math.round(14 - k * .9)); px(BX0(uu), BY0(uu) + 1, Math.round(9 - k * .6)); } }
+        bigBall(BX0(u), BY0(u));
+        if (Math.random() < .7) parts.push({ x: BX0(u) - 3, y: BY0(u) + rnd(-2, 2), vx: rnd(-.5, -.1), vy: rnd(-.2, .3), g: .01, life: 380, age: 0, b: .8 });
+      }
+      if (u >= 1 && once(sc, "fw")) { spark(118, 8, 50, 2.2, 1100, .02); spark(102, 4, 30, 1.6, 900, .02); }
+      return;
+    }
+    const pt = t - 2380;                         // payoff
+    if (strobe(pt, 0, 160, 55)) { fill(15); return; }
+    borderChase(pt);
+    const L = layout(pay, 2), x0 = Math.round(64 - L.w / 2);
+    L.items.forEach((it, i) => {
+      const d = seg(pt, 160 + i * 50, 160 + i * 50 + 280); if (d <= 0) return;
+      blit(it.g, x0 + it.x, 3 - (1 - eBack(d)) * 20, 15);
+      if (d >= 1 && once(sc, "l" + i)) spark(x0 + it.x + 5, 9, 5, 1.1, 450);
+    });
+    if (pt > 600 && who) {
+      const nb = textBmp(who, 1);
+      blit(nb, Math.max(Math.round(64 - nb.w / 2), 128 - Math.round((pt - 600) * .11)), 21, 12);
+    }
+    if (pt > 700 && Math.random() < .3) spark(rnd(4, 124), rnd(3, 29), 2, .5, 420, 0);
+    if (t > 4480) wipe(t, 4480, 4700);
+  });
+}
+
+/* STRIKEOUT: a giant K slams in; swinging = STRIKEOUT pushes it off then shatters into
+   falling dots; looking = mirrored K parks left, CAUGHT / LOOKING types in, then shatters. */
+function kScene({ looking, batter } = {}) {
+  const who = surname(batter || state.batter);
+  const hold = looking
+    ? (t) => {
+      blit(textBmp("K", 4), 4, 2, 15, { flip: true });
+      for (let y = 2; y < 30; y += 2) px(32, y, 4);
+      const c = "CAUGHT", l = "LOOKING";
+      textL(c.slice(0, Math.min(6, Math.floor((t - 620) / 60) + 1)), 36, 1, 2, 15);
+      if (t > 1000) textL(l.slice(0, Math.min(7, Math.floor((t - 1000) / 60) + 1)), 36, 17, 2, 15);
+    }
+    : (t, off = 0) => { text("STRIKEOUT", 64 + off, 3, 2, 15); if (who) text(who, 64 + off, 23, 1, 10); };
+  const SH = looking ? 2700 : 2450;
+  return mk("k", SH + 1300, (t, sc) => {
+    if (t < 110) { if (!RM) fill(15); return; }
+    if (t >= SH) { if (once(sc, "shatter")) { hold(9e9); shatter(); } return; }
+    if (looking) {
+      const a = seg(t, 110, 430);
+      if (t < 620) blit(textBmp("K", 4), 4, 2, 15, { flip: true, scale: 1 + 3 * (1 - eOut(a)) });
+      else hold(t);
+      if (a >= 1 && once(sc, "land")) { shake(300, 2); spark(14, 16, 34, 2.2, 800); }
+      return;
+    }
+    if (t < 1050) {
+      const a = seg(t, 110, 420);
+      text("K", 64, 2, 4, t > 440 && ((t / 90) | 0) % 2 ? 9 : 15, { scale: 1 + 3.2 * (1 - eOut(a)) });
+      if (a >= 1 && once(sc, "land")) { shake(320, 2); spark(64, 16, 40, 2.3, 850); }
+      return;
+    }
+    const s = eOut(seg(t, 1050, 1320)), off = Math.round((1 - s) * 128);
+    if (t < 1320) {
+      const kb = textBmp("K", 4), kx = Math.round(64 - (128 - off) - kb.w / 2);
+      smear(kb, kx, 2, 1, 30 * (1 - s), 8, 2); blit(kb, kx, 2, 15);
+      const sb = textBmp("STRIKEOUT", 2); smear(sb, Math.round(64 + off - sb.w / 2), 3, 1, 26 * (1 - s), 7, 2);
+    }
+    hold(t, off);
+  });
+}
+/* HIT: speed streaks tear across, the word rockets in on a motion trail and lands with a flash. */
+function hitScene({ bases = 1, batter } = {}) {
+  const word = ["SINGLE", "DOUBLE", "TRIPLE"][Math.min(3, Math.max(1, bases | 0)) - 1];
+  const who = clean(batter || state.batter || "");
+  const streaks = Array.from({ length: 18 }, () => ({ y: (Math.random() * H) | 0, sp: rnd(.28, .55), len: rnd(10, 44) | 0, d: rnd(0, 170) }));
+  return mk("hit", 2300, (t, sc) => {
+    for (const s of streaks) {
+      const x = (t - s.d) * s.sp - s.len; if (x > W) continue;
+      for (let i = 0; i < s.len; i++) px(x + i, s.y, Math.round(2 + 11 * i / s.len));
+    }
+    const a = seg(t, 110, 470), x = -70 + 134 * eBack(a);
+    const wb = textBmp(word, 3), wx = Math.round(x - wb.w / 2);
+    if (a < 1) smear(wb, wx, 2, -1, 30 * (1 - a), 6, 2);
+    blit(wb, wx, 2, 15);
+    if (a >= 1 && once(sc, "land")) { shake(160, 1); spark(116, 12, 18, 2, 600); }
+    if (strobe(t, 470, 540, 70)) invert();
+    const n = seg(t, 640, 900); if (n > 0 && who) text(who, 64, 24 + Math.round((1 - eOut(n)) * 9), 1, 11);
+    wipe(t, 2060, 2300);
+  });
+}
+
+/* WALK: BALL FOUR pops in letter by letter over four lit balls, then TAKE YOUR BASE with chasing arrows. */
+function walkScene() {
+  return mk("walk", 2800, (t, sc) => {
+    if (t < 1350) {
+      const L = layout("BALL FOUR", 2), x0 = Math.round(64 - L.w / 2);
+      L.items.forEach((it, i) => { const d = seg(t, i * 55, i * 55 + 200); if (d > 0) blit(it.g, x0 + it.x, 2, 15, { scale: 1 + (1 - eOut(d)) * 1.3 }); });
+      for (let i = 0; i < 4; i++) if (t > 480 + i * 120) {
+        bigBall(37 + i * 18, 24);
+        if (once(sc, "b" + i)) spark(37 + i * 18, 24, 7, 1, 420);
+      }
+      wipe(t, 1150, 1350);
+      return;
+    }
+    const u = t - 1350;
+    text("TAKE YOUR BASE", 64, 3, 1, 15);
+    const step = (u / 90) | 0;
+    for (let k = 0; k < 10; k++) chev(6 + k * 12, 15, ((k - step) % 4 + 4) % 4 === 0 ? 15 : ((k - step) % 4 + 4) % 4 === 3 ? 8 : 3, 13);
+    reveal(u, 0, 230);
+    wipe(t, 2560, 2800);
+  });
+}
+
+/* ERROR: the display glitches: noise, torn rows, jittering letters, hard shake. */
+function errorScene() {
+  return mk("error", 1900, (t, sc) => {
+    if (once(sc, "s")) shake(620, 3);
+    if (!RM && (t < 60 || (t >= 130 && t < 190))) { fill(15); return; }
+    const g = t < 760, f = 1 - t / 760;
+    text("ERROR", 64 + (g ? Math.round(rnd(-3, 3) * f) : 0), 2, 3, 15);
+    if (g) {
+      for (let r = 0; r < 4; r++) shiftRow((Math.random() * 24) | 0, Math.round(rnd(-7, 7) * f));
+      for (let i = 0; i < buf.length; i++) if (Math.random() < f * .07) buf[i] = (Math.random() * 10) | 0;
+    }
+    if (t > 700) text("SAFE ON ERROR", 64, 24, 1, 10);
+    wipe(t, 1660, 1900);
+  });
+}
+
+/* OUT: a quick diagonal wipe in, hold, diagonal wipe out. */
+function diag(p, keepBefore) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const d = x + y * 1.5, i = y * W + x;
+    if (Math.abs(d - p) < 1.6) buf[i] = 15; else if (keepBefore ? d > p : d < p) buf[i] = 0;
+  }
+}
+function outScene() {
+  return mk("out", 1350, (t) => {
+    text("OUT", 64, 2, 3, 15);
+    const n = Math.min(3, state.outs);
+    if (n) text(["", "ONE DOWN", "TWO DOWN", "THREE DOWN"][n], 64, 24, 1, 10);
+    if (t < 280) diag(seg(t, 0, 280) * (W + 52), true);
+    if (t > 1080) diag(seg(t, 1080, 1350) * (W + 52), false);
+  });
+}
+
+/* HALF: SIDE / RETIRED slide in from both sides, a scan bar wipes to BOTTOM 3 / TOP 4. */
+function halfScene({ inning, half } = {}) {
+  inning ??= state.inning; half ??= state.half;
+  const top = half === "top", bat = abbr(state[top ? "away" : "home"], 60);
+  return mk("half", 3300, (t, sc) => {
+    if (t < 1460) {
+      const a = seg(t, 0, 320), b = seg(t, 120, 440);
+      text("SIDE", 64 - Math.round((1 - eOut(a)) * 100), 1, 2, 15);
+      text("RETIRED", 64 + Math.round((1 - eOut(b)) * 110), 17, 2, 15);
+      if (b >= 1 && once(sc, "l")) { shake(200, 1); spark(64, 16, 20, 2, 700); }
+      if (strobe(t, 440, 510, 70)) invert();
+      wipe(t, 1180, 1460);
+      return;
+    }
+    const u = t - 1460, word = top ? "TOP" : "BOTTOM";
+    const wb = textBmp(word, 2), nb = textBmp(String(inning), 3), tot = 9 + 5 + wb.w + 6 + nb.w;
+    const x0 = Math.round(64 - tot / 2);
+    tri(x0 + 4, top ? 10 : 15, top ? 1 : -1, 5, 15);
+    blit(wb, x0 + 14, 7, 15);
+    blit(nb, x0 + 14 + wb.w + 6, 0, 15);
+    text(bat + " AT BAT", 64, 24, 1, 10);
+    reveal(u, 0, 260);
+    wipe(t, 3060, 3300);
+  });
+}
+
+/* NEW BATTER: NOW BATTING types in, the surname streaks in from the right. */
+function batterScene() {
+  return mk("batter", 2700, (t, sc) => {
+    const sur = surname(state.batter);
+    if (!sur) { sc.dur = 0; return; }
+    const hdr = "NOW BATTING", n = Math.min(hdr.length, Math.floor(t / 38)), hb = textBmp(hdr, 1), hx = Math.round(64 - hb.w / 2);
+    if (n) textL(hdr.slice(0, n), hx, 1, 1, 10);
+    if (n < hdr.length || ((t / 200) | 0) % 2) rect(hx + (n ? textBmp(hdr.slice(0, n), 1).w + 2 : 0), 1, 4, 7, 15);
+    const sb = textBmp(sur, 2), a = seg(t, 380, 720);
+    if (a > 0) {
+      let x;
+      if (sb.w <= 124) x = Math.round(64 - sb.w / 2 + (1 - eOut(a)) * 140);
+      else x = Math.round(128 - (t - 380) * .075);
+      if (a < 1) smear(sb, x, 11, 1, 26 * (1 - a), 6, 2);
+      blit(sb, x, 11, 15);
+    }
+    const o = (t / 60) | 0;
+    for (let x = 2; x < 126; x += 2) px(x, 28, (x / 2 + o) % 6 < 2 ? 12 : 2);
+    wipe(t, 2460, 2700);
+  });
+}
+
+/* RESET: the rest screen dissolves in dot by dot. */
+function resetScene() {
+  return mk("reset", 700, (t) => {
+    drawRest(); const p = seg(t, 0, 700);
+    for (let i = 0; i < buf.length; i++) if (((i * 2654435761) >>> 0) % 1000 / 1000 > p) buf[i] = 0;
+  });
+}
+
+/* ============================================================
+   Kit wiring
+   ============================================================ */
+function lamps(sel, n, first) {
+  $$(sel).forEach((el, i) => {
+    const on = i < n, was = el.classList.contains("on");
+    el.classList.toggle("on", on);
+    if (on && !was && !first) restart(el, "pop");
+  });
+}
+BugKit.start({
+  name: "Backglass",
+  hrDelay: 2600,
+  render(S, prev, first) {
+    state = S;
+    const bt = battingTeam(S);
+    for (const t of ["away", "home"]) {
+      const w = $(`.insw[data-t="${t}"]`);
+      w.style.setProperty("--c", S[t].color || "#888");
+      $(".ins span", w).textContent = S[t].abbr || S[t].name || "";
+      w.classList.toggle("on", bt === t);
+      if (first || S[t].r < shown[t]) shown[t] = S[t].r;  // corrections snap; runs count up
+    }
+    lamps(".g-b .lamp", S.balls, first);
+    lamps(".g-s .lamp", S.strikes, first);
+    lamps(".g-o .lamp", S.outs, first);
+    ["b1", "b2", "b3"].forEach((b, i) => {
+      const el = $(".bs." + b), on = !!S.bases[i];
+      if (on && !el.classList.contains("on") && !first) restart(el, "pop");
+      el.classList.toggle("on", on);
+    });
+    $(".ab .nm").textContent = S.batter || "";
+    $(".ab .pc").textContent = S.pitchCount ? `P ${S.pitchCount}` : "";
+    if (!first && S.batter && S.batter !== prev.batter) enqueue(batterScene());
+    kick();                                        // repaint (starts a count-up if a score moved)
+  },
+  fx: {
+    hr(o) { play(hrScene(o)); },
+    k(o) { play(kScene(o)); },
+    hit(o) { play(hitScene(o)); },
+    walk() { play(walkScene()); },
+    error() { play(errorScene()); },
+    out() { play(outScene()); },
+    half(o) { play(halfScene(o)); },
+    run(o = {}) {
+      if (o.hr) lastRunHR = true;
+      if (cur && cur.id !== "count") enqueue(countScene()); else kick();
+    },
+    foul(o, S) { if (S.strikes >= 2) restart($(".g-s"), "flick"); },
+    reset() { queue = []; shown.away = 0; shown.home = 0; play(resetScene()); }
+  }
+});
+
+})();
+</script>
+</body>
+</html>

@@ -138,7 +138,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **Teams**: names, abbreviations, colours, logos and rosters; swap home and away. A named team with a lineup saves itself as you edit (keyed by name), so next game it is one pick. **★ My team** marks your own: preselected in New Game, and the setup checklist asks for its positions only; an opponent's are optional.
 - **Lineup**: rows of number, name and position; **⌨ Jersey numbers** for entering a lineup card at game time (tap a number, Next, repeat; ⌫ on an empty keypad takes the last one back), and **📋 Paste a list** for one player per line (`7 Ava Reyes SS`, `#12 Ben Ortiz (P)`, `3 Cy`).
 - **Lineups & positions**: the same screens the batter line and 🧢 Field open.
-- **Sport & scorebug**: sport, and one of five scorebug styles: Scorebox, Bar, Bug, Minimal, Lower-third.
+- **Sport & scorebug**: sport, and one of five scorebug styles: Scorebox, Bar, Bug, Minimal, Lower-third. Baseball games can pick one of seven **animated** scorebugs instead (Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode). Each brings its own look and plays its own home run, strikeout and hit moments. See them all at `/bugs`.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).
 - **Show on overlay**: clock, batter, pitcher, pitch count, R-H-E on the bug, run-rule watch.
 - **Look & sound**: 16 themes (including Blue Steel) plus Custom colours, the 3×3 position grid, scale, five sound packs, one volume, mute.
@@ -178,6 +178,8 @@ There is no build step, so nothing compiles these files before a browser does. T
 | `css/overlay.css`, `css/styles.css`, `css/themes.css` | Scorebug base, the five layouts, the themes |
 | `css/cards.css`, `css/anim.css` | Broadcast cards and animations |
 | `css/recap.css`, `css/fonts.css` | Recap page; self-hosted Barlow Condensed |
+| `fonts/bugs/` | The animated scorebugs' fonts, self-hosted (licenses in `LICENSES.md`) |
+| `bugs/`, `js/anim-bug.js` | Animated scorebugs: one page per bug on a shared `bugs/kit.js`; the overlay loads the chosen one in a frame and feeds it the game |
 
 Debugging: `/overlay?…&debug=1` paints a checkerboard behind the transparent overlay and exposes `__sb.render(patch)` to preview a what-if over the live row without writing it. `/control?debug` shows the badge that checks the game on screen against a rebuild from its own event log.
 
