@@ -6,7 +6,7 @@ A phone-controlled scoreboard overlay for live-streamed youth sports. You score 
 
 <table>
 <tr>
-<td width="55%" align="center"><img src="docs/img/scorebug.png" alt="The scorebug on the overlay: River 4, Blue Steel 2, top of the 5th, runners on first and third, 2-2 count, one out" /><br /><sub><b>The overlay</b> — a transparent Browser Source in OBS, shown here over a plain green plate</sub></td>
+<td width="55%" align="center"><img src="docs/img/primetime.png" alt="The Prime Time scorebug: River 4, Blue Steel 2, top of the 5th, runners on first and third, 2-2 count, one out, Ava Reyes batting against Ortiz on 58 pitches" /><br /><sub><b>The overlay</b> — a transparent Browser Source in OBS: here the Prime Time scorebug, one of eight animated designs (<a href="#looks">see them all</a>)</sub></td>
 <td width="45%" align="center"><img src="docs/img/pad.png" alt="The phone pad: score, count and bases up top, the batter, then BALL, STRIKE, FOUL and IN PLAY as full-height keys" /><br /><sub><b>The pad</b> — what you actually hold during the game</sub></td>
 </tr>
 </table>
@@ -131,6 +131,46 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **Full screen** (hides the scorebug; the camera keeps running behind): **Starting Soon** (countdown to the start time; every new game opens with it up, and the game going live takes it down), **Mid-Inning**, **Final screen**.
 - **Delays & announcements**: the **Game paused** card (lightning, rain, weather, suspended, called) with an editable countdown and storm effects, and the **announcement ticker** that scrolls along the bottom of every scene until taken down.
 - **Moments**: Walk-Off, 🎺 Charge!, Rally (a glow until turned off). Everything else fires on its own.
+
+## Looks
+
+**Scorebugs.** Five layouts (Scorebox, Bar, Bug, Minimal, Lower-third) take any of 16 themes or your own colours. Baseball games can pick an animated scorebug instead: each one brings its own look and plays its own home runs, strikeouts, hits, walks, errors and half-inning changes, straight from the plays you tap on the pad. Try every one with a demo pad at `/bugs`.
+
+<table>
+<tr>
+<td width="50%" align="center"><img src="docs/img/bugs/primetime.png" alt="Prime Time: a glass rail with team-colour blocks, rolling scores, a lit bases diamond, the count and outs, and a strip for the batter and pitcher" /><br /><sub><b>Prime Time</b> — the network-TV package</sub></td>
+<td width="50%" align="center"><img src="docs/img/bugs/classic-green.png" alt="Classic Green: a hand-operated ballpark board with flip number plates for R, H and E and incandescent count bulbs" /><br /><sub><b>Classic Green</b> — a hand-operated ballpark board</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/bugs/pinball-dmd.png" alt="Backglass: an orange dot-matrix pinball display with lit insert lamps for the count and bases" /><br /><sub><b>Backglass</b> — a pinball dot-matrix display</sub></td>
+<td align="center"><img src="docs/img/bugs/chalkboard.jpg" alt="Chalk Talk: the score hand-lettered on a dugout chalkboard in a wooden frame" /><br /><sub><b>Chalk Talk</b> — the dugout chalkboard</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/bugs/comic.png" alt="Ka-Pow: comic-book panels with halftone team colours and a narrator caption for the batter" /><br /><sub><b>Ka-Pow</b> — a comic-book strip</sub></td>
+<td align="center"><img src="docs/img/bugs/split-flap.png" alt="Departures: a split-flap station board with team, R, H, E and a status column" /><br /><sub><b>Departures</b> — a split-flap station board</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/bugs/receipt.png" alt="Play-by-Play Printer: a receipt printer with an LCD score that prints every pitch" /><br /><sub><b>Play-by-Play Printer</b> — prints every pitch</sub></td>
+<td align="center"><img src="docs/img/bugs/pixel-rpg.png" alt="Battle Mode: 16-bit battle windows for the score, the field, the batter and the pitcher" /><br /><sub><b>Battle Mode</b> — a 16-bit battle screen</sub></td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/img/primetime-hr.png" width="620" alt="Prime Time on a home run: a lower-third band in River green wipes out of the scorebug reading HOME RUN, Ava Reyes, 3-run homer" /><br /><img src="docs/img/primetime-k.png" width="760" alt="Prime Time on a strikeout: a red K flag slides out beside the scorebug reading Strikes out swinging, Reyes, Ortiz 1K" /><br /><sub>Moments, Prime Time style: a home run band that holds the runs back until it lands, and a strikeout flag with the pitcher's running total</sub></p>
+
+**Scenes.** Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards (batting order, defense, matchup, sponsor, the ticker) come in two styles, picked per game in Setup: **Simple**, painted in your theme, and **Elevated**, the network-TV package with team-colour light, wipes, rolling clocks and counting scores.
+
+<table>
+<tr>
+<td width="50%" align="center"><img src="docs/img/scene-start.jpg" alt="Elevated Starting Soon: River and Blue Steel team cards around a gold VS ring, and a countdown to first pitch" /><br /><sub>Starting Soon</sub></td>
+<td width="50%" align="center"><img src="docs/img/scene-mid.jpg" alt="Elevated Mid-Inning: END 3 tag, team score rows, the line score with the finished half lit gold, and the half's plays as chips" /><br /><sub>Mid-Inning, with the half that just ended</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/scene-final.jpg" alt="Elevated Final: FINAL tag, River 6 outlined in gold as the winner, Blue Steel 3 dimmed, and the full line score" /><br /><sub>Final: the scores count up, then the winner steps forward</sub></td>
+<td align="center"><img src="docs/img/scene-pause.jpg" alt="Elevated delay screen: hazard stripes, LIGHTNING DELAY, PLAY IS PAUSED, the score and a restart clock over rain" /><br /><sub>The delay screen, storm included</sub></td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/img/scene-mid-simple.jpg" width="640" alt="Simple Mid-Inning: the same break drawn in the theme, with the score, the half's plays and the line score" /><br /><sub>The same Mid-Inning in the Simple style</sub></p>
 
 ## Setup screen
 
