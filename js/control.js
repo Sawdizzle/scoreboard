@@ -171,7 +171,7 @@ for (const id of ['username', 'pin']) {
 }
 
 $('signup-btn').addEventListener('click', async () => {
-  const username = $('username').value, pin = $('pin').value;
+  const username = $('username').value, pin = $('pin').value, invite = $('invite').value;
   // Say it here rather than after a round trip. The endpoint checks the same
   // thing — this is the courtesy, not the guard.
   if (!/^[a-z0-9_]{3,20}$/i.test(username.trim())) return setAuthMsg('Username: 3–20 letters, numbers or underscore.');
@@ -182,7 +182,7 @@ $('signup-btn').addEventListener('click', async () => {
     res = await fetch(`${SUPABASE_URL}/functions/v1/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ username, pin }),
+      body: JSON.stringify({ username, pin, invite }),
     });
     body = await res.json();
   } catch { authBusy(false); return setAuthMsg('Network error reaching signup.'); }

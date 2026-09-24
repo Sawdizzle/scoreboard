@@ -43,6 +43,10 @@
       <form id="login-form" autocomplete="off">
         <label>Username<input id="username" inputmode="text" autocapitalize="none" autocomplete="username" placeholder="e.g. coach" /></label>
         <label>PIN<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" enterkeyhint="go" placeholder="6–8 digits" /></label>
+        <!-- Only this site's owner knows whether an invite code is required, so
+             the field is always here and always optional: hiding it would mean
+             asking for it after a failed round trip. -->
+        <label class="opt">Invite code <span>only if this site asks for one</span><input id="invite" inputmode="text" autocapitalize="none" autocomplete="off" placeholder="leave blank" /></label>
         <button type="submit" class="primary">Log In</button>
         <button type="button" id="signup-btn" class="ghost">Create Account</button>
       </form>

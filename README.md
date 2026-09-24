@@ -15,6 +15,10 @@ A phone-controlled scoreboard overlay for live-streamed youth sports. You score 
 
 Scoreboard runs on a free Supabase project and any static host. Setup takes about 20 minutes if you have used Supabase before.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSawdizzle%2Fscoreboard&project-name=scoreboard&repository-name=scoreboard)
+
+That button copies this repo into your own GitHub account and puts it on your own Vercel project. The site will load, but it will talk to nothing until you do steps 1-5 below and edit `js/config.js` in **your** copy — there is no build step, so the keys are committed rather than injected as environment variables. Hosting elsewhere is fine too; it is a folder of static files.
+
 1. Create a Supabase project, and give this app one of its own. The publishable key ships in `js/config.js`, so whoever reads your repo can talk to that project as `anon`. RLS keeps them out of Scoreboard's data, but any *other* app sharing the project is exposed to the same key — an anon-writable table belonging to something else becomes a spam target. One project, one app.
 2. Project Settings → API (Data API): add **`scoreboard`** to the exposed schemas.
 3. Apply `supabase/migrations/*.sql` in filename order: the baseline first, then each change. `supabase/migrations/README.md` covers the CLI route and the state of the baseline. `supabase/pending/` holds changes written but not yet applied; each says when it may run.
@@ -23,7 +27,13 @@ Scoreboard runs on a free Supabase project and any static host. Setup takes abou
 6. Deploy the repo root as a static site. On Vercel: framework preset **Other**, no build command, root as output. `vercel.json` turns on clean URLs (`/control`, `/overlay`, `/recap`).
 7. Optional: the lobby's footer carries the original author's Buy Me a Coffee button (`control.html`, `<footer class="support">`). Change it to yours or delete it.
 
-Anyone who can reach your site can create an account; the signup function allows five attempts per address per hour.
+Anyone who can reach your site can create an account; the signup function allows five attempts per address per hour. Since `js/config.js` is committed, anyone reading your repo can reach that endpoint — so if the site is only for your team, set an invite code and hand it out:
+
+```
+supabase secrets set SIGNUP_INVITE=your-code
+```
+
+The pad's **Invite code** field is optional and ignored while the secret is unset, which is the right default for one team on its own project. A wrong code counts against the five-per-hour throttle, so a short code stays worth using.
 
 **Local development**: serve the folder over HTTP (ES modules do not load from `file://`), and use the `.html` paths (`/control.html`, `/overlay.html?ch=…`) unless your server does clean URLs. Use a threaded server — `python3 -c "from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; ThreadingHTTPServer(('127.0.0.1', 5173), SimpleHTTPRequestHandler).serve_forever()"` — because `python3 -m http.server` handles one request at a time and a browser asking for every stylesheet, font and module at once can get served a page with no CSS at all. Local pages talk to whatever Supabase project `js/config.js` names, so if that is the project your games run on, test with a throwaway game. The overlay is a 1920×1080 canvas; maximise the window. Browsers block audio until one click on the overlay; OBS does not.
 

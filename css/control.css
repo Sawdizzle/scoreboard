@@ -85,6 +85,11 @@ h2 { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spa
 label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
 input { width: 100%; margin-top: 6px; padding: 14px; font-size: 18px; background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; color: var(--chalk); }
 input:focus { outline: 2px solid var(--steel); }
+/* The invite field is dead weight on a scoreboard that does not use one, so it
+   sits quieter than the two fields everybody fills in. */
+label.opt { color: var(--steel); }
+label.opt span { color: var(--muted); text-transform: none; letter-spacing: 0; }
+label.opt input { padding: 10px; font-size: 15px; }
 
 button { font-family: var(--disp); font-weight: 700; border: none; border-radius: 14px; cursor: pointer; }
 .primary { width: 100%; padding: 16px; font-size: 18px; background: var(--run); color: #fff; margin-top: 6px; }
