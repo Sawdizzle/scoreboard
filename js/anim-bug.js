@@ -3,7 +3,7 @@
 // stage. Each render hands the frame the game (in the bug's shape) and the
 // stinger that came with it; the bug's kit (bugs/kit.js) works out the moment.
 // Baseball only — any other sport keeps the regular bug.
-import { safeBases, currentBatter, currentPitcher, pitchCount } from './logic.js';
+import { safeBases, currentBatter, currentPitcher, pitchCount, strikeoutsFor } from './logic.js';
 
 export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
 
@@ -11,6 +11,9 @@ export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboa
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
 // or a card still plays over the top as usual.
 const OWN = new Set(['run', 'homerun', 'play', 'strikeout', 'strikeoutlooking', 'doubleplay', 'bigplay', 'stolenbase', 'webgem']);
+// Bugs with a walk-off of their own. For the rest the overlay's celebration plays.
+const OWN_WALKOFF = new Set(['primetime']);
+const plays = (type) => OWN.has(type) || (type === 'walkoff' && OWN_WALKOFF.has(slug));
 
 const POS = {
   'top-left': 'tl', 'top-center': 'tc', 'top-right': 'tr', 'top-bar': 'tc',
@@ -31,6 +34,7 @@ function team(s, side) {
   return {
     name, abbr: s[side + '_abbr'] || name, color: s[side + '_color'] || '#888',
     r: s[side + '_score'] | 0, h: s[side + '_hits'] | 0, e: s[side + '_errors'] | 0, line: [],
+    k: strikeoutsFor(s, side),   // strikeouts by this side's pitcher on the mound
   };
 }
 
@@ -78,12 +82,14 @@ export function syncAnimBug(s, anim) {
     document.body.appendChild(frame);
     anim = null; // a fresh bug paints the game as it stands
   }
-  const lift = parseFloat(getComputedStyle(document.body).getPropertyValue('--tk')) || 0;
+  // Lift a bottom bug over the ticker, read off the row: the ticker paints after this.
+  const t = s.ticker;
+  const lift = t && t.on && typeof t.text === 'string' && t.text.trim() ? 60 : 0;
   post({
     type: 'scoreboard:live',
     state: bugState(s),
-    anim: anim && OWN.has(anim.type) ? { type: anim.type, meta: anim.meta || {} } : null,
-    view: { pos: POS[s.scorebug_position] || 'bc', scale: +s.scorebug_scale || 1, lift },
+    anim: anim && plays(anim.type) ? { type: anim.type, meta: anim.meta || {} } : null,
+    view: { pos: POS[s.scorebug_position] || 'bc', scale: +s.scorebug_scale || 1, lift, rally: !!s.rally_mode },
   });
   return true;
 }
@@ -93,4 +99,4 @@ export function syncAnimBug(s, anim) {
 export const animBugFiles = () => (slug ? [`/bugs/${slug}`, '/bugs/kit.js'] : []);
 
 // Whether the overlay should still play this stinger itself.
-export const overlayPlays = (anim, onScreen) => !onScreen || !OWN.has(anim && anim.type);
+export const overlayPlays = (anim, onScreen) => !onScreen || !plays(anim && anim.type);

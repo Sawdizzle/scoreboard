@@ -17,9 +17,12 @@
      hit   {bases:1|2|3, batter}
      run   {team, runs, hr?}
      hr    {team, runs, batter}
+   A team may also carry k: strikeouts by its pitcher on the mound (live only).
      k     {looking, batter}
      half  {inning, half}
+     walkoff {team, runs, batter}   (live only, for bugs the overlay lists in OWN_WALKOFF)
      reset
+   body.rally is set while the pad's rally mode is on.
    Order: a play's moments fire BEFORE render() paints the new state,
    so a moment sees the old DOM and the new S (passed as 2nd arg).
 
@@ -106,7 +109,7 @@
     <div class="row"><button data-a="single">Single</button><button data-a="double">Double</button><button data-a="triple">Triple</button><button data-a="error">Error</button></div>
     <div class="row"><button class="hot" data-a="hr">Home run</button><button class="hot" data-a="kswing">K swinging</button><button class="hot" data-a="klook">K looking</button><button data-a="walk">Walk</button></div>
     <div class="row"><button data-a="run">+1 Run</button><button data-a="half">Next half</button><button data-a="pos">Move bug</button><button data-a="reset">Reset</button></div>
-    <div class="row"><button data-a="auto" aria-pressed="false">Auto-play a game</button></div>
+    <div class="row"><button data-a="walkoff">Walk-off</button><button data-a="rally" aria-pressed="false">Rally</button><button data-a="auto" aria-pressed="false">Auto-play a game</button></div>
     <p>Add <b>?obs=1</b> to hide this panel for OBS. <b>?auto=1</b> plays a game by itself.</p>`;
 
   function merge(target, src) {
@@ -232,6 +235,7 @@
         if (POS.includes(view.pos)) pos = view.pos;
         scale = +view.scale || 1;
         bug.style.setProperty("--lift", (parseFloat(view.lift) || 0) + "px");
+        document.body.classList.toggle("rally", !!view.rally);   // the pad's rally mode
         place();
       }
       if (!next) return;
@@ -267,6 +271,7 @@
       S = next;
       if (m) emit(m[0], m[1]);
       if (runs) emit("run", { team: bt, runs });
+      if (anim && anim.type === "walkoff") emit("walkoff", { team: bt, runs, batter: prev.batter });
       if (!m && forward(prev, next)) emit("half", { inning: S.inning, half: S.half });
       render();
     }
@@ -343,6 +348,19 @@
         later(theme.hrDelay ?? 1800, () => { score(n, { hr: true }); nextBatter(); });
       },
       kswing() { S.pitchCount++; strikeout(false); },
+      walkoff() {   // a game-ending single; bugs without a walk-off of their own just show the hit
+        S.pitchCount++; S[battingTeam(S)].h++;
+        S.bases[2] = true;                  // the winning run on third
+        const runs = advance(1), t = battingTeam(S);
+        emit("hit", { bases: 1, batter: S.batter });
+        score(runs);
+        emit("walkoff", { team: t, runs, batter: S.batter });
+        nextBatter();
+      },
+      rally() {
+        const on = document.body.classList.toggle("rally");
+        $('#demo [data-a="rally"]')?.setAttribute("aria-pressed", String(on));
+      },
       klook() { S.pitchCount++; strikeout(true); },
       half() { nextHalf(); },
       pos() { pos = DEMO_POS[(DEMO_POS.indexOf(pos) + 1) % DEMO_POS.length]; place(); },

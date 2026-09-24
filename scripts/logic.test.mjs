@@ -1312,3 +1312,28 @@ test('other sports adjust the total only', () => {
   const r = L.adjustScore(G({ sport: 'soccer', away_score: 1 }), 'away', 1);
   assert.deepEqual(Object.keys(r.patch), ['away_score']);
 });
+
+// ---- Strikeouts by the pitcher on the mound (state.ks / state.kLog) --------
+test('a strikeout is charged to the fielding side\'s pitcher', () => {
+  const r = L.onStrike(G({ strikes: 2 }));
+  assert.equal(L.strikeoutsFor({ ...G(), ...r.patch }, 'home'), 1);
+  assert.equal(L.strikeoutsFor({ ...G(), ...r.patch }, 'away'), 0);
+});
+test('a strikeout keeps the batting order moving', () => {
+  const g = G({ strikes: 2, state: { batIdx: { away: 3, home: 0 }, ks: { home: 4 } } });
+  const r = L.onStrike(g);
+  assert.equal(r.patch.state.ks.home, 5);
+  assert.ok(r.patch.state.batIdx, 'endPA state survives');
+});
+test('the third out on a strikeout still counts, against the side that was in the field', () => {
+  const r = L.onStrike(G({ strikes: 2, outs: 2, half: 'bottom', state: { ks: { away: 2 } } }));
+  assert.equal(r.patch.state.ks.away, 3);
+});
+test('a pitcher change banks his strikeouts and restores a returning pitcher\'s', () => {
+  const g = G({ state: { pitches: { home: 40 }, ks: { home: 6 } } });
+  const off = L.onPitcherChange(g, 'home', 'p1', 'p2');
+  assert.equal(off.patch.state.ks.home, 0);
+  assert.equal(off.patch.state.kLog.home.p1, 6);
+  const back = L.onPitcherChange({ ...g, ...off.patch }, 'home', 'p2', 'p1');
+  assert.equal(back.patch.state.ks.home, 6);
+});
