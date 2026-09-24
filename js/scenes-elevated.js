@@ -1,5 +1,6 @@
 // Elevated scenes: the full-frame cards (Starting Soon, Mid-Inning, Final,
-// Game paused) redrawn in the network-TV look of the Prime Time scorebug —
+// Game paused) and the smaller ones (batting order, defense, matchup, sponsor)
+// redrawn in the network-TV look of the Prime Time scorebug —
 // glass rails, team-colour slabs, rolling numerals, wipes and gleams.
 //
 // The markup keeps every hook the overlay already drives, so the countdown
@@ -123,7 +124,76 @@ function paused(c, s, h) {
   </div>`;
 }
 
-const SCENES = { starting, midinning, finalfull: final, paused };
+// ---- The smaller cards ------------------------------------------------------
+// These float over the live picture, so they stay clear of the scorebug: the
+// side panel takes the other side of the frame, the lower thirds the other
+// edge (css/scenes-elevated.css reads body[data-pos]).
+function panelHead(t, kicker) {
+  return `<div class="el-ph"><span class="el-ph-t">${t.logo ? crest(t) : ''}<b>${esc(t.abbr)}</b></span><span class="el-ph-k">${esc(kicker)}</span></div>`;
+}
+
+function lineup(c, s, h) {
+  const meta = c.meta || {};
+  const side = meta.auto ? h.battingSide(s) : (meta.side || h.battingSide(s));
+  const t = team(s, side);
+  let body;
+  if (h.rosterBad()) body = `<div class="el-empty">${esc(h.LINK_STALE)}</div>`;
+  else {
+    const rows = h.battingOrderCard(s, side);
+    body = rows.length ? rows.map((r, i) => `<div class="el-bo${r.current ? ' cur' : ''}" style="--i:${i}">
+        <span class="o">${r.order}</span><span class="nm">${r.num ? `<i>#${esc(r.num)}</i>` : ''}${esc(r.name)}</span>
+        <span class="ps">${esc(r.pos)}</span>${r.current ? '<em>AB</em>' : ''}</div>`).join('')
+      : '<div class="el-empty">No lineup set</div>';
+  }
+  return `<div class="card el el-side-card el-order" style="--tc:${attr(t.color)}" data-enter-ms="2200">
+    ${panelHead(t, 'Batting order')}<div class="el-bo-list">${body}</div></div>`;
+}
+
+// The field, drawn: outfield grass with mowing stripes, the infield skin, the
+// baselines and the mound. Positions sit where they play.
+const FIELD = `<svg class="el-fsvg" viewBox="0 0 900 600" aria-hidden="true">
+  <path class="grass" d="M450 540 L110 200 A481 481 0 0 1 790 200 Z"/>
+  <path class="skin" d="M450 556 L273 363 A250 250 0 0 1 627 363 Z"/>
+  <path class="grass2" d="M450 508 L528 430 L450 352 L372 430 Z"/>
+  <path class="ln" d="M450 540 L110 200 M450 540 L790 200 M110 200 A481 481 0 0 1 790 200"/>
+  <path class="ln" d="M450 540 L560 430 L450 320 L340 430 Z"/>
+  <circle class="mound" cx="450" cy="440" r="18"/>
+  <rect class="bag" x="551" y="421" width="18" height="18" transform="rotate(45 560 430)"/>
+  <rect class="bag" x="441" y="311" width="18" height="18" transform="rotate(45 450 320)"/>
+  <rect class="bag" x="331" y="421" width="18" height="18" transform="rotate(45 340 430)"/>
+  <path class="bag" d="M441 532 h18 v8 l-9 9 l-9 -9 Z"/></svg>`;
+
+function defense(c, s, h) {
+  const side = h.fieldingSide(s);
+  const t = team(s, side);
+  if (h.rosterBad()) {
+    return `<div class="card el el-defense" style="--tc:${attr(t.color)}">${panelHead(t, 'In the field')}<div class="el-empty">${esc(h.LINK_STALE)}</div></div>`;
+  }
+  const spot = (pos, i) => {
+    const f = h.fielderAt(s, side, pos);
+    const who = f ? `${f.num ? `<i>${esc(f.num)}</i>` : ''}<b>${esc(f.name || '')}</b>` : '<b class="none">—</b>';
+    return `<div class="el-dp" data-pos="${pos}" style="--i:${i}"><span class="lab">${pos}</span><span class="who">${who}</span></div>`;
+  };
+  return `<div class="card el el-defense" style="--tc:${attr(t.color)}" data-enter-ms="2600">
+    ${panelHead(t, 'In the field')}<div class="el-field">${FIELD}${h.FIELD_POSITIONS.map(spot).join('')}</div></div>`;
+}
+
+function matchup(c, s) {
+  const meta = c.meta || {};
+  const a = team(s, 'away'), hm = team(s, 'home');
+  const slab = (t) => `<div class="el-mu-t ${t.side}" style="--tc:${attr(t.color)}">${t.logo ? crest(t) : ''}<b>${esc(t.name)}</b></div>`;
+  return `<div class="card el el-lower el-matchup" data-enter-ms="1800">
+    <div class="el-mu">${slab(a)}<span class="el-mu-vs">VS</span>${slab(hm)}</div>
+    ${meta.text ? `<div class="el-mu-meta">${esc(meta.text)}</div>` : ''}</div>`;
+}
+
+function sponsor(c) {
+  const meta = c.meta || {};
+  return `<div class="card el el-lower el-sponsor" data-enter-ms="1600">
+    <span class="el-tag">Brought to you by</span><span class="el-sp">${esc(meta.text || 'Sponsor')}</span><i class="el-sp-gleam" aria-hidden="true"></i></div>`;
+}
+
+const SCENES = { starting, midinning, finalfull: final, paused, lineup, defense, matchup, sponsor };
 
 // The elevated markup for a card, or null when the card has no elevated
 // version (the overlay then builds its simple one).

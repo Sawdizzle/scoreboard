@@ -596,7 +596,7 @@ function renderCard(s) {
     fitStartingNames(layer);
     paintWeather();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitStartingNames(layer));
-    const fresh = layer.querySelector('.takeover-card');
+    const fresh = layer.querySelector('.takeover-card, .card.el');
     if (fresh) {
       fresh.classList.add('enter');
       // Drop it once it's played, so a later live refresh of the card's children
@@ -621,6 +621,8 @@ function renderCard(s) {
     } else layer.innerHTML = html;
   }
   layer.hidden = false;
+  // An elevated side panel or lower third floats over the live picture: no dimming.
+  layer.classList.toggle('el-clear', !!layer.querySelector('.el-lower, .el-side-card'));
   // Final's winner treatment is on the whole frame, not inside the card: the
   // winner's side of the backdrop glows in their colour and the other side goes
   // dark. The card itself is centred, so a wash drawn inside it was clipped to a
@@ -915,7 +917,8 @@ const escapeAttr = (t) => String(t).replace(/"/g, '&quot;');
 // Simple (the original scenes) or Elevated (js/scenes-elevated.js, the Prime
 // Time look). ?scenes= on the overlay link overrides the game's setting.
 const sceneStyle = (s) => (params.get('scenes') || s.scene_style || 'simple') === 'elevated' ? 'elevated' : 'simple';
-const SCENE_HELPERS = { breakLabel, lineScoreHtml, recapStripHtml, midDueUpHtml, finishedHalf, finalStory, standsLabel, PAUSE, NO_CLOCK };
+const SCENE_HELPERS = { breakLabel, lineScoreHtml, recapStripHtml, midDueUpHtml, finishedHalf, finalStory, standsLabel, PAUSE, NO_CLOCK,
+  battingOrderCard, battingSide, fieldingSide, fielderAt, FIELD_POSITIONS, LINK_STALE, rosterBad: () => rosterBad };
 function buildCard(c, s) {
   if (sceneStyle(s) === 'elevated') {
     const el = elevatedScene(c, s, SCENE_HELPERS);
