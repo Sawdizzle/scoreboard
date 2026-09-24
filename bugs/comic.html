@@ -183,8 +183,51 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
 #kp .kcap b{display:block;font-size:38px;margin-top:3px}
 #kp.look .kcap{background:#fff}
 
+/* ---------- WALK-OFF: the last splash page of the book ---------- */
+#wo{position:absolute;inset:0;pointer-events:none;visibility:hidden}
+#wo.on{visibility:visible}
+#wo .wg{position:absolute;inset:0;transform-origin:960px 560px}
+#wo .wsp{left:290px;top:240px;width:1340px;height:640px;clip-path:polygon(0 1.5%,100% 0,99% 100%,.8% 98%);animation:spIn .6s cubic-bezier(.3,1.4,.5,1) both}
+#wo .wsp .fill{clip-path:polygon(0 0,100% 1%,100% 100%,0 99%);
+  background:radial-gradient(circle at 50% 46%,color-mix(in srgb,var(--tc) 30%,#fff) 0%,var(--tc) 40%,color-mix(in srgb,var(--tc) 50%,#000) 100%)}
+#wo .wsp .fill::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,.4) 2.4px,transparent 3px) 0 0/12px 12px;
+  -webkit-mask-image:radial-gradient(circle at 50% 46%,transparent 25%,#000 80%);mask-image:radial-gradient(circle at 50% 46%,transparent 25%,#000 80%)}
+#wo .speed{background:repeating-conic-gradient(from 0deg,rgba(255,217,59,.6) 0 2deg,transparent 2deg 6.5deg);animation:spin 16s linear infinite reverse}
+#wo .dotburst{background:radial-gradient(circle,rgba(255,255,255,.9) 2.6px,transparent 3.2px) 0 0/13px 13px;animation:dotBurst 1.4s ease-out .25s both}
+#wo .nar{position:absolute;left:820px;top:204px;background:var(--yel);border:6px solid var(--ink);padding:12px 24px 8px;font:700 34px/1 var(--cap);text-transform:uppercase;
+  box-shadow:8px 8px 0 var(--ink);animation:narIn .5s cubic-bezier(.2,1.2,.4,1) .15s both}
+#wo .kb{position:absolute;left:320px;top:290px;width:1280px;height:410px;animation:kbIn .6s cubic-bezier(.3,1.5,.5,1) .35s both}
+#wo .word{font-size:232px;--sw:18px;white-space:nowrap;animation:jit .14s steps(1) 1.5s 16}
+#wo .word i{display:inline-block;font-style:normal;animation:letIn .42s cubic-bezier(.3,1.9,.5,1) both}
+#wo .caps{position:absolute;left:350px;top:706px;display:flex;align-items:flex-end}
+#wo .c1{background:#fff;border:6px solid var(--ink);padding:12px 26px 10px;font:700 32px/1 var(--cap);text-transform:uppercase;box-shadow:8px 8px 0 var(--ink);
+  animation:woCap .6s cubic-bezier(.2,1.2,.4,1) 1.3s both}
+#wo .c1 b{display:block;font:400 100px/1 var(--sfx);letter-spacing:.03em;color:var(--red);paint-order:stroke fill;-webkit-text-stroke:9px var(--ink);text-shadow:6px 6px 0 var(--ink);margin-top:6px}
+#wo .star{margin:0 0 -22px -16px;background:var(--yel);border:6px solid var(--ink);padding:10px 22px 6px;font:700 24px/1 var(--cap);text-transform:uppercase;
+  box-shadow:6px 6px 0 var(--ink);animation:tagIn .45s cubic-bezier(.3,1.8,.5,1) 1.95s both}
+#wo .star b{display:block;font:400 56px/1 var(--sfx);letter-spacing:.04em;margin-top:2px}
+#wo .pop{position:absolute;width:230px;height:150px;animation:popIn 1.5s ease-out both}
+#wo .pop .sfxw{font-size:58px;--sw:8px;color:#fff;text-shadow:4px 4px 0 var(--ink)}
+@keyframes woCap{0%{transform:translateX(-700px) rotate(-8deg);opacity:0}25%{opacity:1}70%{transform:translateX(24px) rotate(-1deg)}100%{transform:translateX(0) rotate(-2deg);opacity:1}}
+@keyframes narIn{0%{transform:translateY(-70px) rotate(-9deg);opacity:0}100%{transform:rotate(-2deg);opacity:1}}
+@keyframes letIn{0%{transform:translateY(-150px) scale(2.3) rotate(-22deg);opacity:0}30%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes popIn{0%{transform:scale(0) rotate(-30deg)}14%{transform:scale(1.2) rotate(var(--r))}22%,80%{transform:scale(1) rotate(var(--r));opacity:1}100%{transform:scale(1.3) rotate(var(--r));opacity:0}}
+/* the final panel: a rubber stamp slapped on the winners' panel */
+.wstamp{position:absolute;z-index:3;left:205px;top:9px;padding:4px 18px 0;border:6px solid var(--red);border-radius:6px;background:rgba(255,244,214,.92);
+  font:400 52px/1 var(--sfx);letter-spacing:.06em;color:var(--red);box-shadow:inset 0 0 0 3px rgba(255,244,214,.92),inset 0 0 0 6px var(--red);transform:rotate(-9deg)}
+
+/* ---------- RALLY (the pad's Rally): emanata tick around the strip, the narrator can't sit still ---------- */
+.eman{position:absolute;left:-34px;top:-30px;overflow:visible;pointer-events:none;z-index:3;opacity:0}
+body.rally .eman{opacity:1;animation:eman .9s steps(1) infinite}
+body.rally .cap{animation:excite 1.8s linear infinite}
+@keyframes eman{0%{transform:scale(1)}50%{transform:scale(1.03)}}
+@keyframes excite{0%,60%,100%{transform:rotate(.9deg)}64%{transform:translate(3px,-2px) rotate(-.6deg)}68%{transform:translate(-3px,1px) rotate(1.9deg)}
+  72%{transform:translate(2px,2px) rotate(0deg)}76%{transform:translate(-2px,-1px) rotate(1.6deg)}80%{transform:rotate(.9deg)}}
+
 @media (prefers-reduced-motion:reduce){
   .jit,.spin{animation:none!important}
+  #wo .word,#wo .speed{animation:none!important}
+  body.rally .eman,body.rally .cap{animation:none}
 }
 </style>
 </head>
@@ -226,6 +269,7 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
   <!-- K PANEL + HOME RUN SPLASH (built per moment) -->
   <div id="kp"></div>
   <div id="splash"></div>
+  <div id="wo"></div>
 </div>
 
 <script src="kit.js"></script>
@@ -233,7 +277,7 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
 (() => {
   const { $, $$, restart, battingTeam } = BugKit;
   const stage = $("#stage"), bug = $("#bug"), page = $(".page"), pwrap = $(".pwrap");
-  const kp = $("#kp"), splash = $("#splash");
+  const kp = $("#kp"), splash = $("#splash"), wo = $("#wo");
   const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const POP = "cubic-bezier(.25,1.8,.5,1)";
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
@@ -500,6 +544,68 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
     kTimer = setTimeout(() => { kp.classList.remove("on"); kp.innerHTML = ""; }, dur + 60);
   }
 
+  /* ---------- WALK-OFF: the last splash page, then the book closes onto the bug ---------- */
+  const ord = (n) => n + ((n % 100 >= 11 && n % 100 <= 13) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"));
+  let woTimers = [], woFly;
+  function walkoffFx({ team, batter } = {}, S){
+    team ||= battingTeam(S);
+    const o = team === "away" ? "home" : "away";
+    const abbr = (S[team].abbr || S[team].name || "").toUpperCase();
+    const score = `${S[team].r}-${S[o].r}`;
+    const who = String(batter || "").trim();
+    woTimers.forEach(clearTimeout); woTimers = [];
+    woFly?.cancel();
+    $$(".wstamp").forEach((n) => n.remove());
+    splash.classList.remove("on", "torn"); splash.innerHTML = "";   // never stack on a home-run splash
+    const letters = [..."WALK-OFF!"].map((c, i) => `<i style="animation-delay:${(.42 + i * .06).toFixed(2)}s">${c}</i>`).join("");
+    const pops = [["YEAH!", 250, 480, -14, .95, "var(--mag)"], ["WOO-HOO!", 1450, 220, 10, 1.25, "var(--cyan)"], ["WHAM!", 1480, 660, -8, 1.6, "var(--red)"]]
+      .map(([w, x, y, r, d, back], i) => `<div class="burst pop" style="left:${x}px;top:${y}px;--r:${r}deg;animation-delay:${d}s">${burstSVG({ n: 11, seed: 50 + i, back, front: "var(--yel)" })}
+        <div class="w sfxw">${w}</div></div>`).join("");
+    wo.style.setProperty("--tc", S[team].color || "#5B8FC9");
+    wo.innerHTML = `<div class="wg">
+      <div class="bigpanel wsp"><div class="fill"><div class="speed"></div><div class="dotburst"></div></div></div>
+      <div class="nar">${S.half === "top" ? "Top" : "Bottom"} of the ${ord(S.inning)}…</div>
+      <div class="burst kb">${burstSVG({ n: 19, seed: 77, back: "var(--yel)", front: "var(--red)", ri: .74 })}<div class="w"><div class="sfxw word">${letters}</div></div></div>
+      ${pops}
+      <div class="caps"><div class="c1">The end…<b>${esc(abbr)} WIN ${score}!</b></div>
+        ${who ? `<div class="star">Starring<b>${esc(who)}</b></div>` : ""}</div></div>`;
+    restart(wo, "on");
+    // the book closes: the splash shrinks into the scorebug's corner…
+    woTimers.push(setTimeout(() => {
+      const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width / 1920;
+      const cx = (r.left - s.left + r.width / 2) / k, cy = (r.top - s.top + r.height / 2) / k;
+      woFly = $(".wg", wo).animate(RM
+        ? [{ opacity: 1 }, { opacity: 0 }]
+        : [{ transform: "none", opacity: 1 }, { transform: `translate(${cx - 960}px,${cy - 560}px) scale(.3) rotate(${pos.endsWith("r") ? 8 : -8}deg)`, opacity: .9, offset: .8 },
+           { transform: `translate(${cx - 960}px,${cy - 560}px) scale(.12) rotate(${pos.endsWith("r") ? 12 : -12}deg)`, opacity: 0 }],
+        { duration: 600, easing: "cubic-bezier(.5,0,.75,.3)", fill: "forwards" });
+    }, 4300));
+    // …and lands as the final panel: WIN! stamped on the winners, the narrator signs off
+    woTimers.push(setTimeout(() => {
+      wo.classList.remove("on"); wo.innerHTML = ""; woFly = null;
+      const p = $(`.panel.${team}`);
+      p.animate([{ transform: "scale(1)" }, { transform: "scale(1.06) rotate(-1.5deg)", offset: .3 }, { transform: "scale(1)" }], { duration: 520, easing: "ease-out" });
+      const st = spawn($(".fill", p), "wstamp", "WIN!", 2200);
+      st.animate([{ transform: "scale(3) rotate(-24deg)", opacity: 0 }, { transform: "scale(.92) rotate(-8deg)", opacity: 1, offset: .6 }, { transform: "rotate(-9deg)" }],
+        { duration: 340, easing: "cubic-bezier(.5,0,.7,1)" });
+      st.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, delay: 1850, fill: "forwards" });
+      note("…and they all went home happy.", `Final: ${abbr} ${score}`, 2100);
+    }, 4900));
+  }
+
+  /* Rally: emanata (the little excitement ticks comics draw around a character) round the strip. */
+  (function emanata(){
+    const W = 808, H = 252, x0 = 34, y0 = 30, x1 = W - 34, y1 = H - 30, L = [];
+    const tick = (x, y, a, r0 = 12, r1 = 34) => L.push([x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * r1, y + Math.sin(a) * r1]);
+    for (const [x, y, a] of [[x0, y0, -2.36], [x1, y0, -.79], [x0, y1, 2.36], [x1, y1, .79]])
+      for (const d of [-.5, 0, .5]) tick(x, y, a + d);
+    for (const x of [230, 420, 610]) tick(x, y0, -Math.PI / 2 + (x - 420) / 1400, 6, 26);
+    for (const x of [640]) tick(x, y1, Math.PI / 2, 6, 24);
+    const seg = (w, c) => L.map(([a, b, c2, d]) => `<line x1="${a.toFixed(1)}" y1="${b.toFixed(1)}" x2="${c2.toFixed(1)}" y2="${d.toFixed(1)}"/>`).join("")
+      .replace(/^/, `<g stroke="${c}" stroke-width="${w}" stroke-linecap="round">`) + "</g>";
+    pwrap.insertAdjacentHTML("beforeend", `<svg class="eman" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${seg(11, "#fff")}${seg(5, "#141414")}</svg>`);
+  })();
+
   const HALF = (h, i) => `${h === "top" ? "TOP" : "BOTTOM"} ${i}`;
   BugKit.start({
     name: "Ka-Pow",
@@ -510,6 +616,7 @@ body[data-pos^="t"] .fxl{top:10px} body[data-pos^="b"] .fxl{bottom:40px}
       run: runFx,
       hr: hrFx,
       k: kFx,
+      walkoff: walkoffFx,
       hit({ bases = 1 }){ sfxBurst("hit", "CRACK!", ["", "SINGLE", "DOUBLE!", "TRIPLE!!"][bases] || "", { seed: 5 + bases, rot: -7, w: 260, h: 170 }); },
       foul(){ sfxBurst("hit", "TINK!", "FOUL BALL", { size: 50, w: 190, h: 120, seed: 31, back: "var(--cyan)", front: "#fff", dur: 1000, rot: 6 }); },
       walk({ batter } = {}, S){ note("Ball four.", `Take your base… ${last(batter || S.batter)}`, 2300); },

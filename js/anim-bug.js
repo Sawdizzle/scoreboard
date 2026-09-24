@@ -11,8 +11,9 @@ export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboa
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
 // or a card still plays over the top as usual.
 const OWN = new Set(['run', 'homerun', 'play', 'strikeout', 'strikeoutlooking', 'doubleplay', 'bigplay', 'stolenbase', 'webgem']);
-// Bugs with a walk-off of their own. For the rest the overlay's celebration plays.
-const OWN_WALKOFF = new Set(['primetime']);
+// Bugs with a walk-off of their own (all of them, since v4.31). One left out of
+// this list gets the overlay's own celebration instead.
+const OWN_WALKOFF = new Set(ANIM_BUGS);
 const plays = (type) => OWN.has(type) || (type === 'walkoff' && OWN_WALKOFF.has(slug));
 
 const POS = {

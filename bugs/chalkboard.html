@@ -117,9 +117,28 @@ body.preview{background:
 .ball{position:absolute;left:0;top:0;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--chalk);
   box-shadow:0 0 0 2px rgba(244,242,232,.3)}
 .st.fat{stroke-width:9}.st.fat2{stroke-width:5;opacity:.7}
+/* walk-off board */
+#wob .slate{width:1100px;height:520px}
+.wow{font-family:var(--num);font-weight:700;font-size:168px;color:var(--chalk)}
+.wor{font-family:var(--num);font-weight:700;font-size:92px;color:var(--yellow)}
+.won{font-family:var(--hand);font-weight:700;font-size:52px}
+.wos{font-family:var(--hand);font-weight:700;font-size:40px;color:var(--pink)}
+
+/* rally mode (the pad's Rally): the frame glows warm and chalk dust drifts up off the ledge */
+#bug .frame::after{content:"";position:absolute;inset:-3px;border-radius:8px;pointer-events:none;opacity:0;
+  box-shadow:0 0 0 2px rgba(255,214,120,.55),0 0 22px 6px rgba(255,170,70,.5),inset 0 0 18px rgba(255,190,90,.35)}
+body.rally #bug .frame::after{animation:rallyGlow 2.4s ease-in-out infinite}
+@keyframes rallyGlow{0%,100%{opacity:.35}50%{opacity:1}}
+.mote{position:absolute;bottom:10px;left:var(--x);width:5px;height:5px;border-radius:50%;z-index:3;display:none;
+  background:rgba(255,240,205,.95);box-shadow:0 0 6px 1px rgba(255,210,130,.85);pointer-events:none}
+body.rally .mote{display:block;animation:mote var(--t,3.4s) linear var(--d,0s) infinite both}
+@keyframes mote{0%{transform:translate(0,0) scale(.6);opacity:0}15%{opacity:.9}
+  60%{transform:translate(var(--dx,6px),-30px) scale(1);opacity:.7}100%{transform:translate(calc(var(--dx,6px) * -.5),-54px) scale(.5);opacity:0}}
 
 @media (prefers-reduced-motion:reduce){
   .dust,.puff,.tip{display:none}
+  body.rally #bug .frame::after{animation:none;opacity:.75}
+  body.rally .mote{display:none}
 }
 </style>
 </head>
@@ -153,7 +172,11 @@ body.preview{background:
         <div class="fx" id="fx"></div>
       </div>
     </div>
-    <div class="ledge"><i class="stick s1"></i><i class="stick s2"></i><i class="eraser felt"></i></div>
+    <div class="ledge"><i class="stick s1"></i><i class="stick s2"></i><i class="eraser felt"></i>
+      <i class="mote" style="--x:60px;--d:-.4s;--dx:5px"></i><i class="mote" style="--x:118px;--d:-2.1s;--t:3.9s;--dx:-7px"></i>
+      <i class="mote" style="--x:176px;--d:-1.2s;--t:3s;--dx:8px"></i><i class="mote" style="--x:300px;--d:-2.8s;--dx:-5px"></i>
+      <i class="mote" style="--x:430px;--d:-.9s;--t:4.2s;--dx:6px"></i><i class="mote" style="--x:560px;--d:-3.3s;--t:3.6s;--dx:-8px"></i>
+      <i class="mote" style="--x:690px;--d:-1.7s;--dx:4px"></i></div>
   </div>
 </div>
 
@@ -669,6 +692,61 @@ function strikeout({ looking, batter } = {}, S) {
   B.at(3620, () => boardMove(B, from, 380, true).onfinish = () => B.b.remove());
 }
 
+/* ---------- walk-off: the big board scrawls it, circles it, underlines it twice ---------- */
+function walkOff({ team, batter } = {}, S) {
+  const t = team || battingTeam(S), o = t === "away" ? "home" : "away";
+  const abbr = String(S[t].abbr || S[t].name || "").toUpperCase();
+  const result = `${abbr ? abbr + " WIN" : "FINAL"} ${S[t].r}-${S[o].r}`;
+  const B = makeBoard("wob", 1100, 520), sv2 = B.svg;
+  B.b.style.left = "394px"; B.b.style.top = (pos.startsWith("t") ? 330 : 170) + "px";
+  const from = "translateY(" + (pos.startsWith("t") ? 820 : -820) + "px) rotate(2deg)";
+  boardMove(B, from, 560);
+  // a little diamond in the corner: the winning run comes home from third
+  const P = { h: [955, 440], b1: [1045, 350], b2: [955, 260], b3: [865, 350] };
+  const scene = grp(sv2);
+  sp(`M${P.h} L${P.b1} L${P.b2} L${P.b3}`, "thin", scene);
+  [P.b1, P.b2, P.b3].forEach(([x, y]) => sp(rhombus(x, y, 13), "", scene));
+  sp(`M${P.h[0] - 14} ${P.h[1] - 4} L${P.h[0] + 14} ${P.h[1] - 4} L${P.h[0] + 14} ${P.h[1] + 4} L${P.h[0]} ${P.h[1] + 13} L${P.h[0] - 14} ${P.h[1] + 4} Z`, "", scene);
+  const RUN = `M${P.b3[0]} ${P.b3[1]} Q${P.b3[0] + 22} ${P.h[1] - 18} ${P.h[0] - 4} ${P.h[1] - 6}`;
+  const trail = sp(RUN, "y", sv2); trail.style.strokeWidth = 4;
+  const ball = document.createElement("i"); ball.className = "ball";
+  ball.style.offsetPath = `path("${RUN}")`; ball.style.offsetRotate = "0deg"; ball.style.opacity = 0;
+  B.ink.appendChild(ball);
+  const word = bcell(B, 40, 40, 800, 170, "wow");
+  const ring = sp(loop(432, 126, 398, 104, .03, .4), "y", sv2); ring.style.strokeWidth = 6;
+  const u1 = sp(swoosh(90, 790, 234), "y", sv2), u2 = sp(swoosh(126, 762, 250, false), "y", sv2);
+  u1.style.strokeWidth = 6; u2.style.strokeWidth = 5;
+  const res = bcell(B, 60, 282, 760, 100, "wor");
+  const who = bcell(B, 60, 396, 760, 70, "won");
+  const safe = bcell(B, 984, 452, 110, 52, "wos");
+  [scene, trail, ring, u1, u2].forEach((p) => (p.style.opacity = 0));
+
+  B.at(380, () => { scene.style.opacity = ""; drawAll(scene, 240, 0, 40); });
+  write(word, "WALK-OFF!", { delay: RM ? 0 : 520, dur: 900 });
+  B.at(820, () => {
+    trail.style.opacity = ""; draw(trail, 620, 0, "cubic-bezier(.4,.1,.6,1)");
+    ball.style.opacity = "";
+    ball.animate([{ offsetDistance: "0%" }, { offsetDistance: "100%" }], { duration: 620, easing: "cubic-bezier(.4,.1,.6,1)", fill: "forwards" });
+  });
+  B.at(1440, () => puff(B.fx, P.h[0], P.h[1] - 4, 1.1));
+  write(safe, "safe!", { delay: RM ? 0 : 1500, dur: 320 });
+  B.at(1520, () => { ring.style.opacity = ""; draw(ring, 560); puff(B.fx, 36, 130, 1); });
+  B.at(2080, () => { u1.style.opacity = ""; draw(u1, 260); });
+  B.at(2320, () => { u2.style.opacity = ""; draw(u2, 230); puff(B.fx, 780, 240, 1); });
+  write(res, result, { delay: RM ? 0 : 2300, dur: 760 });
+  write(who, batter ? `${batter} walks it off!` : "that's the ballgame!", { delay: RM ? 0 : 3150, dur: 620 });
+  B.at(3300, () => [[200, 470], [520, 120], [880, 180]].forEach(([x, y], i) => puff(B.fx, x, y, .8, i * 140)));
+  // on the main board: the winners' run total gets circled too
+  const key = "wo-ring";
+  flashG.querySelectorAll(`[data-f="${key}"]`).forEach((g) => g.remove());
+  const g = grp(flashG); g.dataset.f = key;
+  sp(loop(COL.r + CW / 2, ROW[t] + RH / 2, 38, 30, .04, .45), "y", g).style.strokeWidth = 3.6;
+  drawAll(g, 460, RM ? 0 : 1700);
+  B.at(5300, () => wipeMoment(B, 700, 3));
+  B.at(6020, () => boardMove(B, from, 420, true).onfinish = () => B.b.remove());
+  setTimeout(() => { if (g.isConnected) eraseMark(key, g, { eraseDur: 360 }); }, RM ? 3600 : 6000);
+}
+
 /* ---------- wire it up ---------- */
 const markDust = (x, delay = 260) => setTimeout(() => dust(fx, x, CNT_Y + 10, 3, 8, 26), delay);
 BugKit.start({
@@ -700,8 +778,9 @@ BugKit.start({
     run({ team, runs = 1, hr }, S) { runFlourish(team || battingTeam(S), runs > 1 || hr); },
     hr: homeRun,
     k: strikeout,
+    walkoff: walkOff,
     half() { wipeBoard(0); },
-    reset() { document.getElementById("hrb")?.remove(); document.getElementById("kb")?.remove(); wipeBoard(0); }
+    reset() { ["hrb", "kb", "wob"].forEach((id) => document.getElementById(id)?.remove()); wipeBoard(0); }
   }
 });
 document.fonts?.ready.then(() => Object.values(cells).forEach((c) => c.querySelectorAll(".v").forEach((v) => fitText(c, v))));
