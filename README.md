@@ -134,7 +134,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 ## Looks
 
-**Scorebugs.** Five layouts (Scorebox, Bar, Bug, Minimal, Lower-third) take any of 16 themes or your own colours. Baseball games can pick an animated scorebug instead: each one brings its own look and plays its own home runs, strikeouts, hits, walks, errors and half-inning changes, straight from the plays you tap on the pad. Try every one with a demo pad at `/bugs`.
+**Scorebugs.** Five layouts (Scorebox, Bar, Bug, Minimal, Lower-third) take any of 16 themes or your own colours. Or pick an animated scorebug: each one brings its own look and plays its own home runs, strikeouts, hits, walks, errors, walk-offs and half-inning changes, straight from the plays you tap on the pad. Seven of them are baseball's; Prime Time covers every sport. Try every one with a demo pad at `/bugs`.
 
 <table>
 <tr>
@@ -156,6 +156,27 @@ The other sports use simple button grids. Corrections and End game for each are 
 </table>
 
 <p align="center"><img src="docs/img/primetime-hr.png" width="620" alt="Prime Time on a home run: a lower-third band in River green wipes out of the scorebug reading HOME RUN, Ava Reyes, 3-run homer" /><br /><img src="docs/img/primetime-k.png" width="760" alt="Prime Time on a strikeout: a red K flag slides out beside the scorebug reading Strikes out swinging, Reyes, Ortiz 1K" /><br /><sub>Moments, Prime Time style: a home run band that holds the runs back until it lands, and a strikeout flag with the pitcher's running total</sub></p>
+
+Every animated scorebug ends a walk-off game its own way:
+
+<table>
+<tr>
+<td width="50%" align="center"><img src="docs/img/walkoffs/primetime.jpg" alt="Prime Time walk-off: the lower-third band in Blue Steel blue reads WALK-OFF, Ava Reyes, Steel win 4-3" /><br /><sub>Prime Time</sub></td>
+<td width="50%" align="center"><img src="docs/img/walkoffs/classic-green.jpg" alt="Classic Green walk-off: the marquee banner spells WALK-OFF in flip plates over Steel win 4-3" /><br /><sub>Classic Green</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/walkoffs/comic.jpg" alt="Ka-Pow walk-off: a splash page reading WALK-OFF! with a caption The end, Steel win 4-3, starring Ava Reyes" /><br /><sub>Ka-Pow</sub></td>
+<td align="center"><img src="docs/img/walkoffs/pixel-rpg.jpg" alt="Battle Mode walk-off: a VICTORY window reading Walk-off, Steel win 4-3, runs 3 to 4 level up, with pixel fireworks" /><br /><sub>Battle Mode</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/walkoffs/chalkboard.jpg" alt="Chalk Talk walk-off: WALK-OFF! chalked and circled, Steel win 4-3, Ava Reyes walks it off, with a runner chalked home safe" /><br /><sub>Chalk Talk</sub></td>
+<td align="center"><img src="docs/img/walkoffs/pinball-dmd.jpg" alt="Backglass walk-off: the dot-matrix display reads STEEL WIN 4-3 between chevrons" /><br /><sub>Backglass</sub></td>
+</tr>
+</table>
+
+**Other sports.** Prime Time plays football, soccer, basketball and volleyball too: the period and the game clock in the box, down and distance (or stoppage, bonus, a set's target) and who has the ball or the serve in the strip with each side's timeouts, cards, fouls or sets, and its own touchdown, field goal, safety, goal, three, ace and set-won moments. Demo pads: `/bugs/primetime?sport=football` (or `soccer`, `basketball`, `volleyball`).
+
+<p align="center"><img src="docs/img/primetime-football.png" width="620" alt="Prime Time on a football game: River 7, Steel 3, 2nd quarter, 7:29, 3rd and 6, ball River, timeouts; then a TOUCHDOWN band, River 13 Steel 3" /><br /><sub>Prime Time on a football game, and its touchdown</sub></p>
 
 **Scenes.** Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards (batting order, defense, matchup, sponsor, the ticker) come in two styles, picked per game in Setup: **Simple**, painted in your theme, and **Elevated**, the network-TV package with team-colour light, wipes, rolling clocks and counting scores.
 
@@ -181,7 +202,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 - **Sport**: which sport the pad and overlay run.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).
 - **Show on overlay**: clock, batter, pitcher, pitch count, R-H-E on the bug, run-rule watch.
-- **Look & sound**: the scorebug design, the theme, the scene style (Simple, or Elevated: Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards in the network-TV look), the 3×3 position grid, scale, five sound packs, one volume, mute. A design is one of five layouts (Scorebox, Bar, Bug, Minimal, Lower-third), painted by one of 16 themes (including Blue Steel) or Custom colours. Baseball games can instead pick one of eight **animated** scorebugs (Prime Time, Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode), which bring their own look and play their own home run, strikeout and hit moments; the theme then colours only the cards and the ticker. See them all at `/bugs`.
+- **Look & sound**: the scorebug design, the theme, the scene style (Simple, or Elevated: Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards in the network-TV look), the 3×3 position grid, scale, five sound packs, one volume, mute. A design is one of five layouts (Scorebox, Bar, Bug, Minimal, Lower-third), painted by one of 16 themes (including Blue Steel) or Custom colours. Or one of eight **animated** scorebugs (Prime Time, Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode), which bring their own look and play their own moments; Prime Time covers every sport, the rest are baseball. The theme then colours only the cards and the ticker. See them all at `/bugs`.
 - **Sponsors**: a list of names and logos, shown as a rotating "brought to you by" corner bug that hides while a full-screen card is up.
 - **OBS**: the OBS-buttons switch, current page-permission level, auto-clip, Go Live / Record / Buffer.
 - **This game**: Reset to 0–0 (keeps teams and look) and Delete (cannot be undone).

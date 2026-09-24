@@ -1,7 +1,7 @@
 import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
-import { syncAnimBug, overlayPlays, animBugFiles } from './anim-bug.js';
+import { syncAnimBug, overlayPlays, animBugFiles, animBugClock } from './anim-bug.js';
 import { elevatedScene, rollDigits } from './scenes-elevated.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
@@ -414,6 +414,7 @@ function paintClock(hidden, text, low, zero) {
   const key = `${hidden}|${text}|${low}|${zero}`;
   if (key === clockPainted) return;
   clockPainted = key;
+  animBugClock({ hidden, text, low, zero });   // an animated bug with a clock (Prime Time, other sports)
   for (const c of clockEls) {
     c.hidden = hidden;
     if (hidden) continue;

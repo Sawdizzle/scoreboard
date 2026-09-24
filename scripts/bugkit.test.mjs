@@ -165,3 +165,44 @@ test('a real game: every walk, strikeout, hit and out in play animates', () => {
   assert.deepEqual(missed, [], 'plays the bug did not animate');
   assert.ok(seen.walk >= 10 && seen.k >= 3 && seen.hit >= 3 && seen.out >= 5, `the fixture covers the plays: ${JSON.stringify(seen)}`);
 });
+
+// ---- Other sports (Prime Time covers them all) ------------------------------
+const { sitFor } = await loadModule('js/anim-bug.js');
+const S2 = (sport, over = {}, state = {}) => ({ sport, away_score: 0, home_score: 0, state, ...over });
+const sportTap = (before, after, type) => Array.from(
+  decide(bugState(before), bugState(after), type ? { type, meta: {} } : null).moments, (m) => m[0]);
+
+test('football: a touchdown bands, a field goal worth two is still read off the score', () => {
+  const g = S2('football', {}, { quarter: 2, down: 3, distance: 6, possession: 'away' });
+  assert.deepEqual(sportTap(g, { ...g, away_score: 6 }, 'touchdown'), ['td', 'score']);
+  const safety = decide(bugState(g), bugState({ ...g, home_score: 2 }), { type: 'fieldgoal', meta: {} });
+  assert.equal(Array.from(safety.moments, (m) => m[0]).join(), 'fg,score');
+  assert.equal(safety.moments[1][1].pts, 2);
+  assert.deepEqual(sportTap(g, g, 'turnover'), ['turnover']);
+});
+
+test('points with no stinger, a new period, and an undo', () => {
+  const b = S2('basketball', {}, { period: 1 });
+  assert.deepEqual(sportTap(b, { ...b, home_score: 2 }), ['score']);
+  assert.deepEqual(sportTap(b, { ...b, state: { period: 2 } }), ['period']);
+  assert.deepEqual(sportTap({ ...b, home_score: 2 }, b), []);
+  const s = S2('soccer', {}, { half: 1 });
+  assert.deepEqual(sportTap(s, { ...s, away_score: 1 }, 'goal'), ['goal', 'score']);
+});
+
+test('each sport fills the same situation shape', () => {
+  const fb = sitFor(S2('football', {}, { quarter: 2, down: 3, distance: 'goal', possession: 'home', away_timeouts: 1 }));
+  assert.equal(fb.period, '2ND QTR');
+  assert.equal(fb.line, '3RD & GOAL');
+  assert.equal(fb.poss, 'home');
+  assert.equal(fb.marks.away, '●○○');
+  const sc = sitFor(S2('soccer', {}, { half: 2, stoppage: 3, cards: { away: { y: 2, r: 1 } } }));
+  assert.equal(sc.line, '+3');
+  assert.equal(sc.marks.away, '2Y 1R');
+  const bk = sitFor(S2('basketball', { away_abbr: 'RIV' }, { period: 3, fouls: { away: 2, home: 8 } }));
+  assert.equal(bk.line, 'BONUS · RIV');
+  const vb = sitFor(S2('volleyball', {}, { set: 3, serve: 'away', sets: { away: 1, home: 1 }, target: 15 }));
+  assert.equal(vb.period, 'SET 3');
+  assert.equal(vb.poss, 'away');
+  assert.equal(vb.line, 'TO 15');
+});
