@@ -249,7 +249,7 @@ body.obs #pad{display:none}
 
 <script type="module">
 import { YBT_TOPICS } from "./ybt-topics.js";
-import { $, all, OUT, IN, IO, WIPE, BACK, LIN, K, rise, words, whole, fitTo, startSpot } from "./kit.js";
+import { $, all, OUT, IN, IO, WIPE, BACK, LIN, K, rise, whole, fitTo, lines, oneLine, split, fitBlock, startSpot } from "./kit.js";
 
 const AGES = ["8U", "9U", "10U", "11U", "12U", "13U", "14U", "15U", "16U", "17U", "18U"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -303,7 +303,7 @@ function buildInning(t) {
   all(ages, "span").forEach((s) => s.remove());
   ages.insertAdjacentHTML("beforeend", AGES.map((a) => `<span class="${a === t.age ? "lit" : ""}">${a}</span>`).join(""));
   $("y-q").innerHTML = lines(t.q);
-  $("y-a").innerHTML = lines(t.answer.split("|").flatMap((l, i) => (i ? [["|"], [l.trim()]] : [[l.trim()]])));
+  $("y-a").innerHTML = lines(split(t.answer));
   fitBlock($("y-q"), 760); fitBlock($("y-a"), 760);
   $("y-why").innerHTML = t.why;
   $("y-dates").textContent = wk.head;
@@ -373,21 +373,6 @@ function buildInning(t) {
     [L + 3.2, { transform: "translateX(-140px) skewX(-18deg)" }, "step-end"], [L + 3.9, { transform: "translateX(820px) skewX(-18deg)" }, IO]]);
   all($("y-badges"), "span").forEach((b, i) => K(b, D, [[L + 1.3 + i * 0.1, { transform: "translateY(18px) scale(.9)", opacity: 0 }], [L + 1.7 + i * 0.1, { transform: "translateY(0) scale(1)", opacity: 1 }, BACK]]));
   return D;
-}
-
-// Words that rise, one mask per line: a ["|"] part starts a new line, so each
-// line rises out of its own slot. On one line (the banner) the breaks drop out.
-function lines(parts) {
-  const out = [[]];
-  for (const p of parts) (p[0] === "|" ? out.push([]) : out[out.length - 1].push(p));
-  return out.map(words).join("");
-}
-const oneLine = (parts) => words(parts.filter((p) => p[0] !== "|"));
-// Shrink a block of lines together until its longest line fits.
-function fitBlock(el, maxW) {
-  el.style.fontSize = "";
-  const wd = Math.max(...all(el, ".mask").map((m) => m.scrollWidth));
-  if (wd > maxW) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * maxW / wd}px`;
 }
 
 // =============================================================================

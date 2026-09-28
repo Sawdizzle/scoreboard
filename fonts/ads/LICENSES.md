@@ -11,3 +11,4 @@ These fonts use the SIL Open Font License 1.1 (full text: [`/fonts/OFL.txt`](../
 | `barlow-condensed-800.woff2` | Barlow Condensed | Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) |
 | `barlow-semi-condensed-400.woff2` | Barlow Semi Condensed | Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) |
 | `barlow-semi-condensed-600.woff2` | Barlow Semi Condensed | Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) |
+| `inter-400.woff2`, `inter-600.woff2`, `inter-800.woff2` | Inter | Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter) |
