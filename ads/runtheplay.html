@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run the Play spot</title>
+<link rel="preload" href="../fonts/ads/teko-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Teko';font-weight:500;font-display:block;src:url('../fonts/ads/teko-500.woff2') format('woff2')}
+@font-face{font-family:'Teko';font-weight:600;font-display:block;src:url('../fonts/ads/teko-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:block;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:block;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   RUN THE PLAY — an on-air spot for our other app.
+
+   Two cuts, both built on a real play from Run the Play's own
+   engine (single to left, runner on 2nd, 1 out). The hook is the
+   answer most people get wrong: the shortstop covers 3rd, because
+   the 3rd baseman goes in to be the cutoff.
+
+     pitch   ~7s lower third, between pitches. Sits on the edge
+             away from the scorebug.
+     inning  ~13s full screen, between innings. The play runs on
+             an animated field, then the brand lockup.
+
+   Brand atoms (from the app's marketing site): navy ink #12284D,
+   paper cream #F7F5EF, rust #A6432F, amber #E8A33D, field green
+   #A0BB74, clay #DFC49C. Teko display type, zero radius, hard
+   colour splits, the 45 degree hatch.
+
+   Every moving part runs on ONE animation per element, keyed in
+   seconds against the spot's full length (see K()), so a replay
+   is a clean cancel-and-rebuild and nothing fights over a
+   property.
+
+   URL params: ?spot=pitch|inning  plays it once on load
+               ?auto=1             loops it (both cuts if no spot)
+               ?pos=bl|bc|br|tl|tc|tr   where the pitch cut sits
+               ?obs=1              transparent, no demo panel
+               ?embed=1            inside the live overlay
+   API:  RTPSpot.play("pitch", {pos:"br"})
+         postMessage({type:"rtp:play", spot:"inning"})
+         -> parent gets {type:"rtp:done", spot} when it clears.
+   ============================================================ */
+:root{
+  --ink:#12284D; --ink2:#1b3663; --cream:#F7F5EF; --rust:#A6432F; --amber:#E8A33D;
+  --field:#A0BB74; --field2:#94b068; --clay:#DFC49C; --clay2:#cfb084;
+  --hatch:repeating-linear-gradient(45deg,transparent 0 20px,rgba(0,0,0,.07) 20px 40px);
+  --hatch-lt:repeating-linear-gradient(45deg,transparent 0 22px,rgba(247,245,239,.035) 22px 44px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:#0c0d10;font-family:'Barlow Condensed',sans-serif;color:var(--cream)}
+body.obs{background:transparent}
+body:not(.obs){background:
+  radial-gradient(1200px 700px at 50% 38%,#26402b 0,#16241a 55%,#0c0d10 100%)}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin:-540px 0 0 -960px;transform-origin:50% 50%;overflow:hidden}
+.spot{position:absolute;inset:0;visibility:hidden;pointer-events:none}
+.spot.on{visibility:visible}
+.teko{font-family:'Teko',sans-serif;font-weight:600;text-transform:uppercase}
+.mask{overflow:hidden;display:block}
+.w{display:inline-block;will-change:transform}
+
+/* ---------------- INNING (full screen) ---------------- */
+#i-all{position:absolute;inset:0;will-change:clip-path}
+#inning .scene{position:absolute;inset:0;background:var(--ink)}
+#inning .scene::before{content:"";position:absolute;inset:0;background:var(--hatch-lt)}
+#inning .vignette{position:absolute;inset:0;background:radial-gradient(900px 900px at 26% 55%,rgba(160,187,116,.16),transparent 70%),
+  linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.25))}
+#inning .six{position:absolute;right:-190px;bottom:-330px;font:600 1500px/1 'Teko',sans-serif;color:var(--cream);opacity:.045;letter-spacing:-.02em;will-change:transform,opacity}
+.edge{position:absolute;top:-10%;height:120%;left:0;transform-origin:50% 50%;will-change:transform}
+.edge.a{width:70px;margin-left:-35px;background:var(--amber)}
+.edge.r{width:38px;margin-left:-19px;background:var(--rust)}
+
+#fieldwrap{position:absolute;left:40px;top:40px;width:800px;height:800px;transform:scale(1.24);transform-origin:0 0}
+#fieldwrap svg{position:absolute;inset:0;overflow:visible}
+.fp{position:absolute;left:0;top:0;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;
+  background:var(--ink);border:3.5px solid var(--cream);color:var(--cream);display:grid;place-items:center;
+  font:600 27px/1 'Teko',sans-serif;padding-top:4px;box-shadow:0 5px 0 rgba(8,18,36,.35);will-change:transform,opacity}
+.fp.ss{background:var(--amber);color:var(--ink);border-color:var(--ink);z-index:2}
+.fp.run{background:var(--rust);border-color:var(--cream)}
+.ring{position:absolute;left:0;top:0;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;border:5px solid var(--amber);opacity:0;will-change:transform,opacity}
+.ball{position:absolute;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 2px var(--ink),0 0 18px 4px rgba(255,255,255,.55);opacity:0;will-change:transform,opacity}
+.bshadow{position:absolute;left:0;top:0;width:16px;height:8px;margin:-4px 0 0 -8px;border-radius:50%;background:rgba(10,20,30,.4);opacity:0;will-change:transform,opacity}
+.tag{position:absolute;white-space:nowrap;font:600 34px/1 'Teko',sans-serif;text-transform:uppercase;padding:8px 14px 3px;will-change:clip-path,transform}
+.tag.amber{background:var(--amber);color:var(--ink);box-shadow:6px 6px 0 var(--ink)}
+.tag.cream{background:var(--cream);color:var(--ink);font-size:26px;padding:6px 10px 2px}
+
+#icol{position:absolute;left:1060px;top:150px;width:800px}
+.eyebrow{display:flex;align-items:center;gap:14px;font:700 28px/1 'Barlow Condensed',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:var(--amber)}
+.eyebrow i{width:16px;height:16px;background:var(--amber);flex:none}
+.chips{display:flex;gap:14px;margin-top:28px}
+.chip{font:500 42px/1 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.02em;border:2.5px solid rgba(247,245,239,.4);padding:9px 18px 3px;white-space:nowrap}
+.chip b{font-weight:600;color:var(--amber)}
+#qa{position:relative;margin-top:48px;height:440px}
+#qa .q,#qa .ans{position:absolute;left:0;top:0;width:100%}
+.big{font:600 120px/.84 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.005em}
+.big .mask{padding-top:14px;margin-top:-8px}
+.hl{color:var(--amber)}
+.ans .big{font-size:208px;color:var(--amber)}
+.ans .detail{margin-top:22px;font:600 38px/1.2 'Barlow Condensed',sans-serif;color:rgba(247,245,239,.88);max-width:720px}
+.ans .detail b{color:var(--cream);font-weight:700}
+#inote{position:absolute;left:1060px;top:930px;font:600 30px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(247,245,239,.55)}
+
+/* lockup: cream | rust, hard diagonal split */
+.lk{position:absolute;inset:0;will-change:clip-path}
+#lk-cream{background:var(--cream)}
+#lk-rust{background:var(--rust)}
+#lk-rust::before{content:"";position:absolute;inset:0;background:var(--hatch)}
+#lk-left{position:absolute;left:0;width:1140px;top:0;height:1080px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink)}
+#lk-kicker{font:700 26px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:var(--rust);margin-bottom:22px}
+#lk-logo{width:600px;height:395px;position:relative;will-change:clip-path,transform}
+#lk-logo img{width:100%;height:100%;display:block}
+#lk-word{margin-top:20px;font:600 176px/.8 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.01em;transform:skewX(-9deg);white-space:nowrap}
+#lk-word .mask{padding-top:18px}
+#lk-tag{margin-top:26px;text-align:center;font:500 54px/.95 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.02em}
+#lk-tag .hl{color:var(--rust)}
+#lk-right{position:absolute;left:1270px;top:0;height:1080px;width:590px;display:flex;flex-direction:column;justify-content:center;color:var(--cream)}
+#lk-right .eyebrow{color:rgba(247,245,239,.8)}
+#lk-right .eyebrow i{background:var(--amber)}
+#lk-cta{margin-top:22px;font:600 124px/.84 'Teko',sans-serif;text-transform:uppercase}
+#lk-cta .mask{padding-top:12px}
+#lk-url{position:relative;overflow:hidden;margin-top:38px;background:var(--ink);padding:16px 26px 8px;font:600 66px/1 'Teko',sans-serif;letter-spacing:.02em;align-self:flex-start;box-shadow:10px 10px 0 rgba(18,40,77,.35);will-change:clip-path}
+#lk-url::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;background:var(--amber)}
+#lk-url .sheen{position:absolute;top:-20%;left:0;width:120px;height:140%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:translateX(-200px) skewX(-18deg);will-change:transform}
+#lk-list{margin-top:38px;display:flex;flex-direction:column;gap:14px;font:600 34px/1 'Barlow Condensed',sans-serif}
+#lk-list div{display:flex;align-items:center;gap:14px}
+#lk-list i{width:13px;height:13px;background:var(--amber);flex:none}
+
+/* ---------------- PITCH (lower third) ---------------- */
+#pitch .box{position:absolute;width:1010px;height:156px;filter:drop-shadow(0 14px 28px rgba(0,0,0,.4))}
+#pitch[data-pos="bl"] .box{left:64px;bottom:64px}
+#pitch[data-pos="bc"] .box{left:455px;bottom:64px}
+#pitch[data-pos="br"] .box{right:64px;bottom:64px}
+#pitch[data-pos="tl"] .box{left:64px;top:64px}
+#pitch[data-pos="tc"] .box{left:455px;top:64px}
+#pitch[data-pos="tr"] .box{right:64px;top:64px}
+#p-tile{position:absolute;left:0;top:0;width:156px;height:156px;background:var(--ink);overflow:hidden;z-index:2;will-change:clip-path,transform}
+#p-tile svg{position:absolute;inset:0;width:100%;height:100%}
+#p-cover{position:absolute;inset:0;background:var(--cream);display:grid;place-items:center;will-change:transform}
+#p-cover img{width:134px;display:block;will-change:transform}
+#p-plate{position:absolute;left:156px;top:0;width:854px;height:156px;background:var(--cream);color:var(--ink);will-change:clip-path}
+#p-plate::before{content:"";position:absolute;left:0;top:0;bottom:0;width:9px;background:var(--rust)}
+#p-bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--amber);transform-origin:0 50%;will-change:transform}
+#p-edge{position:absolute;top:-8px;bottom:-8px;left:0;width:26px;margin-left:-13px;background:var(--amber);transform:skewX(-12deg);z-index:3;will-change:transform,opacity}
+.lane{position:absolute;left:36px;right:28px;top:0;bottom:6px;overflow:hidden}
+.beat{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
+.p-eye{font:700 21px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--rust);margin-bottom:6px}
+.p-eye .mask{padding:2px 0}
+.p-big{font:600 62px/.84 'Teko',sans-serif;text-transform:uppercase;white-space:nowrap}
+.p-big .mask{padding-top:10px;margin-top:-4px}
+.p-big .hl{color:var(--rust)}
+#p-check{position:absolute;right:6px;top:50%;width:84px;height:84px;margin-top:-42px;border-radius:50%;background:var(--amber);display:grid;place-items:center;will-change:transform}
+#p-check svg{width:48px;height:48px}
+.b3{flex-direction:row;align-items:center;gap:22px}
+.b3 .p-big{font-size:80px;transform:skewX(-9deg)}
+.b3 .url{font:600 40px/1 'Teko',sans-serif;letter-spacing:.03em;color:var(--rust);text-transform:uppercase}
+.b3 .sub{font:700 20px/1 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:rgba(18,40,77,.6);margin-top:2px}
+.b3 .rule{width:4px;align-self:stretch;margin:22px 0 18px;background:var(--rust)}
+
+/* ---------------- demo panel ---------------- */
+#pad{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;
+  background:rgba(12,13,16,.86);backdrop-filter:blur(8px);border:1px solid #2a2b30;border-radius:12px;padding:10px 12px;font:600 14px system-ui,sans-serif;z-index:10;max-width:calc(100vw - 24px)}
+#pad button,#pad select{font:600 14px system-ui,sans-serif;color:#f1f1ef;background:#26272c;border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
+#pad button.go{background:var(--amber);color:#1b1206}
+#pad label{color:#9a9ba2;display:flex;gap:6px;align-items:center}
+#pad button:focus-visible,#pad select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+body.obs #pad{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===================== INNING ===================== -->
+  <section class="spot" id="inning" aria-hidden="true">
+   <div id="i-all">
+    <div class="scene" id="i-scene">
+      <div class="vignette"></div>
+      <div class="six" id="i-six">6</div>
+      <div id="fieldwrap">
+        <svg id="i-field" viewBox="0 0 800 800" aria-hidden="true"></svg>
+        <div id="i-dots"></div>
+      </div>
+      <div id="icol">
+        <div class="eyebrow" id="i-eye"><i></i><span>Inning-break quiz</span></div>
+        <div class="chips">
+          <div class="chip" id="c1">Runner on <b>2nd</b></div>
+          <div class="chip" id="c2"><b>1</b> out</div>
+          <div class="chip" id="c3">Single to <b>left</b></div>
+        </div>
+        <div id="qa">
+          <div class="q big">
+            <span class="mask"><span class="w">Where</span> <span class="w">does</span> <span class="w">your</span></span>
+            <span class="mask"><span class="w hl">shortstop</span> <span class="w">go?</span></span>
+          </div>
+          <div class="ans">
+            <div class="big"><span class="mask"><span class="w">Covers</span></span><span class="mask"><span class="w">3rd.</span></span></div>
+            <div class="detail" id="i-detail">The 3rd baseman charges in to be the <b>cutoff</b>, so the shortstop takes the bag.</div>
+          </div>
+        </div>
+      </div>
+      <div id="inote">Nine players. One job each. Every situation.</div>
+    </div>
+
+    <div class="lk" id="lk-cream">
+      <div id="lk-left">
+        <div id="lk-kicker">This quiz brought to you by</div>
+        <div id="lk-logo"><img src="img/rtp-mark.png" alt=""></div>
+        <div id="lk-word"></div>
+        <div id="lk-tag"><span class="mask"><span class="w">Every player knows where to go</span></span><span class="mask"><span class="w hl">before the ball is hit.</span></span></div>
+      </div>
+    </div>
+    <div class="lk" id="lk-rust">
+      <div id="lk-right">
+        <div class="eyebrow" id="lk-eye"><i></i><span>Coaches</span></div>
+        <div id="lk-cta"><span class="mask"><span class="w">Get your</span></span><span class="mask"><span class="w">team on it.</span></span></div>
+        <div id="lk-url"><span>runtheplayapp.com</span><i class="sheen"></i></div>
+        <div id="lk-list">
+          <div><i></i>Any phone, right in the browser</div>
+          <div><i></i>And in VR on a Meta Quest</div>
+          <div><i></i>Players sign in with a PIN</div>
+        </div>
+      </div>
+    </div>
+   </div>
+    <div class="edge a" id="e-a"></div>
+    <div class="edge r" id="e-r"></div>
+  </section>
+
+  <!-- ===================== PITCH ===================== -->
+  <section class="spot" id="pitch" data-pos="bl" aria-hidden="true">
+    <div class="box">
+      <div id="p-plate">
+        <div class="lane">
+          <div class="beat" id="b1">
+            <div class="p-eye"><span class="mask"><span class="w">Quick quiz · Runner on 2nd · Single to left</span></span></div>
+            <div class="p-big"><span class="mask"><span class="w">Where</span> <span class="w">does</span> <span class="w">your</span> <span class="w hl">shortstop</span> <span class="w">go?</span></span></div>
+          </div>
+          <div class="beat" id="b2">
+            <div class="p-eye"><span class="mask"><span class="w">The 3B charges in to be the cutoff</span></span></div>
+            <div class="p-big"><span class="mask"><span class="w">Shortstop</span> <span class="w hl">covers</span> <span class="w hl">3rd.</span></span></div>
+            <div id="p-check"><svg viewBox="0 0 48 48"><path d="M10 25 L20 35 L39 14" fill="none" stroke="#12284D" stroke-width="7" stroke-linecap="square" pathLength="1" stroke-dasharray="1" id="p-tick"/></svg></div>
+          </div>
+          <div class="beat b3" id="b3">
+            <div class="p-big"><span class="mask"><span class="w">Run</span> <span class="w">the</span> <span class="w">Play</span></span></div>
+            <div class="rule" id="b3-rule"></div>
+            <div>
+              <div class="url"><span class="mask"><span class="w">runtheplayapp.com</span></span></div>
+              <div class="sub"><span class="mask"><span class="w">Every situation, animated</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div id="p-bar"></div>
+      </div>
+      <div id="p-tile">
+        <svg id="p-field" viewBox="60 40 700 700" aria-hidden="true"></svg>
+        <div id="p-cover"><img src="img/rtp-mark.png" alt=""></div>
+      </div>
+      <div id="p-edge"></div>
+    </div>
+  </section>
+</div>
+
+<div id="pad" role="toolbar" aria-label="Spot preview">
+  <button class="go" data-play="pitch">▶ Between pitches</button>
+  <button class="go" data-play="inning">▶ Between innings</button>
+  <label>Pitch cut at <select id="pos">
+    <option value="bl">Bottom left</option><option value="bc">Bottom centre</option><option value="br">Bottom right</option>
+    <option value="tl">Top left</option><option value="tc">Top centre</option><option value="tr">Top right</option>
+  </select></label>
+  <label><input type="checkbox" id="loop"> Loop</label>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const P = new URLSearchParams(location.search);
+  const embed = P.get("embed") === "1";
+  if (embed || P.get("obs") === "1" || window.obsstudio) document.body.classList.add("obs");
+
+  const stage = $("stage");
+  const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; };
+  addEventListener("resize", fit); fit();
+
+  // ---- eases ----------------------------------------------------------
+  const OUT = "cubic-bezier(.16,1,.3,1)";       // expo out: arrivals
+  const IN = "cubic-bezier(.7,0,.84,0)";        // expo in: departures
+  const IO = "cubic-bezier(.65,0,.35,1)";       // runs across the field
+  const WIPE = "cubic-bezier(.77,0,.18,1)";     // the diagonal wipes
+  const BACK = "cubic-bezier(.34,1.56,.64,1)";  // pops
+  const LIN = "linear";
+
+  // ---- K(): one animation per element, keyed in seconds -----------------
+  // steps: [[t, {props}, easeInto], ...]; easeInto is how the move INTO that
+  // step feels. The first step holds from 0, the last holds to the end.
+  let anims = [];
+  function K(el, D, steps) {
+    if (!el) return;
+    const frames = steps.map(([t, p]) => ({ ...p, offset: Math.min(1, Math.max(0, t / D)) }));
+    for (let i = 1; i < steps.length; i++) frames[i - 1].easing = steps[i][2] || LIN;
+    if (frames[0].offset > 0) frames.unshift({ ...steps[0][1], offset: 0 });
+    if (frames[frames.length - 1].offset < 1) frames.push({ ...steps[steps.length - 1][1], offset: 1 });
+    anims.push(el.animate(frames, { duration: D * 1000, fill: "forwards" }));
+  }
+  const all = (root, sel) => [...root.querySelectorAll(sel)];
+  // Words rise out of their mask, staggered.
+  function rise(root, D, t0, stagger = 0.045, dur = 0.55, tOut = null, outDur = 0.35) {
+    all(root, ".w").forEach((w, i) => {
+      const s = [[0, { transform: "translateY(110%)" }], [t0 + i * stagger, { transform: "translateY(110%)" }], [t0 + i * stagger + dur, { transform: "translateY(0%)" }, OUT]];
+      if (tOut != null) s.push([tOut + i * 0.02, { transform: "translateY(0%)" }], [tOut + i * 0.02 + outDur, { transform: "translateY(-115%)" }, IN]);
+      K(w, D, s);
+    });
+  }
+  // A clip-path polygon for a 12-degree diagonal wipe across the frame.
+  // a = top-left x, b = top-right x (percent); the bottom edge leans 12% left.
+  const poly = (a, b) => `polygon(${a}% 0%, ${b}% 0%, ${b - 12}% 100%, ${a - 12}% 100%)`;
+
+  // ---- the play (Run the Play's engine, baseball, 800x800 field) --------------
+  const HOME = [400, 740], B1 = [590, 550], B2 = [400, 360], B3 = [210, 550];
+  const START = { P: [400, 550], C: [400, 715], "1B": [560, 500], "2B": [470, 410], "3B": [240, 500], SS: [330, 410], LF: [150, 190], CF: [400, 110], RF: [650, 190] };
+  const JOB = { P: [419, 737], C: [400, 702], "1B": [552, 550], "2B": [400, 398], "3B": [322, 560], SS: [248, 550], LF: [140, 230], CF: [152, 185], RF: [492, 458] };
+  const LAND = [140, 230];
+
+  function fieldSVG(svg, big) {
+    const sw = big ? 1 : 1.6;
+    svg.innerHTML = `
+      <defs>
+        <pattern id="mow${big ? "I" : "P"}" width="56" height="56" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="28" height="56" fill="rgba(255,255,255,.06)"/></pattern>
+      </defs>
+      <g class="f-grass">
+        <path d="M400 752 L70 422 A330 330 0 1 1 730 422 Z" fill="var(--field)" stroke="var(--ink)" stroke-width="${10 * sw}" stroke-linejoin="round"/>
+        <path d="M400 752 L70 422 A330 330 0 1 1 730 422 Z" fill="url(#mow${big ? "I" : "P"})"/>
+      </g>
+      <g class="f-dirt">
+        <path d="M400 770 L172 542 Q400 128 628 542 Z" fill="var(--clay)"/>
+        <path d="M400 711 L561 550 L400 389 L239 550 Z" fill="var(--field2)"/>
+        <circle cx="400" cy="550" r="22" fill="var(--clay)"/>
+        <circle cx="400" cy="738" r="40" fill="var(--clay)"/>
+      </g>
+      <g fill="none" stroke="var(--cream)" stroke-width="${4 * sw}" stroke-linecap="round">
+        <path class="f-line" pathLength="1" stroke-dasharray="1" d="M400 740 L74 414"/>
+        <path class="f-line" pathLength="1" stroke-dasharray="1" d="M400 740 L726 414"/>
+        <path class="f-line" pathLength="1" stroke-dasharray="1" d="M400 740 L590 550 L400 360 L210 550 Z" stroke-width="${3 * sw}" opacity=".7"/>
+      </g>
+      <g class="f-bases" fill="var(--cream)" stroke="var(--ink)" stroke-width="${3 * sw}">
+        ${[B1, B2, B3].map(([x, y]) => `<rect class="f-base" x="${x - 11}" y="${y - 11}" width="22" height="22" transform="rotate(45 ${x} ${y})"/>`).join("")}
+        <path class="f-base" d="M389 734 h22 v8 l-11 10 l-11 -10 Z"/>
+      </g>
+      <g class="f-routes" fill="none" stroke-linecap="round"></g>
+      <line class="f-flight" x1="${HOME[0]}" y1="${HOME[1]}" x2="${LAND[0]}" y2="${LAND[1]}" pathLength="1" stroke-dasharray="1"
+        stroke="#fff" stroke-width="${big ? 5 : 12}" stroke-linecap="round" opacity=".9" fill="none"/>
+      <line class="f-throw" x1="${LAND[0]}" y1="${LAND[1]}" x2="${JOB["3B"][0]}" y2="${JOB["3B"][1]}" pathLength="1" stroke-dasharray="1"
+        stroke="var(--amber)" stroke-width="${big ? 6 : 12}" stroke-linecap="round" fill="none"/>`;
+    const routes = svg.querySelector(".f-routes");
+    for (const k of Object.keys(START)) {
+      const [x1, y1] = START[k], [x2, y2] = JOB[k];
+      if (Math.hypot(x2 - x1, y2 - y1) < 12) continue;
+      routes.insertAdjacentHTML("beforeend", `<line data-pos="${k}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" pathLength="1" stroke-dasharray="1"
+        stroke="${k === "SS" ? "var(--amber)" : "rgba(247,245,239,.55)"}" stroke-width="${k === "SS" ? (big ? 7 : 14) : (big ? 3.5 : 8)}"/>`);
+    }
+  }
+
+  // ---- build the static bits once ---------------------------------------------
+  fieldSVG($("i-field"), true);
+  fieldSVG($("p-field"), false);
+  const dots = $("i-dots");
+  for (const k of Object.keys(START)) dots.insertAdjacentHTML("beforeend", `<div class="fp${k === "SS" ? " ss" : ""}" data-k="${k}">${k}</div>`);
+  dots.insertAdjacentHTML("beforeend", `<div class="fp run" data-k="R2">R</div><div class="fp run" data-k="B">B</div>
+    <div class="ring" id="ring1"></div><div class="ring" id="ring2"></div><div class="ring" id="crack" style="border-color:#fff"></div>
+    <div class="bshadow" id="bsh"></div><div class="ball" id="ball"></div>
+    <div class="tag amber" id="t-ss" style="left:18px;top:596px">SS · covers 3rd</div>
+    <div class="tag cream" id="t-3b" style="left:338px;top:580px">3B · cutoff</div>`);
+  // pitch tile: tiny dots
+  const pf = $("p-field");
+  pf.insertAdjacentHTML("beforeend", Object.keys(START).map((k) =>
+    `<circle class="pd" data-k="${k}" r="${k === "SS" ? 30 : 22}" cx="0" cy="0" fill="${k === "SS" ? "var(--amber)" : "var(--ink)"}" stroke="${k === "SS" ? "var(--ink)" : "var(--cream)"}" stroke-width="7"/>`).join("")
+    + `<circle class="pd" data-k="R2" r="22" fill="var(--rust)" stroke="var(--cream)" stroke-width="7"/>`);
+  const word = $("lk-word");
+  word.innerHTML = `<span class="mask">${[..."RUN THE PLAY"].map((c) => c === " " ? `<span class="w" style="width:.22em"></span>` : `<span class="w">${c}</span>`).join("")}</span>`;
+
+  const T = (x, y, s = 1) => `translate(${x}px,${y}px) scale(${s})`;
+
+  // ====================================================================
+  //  INNING  — 13.0s
+  // ====================================================================
+  function buildInning() {
+    const D = 13.0, root = $("inning");
+    const inAt = 0, inDur = 0.62, outAt = 12.3, outDur = 0.6;
+    // wipe on, hold, wipe off (the whole scene; the lockup rides inside)
+    K($("i-all"), D, [[inAt, { clipPath: poly(-12, -12) }], [inAt + inDur, { clipPath: poly(-12, 124) }, WIPE],
+      [outAt, { clipPath: poly(-12, 124) }], [outAt + outDur, { clipPath: poly(124, 124) }, WIPE]]);
+    // edge bars ride the wipe's leading edge (mid-height of the diagonal)
+    const edgeX = (b) => (b - 6) / 100 * 1920;
+    for (const [id, lead] of [["e-a", 20], ["e-r", -34]]) {
+      K($(id), D, [[inAt, { transform: `translateX(${edgeX(-12) + lead}px) skewX(-12deg)` }],
+        [inAt + inDur, { transform: `translateX(${edgeX(124) + lead}px) skewX(-12deg)` }, WIPE],
+        [outAt, { transform: `translateX(${edgeX(-12) - lead}px) skewX(-12deg)` }, "step-end"],
+        [outAt + outDur, { transform: `translateX(${edgeX(124) - lead}px) skewX(-12deg)` }, WIPE]]);
+    }
+    // the giant 6 (the shortstop's number) drifts, then flares when he's the answer
+    K($("i-six"), D, [[0.2, { transform: "translateX(120px)", opacity: 0, color: "#F7F5EF" }], [1.2, { transform: "translateX(60px)", opacity: .045, color: "#F7F5EF" }, OUT],
+      [4.0, { transform: "translateX(20px)", opacity: .05, color: "#F7F5EF" }], [4.25, { transform: "translateX(14px)", opacity: .11, color: "#E8A33D" }, OUT],
+      [7.2, { transform: "translateX(-40px)", opacity: .06, color: "#E8A33D" }]]);
+
+    // ---- field builds ----
+    const fw = $("fieldwrap");
+    K(fw, D, [[0.25, { transform: "translate(20px,40px) scale(1.16)", opacity: 0 }], [1.1, { transform: "translate(0,0) scale(1.24)", opacity: 1 }, OUT],
+      [7.1, { transform: "translate(0,0) scale(1.24)", opacity: 1 }], [7.7, { transform: "translate(-60px,20px) scale(1.32)", opacity: 1 }, IN]]);
+    const svg = $("i-field");
+    all(svg, ".f-line").forEach((l, i) => K(l, D, [[0.55 + i * 0.1, { strokeDashoffset: 1 }], [1.2 + i * 0.1, { strokeDashoffset: 0 }, OUT]]));
+    all(svg, ".f-base").forEach((b, i) => K(b, D, [[0.95 + i * 0.05, { opacity: 0 }], [1.15 + i * 0.05, { opacity: 1 }, OUT]]));
+    // fielders pop in, then run to their jobs
+    const run0 = 2.5;
+    all(dots, ".fp").forEach((d, i) => {
+      const k = d.dataset.k;
+      if (k === "R2" || k === "B") return;
+      const [x0, y0] = START[k], [x1, y1] = JOB[k];
+      const t = 0.9 + i * 0.045, dur = k === "LF" || k === "CF" ? 0.75 : 1.25;
+      const leave = run0 + (k === "LF" ? 0 : 0.08 + (i % 3) * 0.05);
+      const dim = k === "SS" ? 1 : k === "3B" ? 0.9 : 0.5;
+      K(d, D, [[t, { transform: T(x0, y0, 0), opacity: 1 }], [t + 0.45, { transform: T(x0, y0, 1), opacity: 1 }, BACK],
+        [leave, { transform: T(x0, y0, 1), opacity: 1 }], [leave + dur, { transform: T(x1, y1, k === "SS" ? 1.22 : 1), opacity: 1 }, IO],
+        [3.95, { transform: T(x1, y1, k === "SS" ? 1.22 : 1), opacity: 1 }], [4.3, { transform: T(x1, y1, k === "SS" ? 1.3 : 1), opacity: dim }, OUT]]);
+    });
+    // runners: R2 rounds 3rd a touch and is held; batter rounds 1st and holds
+    const r2 = dots.querySelector('[data-k="R2"]'), bat = dots.querySelector('[data-k="B"]');
+    K(r2, D, [[1.3, { transform: T(...B2, 0) }], [1.7, { transform: T(...B2, 1) }, BACK], [run0, { transform: T(...B2, 1) }],
+      [run0 + 1.2, { transform: T(186, 566, 1) }, IO], [run0 + 1.65, { transform: T(...B3, 1) }, OUT]]);
+    K(bat, D, [[1.35, { transform: T(430, 752, 0) }], [1.75, { transform: T(430, 752, 1) }, BACK], [run0 + 0.1, { transform: T(430, 752, 1) }],
+      [run0 + 1.35, { transform: T(616, 532, 1) }, IO], [run0 + 1.8, { transform: T(...B1, 1) }, OUT]]);
+    // crack of the bat, the ball's flight, the throw to the cutoff
+    K($("crack"), D, [[run0 - 0.05, { transform: T(...HOME, 0.2), opacity: 0 }], [run0, { transform: T(...HOME, 0.3), opacity: 1 }],
+      [run0 + 0.45, { transform: T(...HOME, 2.6), opacity: 0 }, OUT]]);
+    const fl = 0.75, mid = [(HOME[0] + LAND[0]) / 2, (HOME[1] + LAND[1]) / 2];
+    K($("ball"), D, [[run0, { transform: T(...HOME, 0.8), opacity: 0 }], [run0 + 0.02, { transform: T(...HOME, 0.8), opacity: 1 }],
+      [run0 + fl / 2, { transform: T(mid[0], mid[1] - 70, 1.45), opacity: 1 }, "cubic-bezier(.3,.6,.6,1)"],
+      [run0 + fl, { transform: T(...LAND, 0.9), opacity: 1 }, "cubic-bezier(.4,0,.7,.4)"],
+      [3.4, { transform: T(...LAND, 0.9), opacity: 1 }], [3.9, { transform: T(...JOB["3B"], 0.9), opacity: 1 }, "cubic-bezier(.3,.1,.5,1)"],
+      [4.1, { transform: T(...JOB["3B"], 0.9), opacity: 0 }, OUT]]);
+    K($("bsh"), D, [[run0, { transform: T(...HOME), opacity: 0 }], [run0 + 0.02, { transform: T(...HOME), opacity: 1 }],
+      [run0 + fl, { transform: T(...LAND), opacity: 1 }, "cubic-bezier(.35,.35,.65,.65)"], [3.3, { transform: T(...LAND), opacity: 0 }]]);
+    K(svg.querySelector(".f-flight"), D, [[run0, { strokeDashoffset: 1, opacity: .9 }], [run0 + fl, { strokeDashoffset: 0, opacity: .9 }, "cubic-bezier(.3,.6,.6,1)"],
+      [3.4, { strokeDashoffset: 0, opacity: .9 }], [4.0, { strokeDashoffset: 0, opacity: 0 }]]);
+    K(svg.querySelector(".f-throw"), D, [[3.4, { strokeDashoffset: 1, opacity: 1 }], [3.9, { strokeDashoffset: 0, opacity: 1 }, "cubic-bezier(.3,.1,.5,1)"]]);
+    all(svg, ".f-routes line").forEach((l, i) => {
+      const leave = run0 + (l.dataset.pos === "LF" ? 0 : 0.08 + (i % 3) * 0.05), dur = l.dataset.pos === "LF" || l.dataset.pos === "CF" ? 0.75 : 1.25;
+      K(l, D, [[leave, { strokeDashoffset: 1 }], [leave + dur, { strokeDashoffset: 0 }, IO]]);
+    });
+    // the answer lands on the field
+    const ss = JOB.SS;
+    for (const [id, t] of [["ring1", 3.95], ["ring2", 4.35]])
+      K($(id), D, [[t, { transform: T(...ss, 1), opacity: 0 }], [t + 0.02, { transform: T(...ss, 1), opacity: 1 }], [t + 0.8, { transform: T(...ss, 3.2), opacity: 0 }, OUT]]);
+    K($("t-ss"), D, [[4.05, { clipPath: "inset(0 100% 0 0)", transform: "translateX(-12px)" }], [4.45, { clipPath: "inset(0 0% 0 0)", transform: "translateX(0)" }, OUT]]);
+    K($("t-3b"), D, [[4.3, { clipPath: "inset(0 100% 0 0)", opacity: 1 }], [4.65, { clipPath: "inset(0 0% 0 0)", opacity: 1 }, OUT]]);
+
+    // ---- right column ----
+    K($("i-eye"), D, [[0.55, { transform: "translateX(-30px)", opacity: 0 }], [1.0, { transform: "translateX(0)", opacity: 1 }, OUT]]);
+    ["c1", "c2", "c3"].forEach((id, i) => K($(id), D, [[0.75 + i * 0.09, { transform: "translateY(24px)", opacity: 0 }], [1.2 + i * 0.09, { transform: "translateY(0)", opacity: 1 }, OUT]]));
+    rise(root.querySelector(".q"), D, 1.05, 0.07, 0.6, 3.75, 0.38);
+    rise(root.querySelector(".ans .big"), D, 4.0, 0.1, 0.6);
+    K($("i-detail"), D, [[4.5, { transform: "translateY(18px)", opacity: 0 }], [5.0, { transform: "translateY(0)", opacity: 1 }, OUT]]);
+    K($("inote"), D, [[1.8, { opacity: 0 }], [2.4, { opacity: 1 }, OUT]]);
+
+    // ---- lockup: cream | rust split slams over the field ----
+    const L0 = 7.1;
+    K($("lk-cream"), D, [[L0, { clipPath: poly(-12, -12) }], [L0 + 0.6, { clipPath: poly(-12, 64.5) }, WIPE]]);
+    K($("lk-rust"), D, [[L0 + 0.08, { clipPath: "polygon(112% 0%, 124% 0%, 112% 100%, 100% 100%)" }],
+      [L0 + 0.68, { clipPath: "polygon(64.5% 0%, 124% 0%, 112% 100%, 52.5% 100%)" }, WIPE]]);
+    K($("lk-kicker"), D, [[L0 + 0.55, { opacity: 0, letterSpacing: ".6em" }], [L0 + 1.2, { opacity: 1, letterSpacing: ".3em" }, OUT]]);
+    // the book opens from its spine
+    K($("lk-logo"), D, [[L0 + 0.45, { clipPath: "inset(0 50% 0 50%)", transform: "translateY(30px) scale(.86)" }],
+      [L0 + 1.15, { clipPath: "inset(0 0% 0 0%)", transform: "translateY(0) scale(1)" }, BACK],
+      [11.6, { clipPath: "inset(0 0% 0 0%)", transform: "translateY(0) scale(1.03)" }, LIN]]);
+    rise(word, D, L0 + 0.75, 0.035, 0.55);
+    rise($("lk-tag"), D, L0 + 1.25, 0.14, 0.6);
+    K($("lk-eye"), D, [[L0 + 0.7, { transform: "translateX(-30px)", opacity: 0 }], [L0 + 1.1, { transform: "translateX(0)", opacity: 1 }, OUT]]);
+    rise($("lk-cta"), D, L0 + 0.8, 0.12, 0.6);
+    K($("lk-url"), D, [[L0 + 1.25, { clipPath: "inset(0 100% 0 0)" }], [L0 + 1.75, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
+    K($("lk-url").querySelector(".sheen"), D, [[L0 + 1.9, { transform: "translateX(-200px) skewX(-18deg)" }], [L0 + 2.6, { transform: "translateX(640px) skewX(-18deg)" }, IO],
+      [L0 + 3.9, { transform: "translateX(-200px) skewX(-18deg)" }, "step-end"], [L0 + 4.6, { transform: "translateX(640px) skewX(-18deg)" }, IO]]);
+    all($("lk-list"), "div").forEach((d, i) => K(d, D, [[L0 + 1.7 + i * 0.12, { transform: "translateX(-24px)", opacity: 0 }], [L0 + 2.15 + i * 0.12, { transform: "translateX(0)", opacity: 1 }, OUT]]));
+    return D;
+  }
+
+  // ====================================================================
+  //  PITCH  — 7.0s lower third
+  // ====================================================================
+  function buildPitch() {
+    const D = 7.0;
+    const outAt = 6.4;
+    K($("p-tile"), D, [[0, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.7) rotate(-6deg)" }],
+      [0.42, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }, BACK],
+      [outAt + 0.2, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }],
+      [outAt + 0.55, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.7) rotate(6deg)" }, IN]]);
+    K($("p-plate"), D, [[0.18, { clipPath: "polygon(0 0, 0 0, -3% 100%, -3% 100%)" }], [0.62, { clipPath: "polygon(0 0, 103% 0, 100% 100%, -3% 100%)" }, WIPE],
+      [outAt, { clipPath: "polygon(0 0, 103% 0, 100% 100%, -3% 100%)" }], [outAt + 0.36, { clipPath: "polygon(0 0, 0 0, -3% 100%, -3% 100%)" }, WIPE]]);
+    // amber edge rides the plate's wipe
+    const px = (f) => 156 + f * 854;
+    K($("p-edge"), D, [[0.18, { transform: `translateX(${px(0)}px) skewX(-12deg)`, opacity: 1 }], [0.62, { transform: `translateX(${px(1.02)}px) skewX(-12deg)`, opacity: 1 }, WIPE],
+      [0.7, { transform: `translateX(${px(1.02)}px) skewX(-12deg)`, opacity: 0 }], [outAt, { transform: `translateX(${px(1.02)}px) skewX(-12deg)`, opacity: 0 }],
+      [outAt + 0.02, { transform: `translateX(${px(1.02)}px) skewX(-12deg)`, opacity: 1 }], [outAt + 0.36, { transform: `translateX(${px(0)}px) skewX(-12deg)`, opacity: 1 }, WIPE],
+      [outAt + 0.42, { transform: `translateX(${px(0)}px) skewX(-12deg)`, opacity: 0 }]]);
+    K($("p-bar"), D, [[0.6, { transform: "scaleX(0)" }], [outAt, { transform: "scaleX(1)" }, LIN]]);
+    // tiny field: lines draw, dots pop, ball flies, SS runs to 3rd
+    const svg = $("p-field");
+    all(svg, ".f-line").forEach((l, i) => K(l, D, [[0.25 + i * 0.06, { strokeDashoffset: 1 }], [0.8 + i * 0.06, { strokeDashoffset: 0 }, OUT]]));
+    all(svg, ".pd").forEach((c, i) => {
+      const k = c.dataset.k, p0 = k === "R2" ? B2 : START[k], p1 = k === "R2" ? B3 : JOB[k];
+      const go = 2.95, dur = k === "SS" ? 0.7 : 0.8;
+      K(c, D, [[0.4 + i * 0.03, { transform: T(...p0, 0) }], [0.7 + i * 0.03, { transform: T(...p0, 1) }, BACK],
+        [go, { transform: T(...p0, 1) }], [go + dur, { transform: T(...p1, k === "SS" ? 1.25 : 1) }, IO]]);
+    });
+    K(svg.querySelector(".f-flight"), D, [[1.5, { strokeDashoffset: 1, opacity: .9 }], [2.0, { strokeDashoffset: 0, opacity: .9 }, OUT], [3.4, { strokeDashoffset: 0, opacity: 0 }]]);
+    K(svg.querySelector(".f-throw"), D, [[3.3, { strokeDashoffset: 1 }], [3.7, { strokeDashoffset: 0 }, OUT]]);
+    all(svg, ".f-routes line").forEach((l) => K(l, D, [[2.95, { strokeDashoffset: 1 }], [3.7, { strokeDashoffset: 0 }, IO]]));
+    // the logo takes over the tile for the sign-off
+    K($("p-cover"), D, [[4.7, { transform: "translateY(101%)" }], [5.1, { transform: "translateY(0%)" }, OUT]]);
+    K($("p-cover").querySelector("img"), D, [[4.8, { transform: "scale(.6)", opacity: 0 }], [5.25, { transform: "scale(1)", opacity: 1 }, BACK]]);
+    // beats
+    rise($("b1"), D, 0.5, 0.05, 0.5, 2.8, 0.3);
+    rise($("b2"), D, 2.95, 0.06, 0.5, 4.65, 0.3);
+    K($("p-check"), D, [[3.35, { transform: "scale(0) rotate(-40deg)" }], [3.75, { transform: "scale(1) rotate(0deg)" }, BACK],
+      [4.62, { transform: "scale(1) rotate(0deg)" }], [4.9, { transform: "scale(0) rotate(20deg)" }, IN]]);
+    K($("p-tick"), D, [[3.6, { strokeDashoffset: 1 }], [3.95, { strokeDashoffset: 0 }, OUT]]);
+    rise($("b3"), D, 4.85, 0.06, 0.55);
+    K($("b3-rule"), D, [[5.0, { transform: "scaleY(0)" }], [5.4, { transform: "scaleY(1)" }, OUT]]);
+    return D;
+  }
+
+  // ---- player ------------------------------------------------------------
+  let timer = null, current = null;
+  const BUILD = { inning: buildInning, pitch: buildPitch };
+  function stop() {
+    clearTimeout(timer); timer = null;
+    anims.forEach((a) => a.cancel()); anims = [];
+    document.querySelectorAll(".spot.on").forEach((s) => s.classList.remove("on"));
+    current = null;
+  }
+  // Wait for the type and the logo, but never hold a spot back more than 2s.
+  const cap = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 2000))]);
+  const ready = cap(Promise.all([
+    ...(document.fonts ? ["600 40px Teko", "500 40px Teko", "700 20px 'Barlow Condensed'", "600 20px 'Barlow Condensed'"].map((f) => document.fonts.load(f)) : []),
+    ...[...document.images].map((i) => (i.decode ? i.decode() : Promise.resolve()).catch(() => {})),
+  ]).catch(() => {}));
+
+  async function play(spot, opts = {}) {
+    if (!BUILD[spot]) return;
+    await ready;
+    stop();
+    if (opts.pos && /^(bl|bc|br|tl|tc|tr)$/.test(opts.pos)) $("pitch").dataset.pos = opts.pos;
+    const el = $(spot);
+    const D = BUILD[spot]();
+    el.classList.add("on"); current = spot;
+    timer = setTimeout(() => {
+      stop();
+      if (window.parent !== window) window.parent.postMessage({ type: "rtp:done", spot }, "*");
+      if (opts.onDone) opts.onDone();
+    }, D * 1000 + 50);
+  }
+  window.RTPSpot = { play, stop, get playing() { return current; } };
+  addEventListener("message", (e) => {
+    const m = e.data || {};
+    if (m.type === "rtp:play") play(m.spot, { pos: m.pos });
+    if (m.type === "rtp:stop") stop();
+  });
+
+  // ---- demo panel / URL -------------------------------------------------
+  const posSel = $("pos");
+  if (P.get("pos")) posSel.value = P.get("pos");
+  const loop = $("loop");
+  if (P.get("auto") === "1") loop.checked = true;
+  const go = (spot) => {
+    play(spot, { pos: posSel.value, onDone: () => { if (loop.checked) setTimeout(() => go(P.get("spot") ? spot : spot === "pitch" ? "inning" : "pitch"), 900); } });
+  };
+  document.querySelectorAll("[data-play]").forEach((b) => b.addEventListener("click", () => go(b.dataset.play)));
+  posSel.addEventListener("change", () => { if (current === "pitch") go("pitch"); });
+  if (P.get("spot")) go(P.get("spot"));
+  else if (P.get("auto") === "1") go("pitch");
+})();
+</script>
+</body>
+</html>
