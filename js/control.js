@@ -11,6 +11,7 @@ import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
 import { SPOT_APPS } from '../ads/spots.js';
+import { nextSpot } from './spot-deck.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -1327,29 +1328,15 @@ function renderOnAir() {
 // Moments / FX
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 // Our apps' spots are moments too: one shot, gone when they end (js/app-spots.js).
-// Each tap deals the next of our apps, then that app's next topic, each from its
-// own shuffled deck: everything shows once before any repeats, and a fresh deck
-// never opens with what was just shown. Quick and Full deal from the same decks,
-// which are kept on this device.
-function deal(key, ids) {
-  let deck = [], last = null;
-  try {
-    deck = JSON.parse(localStorage.getItem(`${key}-deck`) || '[]').filter((id) => ids.includes(id));
-    last = localStorage.getItem(`${key}-last`);
-  } catch {}
-  if (!deck.length) {
-    deck = [...ids];
-    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
-    if (deck.length > 1 && deck[0] === last) deck.push(deck.shift());
-  }
-  const id = deck.shift();
-  try { localStorage.setItem(`${key}-deck`, JSON.stringify(deck)); localStorage.setItem(`${key}-last`, id); } catch {}
-  return id;
-}
+// Each tap deals the next of our apps, then that app's next topic, from
+// shuffled decks kept on this device (js/spot-deck.js). A spot that can't go up
+// says so rather than failing quietly.
 function fireSpot(cut) {
   haptic();
-  const app = SPOT_APPS.find((a) => a.id === deal('spot-app', SPOT_APPS.map((a) => a.id)));
-  const topic = app.topics.find((t) => t.id === deal(`spot-${app.id}`, app.topics.map((t) => t.id)));
+  let spot;
+  try { spot = nextSpot(localStorage, SPOT_APPS); } catch { spot = nextSpot({ getItem: () => null, setItem: () => {} }, SPOT_APPS); }   // reading localStorage can throw
+  const { app, topic } = spot;
+  if (!app || !topic) return showToast('⚠️ No spot to show', 3000);
   fireAnim('spot', { cut, app: app.id, topic: topic.id });
   showToast(`🎬 ${cut === 'inning' ? 'Full' : 'Quick'} spot: ${app.name} · ${topic.label}`);
 }
