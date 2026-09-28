@@ -11,12 +11,8 @@ const SRC = '/ads/runtheplay?embed=1';
 const STALE_MS = 6000;     // a spot that could not start within this is dropped, not played late
 const LONGEST_MS = 15000;  // the frame hides itself after this even if 'done' never arrives
 
-// The quick cut is a lower third, so it goes on the edge away from the scorebug.
-const CUT_POS = {
-  'bottom-left': 'br', 'bottom-right': 'bl', 'bottom-center': 'tc', 'bottom-bar': 'tc',
-  'mid-left': 'br', 'mid-center': 'bl', 'mid-right': 'bl',
-  'top-left': 'bl', 'top-center': 'bl', 'top-right': 'bl', 'top-bar': 'bl',
-};
+// The quick cut sits top right, unless the scorebug is already up there.
+const CUT_POS = { 'top-right': 'bl', 'top-center': 'bl', 'top-bar': 'bl' };
 
 let frame = null, ready = false, pending = null, hideTimer = 0;
 
@@ -54,7 +50,7 @@ export function playSpot(anim, s) {
   // Clear the announcement ticker when it is up, the way a bottom scorebug does.
   const t = s.ticker;
   const lift = t && t.on && typeof t.text === 'string' && t.text.trim() ? 60 : 0;
-  const msg = { type: 'rtp:play', spot: cut, pos: CUT_POS[s.scorebug_position] || 'bl', lift };
+  const msg = { type: 'rtp:play', spot: cut, pos: CUT_POS[s.scorebug_position] || 'tr', lift };
   frame.classList.add('on');
   clearTimeout(hideTimer);
   hideTimer = setTimeout(hide, LONGEST_MS);
