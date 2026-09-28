@@ -79,7 +79,7 @@ export const clockTime = () => (anims[0] ? anims[0].currentTime / 1000 : 0);
 export function rise(root, D, t0, { stagger = 0.045, dur = 0.6, out = null, outDur = 0.34, from = 105 } = {}) {
   all(root, ".w").forEach((w, i) => {
     const s = [[t0 + i * stagger, { transform: `translateY(${from}%)` }], [t0 + i * stagger + dur, { transform: "translateY(0%)" }, OUT]];
-    if (out != null) s.push([out + i * 0.025, { transform: "translateY(0%)" }], [out + i * 0.025 + outDur, { transform: "translateY(-110%)" }, IN]);
+    if (out != null) s.push([out + i * 0.025, { transform: "translateY(0%)" }], [out + i * 0.025 + outDur, { transform: "translateY(-150%)" }, IN]);   // far enough that descenders clear too
     K(w, D, s);
   });
 }
@@ -107,6 +107,22 @@ export const words = (parts) => `<span class="mask">${parts.flatMap(([text, hl])
   text.split(" ").filter(Boolean).map((wd) => `<span class="w${hl ? " hl" : ""}">${wd}</span>`)).join(" ")}</span>`;
 // A line that rises as one piece (it carries its own markup).
 export const whole = (html) => `<span class="mask"><span class="w">${html}</span></span>`;
+// Words that rise, one mask per line: a ["|"] part starts a new line, so each
+// line rises out of its own slot. oneLine() drops the breaks (for a banner).
+export function lines(parts) {
+  const out = [[]];
+  for (const p of parts) (p[0] === "|" ? out.push([]) : out[out.length - 1].push(p));
+  return out.map((l) => words(l)).join("");
+}
+export const oneLine = (parts) => words(parts.filter((p) => p[0] !== "|"));
+// "Right on | time." as parts for lines().
+export const split = (text) => text.split("|").flatMap((l, i) => (i ? [["|"], [l.trim()]] : [[l.trim()]]));
+// Shrink a block of lines together until its longest line fits.
+export function fitBlock(el, maxW) {
+  el.style.fontSize = "";
+  const wd = Math.max(...all(el, ".mask").map((m) => m.scrollWidth));
+  if (wd > maxW) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * maxW / wd}px`;
+}
 // Shrink a one-line, no-wrap element until it fits the width it has.
 export function fitTo(el, maxW) {
   el.style.fontSize = "";

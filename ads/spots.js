@@ -10,6 +10,7 @@
 
 import { RTP_PLAYS } from './rtp-plays.js';
 import { YBT_TOPICS } from './ybt-topics.js';
+import { TWL_TOPICS } from './twl-topics.js';
 
 export const SPOT_APPS = [
   {
@@ -20,6 +21,11 @@ export const SPOT_APPS = [
     id: 'ybt', name: 'Baseball Time', page: '/ads/baseballtime', topics: YBT_TOPICS,
     files: ['/ads/ybt-topics.js', '/ads/img/ybt-mark.png', '/fonts/ads/barlow-condensed-800.woff2',
       '/fonts/ads/barlow-semi-condensed-400.woff2', '/fonts/ads/barlow-semi-condensed-600.woff2'],
+  },
+  {
+    id: 'twl', name: 'Two-Way Lab', page: '/ads/twowaylab', topics: TWL_TOPICS,
+    files: ['/ads/twl-topics.js', '/ads/twl/swing-data.js', '/ads/twl/skeleton.js', '/fonts/ads/inter-400.woff2', '/fonts/ads/inter-600.woff2',
+      '/fonts/ads/inter-800.woff2', '/fonts/ads/barlow-semi-condensed-600.woff2', '/fonts/bugs/jetbrains-mono-var.woff2'],
   },
 ];
 
