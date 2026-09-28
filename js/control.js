@@ -10,6 +10,7 @@ import { createField } from './field.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
+import { RTP_PLAYS } from '../ads/rtp-plays.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -1326,10 +1327,21 @@ function renderOnAir() {
 // Moments / FX
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 // The Run the Play spot is a moment too: one shot, gone when it ends (js/rtp-spot.js).
+// Each tap takes the next quiz play; Quick and Full share the turn, so two spots
+// in a row never ask the same question. The turn is kept on this device.
+function nextQuizPlay() {
+  let i = 0;
+  try {
+    i = (parseInt(localStorage.getItem('rtp-next-play'), 10) || 0) % RTP_PLAYS.length;
+    localStorage.setItem('rtp-next-play', String((i + 1) % RTP_PLAYS.length));
+  } catch {}
+  return RTP_PLAYS[i];
+}
 function fireSpot(cut) {
   haptic();
-  fireAnim('rtp', { cut });
-  showToast(cut === 'inning' ? '🎬 Full quiz on air' : '🎬 Quick quiz on air');
+  const play = nextQuizPlay();
+  fireAnim('rtp', { cut, play: play.id });
+  showToast(`🎬 ${cut === 'inning' ? 'Full' : 'Quick'} quiz: ${play.label}`);
 }
 $('air-rtp-pitch').onclick = () => fireSpot('pitch');
 $('air-rtp-inning').onclick = () => fireSpot('inning');
