@@ -2,6 +2,7 @@ import { supabase, db } from './supabase.js';
 import { safeBases, currentBatter, currentPitcher, pitchCount, fieldingSide, battingSide, fielderAt, FIELD_POSITIONS, battingOrderCard, teamLineup, normalizeRoster, dueUpCard, halfRecap, finishedHalf, finalStory } from './logic.js';
 import { playAnimation, setRally } from './anim.js';
 import { syncAnimBug, overlayPlays, animBugFiles, animBugClock } from './anim-bug.js';
+import { playSpot, preloadSpot, spotFiles } from './rtp-spot.js';
 import { elevatedScene, rollDigits } from './scenes-elevated.js';
 import * as audio from './audio.js';
 import { startingCard, fitStartingNames, weatherHtml } from './starting.js';
@@ -67,7 +68,7 @@ async function releaseReady() {
     const urls = [...doc.querySelectorAll('link[rel="modulepreload"], link[rel="stylesheet"], script[src]')]
       .map((n) => n.getAttribute('href') || n.getAttribute('src'))
       .filter((u) => u && u.startsWith('/'));
-    urls.push(...animBugFiles());
+    urls.push(...animBugFiles(), ...spotFiles());
     const ok = await Promise.all(urls.map((u) => fetch(u, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false)));
     return ok.length > 0 && ok.every(Boolean);
   } catch { return false; }
@@ -294,7 +295,8 @@ function render(s) {
   const animBug = syncAnimBug(s, fresh);
   const cardNonce = (s.card && s.card.nonce) || null;
   if (fresh || cardNonce !== lastCardNonce) { lastActivity = Date.now(); lastCardNonce = cardNonce; }
-  if (fresh) {
+  if (fresh && fresh.type === 'rtp') playSpot(fresh, s);   // the Run the Play spot plays in its own frame
+  else if (fresh) {
     if (overlayPlays(fresh, animBug)) playAnimation(withBatterName(fresh, s));
     audio.play(soundFor(fresh));
   }
@@ -324,6 +326,8 @@ function withBatterName(a, s) {
 // A play plays the run sound when a run scored on it, and is quiet otherwise —
 // outs happen every inning and the stream doesn't need a sting for each.
 const soundFor = (a) => (a.type === 'play' ? (a.meta && a.meta.runs ? 'run' : null) : a.type);
+
+preloadSpot();
 
 // Audio needs one gesture in a normal browser; OBS browser sources autoplay.
 audio.resume();

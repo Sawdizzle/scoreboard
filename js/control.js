@@ -1325,6 +1325,14 @@ function renderOnAir() {
 
 // Moments / FX
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
+// The Run the Play spot is a moment too: one shot, gone when it ends (js/rtp-spot.js).
+function fireSpot(cut) {
+  haptic();
+  fireAnim('rtp', { cut });
+  showToast(cut === 'inning' ? '🎬 Full quiz on air' : '🎬 Quick quiz on air');
+}
+$('air-rtp-pitch').onclick = () => fireSpot('pitch');
+$('air-rtp-inning').onclick = () => fireSpot('inning');
 $('fx-rally').onclick   = () => writeField({ rally_mode: !game.rally_mode });
 function renderRally() {
   const b = $('fx-rally');

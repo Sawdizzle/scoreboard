@@ -51,9 +51,11 @@
                ?pos=bl|bc|br|tl|tc|tr   where the pitch cut sits
                ?obs=1              transparent, no demo panel
                ?embed=1            inside the live overlay
-   API:  RTPSpot.play("pitch", {pos:"br"})
-         postMessage({type:"rtp:play", spot:"inning"})
-         -> parent gets {type:"rtp:done", spot} when it clears.
+   API:  RTPSpot.play("pitch", {pos:"br", lift:60})
+         postMessage({type:"rtp:play", spot:"inning"})   (from the parent only)
+         -> parent gets {type:"rtp:ready"} once fonts and logo are in,
+            and {type:"rtp:done", spot} when a spot clears.
+   The live overlay drives it through js/rtp-spot.js.
    ============================================================ */
 :root{--ink:#12284D;--cream:#F7F5EF;--rust:#A6432F;--amber:#E8A33D}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -143,9 +145,9 @@ body.obs{background:transparent}
 
 /* ============== PITCH ============== */
 #pitch .box{position:absolute;width:1064px;height:164px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.42))}
-#pitch[data-pos="bl"] .box{left:72px;bottom:64px}
-#pitch[data-pos="bc"] .box{left:428px;bottom:64px}
-#pitch[data-pos="br"] .box{right:72px;bottom:64px}
+#pitch[data-pos="bl"] .box{left:72px;bottom:calc(64px + var(--lift,0px))}
+#pitch[data-pos="bc"] .box{left:428px;bottom:calc(64px + var(--lift,0px))}
+#pitch[data-pos="br"] .box{right:72px;bottom:calc(64px + var(--lift,0px))}
 #pitch[data-pos="tl"] .box{left:72px;top:106px}
 #pitch[data-pos="tc"] .box{left:428px;top:106px}
 #pitch[data-pos="tr"] .box{right:72px;top:106px}
@@ -784,19 +786,22 @@ body.obs #pad{display:none}
     await ready;
     stop();
     if (opts.pos && /^(bl|bc|br|tl|tc|tr)$/.test(opts.pos)) $("pitch").dataset.pos = opts.pos;
+    $("pitch").style.setProperty("--lift", `${Math.max(0, Math.min(200, +opts.lift || 0))}px`);
     const D = BUILD[spot]();
     $(spot).classList.add("on"); current = spot;
     frame();
     timer = setTimeout(() => {
       stop();
-      if (window.parent !== window) window.parent.postMessage({ type: "rtp:done", spot }, "*");
+      if (window.parent !== window) window.parent.postMessage({ type: "rtp:done", spot }, location.origin);
       if (opts.onDone) opts.onDone();
     }, D * 1000 + 50);
   }
   window.RTPSpot = { play, stop, get playing() { return current; } };
+  if (window.parent !== window) ready.then(() => window.parent.postMessage({ type: "rtp:ready" }, location.origin));
   addEventListener("message", (e) => {
+    if (e.source !== window.parent || e.origin !== location.origin) return;
     const m = e.data || {};
-    if (m.type === "rtp:play") play(m.spot, { pos: m.pos });
+    if (m.type === "rtp:play") play(m.spot, { pos: m.pos, lift: m.lift });
     if (m.type === "rtp:stop") stop();
   });
 
