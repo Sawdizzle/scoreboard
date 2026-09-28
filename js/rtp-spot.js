@@ -1,7 +1,8 @@
 // Run the Play spot: an on-air ad for our other app (the page is /ads/runtheplay).
 // The pad's On Air sheet fires it as a one-shot moment, current_animation
-// { type: 'rtp', meta: { cut: 'pitch' | 'inning' } }, so it rides the same nonce
-// rules as every stinger: it plays once, and a reload or an undo never replays it.
+// { type: 'rtp', meta: { cut: 'pitch' | 'inning', play: <id in ads/rtp-plays.js> } },
+// so it rides the same nonce rules as every stinger: it plays once, and a reload
+// or an undo never replays it.
 //
 // The spot runs in its own transparent iframe. The frame loads a few seconds
 // after the overlay and says 'rtp:ready' once its type and logo are in, so the
@@ -50,7 +51,8 @@ export function playSpot(anim, s) {
   // Clear the announcement ticker when it is up, the way a bottom scorebug does.
   const t = s.ticker;
   const lift = t && t.on && typeof t.text === 'string' && t.text.trim() ? 60 : 0;
-  const msg = { type: 'rtp:play', spot: cut, pos: CUT_POS[s.scorebug_position] || 'tr', lift };
+  const play = anim.meta && typeof anim.meta.play === 'string' ? anim.meta.play : null;   // the pad picks it; none = the spot's own turn
+  const msg = { type: 'rtp:play', spot: cut, play, pos: CUT_POS[s.scorebug_position] || 'tr', lift };
   frame.classList.add('on');
   clearTimeout(hideTimer);
   hideTimer = setTimeout(hide, LONGEST_MS);
@@ -59,5 +61,5 @@ export function playSpot(anim, s) {
 
 // The files the spot loads, for the release check before a reload (overlay.js).
 export const spotFiles = () => (frame
-  ? ['/ads/runtheplay', '/ads/img/rtp-mark.png', '/fonts/ads/teko-500.woff2', '/fonts/ads/teko-600.woff2']
+  ? ['/ads/runtheplay', '/ads/rtp-plays.js', '/ads/img/rtp-mark.png', '/fonts/ads/teko-500.woff2', '/fonts/ads/teko-600.woff2']
   : []);

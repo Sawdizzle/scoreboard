@@ -10,6 +10,7 @@ import { createField } from './field.js';
 import { serverNow, syncClock } from './clock.js';
 import { createQueue } from './sync.js';
 import { geocode } from './weather.js';
+import { RTP_PLAYS } from '../ads/rtp-plays.js';
 
 const $ = (id) => document.getElementById(id);
 const views = { auth: $('auth-view'), lobby: $('lobby-view'), game: $('game-view') };
@@ -1326,10 +1327,30 @@ function renderOnAir() {
 // Moments / FX
 $('fx-walkoff').onclick = () => fireAnim('walkoff');
 // The Run the Play spot is a moment too: one shot, gone when it ends (js/rtp-spot.js).
+// Each tap deals the next quiz play from a shuffled deck: every play shows once
+// before any repeats, and a fresh deck never opens with the play just shown.
+// Quick and Full deal from the same deck, which is kept on this device.
+function nextQuizPlay() {
+  const ids = RTP_PLAYS.map((p) => p.id);
+  let deck = [], last = null;
+  try {
+    deck = JSON.parse(localStorage.getItem('rtp-deck') || '[]').filter((id) => ids.includes(id));
+    last = localStorage.getItem('rtp-last');
+  } catch {}
+  if (!deck.length) {
+    deck = [...ids];
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    if (deck.length > 1 && deck[0] === last) deck.push(deck.shift());
+  }
+  const id = deck.shift();
+  try { localStorage.setItem('rtp-deck', JSON.stringify(deck)); localStorage.setItem('rtp-last', id); } catch {}
+  return RTP_PLAYS.find((p) => p.id === id);
+}
 function fireSpot(cut) {
   haptic();
-  fireAnim('rtp', { cut });
-  showToast(cut === 'inning' ? '🎬 Full quiz on air' : '🎬 Quick quiz on air');
+  const play = nextQuizPlay();
+  fireAnim('rtp', { cut, play: play.id });
+  showToast(`🎬 ${cut === 'inning' ? 'Full' : 'Quick'} quiz: ${play.label}`);
 }
 $('air-rtp-pitch').onclick = () => fireSpot('pitch');
 $('air-rtp-inning').onclick = () => fireSpot('inning');

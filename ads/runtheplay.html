@@ -18,10 +18,12 @@
 /* ============================================================
    RUN THE PLAY — an on-air spot for our other app.
 
-   Two cuts, both built on a real play from Run the Play's own
-   engine (single to left, runner on 2nd, 1 out). The hook is the
-   answer most people get wrong: the shortstop covers 3rd, because
-   the 3rd baseman charges in to be the cutoff.
+   Two cuts, both built on real plays from Run the Play's own
+   engine (ads/rtp-plays.js). Each spot is a quiz on one play, the
+   kind of answer people get wrong: on a single to left with a
+   runner on 2nd, the shortstop covers 3rd because the 3rd baseman
+   charges in to be the cutoff. The pad picks the next play on each
+   tap; with no play named, the page takes the next in the list.
 
      pitch   6.8s banner, between pitches. The overlay puts it top
              right, or bottom left when the scorebug is up top.
@@ -47,12 +49,13 @@
    cancel-and-rebuild, and seeking the animations seeks the field.
 
    URL params: ?spot=pitch|inning  plays it once on load
+               ?play=<id>          one play (see ads/rtp-plays.js)
                ?auto=1             loops it (both cuts if no spot)
                ?pos=bl|bc|br|tl|tc|tr   where the pitch cut sits
                ?obs=1              transparent, no demo panel
                ?embed=1            inside the live overlay
-   API:  RTPSpot.play("pitch", {pos:"br", lift:60})
-         postMessage({type:"rtp:play", spot:"inning"})   (from the parent only)
+   API:  RTPSpot.play("pitch", {pos:"br", lift:60, play:"bunt-1b"})
+         postMessage({type:"rtp:play", spot:"inning", play})   (from the parent only)
          -> parent gets {type:"rtp:ready"} once fonts and logo are in,
             and {type:"rtp:done", spot} when a spot clears.
    The live overlay drives it through js/rtp-spot.js.
@@ -108,7 +111,7 @@ body.obs{background:transparent}
 .play b{color:var(--amber);font-weight:600}
 #qa{position:absolute;left:0;top:420px;width:640px;height:420px}
 #qa .q,#qa .a{position:absolute;left:0;top:0;width:100%}
-.l1{font:500 76px/.9 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:var(--cream)}
+.l1{white-space:nowrap;font:500 76px/.9 'Teko',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:var(--cream)}
 .l2{font:600 106px/.86 'Teko',sans-serif;text-transform:uppercase;color:var(--amber);white-space:nowrap}
 .a .l2{font-size:134px}
 .why{margin-top:30px;max-width:600px;font:600 35px/1.24 'Barlow Condensed',sans-serif;color:rgba(247,245,239,.86)}
@@ -165,7 +168,7 @@ body.obs{background:transparent}
 #p-edge{position:absolute;top:-8px;height:180px;left:0;width:24px;margin-left:-12px;background:var(--amber);z-index:3;will-change:transform,opacity}
 .lane{position:absolute;left:38px;right:30px;top:0;bottom:6px;overflow:hidden}
 .beat{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding-top:4px}
-.p-ctx{font:700 24px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(18,40,77,.62);margin-bottom:8px}
+.p-ctx{white-space:nowrap;font:700 24px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(18,40,77,.62);margin-bottom:8px}
 .p-ctx b{color:var(--rust);font-weight:700}
 .p-big{font:600 64px/.9 'Teko',sans-serif;text-transform:uppercase;white-space:nowrap}
 .p-big .hl{color:var(--rust)}
@@ -205,24 +208,24 @@ body.obs #pad{display:none}
           <div id="i-sit">
             <svg viewBox="-40 -40 80 80" aria-hidden="true">
               <g stroke="rgba(247,245,239,.55)" stroke-width="3" fill="none">
+                <rect id="sb1" x="11" y="-11" width="22" height="22" transform="rotate(45 22 0)"/>
                 <rect id="sb2" x="-11" y="-33" width="22" height="22" transform="rotate(45 0 -22)"/>
-                <rect x="11" y="-11" width="22" height="22" transform="rotate(45 22 0)"/>
-                <rect x="-33" y="-11" width="22" height="22" transform="rotate(45 -22 0)"/>
+                <rect id="sb3" x="-33" y="-11" width="22" height="22" transform="rotate(45 -22 0)"/>
               </g>
             </svg>
-            <div class="outs"><span>OUT</span><div><i class="on"></i><i></i></div></div>
+            <div class="outs"><span>OUT</span><div><i id="o1"></i><i id="o2"></i></div></div>
             <div class="sitline"></div>
-            <div class="play">Single to <b>left</b></div>
+            <div class="play" id="i-hit"></div>
           </div>
           <div id="qa">
             <div class="q">
               <div class="l1"><span class="mask"><span class="w">Where</span> <span class="w">does</span> <span class="w">your</span></span></div>
-              <div class="l2"><span class="mask"><span class="w">Shortstop</span> <span class="w">go?</span></span></div>
+              <div class="l2" id="q-l2"></div>
             </div>
             <div class="a">
-              <div class="l1"><span class="mask"><span class="w">The</span> <span class="w">shortstop</span></span></div>
-              <div class="l2"><span class="mask"><span class="w">Covers</span> <span class="w">3rd.</span></span></div>
-              <div class="why" id="i-why">The 3rd baseman charges in to be the <b>cutoff</b>, so the shortstop takes the bag.</div>
+              <div class="l1" id="a-l1"></div>
+              <div class="l2" id="a-l2"></div>
+              <div class="why" id="i-why"></div>
             </div>
           </div>
           <div id="i-brand">
@@ -262,12 +265,12 @@ body.obs #pad{display:none}
       <div id="p-plate">
         <div class="lane">
           <div class="beat" id="b1">
-            <div class="p-ctx"><span class="mask"><span class="w">Runner on <b>2nd</b> · 1 out · single to <b>left</b></span></span></div>
-            <div class="p-big"><span class="mask"><span class="w">Where</span> <span class="w">does</span> <span class="w">your</span> <span class="w hl">shortstop</span> <span class="w">go?</span></span></div>
+            <div class="p-ctx" id="p-ctx1"></div>
+            <div class="p-big" id="p-big1"></div>
           </div>
           <div class="beat" id="b2">
-            <div class="p-ctx"><span class="mask"><span class="w">The 3B charges in to be the <b>cutoff</b></span></span></div>
-            <div class="p-big"><span class="mask"><span class="w">Shortstop</span> <span class="w hl">covers</span> <span class="w hl">3rd.</span></span></div>
+            <div class="p-ctx" id="p-ctx2"></div>
+            <div class="p-big" id="p-big2"></div>
             <div id="p-check"><svg viewBox="0 0 48 48"><path id="p-tick" d="M10 25 L20 35 L39 14" fill="none" stroke="#12284D" stroke-width="7" stroke-linecap="square" pathLength="1" stroke-dasharray="1"/></svg></div>
           </div>
           <div class="beat b3" id="b3">
@@ -282,23 +285,7 @@ body.obs #pad{display:none}
         <div id="p-bar"></div>
       </div>
       <div id="p-tile">
-        <svg viewBox="-120 -118 240 240" aria-hidden="true">
-          <path d="M0 96 L-120 -24 M0 96 L120 -24" stroke="rgba(247,245,239,.22)" stroke-width="3"/>
-          <path d="M0 -104 Q 108 -64 112 -8 L0 104 L-112 -8 Q -108 -64 0 -104Z" fill="rgba(223,196,156,.14)"/>
-          <path id="pi-paths" d="M0 80 L80 0 L0 -80 L-80 0 Z" fill="none" stroke="rgba(247,245,239,.75)" stroke-width="4" pathLength="1" stroke-dasharray="1"/>
-          <g fill="#F7F5EF">
-            <rect class="pi-base" x="-11" y="-91" width="22" height="22" transform="rotate(45 0 -80)"/>
-            <rect class="pi-base" x="69" y="-11" width="22" height="22" transform="rotate(45 80 0)"/>
-            <rect class="pi-base" x="-91" y="-11" width="22" height="22" transform="rotate(45 -80 0)"/>
-            <path class="pi-base" d="M-10 72 h20 v9 l-10 9 l-10 -9Z"/>
-          </g>
-          <line id="pi-hit" x1="0" y1="78" x2="-112" y2="-112" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="1" pathLength="1"/>
-          <line id="pi-route" x1="-40" y1="-50" x2="-88" y2="6" stroke="#E8A33D" stroke-width="6" stroke-linecap="round" stroke-dasharray="1" pathLength="1"/>
-          <circle id="pi-ring" r="16" fill="none" stroke="#E8A33D" stroke-width="5"/>
-          <circle id="pi-r2" r="13" fill="#A6432F" stroke="#F7F5EF" stroke-width="4"/>
-          <circle id="pi-3b" r="13" fill="#12284D" stroke="#F7F5EF" stroke-width="4"/>
-          <circle id="pi-ss" r="16" fill="#E8A33D" stroke="#12284D" stroke-width="4"/>
-        </svg>
+        <svg id="p-field" aria-hidden="true"></svg>
         <div id="p-cover"><img src="img/rtp-mark.png" alt=""></div>
       </div>
       <div id="p-edge"></div>
@@ -309,514 +296,670 @@ body.obs #pad{display:none}
 <div id="pad" role="toolbar" aria-label="Spot preview">
   <button class="go" data-play="pitch">▶ Between pitches</button>
   <button class="go" data-play="inning">▶ Between innings</button>
+  <label>Play <select id="pl"><option value="">Rotate</option></select></label>
   <label>Pitch cut at <select id="pos">
+    <option value="tr">Top right</option><option value="tc">Top centre</option><option value="tl">Top left</option>
     <option value="bl">Bottom left</option><option value="bc">Bottom centre</option><option value="br">Bottom right</option>
-    <option value="tl">Top left</option><option value="tc">Top centre</option><option value="tr">Top right</option>
   </select></label>
   <label><input type="checkbox" id="loop"> Loop</label>
 </div>
 
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const P = new URLSearchParams(location.search);
-  if (P.get("embed") === "1" || P.get("obs") === "1" || window.obsstudio) document.body.classList.add("obs");
+<script type="module">
+import { RTP_PLAYS, POS_NAME } from "./rtp-plays.js";
 
-  const stage = $("stage");
-  const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; };
-  addEventListener("resize", fit); fit();
+const $ = (id) => document.getElementById(id);
+const P = new URLSearchParams(location.search);
+if (P.get("embed") === "1" || P.get("obs") === "1" || window.obsstudio) document.body.classList.add("obs");
 
-  // ---- eases: CSS strings for Web Animations, and the same curves in JS for the canvas
-  const CB = {
-    out: [.16, 1, .3, 1],        // expo out: arrivals
-    in: [.7, 0, .84, 0],         // expo in: departures
-    io: [.65, 0, .35, 1],        // runs across the field
-    cam: [.45, 0, .2, 1],        // camera: slow start, long settle
-    wipe: [.77, 0, .18, 1],      // the diagonal wipes
-    back: [.34, 1.56, .64, 1],   // pops
-    soft: [.33, 1, .68, 1],
+const stage = $("stage");
+const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; };
+addEventListener("resize", fit); fit();
+
+// ---- eases: CSS strings for Web Animations, and the same curves in JS for the canvas
+const CB = {
+  out: [.16, 1, .3, 1],        // expo out: arrivals
+  in: [.7, 0, .84, 0],         // expo in: departures
+  io: [.65, 0, .35, 1],        // runs across the field
+  cam: [.45, 0, .2, 1],        // camera: slow start, long settle
+  wipe: [.77, 0, .18, 1],      // the diagonal wipes
+  back: [.34, 1.56, .64, 1],   // pops
+  soft: [.33, 1, .68, 1],
+};
+const css = (k) => `cubic-bezier(${CB[k].join(",")})`;
+const OUT = css("out"), IN = css("in"), IO = css("io"), WIPE = css("wipe"), BACK = css("back"), LIN = "linear";
+function bez([x1, y1, x2, y2]) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t, dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x; if (Math.abs(e) < 1e-5) break; const d = dx(t); if (Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(Math.min(1, Math.max(0, t)));
   };
-  const css = (k) => `cubic-bezier(${CB[k].join(",")})`;
-  const OUT = css("out"), IN = css("in"), IO = css("io"), WIPE = css("wipe"), BACK = css("back"), LIN = "linear";
-  function bez([x1, y1, x2, y2]) {
-    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
-    const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t, dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
-    return (x) => {
-      if (x <= 0) return 0; if (x >= 1) return 1;
-      let t = x;
-      for (let i = 0; i < 8; i++) { const e = sx(t) - x; if (Math.abs(e) < 1e-5) break; const d = dx(t); if (Math.abs(d) < 1e-6) break; t -= e / d; }
-      return sy(Math.min(1, Math.max(0, t)));
-    };
-  }
-  const E = Object.fromEntries(Object.entries(CB).map(([k, v]) => [k, bez(v)]));
-  E.lin = (x) => Math.min(1, Math.max(0, x));
+}
+const E = Object.fromEntries(Object.entries(CB).map(([k, v]) => [k, bez(v)]));
+E.lin = (x) => Math.min(1, Math.max(0, x));
 
-  // ---- K(): one Web Animation per element, keyed in seconds -------------------
-  // steps: [[t, {props}, easeInto], ...]. The first step holds from 0 and the
-  // last holds to the end, so nothing ever snaps between keys.
-  let anims = [];
-  function K(el, D, steps) {
-    if (!el) return null;
-    const frames = steps.map(([t, p]) => ({ ...p, offset: Math.min(1, Math.max(0, t / D)) }));
-    for (let i = 1; i < steps.length; i++) frames[i - 1].easing = steps[i][2] || LIN;
-    if (frames[0].offset > 0) frames.unshift({ ...steps[0][1], offset: 0 });
-    if (frames[frames.length - 1].offset < 1) frames.push({ ...steps[steps.length - 1][1], offset: 1 });
-    const a = el.animate(frames, { duration: D * 1000, fill: "forwards" });
-    anims.push(a);
-    return a;
-  }
-  const all = (root, sel) => [...root.querySelectorAll(sel)];
-  // Words rise out of their masks, staggered; optionally leave upward later.
-  function rise(root, D, t0, { stagger = 0.045, dur = 0.6, out = null, outDur = 0.34, from = 105 } = {}) {
-    all(root, ".w").forEach((w, i) => {
-      const s = [[t0 + i * stagger, { transform: `translateY(${from}%)` }], [t0 + i * stagger + dur, { transform: "translateY(0%)" }, OUT]];
-      if (out != null) s.push([out + i * 0.025, { transform: "translateY(0%)" }], [out + i * 0.025 + outDur, { transform: "translateY(-110%)" }, IN]);
-      K(w, D, s);
-    });
-  }
-  const poly = (a, b) => `polygon(${a}% 0%, ${b}% 0%, ${b - 12}% 100%, ${a - 12}% 100%)`;
-  const edgeX = (b) => (b - 6) / 100 * 1920; // the wipe's edge at mid-height
+// ---- K(): one Web Animation per element, keyed in seconds -------------------
+// steps: [[t, {props}, easeInto], ...]. The first step holds from 0 and the
+// last holds to the end, so nothing ever snaps between keys.
+let anims = [];
+function K(el, D, steps) {
+  if (!el) return null;
+  const frames = steps.map(([t, p]) => ({ ...p, offset: Math.min(1, Math.max(0, t / D)) }));
+  for (let i = 1; i < steps.length; i++) frames[i - 1].easing = steps[i][2] || LIN;
+  if (frames[0].offset > 0) frames.unshift({ ...steps[0][1], offset: 0 });
+  if (frames[frames.length - 1].offset < 1) frames.push({ ...steps[steps.length - 1][1], offset: 1 });
+  const a = el.animate(frames, { duration: D * 1000, fill: "forwards" });
+  anims.push(a);
+  return a;
+}
+const all = (root, sel) => [...root.querySelectorAll(sel)];
+// Words rise out of their masks, staggered; optionally leave upward later.
+function rise(root, D, t0, { stagger = 0.045, dur = 0.6, out = null, outDur = 0.34, from = 105 } = {}) {
+  all(root, ".w").forEach((w, i) => {
+    const s = [[t0 + i * stagger, { transform: `translateY(${from}%)` }], [t0 + i * stagger + dur, { transform: "translateY(0%)" }, OUT]];
+    if (out != null) s.push([out + i * 0.025, { transform: "translateY(0%)" }], [out + i * 0.025 + outDur, { transform: "translateY(-110%)" }, IN]);
+    K(w, D, s);
+  });
+}
+const poly = (a, b) => `polygon(${a}% 0%, ${b}% 0%, ${b - 12}% 100%, ${a - 12}% 100%)`;
+const edgeX = (b) => (b - 6) / 100 * 1920; // the wipe's edge at mid-height
 
-  // keyed values for the canvas: [[t, value, easeName], ...]
-  const mix = (a, b, u) => Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * u) : a + (b - a) * u;
-  function kv(keys, t) {
-    if (t <= keys[0][0]) return keys[0][1];
-    for (let i = 1; i < keys.length; i++) {
-      if (t <= keys[i][0]) {
-        const [t0, v0] = keys[i - 1], [t1, v1, e] = keys[i];
-        return mix(v0, v1, E[e || "lin"]((t - t0) / (t1 - t0 || 1)));
-      }
+// keyed values for the canvas: [[t, value, easeName], ...]
+const mix = (a, b, u) => Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * u) : a + (b - a) * u;
+function kv(keys, t) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    if (t <= keys[i][0]) {
+      const [t0, v0] = keys[i - 1], [t1, v1, e] = keys[i];
+      return mix(v0, v1, E[e || "lin"]((t - t0) / (t1 - t0 || 1)));
     }
-    return keys[keys.length - 1][1];
   }
-  const seg = (t, a, b, e = "lin") => E[e]((t - a) / (b - a));
+  return keys[keys.length - 1][1];
+}
+const seg = (t, a, b, e = "lin") => E[e]((t - a) / (b - a));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  // =============================================================================
-  //  THE PLAY — Run the Play's engine, baseball. Its 800x800 field space has
-  //  home plate at the bottom; here the world is X right, Y up, Z toward home,
-  //  with the mound at 0,0,0.
-  // =============================================================================
-  const w = ([x, y]) => [x - 400, y - 550];
-  const HOME = w([400, 740]), B1 = w([590, 550]), B2 = w([400, 360]), B3 = w([210, 550]);
-  const START = { P: [400, 550], C: [400, 715], "1B": [560, 500], "2B": [470, 410], "3B": [240, 500], SS: [330, 410], LF: [150, 190], CF: [400, 110], RF: [650, 190] };
-  const JOB = { P: [419, 737], C: [400, 702], "1B": [552, 550], "2B": [400, 398], "3B": [322, 560], SS: [248, 550], LF: [140, 230], CF: [152, 185], RF: [492, 458] };
-  for (const k in START) { START[k] = w(START[k]); JOB[k] = w(JOB[k]); }
-  const LAND = w([140, 230]);
+// ---- text -----------------------------------------------------------------
+// A line of words that rise one by one: parts = [[text, highlighted?], ...].
+const words = (parts) => `<span class="mask">${parts.flatMap(([text, hl]) =>
+  text.split(" ").filter(Boolean).map((wd) => `<span class="w${hl ? " hl" : ""}">${wd}</span>`)).join(" ")}</span>`;
+// A line that rises as one piece (it carries its own markup).
+const whole = (html) => `<span class="mask"><span class="w">${html}</span></span>`;
+// Shrink a one-line, no-wrap element until it fits the width it has.
+function fitTo(el, maxW) {
+  el.style.fontSize = "";
+  const m = el.querySelector(".mask") || el, wd = m.scrollWidth;
+  if (wd > maxW) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * maxW / wd}px`;
+}
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const ORD = ["1st", "2nd", "3rd"];
+function runnersText(bases) {
+  const on = ORD.filter((_, i) => bases[i]);
+  if (!on.length) return "Bases empty";
+  if (on.length === 3) return "Bases <b>loaded</b>";
+  return `Runner${on.length > 1 ? "s" : ""} on <b>${on.join(" &amp; ")}</b>`;
+}
+const outsText = (n) => `${n} out${n === 1 ? "" : "s"}`;
 
-  // =============================================================================
-  //  INNING — 12.9s
-  // =============================================================================
-  const ID = 12.9;
-  const T_HIT = 2.45, T_LAND = 3.2, T_THROW = [3.42, 3.92], T_ANS = 4.0, T_HOME = 6.95, T_MORPH = 7.95, T_OUT = 12.2;
+// =============================================================================
+//  THE PLAYS — Run the Play's engine (ads/rtp-plays.js). Its 800x800 field has
+//  home plate at the bottom; here the world is X right, Y up, Z toward home,
+//  with the mound at 0,0,0.
+// =============================================================================
+const w = ([x, y]) => [x - 400, y - 550];
+const HOME = w([400, 740]), B1 = w([590, 550]), B2 = w([400, 360]), B3 = w([210, 550]);
+const BASES = [HOME, B1, B2, B3];
+const BOX = [26, 204];   // the batter's box
+const START800 = { P: [400, 550], C: [400, 715], "1B": [560, 500], "2B": [470, 410], "3B": [240, 500], SS: [330, 410], LF: [150, 190], CF: [400, 110], RF: [650, 190] };
+const START = Object.fromEntries(Object.entries(START800).map(([k, v]) => [k, w(v)]));
+const ORDER = ["CF", "LF", "RF", "2B", "SS", "3B", "1B", "P", "C"];
+const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+// A point part-way along a path of points, spaced by length.
+function along(path, u) {
+  if (path.length < 2 || u <= 0) return path[0];
+  const lens = path.slice(1).map((p, i) => dist(path[i], p)), total = lens.reduce((a, b) => a + b, 0);
+  let d = Math.min(1, u) * total;
+  for (let i = 0; i < lens.length; i++) { if (d <= lens[i]) return lerp2(path[i], path[i + 1], d / lens[i]); d -= lens[i]; }
+  return path[path.length - 1];
+}
 
-  // Camera keys: [target X, target Z, yaw deg, pitch deg, distance, focal, screen cx, screen cy]
-  // The last key is the logo's own angle: its diamond is 183px wide and 149px
-  // deep, so the logo is the field seen from 55.9 degrees up, near-orthographic,
-  // at 0.379px a unit (at 640px wide) with the mound at (559, 382) on screen.
-  const LOGO = { x: 240, y: 132, s: 0.8 };
-  const LOGO_CAM = [0, 0, 0, 55.9, 5200, 5200 * 0.3789, LOGO.x + 399 * LOGO.s, LOGO.y + 312 * LOGO.s];
+// =============================================================================
+//  INNING — 12.9s
+// =============================================================================
+const ID = 12.9;
+const T_HIT = 2.45, T_ANS = 4.0, T_HOME = 6.95, T_MORPH = 7.95, T_OUT = 12.2;
+// The logo's own angle: its diamond is 183px wide and 149px deep, so the logo is
+// the field seen from 55.9 degrees up, near-orthographic, at 0.379px a unit (at
+// 640px wide), with the mound at (559, 382) on screen.
+const LOGO = { x: 240, y: 132, s: 0.8 };
+const LOGO_CAM = [0, 0, 0, 55.9, 5200, 5200 * 0.3789, LOGO.x + 399 * LOGO.s, LOGO.y + 312 * LOGO.s];
+// Logo pin heads (image px, measured off the artwork) for the match cut.
+const PIN = { CF: [399, 135], LF: [253, 184], RF: [545, 184], SS: [349, 221], "2B": [443, 221], "3B": [308, 277], "1B": [490, 277], P: [399, 291], C: [399, 414] };
+
+// Everything the field needs for one play, worked out once when it starts.
+let PL = null;
+function prep(p) {
+  const JOB = Object.fromEntries(Object.entries(p.jobs).map(([k, v]) => [k, w(v)]));
+  const LAND = w(p.land), air = p.kind === "fly" || p.kind === "gap";
+  const T_LAND = T_HIT + (p.kind === "gap" ? 0.95 : p.kind === "fly" ? 0.78 : p.kind === "bunt" ? 0.75 : 0.5);
+  const peak = p.kind === "gap" ? 120 : 78;
+  const flight = (u) => ({
+    p: lerp2(HOME, LAND, air ? 1 - Math.pow(1 - u, 1.6) : E.soft(u)),
+    h: air ? 6 + peak * 4 * u * (1 - u) : 3 + (p.kind === "ground" ? 14 : 6) * Math.abs(Math.sin(u * Math.PI * 2.5)) * (1 - u),
+  });
+  let t = T_LAND + (air ? 0.22 : 0.15);
+  const throws = p.throws.map(([from, to, a, b]) => {
+    const A = w(a), B = w(b), d = dist(A, B), dur = 0.2 + d / 950;
+    const th = { from, to, A, B, t0: t, t1: t + dur, h: 8 + d * 0.05 };
+    t += dur + 0.12;
+    return th;
+  });
+  // who has to be where by when: the fielder by the time the ball gets there,
+  // everyone who takes a throw by the time it arrives
+  const fielder = p.throws.length ? p.throws[0][0] : null;
+  const need = {};
+  if (fielder) need[fielder] = T_LAND;
+  for (const th of throws) need[th.to] = Math.min(need[th.to] ?? 99, th.t1 - 0.06);
+  const RUN = {};
+  for (const k of ORDER) {
+    const leave = T_HIT + (k === fielder ? 0.02 : 0.08 + (ORDER.indexOf(k) % 3) * 0.05);
+    RUN[k] = [leave, clamp((need[k] ?? 99) - leave, 0.45, 1.25)];
+  }
+  const runners = p.runners.map(([id, from, to, outcome]) => {
+    const path = [id === "B" ? BOX : BASES[from]];
+    const steps = to === 0 && from !== 0 ? 4 - from : to - from;
+    for (let i = 1; i <= steps; i++) path.push(BASES[(from + i) % 4]);
+    const t0 = T_HIT + (id === "B" ? 0.12 : 0.05);
+    return { id, path, t0, t1: t0 + 0.62 * Math.max(1, steps), outcome };
+  });
+  // the camera: overhead for the question, chase the ball, then settle on the answer
+  const J = JOB[p.focus], far = dist(LAND, [0, 0]) > 300;
+  const chase = lerp2([0, -40], LAND, far ? 0.5 : 0.6);
+  const yaw2 = far ? 16 * clamp(LAND[0] / 260, -1, 1) : 6 * clamp(LAND[0] / 150, -1, 1);
+  const yaw3 = clamp(J[0] * 0.05, -10, 10);
   const CAM = [
     [0.0, [0, -40, -30, 76, 2500, 2150, 540, 560]],
     [2.35, [0, -60, -5, 57, 1640, 2150, 520, 585], "soft"],
     [T_HIT + 0.05, [0, -60, -5, 57, 1640, 2150, 520, 585]],
-    [T_LAND + 0.1, [-140, -150, -16, 43, 1180, 2150, 540, 560], "io"],
-    [4.45, [-140, 20, -8, 49, 1060, 2150, 480, 640], "io"],
-    [T_HOME, [-132, 20, -2, 51, 1020, 2150, 480, 640], "lin"],
+    [T_LAND + 0.1, [chase[0], chase[1], yaw2, far ? 43 : 50, far ? 1180 : 1250, 2150, 540, 560], "io"],
+    [4.45, [J[0] + 12, J[1] + 20, yaw3, 49, 1060, 2150, 480, 640], "io"],
+    [T_HOME, [J[0] + 20, J[1] + 20, yaw3 * 0.25, 51, 1020, 2150, 480, 640], "lin"],
     [T_MORPH, LOGO_CAM, "cam"],
   ];
-  // Logo pin heads (image px, measured off the artwork) for the match cut.
-  const PIN = { CF: [399, 135], LF: [253, 184], RF: [545, 184], SS: [349, 221], "2B": [443, 221], "3B": [308, 277], "1B": [490, 277], P: [399, 291], C: [399, 414] };
+  const tag = p.answer.replace(/\.$/, "").replace(/^is the /i, "").toUpperCase();
+  return { p, JOB, LAND, T_LAND, flight, throws, RUN, runners, CAM, focus: p.focus, second: p.second, tag };
+}
+function fielderAt(k, t) {
+  const [a, dur] = PL.RUN[k], b = a + dur;
+  let p = lerp2(START[k], PL.JOB[k], seg(t, a, b, "io"));
+  // after the answer they jog back to their spots, where the logo's pins are
+  p = lerp2(p, START[k], seg(t, T_HOME, T_MORPH - 0.15, "io"));
+  const running = (t > a && t < b) || (t > T_HOME && t < T_MORPH - 0.15);
+  return { p, hop: running ? Math.abs(Math.sin((t - a) * 17)) * 5 : 0 };
+}
+function ballAt(t) {
+  if (t < T_HIT) return null;
+  if (t <= PL.T_LAND) return PL.flight((t - T_HIT) / (PL.T_LAND - T_HIT));
+  let at = PL.LAND;
+  for (const th of PL.throws) {
+    if (t < th.t0) return { p: at, h: 8 };
+    if (t <= th.t1) { const u = (t - th.t0) / (th.t1 - th.t0); return { p: lerp2(th.A, th.B, E.soft(u)), h: 8 + th.h * 4 * u * (1 - u) }; }
+    at = th.B;
+  }
+  return t < (PL.throws.length ? PL.throws[PL.throws.length - 1].t1 + 0.15 : PL.T_LAND + 0.4) ? { p: at, h: 8 } : null;
+}
 
-  const cv = $("i-canvas"), g = cv.getContext("2d");
-  const rad = (d) => d * Math.PI / 180;
-  function camera(t) {
-    const [tx, tz, yaw, pitch, d, F, cx, cy] = kv(CAM, t);
-    const cp = Math.cos(rad(pitch)), sp = Math.sin(rad(pitch));
-    const pos = [tx + d * cp * Math.sin(rad(yaw)), d * sp, tz + d * cp * Math.cos(rad(yaw))];
-    let f = [tx - pos[0], -pos[1], tz - pos[2]];
-    const fl = Math.hypot(...f); f = f.map((v) => v / fl);
-    let r = [-f[2], 0, f[0]]; const rl = Math.hypot(...r); r = r.map((v) => v / rl);
-    const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
-    return { pos, f, r, u, F, cx, cy, k: F / d };
-  }
-  function P3(C, X, Y, Z) {
-    const dx = X - C.pos[0], dy = Y - C.pos[1], dz = Z - C.pos[2];
-    const z = dx * C.f[0] + dy * C.f[1] + dz * C.f[2];
-    return [C.cx + C.F * (dx * C.r[0] + dy * C.r[1] + dz * C.r[2]) / z, C.cy - C.F * (dx * C.u[0] + dy * C.u[1] + dz * C.u[2]) / z, z];
-  }
-  const G = (C, [X, Z], Y = 0) => P3(C, X, Y, Z);
-  function pathW(C, pts, close = true) {
-    g.beginPath();
-    pts.forEach((p, i) => { const q = G(C, p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-    if (close) g.closePath();
-  }
-  function pathS(pts) { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); }
-  const arcPts = (cx, cz, r, a0, a1, n = 48) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [cx + r * Math.cos(a), cz + r * Math.sin(a)]; });
-  const circle = (c, r, n = 40) => arcPts(c[0], c[1], r, 0, Math.PI * 2, n);
-  const lerp2 = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+const cv = $("i-canvas"), g = cv.getContext("2d");
+const rad = (d) => d * Math.PI / 180;
+function camera(t) {
+  const [tx, tz, yaw, pitch, d, F, cx, cy] = kv(PL.CAM, t);
+  const cp = Math.cos(rad(pitch)), sp = Math.sin(rad(pitch));
+  const pos = [tx + d * cp * Math.sin(rad(yaw)), d * sp, tz + d * cp * Math.cos(rad(yaw))];
+  let f = [tx - pos[0], -pos[1], tz - pos[2]];
+  const fl = Math.hypot(...f); f = f.map((v) => v / fl);
+  let r = [-f[2], 0, f[0]]; const rl = Math.hypot(...r); r = r.map((v) => v / rl);
+  const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  return { pos, f, r, u, F, cx, cy, k: F / d };
+}
+function P3(C, X, Y, Z) {
+  const dx = X - C.pos[0], dy = Y - C.pos[1], dz = Z - C.pos[2];
+  const z = dx * C.f[0] + dy * C.f[1] + dz * C.f[2];
+  return [C.cx + C.F * (dx * C.r[0] + dy * C.r[1] + dz * C.r[2]) / z, C.cy - C.F * (dx * C.u[0] + dy * C.u[1] + dz * C.u[2]) / z, z];
+}
+const G = (C, [X, Z], Y = 0) => P3(C, X, Y, Z);
+function pathW(C, pts, close = true) {
+  g.beginPath();
+  pts.forEach((p, i) => { const q = G(C, p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+  if (close) g.closePath();
+}
+function pathS(pts) { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); }
+const arcPts = (cx, cz, r, a0, a1, n = 48) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [cx + r * Math.cos(a), cz + r * Math.sin(a)]; });
+const circle = (c, r, n = 40) => arcPts(c[0], c[1], r, 0, Math.PI * 2, n);
 
-  // field shapes (world). Fence: a circle about (0,-130), r 380, pole to pole.
-  const FAN = [HOME, ...arcPts(0, -130, 380, rad(-171.5), rad(-8.5), 64)];
-  const DIRT = [[0, 214], ...arcPts(0, 10, 215, rad(-171.3), rad(-8.7), 40)];
-  const INF = [[0, 150], [150, 0], [0, -150], [-150, 0]];
-  const POLE_L = [-376, -186], POLE_R = [376, -186];
-  // mow bands: 45 degree stripes both ways make the checkerboard
-  const BANDS = [];
-  for (const s of [1, -1]) for (let a = -900; a < 900; a += 76) {
-    BANDS.push([[a, -900], [a + 38, -900], [a + 38, 900], [a, 900]].map(([u, v]) => s > 0 ? [(u - v) / Math.SQRT2, (u + v) / Math.SQRT2] : [(u + v) / Math.SQRT2, (v - u) / Math.SQRT2]));
-  }
+// field shapes (world). Fence: a circle about (0,-130), r 380, pole to pole.
+const FAN = [HOME, ...arcPts(0, -130, 380, rad(-171.5), rad(-8.5), 64)];
+const DIRT = [[0, 214], ...arcPts(0, 10, 215, rad(-171.3), rad(-8.7), 40)];
+const INF = [[0, 150], [150, 0], [0, -150], [-150, 0]];
+const POLE_L = [-376, -186], POLE_R = [376, -186];
+// mow bands: 45 degree stripes both ways make the checkerboard
+const BANDS = [];
+for (const s of [1, -1]) for (let a = -900; a < 900; a += 76) {
+  BANDS.push([[a, -900], [a + 38, -900], [a + 38, 900], [a, 900]].map(([u, v]) => s > 0 ? [(u - v) / Math.SQRT2, (u + v) / Math.SQRT2] : [(u + v) / Math.SQRT2, (v - u) / Math.SQRT2]));
+}
 
-  // who does what, and when
-  const ORDER = ["CF", "LF", "RF", "2B", "SS", "3B", "1B", "P", "C"];
-  const LEAVE = (k) => T_HIT + (k === "LF" || k === "CF" ? 0.02 : 0.1 + (ORDER.indexOf(k) % 3) * 0.05);
-  const RUN = (k) => (k === "LF" || k === "CF" ? 0.72 : 1.22);
-  function fielderAt(k, t) {
-    const a = LEAVE(k), b = a + RUN(k);
-    let p = lerp2(START[k], JOB[k], seg(t, a, b, "io"));
-    // after the answer they jog back to their spots, where the logo's pins are
-    p = lerp2(p, START[k], seg(t, T_HOME, T_MORPH - 0.15, "io"));
-    const running = (t > a && t < b) || (t > T_HOME && t < T_MORPH - 0.15);
-    return { p, hop: running ? Math.abs(Math.sin((t - a) * 17)) * 5 : 0 };
+const NAVY = "#12284D", CREAM = "#F7F5EF", AMBER = "#E8A33D", RUST = "#A6432F";
+// A map pin like the logo's: a round head, its point on the ground at x,y.
+function pin(x, y, r, fill, ring, label, ink, alpha, glow) {
+  if (alpha <= 0) return;
+  const h = r * 1.9, cy = y - h, b = Math.acos(Math.min(1, r / h));
+  g.save(); g.globalAlpha = alpha;
+  g.fillStyle = "rgba(6,16,34,.3)";
+  g.beginPath(); g.ellipse(x, y, r * .8, r * .3, 0, 0, Math.PI * 2); g.fill();
+  if (glow > 0) { g.shadowColor = "rgba(232,163,61,.95)"; g.shadowBlur = 30 * glow; }
+  g.beginPath(); g.moveTo(x, y); g.arc(x, cy, r, Math.PI / 2 + b, Math.PI / 2 - b + Math.PI * 2); g.closePath();
+  g.fillStyle = ring; g.fill();
+  g.shadowBlur = 0;
+  g.beginPath(); g.arc(x, cy, r * .8, 0, Math.PI * 2); g.fillStyle = fill; g.fill();
+  if (label) {
+    g.fillStyle = ink; g.font = `600 ${Math.round(r * 1.02)}px Teko`;
+    g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.fillText(label, x, cy + r * .37);
   }
-  function runnerAt(which, t) {
-    if (which === "R2") {
-      if (t < T_HIT) return B2;
-      if (t < T_HIT + 1.25) return lerp2(B2, [-202, 16], seg(t, T_HIT, T_HIT + 1.25, "io"));
-      return lerp2([-202, 16], [-196, 8], seg(t, T_HIT + 1.25, T_HIT + 1.7, "out"));   // rounds 3rd, held
+  g.restore();
+}
+// A callout flag above (or below) a pin, wiping open left to right. dx slides
+// the flag sideways; its pointer still runs back to the pin.
+function tagBox(x, y, text, size, below, dx = 0) {
+  g.font = `600 ${size}px Teko`;
+  const pw = g.measureText(text).width + size * .72, ph = size * 1.06, gap = size * .45;
+  return { bx: x + dx - pw / 2, by: below ? y + gap : y - ph - gap, pw, ph };
+}
+function tagAt(x, y, text, prog, bg, fg, size, below = false, alpha = 1, dx = 0) {
+  if (prog <= 0 || alpha <= 0) return;
+  g.save();
+  const { bx, by, pw, ph } = tagBox(x, y, text, size, below, dx);
+  const ex = x + dx, ey = below ? by : by + ph;
+  g.globalAlpha = Math.min(1, prog * 2.5) * alpha;
+  g.beginPath(); g.moveTo(ex, ey); g.lineTo(ex + (x - ex) * prog, ey + (y - ey) * prog);
+  g.strokeStyle = bg; g.lineWidth = 3; g.stroke();
+  g.beginPath(); g.rect(bx - 2, by - 2, (pw + 12) * prog, ph + 12); g.clip();
+  g.fillStyle = "rgba(6,16,34,.35)"; g.fillRect(bx + 6, by + 6, pw, ph);
+  g.fillStyle = bg; g.fillRect(bx, by, pw, ph);
+  g.fillStyle = fg; g.textAlign = "left"; g.textBaseline = "alphabetic";
+  g.fillText(text, bx + size * .36, by + ph * .84);
+  g.restore();
+}
+function ringW(C, c, r, color, width, alpha) {
+  if (alpha <= 0) return;
+  pathW(C, circle(c, r, 48)); g.save(); g.strokeStyle = color; g.globalAlpha = alpha; g.lineWidth = width; g.stroke(); g.restore();
+}
+
+function drawField(t) {
+  g.clearRect(0, 0, 1920, 1080);
+  if (t <= 0 || !PL) return;
+  const C = camera(t), k = C.k, { JOB, LAND, focus } = PL;
+  const second = PL.second && PL.second[0];
+  const fade = 1 - seg(t, T_HOME, T_HOME + 0.5);    // the play's marks clear before the match cut
+
+  // 1. the field unfolds out of home plate
+  const R = kv([[0.12, 0], [1.3, 980, "out"]], t);
+  g.save();
+  if (R < 980) { pathW(C, circle(HOME, Math.max(1, R), 72)); g.clip(); }
+  pathW(C, FAN); g.fillStyle = "#A0BB74"; g.fill();
+  g.save(); pathW(C, FAN); g.clip();
+  g.fillStyle = "rgba(255,255,255,.055)";
+  for (const b of BANDS) { pathW(C, b); g.fill(); }
+  g.fillStyle = "#DFC49C"; pathW(C, DIRT); g.fill();
+  g.fillStyle = "#94B068"; pathW(C, INF); g.fill();
+  g.fillStyle = "#DFC49C";
+  for (const [c, r] of [[[0, 0], 24], [HOME, 44], [B1, 26], [B2, 26], [B3, 26]]) { pathW(C, circle(c, r)); g.fill(); }
+  g.restore();
+  pathW(C, FAN); g.strokeStyle = NAVY; g.lineWidth = Math.max(4, 11 * k); g.lineJoin = "round"; g.stroke();
+  g.restore();
+
+  // 2. chalk draws out from home
+  const L = seg(t, 0.55, 1.35, "out");
+  if (L > 0) {
+    g.save(); g.lineCap = "round"; g.strokeStyle = CREAM; g.lineWidth = Math.max(2, 3.6 * k);
+    for (const pole of [POLE_L, POLE_R]) { pathW(C, [HOME, lerp2(HOME, pole, L)], false); g.stroke(); }
+    const loop = [HOME, B1, B2, B3, HOME], pts = [HOME];
+    for (let i = 1; i < loop.length; i++) {
+      const a = (i - 1) / 4, b = i / 4;
+      if (L >= b) pts.push(loop[i]); else { if (L > a) pts.push(lerp2(loop[i - 1], loop[i], (L - a) * 4)); break; }
     }
-    if (t < T_HIT + 0.08) return [26, 204];
-    if (t < T_HIT + 1.4) return lerp2([26, 204], [214, -16], seg(t, T_HIT + 0.08, T_HIT + 1.4, "io"));
-    return lerp2([214, -16], [198, 6], seg(t, T_HIT + 1.4, T_HIT + 1.85, "out"));      // rounds 1st, holds
-  }
-  const flight = (u) => ({ p: lerp2(HOME, LAND, 1 - Math.pow(1 - u, 1.6)), h: 6 + 78 * 4 * u * (1 - u) });
-  const toss = (u) => ({ p: lerp2(LAND, JOB["3B"], E.soft(u)), h: 8 + 28 * 4 * u * (1 - u) });
-  function ballAt(t) {
-    if (t < T_HIT) return null;
-    if (t <= T_LAND) return flight((t - T_HIT) / (T_LAND - T_HIT));
-    if (t < T_THROW[0]) return { p: LAND, h: 8 };
-    if (t <= T_THROW[1] + 0.12) return toss(Math.min(1, (t - T_THROW[0]) / (T_THROW[1] - T_THROW[0])));
-    return null;
-  }
-
-  const NAVY = "#12284D", CREAM = "#F7F5EF", AMBER = "#E8A33D", RUST = "#A6432F";
-  // A map pin like the logo's: a round head, its point on the ground at x,y.
-  function pin(x, y, r, fill, ring, label, ink, alpha, glow) {
-    if (alpha <= 0) return;
-    const h = r * 1.9, cy = y - h, b = Math.acos(Math.min(1, r / h));
-    g.save(); g.globalAlpha = alpha;
-    g.fillStyle = "rgba(6,16,34,.3)";
-    g.beginPath(); g.ellipse(x, y, r * .8, r * .3, 0, 0, Math.PI * 2); g.fill();
-    if (glow > 0) { g.shadowColor = "rgba(232,163,61,.95)"; g.shadowBlur = 30 * glow; }
-    g.beginPath(); g.moveTo(x, y); g.arc(x, cy, r, Math.PI / 2 + b, Math.PI / 2 - b + Math.PI * 2); g.closePath();
-    g.fillStyle = ring; g.fill();
-    g.shadowBlur = 0;
-    g.beginPath(); g.arc(x, cy, r * .8, 0, Math.PI * 2); g.fillStyle = fill; g.fill();
-    if (label) {
-      g.fillStyle = ink; g.font = `600 ${Math.round(r * 1.02)}px Teko`;
-      g.textAlign = "center"; g.textBaseline = "alphabetic";
-      g.fillText(label, x, cy + r * .37);
-    }
+    g.globalAlpha = .75; g.lineWidth = Math.max(1.5, 2.6 * k); pathW(C, pts, false); g.stroke();
     g.restore();
   }
-  // A callout flag above (or below) a pin, wiping open left to right.
-  function tagAt(x, y, text, prog, bg, fg, size, below = false, alpha = 1) {
-    if (prog <= 0 || alpha <= 0) return;
-    g.save();
-    g.font = `600 ${size}px Teko`;
-    const pw = g.measureText(text).width + size * .72, ph = size * 1.06, bx = x - pw / 2, gap = size * .45;
-    const by = below ? y + gap : y - ph - gap;
-    g.globalAlpha = Math.min(1, prog * 2.5) * alpha;
-    g.beginPath(); g.moveTo(x, below ? by : by + ph); g.lineTo(x, below ? by - gap * prog : by + ph + gap * prog);
-    g.strokeStyle = bg; g.lineWidth = 3; g.stroke();
-    g.beginPath(); g.rect(bx - 2, by - 2, (pw + 12) * prog, ph + 12); g.clip();
-    g.fillStyle = "rgba(6,16,34,.35)"; g.fillRect(bx + 6, by + 6, pw, ph);
-    g.fillStyle = bg; g.fillRect(bx, by, pw, ph);
-    g.fillStyle = fg; g.textAlign = "left"; g.textBaseline = "alphabetic";
-    g.fillText(text, bx + size * .36, by + ph * .84);
-    g.restore();
-  }
-  function ringW(C, c, r, color, width, alpha) {
-    if (alpha <= 0) return;
-    pathW(C, circle(c, r, 48)); g.save(); g.strokeStyle = color; g.globalAlpha = alpha; g.lineWidth = width; g.stroke(); g.restore();
-  }
-
-  function drawField(t) {
-    g.clearRect(0, 0, 1920, 1080);
-    if (t <= 0) return;
-    const C = camera(t), k = C.k;
-    const fade = 1 - seg(t, T_HOME, T_HOME + 0.5);    // the play's marks clear before the match cut
-
-    // 1. the field unfolds out of home plate
-    const R = kv([[0.12, 0], [1.3, 980, "out"]], t);
-    g.save();
-    if (R < 980) { pathW(C, circle(HOME, Math.max(1, R), 72)); g.clip(); }
-    pathW(C, FAN); g.fillStyle = "#A0BB74"; g.fill();
-    g.save(); pathW(C, FAN); g.clip();
-    g.fillStyle = "rgba(255,255,255,.055)";
-    for (const b of BANDS) { pathW(C, b); g.fill(); }
-    g.fillStyle = "#DFC49C"; pathW(C, DIRT); g.fill();
-    g.fillStyle = "#94B068"; pathW(C, INF); g.fill();
-    g.fillStyle = "#DFC49C";
-    for (const [c, r] of [[[0, 0], 24], [HOME, 44], [B1, 26], [B2, 26], [B3, 26]]) { pathW(C, circle(c, r)); g.fill(); }
-    g.restore();
-    pathW(C, FAN); g.strokeStyle = NAVY; g.lineWidth = Math.max(4, 11 * k); g.lineJoin = "round"; g.stroke();
-    g.restore();
-
-    // 2. chalk draws out from home
-    const L = seg(t, 0.55, 1.35, "out");
-    if (L > 0) {
-      g.save(); g.lineCap = "round"; g.strokeStyle = CREAM; g.lineWidth = Math.max(2, 3.6 * k);
-      for (const pole of [POLE_L, POLE_R]) { pathW(C, [HOME, lerp2(HOME, pole, L)], false); g.stroke(); }
-      const loop = [HOME, B1, B2, B3, HOME], pts = [HOME];
-      for (let i = 1; i < loop.length; i++) {
-        const a = (i - 1) / 4, b = i / 4;
-        if (L >= b) pts.push(loop[i]); else { if (L > a) pts.push(lerp2(loop[i - 1], loop[i], (L - a) * 4)); break; }
-      }
-      g.globalAlpha = .75; g.lineWidth = Math.max(1.5, 2.6 * k); pathW(C, pts, false); g.stroke();
-      g.restore();
-    }
-    [B1, B2, B3].forEach((b, i) => {
-      const s = seg(t, 0.95 + i * 0.06, 1.35 + i * 0.06, "back");
-      if (s <= 0) return;
-      pathW(C, [[0, -13], [13, 0], [0, 13], [-13, 0]].map(([x, z]) => [b[0] + x * s, b[1] + z * s]));
-      g.fillStyle = "#fff"; g.fill(); g.strokeStyle = NAVY; g.lineWidth = Math.max(1.5, 2.5 * k); g.stroke();
-    });
-    { const s = seg(t, 1.1, 1.45, "back");
-      if (s > 0) { pathW(C, [[-9, -6], [9, -6], [9, 1], [0, 9], [-9, 1]].map(([x, z]) => [x * s, HOME[1] + z * s])); g.fillStyle = "#fff"; g.fill(); } }
-
-    // 3. routes trail each fielder, the runners' paths, the ball's flight and the throw
-    if (t > T_HIT && fade > 0) {
-      g.save(); g.lineCap = "round"; g.globalAlpha = fade;
-      for (const key of ORDER) {
-        const a = LEAVE(key), u = seg(t, a, a + RUN(key), "io");
-        if (u <= 0 || Math.hypot(JOB[key][0] - START[key][0], JOB[key][1] - START[key][1]) < 14) continue;
-        if (key === "SS") { g.setLineDash([]); g.strokeStyle = AMBER; g.lineWidth = Math.max(3, 6 * k); g.shadowColor = "rgba(232,163,61,.8)"; g.shadowBlur = 14; }
-        else { g.setLineDash([9 * k, 8 * k]); g.strokeStyle = "rgba(18,40,77,.5)"; g.lineWidth = Math.max(2, 3 * k); g.shadowBlur = 0; }
-        pathW(C, [START[key], lerp2(START[key], JOB[key], u)], false); g.stroke();
-      }
-      g.setLineDash([]); g.shadowBlur = 0; g.strokeStyle = "rgba(166,67,47,.75)"; g.lineWidth = Math.max(2, 3.4 * k);
-      const r2 = seg(t, T_HIT, T_HIT + 1.25, "io"), bt = seg(t, T_HIT + 0.08, T_HIT + 1.4, "io");
-      if (r2 > 0) { pathW(C, [B2, lerp2(B2, B3, r2)], false); g.stroke(); }
-      if (bt > 0) { pathW(C, [HOME, lerp2(HOME, B1, bt)], false); g.stroke(); }
-      const fu = seg(t, T_HIT, T_LAND);
-      pathS(Array.from({ length: 25 }, (_, i) => { const f = flight(fu * i / 24); return G(C, f.p, f.h); }));
-      g.globalAlpha = fade * .9; g.strokeStyle = "#fff"; g.lineWidth = Math.max(2, 4 * k); g.stroke();
-      const th = seg(t, T_THROW[0], T_THROW[1]);
-      if (th > 0) {
-        pathS(Array.from({ length: 19 }, (_, i) => { const f = toss(th * i / 18); return G(C, f.p, f.h); }));
-        g.globalAlpha = fade; g.strokeStyle = AMBER; g.lineWidth = Math.max(3, 5 * k); g.stroke();
-      }
-      g.restore();
-    }
-    { const u = seg(t, T_HIT, T_HIT + 0.55, "out"); if (u > 0 && u < 1) ringW(C, HOME, 20 + 150 * u, "#fff", Math.max(2, 5 * k), 1 - u); }
-    for (const t0 of [T_ANS, T_ANS + 0.45, T_ANS + 0.9, T_ANS + 1.8]) {
-      const u = seg(t, t0, t0 + 0.9, "out");
-      if (u > 0 && u < 1) ringW(C, JOB.SS, 22 + 95 * u, AMBER, Math.max(3, 6 * k) * (1 - u * .6), (1 - u) * fade);
-    }
-
-    // 4. pins, far to near. At the match cut each flies to its pin in the logo.
-    const morph = seg(t, T_MORPH - 0.12, T_MORPH + 0.3, "io"), gone = 1 - seg(t, T_MORPH + 0.08, T_MORPH + 0.4);
-    const size = Math.min(34, Math.max(19, 19 * k));
-    const items = [];
-    ORDER.forEach((key, i) => {
-      const drop = seg(t, 0.85 + i * 0.05, 1.35 + i * 0.05, "back");
-      if (drop <= 0) return;
-      const { p, hop } = fielderAt(key, t);
-      let [x, y, z] = G(C, p, hop + (1 - drop) * 160);
-      const lit = key === "SS" ? seg(t, T_ANS - 0.1, T_ANS + 0.3) * fade : 0;
-      const dim = key !== "SS" && key !== "3B" ? seg(t, T_ANS, T_ANS + 0.4) * fade : 0;
-      let r = size * (1 + 0.18 * (key === "SS" ? seg(t, T_ANS - 0.1, T_ANS + 0.3, "back") * fade : 0));
-      if (morph > 0) {
-        r += (8 - r) * morph;
-        const hx = LOGO.x + PIN[key][0] * LOGO.s, hy = LOGO.y + PIN[key][1] * LOGO.s + r * 1.9;
-        x += (hx - x) * morph; y += (hy - y) * morph;
-      }
-      const ssLit = key === "SS" && lit > 0.5;
-      items.push({ z, draw: () => pin(x, y, r, ssLit ? AMBER : dim > 0.5 ? "#4d5f7e" : NAVY, ssLit ? NAVY : CREAM,
-        r > 13 ? key : "", ssLit ? NAVY : dim > 0.5 ? "rgba(247,245,239,.7)" : CREAM, Math.min(1, drop * 1.4) * gone, lit) });
-    });
-    for (const [key, t0] of [["R2", 1.25], ["B", 1.32]]) {
-      const drop = seg(t, t0, t0 + 0.5, "back"), off = 1 - seg(t, T_HOME, T_HOME + 0.45);
-      if (drop <= 0 || off <= 0) continue;
-      const [x, y, z] = G(C, runnerAt(key, t), (1 - drop) * 160);
-      items.push({ z, draw: () => pin(x, y, size * .9, RUST, CREAM, key === "R2" ? "R" : "B", CREAM, Math.min(1, drop * 1.4) * off, 0) });
-    }
-    items.sort((a, b) => b.z - a.z).forEach((it) => it.draw());
-
-    // 5. the ball
-    const b = ballAt(t);
-    if (b) {
-      const [sx, sy] = G(C, b.p);
-      g.fillStyle = "rgba(6,16,34,.35)"; g.beginPath(); g.ellipse(sx, sy, 7 * k, 3 * k, 0, 0, Math.PI * 2); g.fill();
-      const [bx, by] = G(C, b.p, b.h);
-      g.save(); g.shadowColor = "rgba(255,255,255,.9)"; g.shadowBlur = 20;
-      g.beginPath(); g.arc(bx, by, Math.max(5, 7.5 * k), 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.restore();
-    }
-
-    // 6. callouts
-    if (fade > 0) {
-      const ss = G(C, JOB.SS), tb = G(C, JOB["3B"]), r = size * 1.18;
-      tagAt(ss[0], ss[1] - r * 2.9, "SS · COVERS 3RD", seg(t, T_ANS + 0.15, T_ANS + 0.6, "out"), AMBER, NAVY, Math.round(Math.max(30, 17 * k)), false, fade);
-      tagAt(tb[0], tb[1] + size * .5, "3B · CUTOFF", seg(t, T_ANS + 0.4, T_ANS + 0.85, "out"), CREAM, NAVY, Math.round(Math.max(24, 13 * k)), true, fade);
-    }
-  }
-
-  function buildInning() {
-    const D = ID, root = $("inning");
-    const inDur = 0.62, outDur = 0.62;
-    K($("i-clock"), D, [[0, { transform: "translateX(0px)" }], [D, { transform: "translateX(1px)" }]]);   // the canvas reads this one
-    // on and off along the brand diagonal, amber and rust riding the edge
-    K($("i-all"), D, [[0, { clipPath: poly(-12, -12) }], [inDur, { clipPath: poly(-12, 124) }, WIPE],
-      [T_OUT, { clipPath: poly(-12, 124) }], [T_OUT + outDur, { clipPath: poly(124, 124) }, WIPE]]);
-    for (const [id, lead] of [["e-a", 18], ["e-r", -30]]) {
-      K($(id), D, [[0, { transform: `translateX(${edgeX(-12) + lead}px) skewX(-12deg)` }],
-        [inDur, { transform: `translateX(${edgeX(124) + lead}px) skewX(-12deg)` }, WIPE],
-        [T_OUT, { transform: `translateX(${edgeX(-12) - lead}px) skewX(-12deg)` }, "step-end"],
-        [T_OUT + outDur, { transform: `translateX(${edgeX(124) - lead}px) skewX(-12deg)` }, WIPE]]);
-    }
-    K($("i-canvas"), D, [[T_MORPH + 0.05, { opacity: 1 }], [T_MORPH + 0.42, { opacity: 0 }, IO]]);
-
-    // ---- panel ----
-    const pan = $("i-panel");
-    const shut = "polygon(112% 0, 124% 0, 112% 100%, 100% 100%)", open = "polygon(55% 0, 124% 0, 112% 100%, 43% 100%)";
-    K(pan, D, [[0.3, { clipPath: shut }], [0.95, { clipPath: open }, WIPE], [T_HOME - 0.05, { clipPath: open }], [T_HOME + 0.55, { clipPath: shut }, WIPE]]);
-    K(pan.querySelector(".rule"), D, [[0.55, { transform: "scaleY(0)" }], [1.05, { transform: "scaleY(1)" }, OUT]]);
-    K($("i-kick"), D, [[0.7, { transform: "translateX(-26px)", opacity: 0 }], [1.15, { transform: "translateX(0)", opacity: 1 }, OUT]]);
-    K($("i-sit"), D, [[0.82, { clipPath: "inset(0 100% 0 0)" }], [1.3, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
-    K($("sb2"), D, [[1.2, { fill: "rgba(232,163,61,0)", stroke: "rgba(247,245,239,.55)" }], [1.45, { fill: "rgba(232,163,61,1)", stroke: "rgba(232,163,61,1)" }, OUT]]);
-    rise(root.querySelector(".q .l1"), D, 1.0, { stagger: 0.06, out: 3.85 });
-    rise(root.querySelector(".q .l2"), D, 1.18, { stagger: 0.09, dur: 0.65, out: 3.9 });
-    rise(root.querySelector(".a .l1"), D, T_ANS + 0.02, { stagger: 0.06 });
-    rise(root.querySelector(".a .l2"), D, T_ANS + 0.12, { stagger: 0.1, dur: 0.7 });
-    K($("i-why"), D, [[T_ANS + 0.55, { transform: "translateY(16px)", opacity: 0 }], [T_ANS + 1.05, { transform: "translateY(0)", opacity: 1 }, OUT]]);
-    K($("i-brand"), D, [[1.5, { clipPath: "inset(0 100% 0 0)" }], [2.0, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
-
-    // ---- match cut into the logo, then the lockup ----
-    const M = T_MORPH, cx = LOGO_CAM[6], cy = LOGO_CAM[7];
-    K($("lk-logo"), D, [[M + 0.02, { opacity: 0, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }],
-      [M + 0.38, { opacity: 1, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }, IO],
-      [M + 0.5, { opacity: 1, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }],
-      [M + 1.1, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1.035)" }, OUT],
-      [M + 1.5, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1)" }, IO],
-      [T_OUT, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1.02)" }]]);
-    K($("lk-cream"), D, [[M + 0.1, { clipPath: `circle(0px at ${cx}px ${cy}px)` }], [M + 0.85, { clipPath: `circle(2300px at ${cx}px ${cy}px)` }, css("cam")]]);
-    K($("lk-kicker"), D, [[M + 0.75, { opacity: 0, letterSpacing: ".42em" }], [M + 1.4, { opacity: 1, letterSpacing: ".2em" }, OUT]]);
-    rise($("lk-word"), D, M + 0.85, { stagger: 0.032, dur: 0.6, from: 110 });
-    rise($("lk-tag"), D, M + 1.3, { stagger: 0.14 });
-    K($("lk-rust"), D, [[M + 0.55, { clipPath: "polygon(112% 0%, 124% 0%, 112% 100%, 100% 100%)" }],
-      [M + 1.15, { clipPath: "polygon(65.5% 0%, 124% 0%, 112% 100%, 53.5% 100%)" }, WIPE]]);
-    K($("lk-eye"), D, [[M + 1.0, { transform: "translateX(-24px)", opacity: 0 }], [M + 1.4, { transform: "translateX(0)", opacity: 1 }, OUT]]);
-    rise($("lk-cta"), D, M + 1.05, { stagger: 0.12 });
-    K($("lk-url"), D, [[M + 1.45, { clipPath: "inset(0 100% 0 0)" }], [M + 1.95, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
-    K($("lk-url").querySelector(".sheen"), D, [[M + 2.1, { transform: "translateX(-160px) skewX(-18deg)" }], [M + 2.8, { transform: "translateX(620px) skewX(-18deg)" }, IO],
-      [M + 3.6, { transform: "translateX(-160px) skewX(-18deg)" }, "step-end"], [M + 4.3, { transform: "translateX(620px) skewX(-18deg)" }, IO]]);
-    all($("lk-list"), "div").forEach((d, i) => K(d, D, [[M + 1.85 + i * 0.1, { transform: "translateX(-22px)", opacity: 0 }], [M + 2.3 + i * 0.1, { transform: "translateX(0)", opacity: 1 }, OUT]]));
-    return D;
-  }
-
-  // =============================================================================
-  //  PITCH — 6.8s lower third
-  // =============================================================================
-  function buildPitch() {
-    const D = 6.8, outAt = 6.25;
-    K($("p-tile"), D, [[0.02, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.72) rotate(-8deg)" }],
-      [0.46, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }, BACK],
-      [outAt + 0.18, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }],
-      [outAt + 0.5, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.72) rotate(8deg)" }, IN]]);
-    const shut = "polygon(0 0, 0 0, -2.6% 100%, -2.6% 100%)", open = "polygon(0 0, 102.6% 0, 100% 100%, -2.6% 100%)";
-    K($("p-plate"), D, [[0.2, { clipPath: shut }], [0.66, { clipPath: open }, WIPE], [outAt, { clipPath: open }], [outAt + 0.34, { clipPath: shut }, WIPE]]);
-    // amber edge rides the plate's wipe, both ways
-    const ex = (f, o) => ({ transform: `translateX(${164 + f * 900 - 12}px) skewX(-8deg)`, opacity: o });
-    K($("p-edge"), D, [[0.2, ex(0, 1)], [0.66, ex(1.013, 1), WIPE], [0.74, ex(1.013, 0)],
-      [outAt, ex(1.013, 0)], [outAt + 0.01, ex(1.013, 1), "step-end"], [outAt + 0.34, ex(0, 1), WIPE], [outAt + 0.4, ex(0, 0)]]);
-    // the tab rises out from behind the plate, and folds away with it
-    K($("p-tab"), D, [[0.55, { transform: "translateY(100%)", clipPath: "inset(0 0% 0 0)" }], [0.95, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }, OUT],
-      [outAt - 0.08, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }], [outAt + 0.22, { transform: "translateY(0%)", clipPath: "inset(0 100% 0 0)" }, WIPE]]);
-    K($("p-bar"), D, [[0.66, { transform: "scaleX(0)" }], [outAt, { transform: "scaleX(1)" }, LIN]]);
-    // the infield: paths draw, runner and fielders land, ball goes to left, SS takes 3rd
-    K($("pi-paths"), D, [[0.3, { strokeDashoffset: 1 }], [0.95, { strokeDashoffset: 0 }, OUT]]);
-    all($("p-tile"), ".pi-base").forEach((b, i) => K(b, D, [[0.6 + i * 0.05, { opacity: 0 }], [0.85 + i * 0.05, { opacity: 1 }, OUT]]));
-    const T = (x, y, s = 1) => `translate(${x}px,${y}px) scale(${s})`;
-    K($("pi-r2"), D, [[0.75, { transform: T(0, -80, 0) }], [1.1, { transform: T(0, -80, 1) }, BACK], [2.0, { transform: T(0, -80, 1) }], [2.8, { transform: T(-64, -16, 1) }, IO]]);
-    K($("pi-3b"), D, [[0.8, { transform: T(-60, -18, 0) }], [1.15, { transform: T(-60, -18, 1) }, BACK], [2.9, { transform: T(-60, -18, 1) }], [3.5, { transform: T(-28, 34, 1) }, IO]]);
-    K($("pi-ss"), D, [[0.85, { transform: T(-40, -50, 0) }], [1.2, { transform: T(-40, -50, 1) }, BACK], [2.95, { transform: T(-40, -50, 1) }], [3.55, { transform: T(-92, 10, 1.15) }, IO]]);
-    K($("pi-route"), D, [[2.95, { strokeDashoffset: 1 }], [3.55, { strokeDashoffset: 0 }, IO]]);
-    K($("pi-hit"), D, [[1.7, { strokeDashoffset: 1, opacity: 1 }], [2.15, { strokeDashoffset: 0, opacity: 1 }, OUT], [2.9, { strokeDashoffset: 0, opacity: 1 }], [3.3, { strokeDashoffset: 0, opacity: 0 }]]);
-    K($("pi-ring"), D, [[3.5, { transform: T(-92, 10, .6), opacity: 0 }], [3.52, { transform: T(-92, 10, .6), opacity: 1 }], [4.3, { transform: T(-92, 10, 3), opacity: 0 }, OUT]]);
-    // the logo takes the tile for the sign-off
-    K($("p-cover"), D, [[4.62, { transform: "translateY(101%)" }], [5.0, { transform: "translateY(0%)" }, OUT]]);
-    K($("p-cover").querySelector("img"), D, [[4.7, { transform: "scale(.55) rotate(-6deg)", opacity: 0 }], [5.2, { transform: "scale(1) rotate(0deg)", opacity: 1 }, BACK]]);
-    // the three beats
-    rise($("b1"), D, 0.55, { stagger: 0.05, dur: 0.5, out: 2.8, outDur: 0.3 });
-    rise($("b2"), D, 2.98, { stagger: 0.06, dur: 0.5, out: 4.6, outDur: 0.3 });
-    K($("p-check"), D, [[3.35, { transform: "scale(0) rotate(-40deg)" }], [3.75, { transform: "scale(1) rotate(0deg)" }, BACK],
-      [4.55, { transform: "scale(1) rotate(0deg)" }], [4.85, { transform: "scale(0) rotate(20deg)" }, IN]]);
-    K($("p-tick"), D, [[3.6, { strokeDashoffset: 1 }], [3.95, { strokeDashoffset: 0 }, OUT]]);
-    rise($("b3"), D, 4.82, { stagger: 0.06, dur: 0.55 });
-    K($("b3-rule"), D, [[4.95, { transform: "scaleY(0)" }], [5.35, { transform: "scaleY(1)" }, OUT]]);
-    return D;
-  }
-
-  // ---- player ------------------------------------------------------------
-  $("lk-letters").innerHTML = [..."RUN THE PLAY"].map((c) => c === " " ? `<span class="w" style="width:.2em"></span>` : `<span class="w">${c}</span>`).join("");
-
-  let timer = null, current = null, raf = 0;
-  const BUILD = { inning: buildInning, pitch: buildPitch };
-  function frame() {
-    raf = requestAnimationFrame(frame);
-    if (current === "inning" && anims[0]) drawField(anims[0].currentTime / 1000);
-  }
-  function stop() {
-    clearTimeout(timer); timer = null;
-    cancelAnimationFrame(raf); raf = 0;
-    anims.forEach((a) => a.cancel()); anims = [];
-    document.querySelectorAll(".spot.on").forEach((s) => s.classList.remove("on"));
-    g.clearRect(0, 0, 1920, 1080);
-    current = null;
-  }
-  // Wait for the type and the logo, but never hold a spot back more than 2s.
-  const cap = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 2000))]);
-  const ready = cap(Promise.all([
-    ...(document.fonts ? ["600 40px Teko", "500 40px Teko", "700 20px 'Barlow Condensed'", "600 20px 'Barlow Condensed'"].map((f) => document.fonts.load(f)) : []),
-    ...[...document.images].map((i) => (i.decode ? i.decode() : Promise.resolve()).catch(() => {})),
-  ]).catch(() => {}));
-
-  async function play(spot, opts = {}) {
-    if (!BUILD[spot]) return;
-    await ready;
-    stop();
-    if (opts.pos && /^(bl|bc|br|tl|tc|tr)$/.test(opts.pos)) $("pitch").dataset.pos = opts.pos;
-    $("pitch").style.setProperty("--lift", `${Math.max(0, Math.min(200, +opts.lift || 0))}px`);
-    const D = BUILD[spot]();
-    $(spot).classList.add("on"); current = spot;
-    frame();
-    timer = setTimeout(() => {
-      stop();
-      if (window.parent !== window) window.parent.postMessage({ type: "rtp:done", spot }, location.origin);
-      if (opts.onDone) opts.onDone();
-    }, D * 1000 + 50);
-  }
-  window.RTPSpot = { play, stop, get playing() { return current; } };
-  if (window.parent !== window) ready.then(() => window.parent.postMessage({ type: "rtp:ready" }, location.origin));
-  addEventListener("message", (e) => {
-    if (e.source !== window.parent || e.origin !== location.origin) return;
-    const m = e.data || {};
-    if (m.type === "rtp:play") play(m.spot, { pos: m.pos, lift: m.lift });
-    if (m.type === "rtp:stop") stop();
+  [B1, B2, B3].forEach((b, i) => {
+    const s = seg(t, 0.95 + i * 0.06, 1.35 + i * 0.06, "back");
+    if (s <= 0) return;
+    pathW(C, [[0, -13], [13, 0], [0, 13], [-13, 0]].map(([x, z]) => [b[0] + x * s, b[1] + z * s]));
+    g.fillStyle = "#fff"; g.fill(); g.strokeStyle = NAVY; g.lineWidth = Math.max(1.5, 2.5 * k); g.stroke();
   });
+  { const s = seg(t, 1.1, 1.45, "back");
+    if (s > 0) { pathW(C, [[-9, -6], [9, -6], [9, 1], [0, 9], [-9, 1]].map(([x, z]) => [x * s, HOME[1] + z * s])); g.fillStyle = "#fff"; g.fill(); } }
 
-  // ---- demo panel / URL -------------------------------------------------
-  const posSel = $("pos"), loopBox = $("loop");
-  if (P.get("pos")) posSel.value = P.get("pos");
-  if (P.get("auto") === "1") loopBox.checked = true;
-  const go = (spot) => play(spot, { pos: posSel.value, onDone: () => {
-    if (loopBox.checked) setTimeout(() => go(P.get("spot") ? spot : spot === "pitch" ? "inning" : "pitch"), 900);
-  } });
-  document.querySelectorAll("[data-play]").forEach((b) => b.addEventListener("click", () => go(b.dataset.play)));
-  posSel.addEventListener("change", () => { if (current === "pitch") go("pitch"); });
-  if (P.get("spot")) go(P.get("spot"));
-  else if (P.get("auto") === "1") go("pitch");
-})();
+  // 3. routes trail each fielder, the runners' paths, the ball's flight and the throws
+  if (t > T_HIT && fade > 0) {
+    g.save(); g.lineCap = "round"; g.globalAlpha = fade;
+    for (const key of ORDER) {
+      const [a, dur] = PL.RUN[key], u = seg(t, a, a + dur, "io");
+      if (u <= 0 || dist(JOB[key], START[key]) < 14) continue;
+      if (key === focus) { g.setLineDash([]); g.strokeStyle = AMBER; g.lineWidth = Math.max(3, 6 * k); g.shadowColor = "rgba(232,163,61,.8)"; g.shadowBlur = 14; }
+      else { g.setLineDash([9 * k, 8 * k]); g.strokeStyle = "rgba(18,40,77,.5)"; g.lineWidth = Math.max(2, 3 * k); g.shadowBlur = 0; }
+      pathW(C, [START[key], lerp2(START[key], JOB[key], u)], false); g.stroke();
+    }
+    g.setLineDash([]); g.shadowBlur = 0; g.strokeStyle = "rgba(166,67,47,.75)"; g.lineWidth = Math.max(2, 3.4 * k);
+    for (const rn of PL.runners) {
+      const u = seg(t, rn.t0, rn.t1, "io");
+      if (u <= 0) continue;
+      const n = rn.path.length - 1, pts = [rn.path[0]];
+      for (let i = 1; i <= n && i / n <= u; i++) pts.push(rn.path[i]);
+      pts.push(along(rn.path, u));
+      pathW(C, pts, false); g.stroke();
+    }
+    const fu = seg(t, T_HIT, PL.T_LAND);
+    pathS(Array.from({ length: 25 }, (_, i) => { const f = PL.flight(fu * i / 24); return G(C, f.p, f.h); }));
+    g.globalAlpha = fade * .9; g.strokeStyle = "#fff"; g.lineWidth = Math.max(2, 4 * k); g.stroke();
+    for (const th of PL.throws) {
+      const u = seg(t, th.t0, th.t1);
+      if (u <= 0) continue;
+      pathS(Array.from({ length: 19 }, (_, i) => { const v = u * i / 18; return G(C, lerp2(th.A, th.B, E.soft(v)), 8 + th.h * 4 * v * (1 - v)); }));
+      g.globalAlpha = fade; g.strokeStyle = AMBER; g.lineWidth = Math.max(3, 5 * k); g.stroke();
+    }
+    g.restore();
+  }
+  { const u = seg(t, T_HIT, T_HIT + 0.55, "out"); if (u > 0 && u < 1) ringW(C, HOME, 20 + 150 * u, "#fff", Math.max(2, 5 * k), 1 - u); }
+  for (const t0 of [T_ANS, T_ANS + 0.45, T_ANS + 0.9, T_ANS + 1.8]) {
+    const u = seg(t, t0, t0 + 0.9, "out");
+    if (u > 0 && u < 1) ringW(C, JOB[focus], 22 + 95 * u, AMBER, Math.max(3, 6 * k) * (1 - u * .6), (1 - u) * fade);
+  }
+
+  // 4. pins, far to near. At the match cut each flies to its pin in the logo.
+  const morph = seg(t, T_MORPH - 0.12, T_MORPH + 0.3, "io"), gone = 1 - seg(t, T_MORPH + 0.08, T_MORPH + 0.4);
+  const size = Math.min(34, Math.max(19, 19 * k));
+  const items = [];
+  ORDER.forEach((key, i) => {
+    const drop = seg(t, 0.85 + i * 0.05, 1.35 + i * 0.05, "back");
+    if (drop <= 0) return;
+    const { p, hop } = fielderAt(key, t);
+    let [x, y, z] = G(C, p, hop + (1 - drop) * 160);
+    const isFocus = key === focus;
+    const lit = isFocus ? seg(t, T_ANS - 0.1, T_ANS + 0.3) * fade : 0;
+    const dim = !isFocus && key !== second ? seg(t, T_ANS, T_ANS + 0.4) * fade : 0;
+    let r = size * (1 + 0.18 * (isFocus ? seg(t, T_ANS - 0.1, T_ANS + 0.3, "back") * fade : 0));
+    if (morph > 0) {
+      r += (8 - r) * morph;
+      const hx = LOGO.x + PIN[key][0] * LOGO.s, hy = LOGO.y + PIN[key][1] * LOGO.s + r * 1.9;
+      x += (hx - x) * morph; y += (hy - y) * morph;
+    }
+    const on = isFocus && lit > 0.5;
+    items.push({ z, draw: () => pin(x, y, r, on ? AMBER : dim > 0.5 ? "#4d5f7e" : NAVY, on ? NAVY : CREAM,
+      r > 13 ? key : "", on ? NAVY : dim > 0.5 ? "rgba(247,245,239,.7)" : CREAM, Math.min(1, drop * 1.4) * gone, lit) });
+  });
+  PL.runners.forEach((rn, i) => {
+    const drop = seg(t, 1.25 + i * 0.07, 1.75 + i * 0.07, "back"), off = 1 - seg(t, T_HOME, T_HOME + 0.45);
+    if (drop <= 0 || off <= 0) return;
+    const [x, y, z] = G(C, along(rn.path, seg(t, rn.t0, rn.t1, "io")), (1 - drop) * 160);
+    const out = rn.outcome === "out" ? seg(t, rn.t1 + 0.1, rn.t1 + 0.4) : 0;
+    items.push({ z, draw: () => pin(x, y, size * .9, RUST, CREAM, rn.id === "B" ? "B" : "R", CREAM, Math.min(1, drop * 1.4) * off * (1 - out * .55), 0) });
+  });
+  items.sort((a, b) => b.z - a.z).forEach((it) => it.draw());
+
+  // 5. the ball
+  const b = ballAt(t);
+  if (b) {
+    const [sx, sy] = G(C, b.p);
+    g.fillStyle = "rgba(6,16,34,.35)"; g.beginPath(); g.ellipse(sx, sy, 7 * k, 3 * k, 0, 0, Math.PI * 2); g.fill();
+    const [bx, by] = G(C, b.p, b.h);
+    g.save(); g.shadowColor = "rgba(255,255,255,.9)"; g.shadowBlur = 20;
+    g.beginPath(); g.arc(bx, by, Math.max(5, 7.5 * k), 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); g.restore();
+  }
+
+  // 6. callouts: the answer over its pin; the other job under its own, or
+  // wherever nearby it clears the answer when the two pins stand close
+  if (fade > 0) {
+    const f = G(C, JOB[focus]), r = size * 1.18;
+    const rect = (q) => ({ x0: q.bx - 8, y0: q.by - 8, x1: q.bx + q.pw + 8, y1: q.by + q.ph + 8 });
+    const hit = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+    const head = (q, rr) => ({ x0: q[0] - rr, x1: q[0] + rr, y0: q[1] - rr * 2.9, y1: q[1] });
+    const s2 = second ? G(C, JOB[second]) : null;
+    const fText = `${focus} · ${PL.tag}`, fSize = Math.round(Math.max(30, 17 * k));
+    // the answer flies over its pin, unless that would hide the other pin
+    let fY = f[1] - r * 2.9, fDown = false;
+    if (s2 && hit(rect(tagBox(f[0], fY, fText, fSize, false)), head(s2, size))) { fY = f[1] + size * .5; fDown = true; }
+    tagAt(f[0], fY, fText, seg(t, T_ANS + 0.15, T_ANS + 0.6, "out"), AMBER, NAVY, fSize, fDown, fade);
+    if (second) {
+      const sText = `${second} · ${PL.second[1].toUpperCase()}`, sSize = Math.round(Math.max(24, 13 * k));
+      const keep = [rect(tagBox(f[0], fY, fText, fSize, fDown)), head(f, r)];
+      const away = s2[0] >= f[0] ? 1 : -1, sw = tagBox(0, 0, sText, sSize, true).pw, shift = away * (sw / 2 + size);
+      const below = s2[1] + size * .5, above = s2[1] - size * 2.9;
+      const spots = [[below, true, 0], [below, true, shift], [above, false, shift], [below, true, shift * 2]];
+      const [sy, down, dx] = spots.find(([y, dn, x]) => !keep.some((kr) => hit(kr, rect(tagBox(s2[0], y, sText, sSize, dn, x))))) || spots[0];
+      tagAt(s2[0], sy, sText, seg(t, T_ANS + 0.4, T_ANS + 0.85, "out"), CREAM, NAVY, sSize, down, fade, dx);
+    }
+  }
+}
+
+function buildInning(p) {
+  const D = ID, root = $("inning");
+  PL = prep(p);
+  // the panel's words for this play
+  [0, 1, 2].forEach((i) => $(`sb${i + 1}`).dataset.on = p.bases[i] ? "1" : "");
+  $("o1").className = p.outs >= 1 ? "on" : ""; $("o2").className = p.outs >= 2 ? "on" : "";
+  $("i-hit").innerHTML = p.hit;
+  const name = POS_NAME[p.focus];
+  $("q-l2").innerHTML = words([[`${name} go?`]]);
+  $("a-l1").innerHTML = words([[`The ${name}`]]);
+  $("a-l2").innerHTML = words([[p.answer]]);
+  $("i-why").innerHTML = p.why;
+  for (const id of ["q-l2", "a-l2", "a-l1"]) fitTo($(id), 640);
+
+  const inDur = 0.62, outDur = 0.62;
+  K($("i-clock"), D, [[0, { transform: "translateX(0px)" }], [D, { transform: "translateX(1px)" }]]);   // the canvas reads this one
+  // on and off along the brand diagonal, amber and rust riding the edge
+  K($("i-all"), D, [[0, { clipPath: poly(-12, -12) }], [inDur, { clipPath: poly(-12, 124) }, WIPE],
+    [T_OUT, { clipPath: poly(-12, 124) }], [T_OUT + outDur, { clipPath: poly(124, 124) }, WIPE]]);
+  for (const [id, lead] of [["e-a", 18], ["e-r", -30]]) {
+    K($(id), D, [[0, { transform: `translateX(${edgeX(-12) + lead}px) skewX(-12deg)` }],
+      [inDur, { transform: `translateX(${edgeX(124) + lead}px) skewX(-12deg)` }, WIPE],
+      [T_OUT, { transform: `translateX(${edgeX(-12) - lead}px) skewX(-12deg)` }, "step-end"],
+      [T_OUT + outDur, { transform: `translateX(${edgeX(124) - lead}px) skewX(-12deg)` }, WIPE]]);
+  }
+  K($("i-canvas"), D, [[T_MORPH + 0.05, { opacity: 1 }], [T_MORPH + 0.42, { opacity: 0 }, IO]]);
+
+  // ---- panel ----
+  const pan = $("i-panel");
+  const shut = "polygon(112% 0, 124% 0, 112% 100%, 100% 100%)", open = "polygon(55% 0, 124% 0, 112% 100%, 43% 100%)";
+  K(pan, D, [[0.3, { clipPath: shut }], [0.95, { clipPath: open }, WIPE], [T_HOME - 0.05, { clipPath: open }], [T_HOME + 0.55, { clipPath: shut }, WIPE]]);
+  K(pan.querySelector(".rule"), D, [[0.55, { transform: "scaleY(0)" }], [1.05, { transform: "scaleY(1)" }, OUT]]);
+  K($("i-kick"), D, [[0.7, { transform: "translateX(-26px)", opacity: 0 }], [1.15, { transform: "translateX(0)", opacity: 1 }, OUT]]);
+  K($("i-sit"), D, [[0.82, { clipPath: "inset(0 100% 0 0)" }], [1.3, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
+  [1, 2, 3].forEach((n, i) => {
+    const lit = $(`sb${n}`).dataset.on === "1";
+    K($(`sb${n}`), D, [[1.2 + i * 0.06, { fill: "rgba(232,163,61,0)", stroke: "rgba(247,245,239,.55)" }],
+      [1.45 + i * 0.06, lit ? { fill: "rgba(232,163,61,1)", stroke: "rgba(232,163,61,1)" } : { fill: "rgba(232,163,61,0)", stroke: "rgba(247,245,239,.55)" }, OUT]]);
+  });
+  rise(root.querySelector(".q .l1"), D, 1.0, { stagger: 0.06, out: 3.85 });
+  rise($("q-l2"), D, 1.18, { stagger: 0.09, dur: 0.65, out: 3.9 });
+  rise($("a-l1"), D, T_ANS + 0.02, { stagger: 0.06 });
+  rise($("a-l2"), D, T_ANS + 0.12, { stagger: 0.1, dur: 0.7 });
+  K($("i-why"), D, [[T_ANS + 0.55, { transform: "translateY(16px)", opacity: 0 }], [T_ANS + 1.05, { transform: "translateY(0)", opacity: 1 }, OUT]]);
+  K($("i-brand"), D, [[1.5, { clipPath: "inset(0 100% 0 0)" }], [2.0, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
+
+  // ---- match cut into the logo, then the lockup ----
+  const M = T_MORPH, cx = LOGO_CAM[6], cy = LOGO_CAM[7];
+  K($("lk-logo"), D, [[M + 0.02, { opacity: 0, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }],
+    [M + 0.38, { opacity: 1, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }, IO],
+    [M + 0.5, { opacity: 1, clipPath: "inset(0 21% 0 21%)", transform: "scale(1)" }],
+    [M + 1.1, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1.035)" }, OUT],
+    [M + 1.5, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1)" }, IO],
+    [T_OUT, { opacity: 1, clipPath: "inset(0 0% 0 0%)", transform: "scale(1.02)" }]]);
+  K($("lk-cream"), D, [[M + 0.1, { clipPath: `circle(0px at ${cx}px ${cy}px)` }], [M + 0.85, { clipPath: `circle(2300px at ${cx}px ${cy}px)` }, css("cam")]]);
+  K($("lk-kicker"), D, [[M + 0.75, { opacity: 0, letterSpacing: ".42em" }], [M + 1.4, { opacity: 1, letterSpacing: ".2em" }, OUT]]);
+  rise($("lk-word"), D, M + 0.85, { stagger: 0.032, dur: 0.6, from: 110 });
+  rise($("lk-tag"), D, M + 1.3, { stagger: 0.14 });
+  K($("lk-rust"), D, [[M + 0.55, { clipPath: "polygon(112% 0%, 124% 0%, 112% 100%, 100% 100%)" }],
+    [M + 1.15, { clipPath: "polygon(65.5% 0%, 124% 0%, 112% 100%, 53.5% 100%)" }, WIPE]]);
+  K($("lk-eye"), D, [[M + 1.0, { transform: "translateX(-24px)", opacity: 0 }], [M + 1.4, { transform: "translateX(0)", opacity: 1 }, OUT]]);
+  rise($("lk-cta"), D, M + 1.05, { stagger: 0.12 });
+  K($("lk-url"), D, [[M + 1.45, { clipPath: "inset(0 100% 0 0)" }], [M + 1.95, { clipPath: "inset(0 0% 0 0)" }, OUT]]);
+  K($("lk-url").querySelector(".sheen"), D, [[M + 2.1, { transform: "translateX(-160px) skewX(-18deg)" }], [M + 2.8, { transform: "translateX(620px) skewX(-18deg)" }, IO],
+    [M + 3.6, { transform: "translateX(-160px) skewX(-18deg)" }, "step-end"], [M + 4.3, { transform: "translateX(620px) skewX(-18deg)" }, IO]]);
+  all($("lk-list"), "div").forEach((d, i) => K(d, D, [[M + 1.85 + i * 0.1, { transform: "translateX(-22px)", opacity: 0 }], [M + 2.3 + i * 0.1, { transform: "translateX(0)", opacity: 1 }, OUT]]));
+  return D;
+}
+
+// =============================================================================
+//  PITCH — 6.8s banner
+// =============================================================================
+// The tile's little field, drawn in the play's own 800x800 space and framed
+// around whatever this play needs you to see.
+function buildTile(p) {
+  const svg = $("p-field");
+  const J = p.jobs, f = p.focus, s2 = p.second && p.second[0];
+  const pts = [[210, 550], [590, 550], [400, 360], [400, 740], START800[f], J[f], ...(s2 ? [START800[s2], J[s2]] : [])];
+  const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+  const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + 200;
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2 + 8;
+  svg.setAttribute("viewBox", `${cx - size / 2} ${cy - size / 2} ${size} ${size}`);
+  const u = size / 240;
+  const base = (x, y) => `<rect class="pi-base" x="${x - 11 * u}" y="${y - 11 * u}" width="${22 * u}" height="${22 * u}" transform="rotate(45 ${x} ${y})"/>`;
+  const dot = (cls, r, fill, stroke) => `<circle class="${cls}" r="${r * u}" fill="${fill}" stroke="${stroke}" stroke-width="${4 * u}"/>`;
+  svg.innerHTML = `
+    <path d="M400 740 L60 400 M400 740 L740 400" stroke="rgba(247,245,239,.22)" stroke-width="${3 * u}"/>
+    <path d="M400 770 L172 542 Q400 128 628 542 Z" fill="rgba(223,196,156,.14)"/>
+    <path id="pi-paths" d="M400 740 L590 550 L400 360 L210 550 Z" fill="none" stroke="rgba(247,245,239,.75)" stroke-width="${4 * u}" pathLength="1" stroke-dasharray="1"/>
+    <g fill="#F7F5EF">${base(590, 550)}${base(400, 360)}${base(210, 550)}
+      <path class="pi-base" d="M${400 - 10 * u} ${732 - 8 * u} h${20 * u} v${9 * u} l${-10 * u} ${9 * u} l${-10 * u} ${-9 * u}Z"/></g>
+    <line id="pi-hit" x1="400" y1="735" x2="${p.land[0]}" y2="${p.land[1]}" stroke="#fff" stroke-width="${5 * u}" stroke-linecap="round" stroke-dasharray="1" pathLength="1"/>
+    <line id="pi-route" x1="${START800[f][0]}" y1="${START800[f][1]}" x2="${J[f][0]}" y2="${J[f][1]}" stroke="#E8A33D" stroke-width="${6 * u}" stroke-linecap="round" stroke-dasharray="1" pathLength="1"/>
+    <circle id="pi-ring" r="${16 * u}" fill="none" stroke="#E8A33D" stroke-width="${5 * u}"/>
+    ${p.runners.map(() => dot("pi-run", 12, "#A6432F", "#F7F5EF")).join("")}
+    ${s2 ? dot("", 13, "#12284D", "#F7F5EF").replace('class=""', 'id="pi-2nd"') : ""}
+    ${dot("", 16, "#E8A33D", "#12284D").replace('class=""', 'id="pi-focus"')}`;
+}
+const P800 = [[400, 740], [590, 550], [400, 360], [210, 550]];
+function buildPitch(p) {
+  const D = 6.8, outAt = 6.25;
+  const name = POS_NAME[p.focus];
+  $("p-ctx1").innerHTML = whole(`${runnersText(p.bases)} · ${outsText(p.outs)} · ${p.hit.toLowerCase()}`);
+  $("p-big1").innerHTML = words([["Where does your"], [name, true], ["go?"]]);
+  $("p-ctx2").innerHTML = whole(p.whyShort);
+  $("p-big2").innerHTML = words([[cap(name)], [p.answer.charAt(0).toLowerCase() + p.answer.slice(1), true]]);
+  fitTo($("p-big1"), 828); fitTo($("p-big2"), 720); fitTo($("p-ctx1"), 828); fitTo($("p-ctx2"), 720);
+  buildTile(p);
+
+  K($("p-tile"), D, [[0.02, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.72) rotate(-8deg)" }],
+    [0.46, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }, BACK],
+    [outAt + 0.18, { clipPath: "inset(0% 0% 0% 0%)", transform: "scale(1) rotate(0deg)" }],
+    [outAt + 0.5, { clipPath: "inset(50% 50% 50% 50%)", transform: "scale(.72) rotate(8deg)" }, IN]]);
+  const shut = "polygon(0 0, 0 0, -2.6% 100%, -2.6% 100%)", open = "polygon(0 0, 102.6% 0, 100% 100%, -2.6% 100%)";
+  K($("p-plate"), D, [[0.2, { clipPath: shut }], [0.66, { clipPath: open }, WIPE], [outAt, { clipPath: open }], [outAt + 0.34, { clipPath: shut }, WIPE]]);
+  // amber edge rides the plate's wipe, both ways
+  const ex = (f, o) => ({ transform: `translateX(${164 + f * 900 - 12}px) skewX(-8deg)`, opacity: o });
+  K($("p-edge"), D, [[0.2, ex(0, 1)], [0.66, ex(1.013, 1), WIPE], [0.74, ex(1.013, 0)],
+    [outAt, ex(1.013, 0)], [outAt + 0.01, ex(1.013, 1), "step-end"], [outAt + 0.34, ex(0, 1), WIPE], [outAt + 0.4, ex(0, 0)]]);
+  // the tab rises out from behind the plate, and folds away with it
+  K($("p-tab"), D, [[0.55, { transform: "translateY(100%)", clipPath: "inset(0 0% 0 0)" }], [0.95, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }, OUT],
+    [outAt - 0.08, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }], [outAt + 0.22, { transform: "translateY(0%)", clipPath: "inset(0 100% 0 0)" }, WIPE]]);
+  K($("p-bar"), D, [[0.66, { transform: "scaleX(0)" }], [outAt, { transform: "scaleX(1)" }, LIN]]);
+  // the little field: paths draw, runners and fielders land, the ball goes out, the answer runs to its spot
+  K($("pi-paths"), D, [[0.3, { strokeDashoffset: 1 }], [0.95, { strokeDashoffset: 0 }, OUT]]);
+  all($("p-tile"), ".pi-base").forEach((b, i) => K(b, D, [[0.6 + i * 0.05, { opacity: 0 }], [0.85 + i * 0.05, { opacity: 1 }, OUT]]));
+  const T = ([x, y], s = 1) => `translate(${x}px,${y}px) scale(${s})`;
+  all($("p-tile"), ".pi-run").forEach((c, i) => {
+    const [id, from, to] = p.runners[i];
+    const a = id === "B" ? [416, 740] : P800[from], b = P800[to];
+    K(c, D, [[0.75 + i * 0.05, { transform: T(a, 0) }], [1.1 + i * 0.05, { transform: T(a, 1) }, BACK], [2.0, { transform: T(a, 1) }], [2.8, { transform: T(b, 1) }, IO]]);
+  });
+  const f = p.focus, s2 = p.second && p.second[0];
+  if (s2) K($("pi-2nd"), D, [[0.8, { transform: T(START800[s2], 0) }], [1.15, { transform: T(START800[s2], 1) }, BACK], [2.9, { transform: T(START800[s2], 1) }], [3.5, { transform: T(p.jobs[s2], 1) }, IO]]);
+  K($("pi-focus"), D, [[0.85, { transform: T(START800[f], 0) }], [1.2, { transform: T(START800[f], 1) }, BACK], [2.95, { transform: T(START800[f], 1) }], [3.55, { transform: T(p.jobs[f], 1.15) }, IO]]);
+  K($("pi-route"), D, [[2.95, { strokeDashoffset: 1 }], [3.55, { strokeDashoffset: 0 }, IO]]);
+  K($("pi-hit"), D, [[1.7, { strokeDashoffset: 1, opacity: 1 }], [2.15, { strokeDashoffset: 0, opacity: 1 }, OUT], [2.9, { strokeDashoffset: 0, opacity: 1 }], [3.3, { strokeDashoffset: 0, opacity: 0 }]]);
+  K($("pi-ring"), D, [[3.5, { transform: T(p.jobs[f], .6), opacity: 0 }], [3.52, { transform: T(p.jobs[f], .6), opacity: 1 }], [4.3, { transform: T(p.jobs[f], 3), opacity: 0 }, OUT]]);
+  // the logo takes the tile for the sign-off
+  K($("p-cover"), D, [[4.62, { transform: "translateY(101%)" }], [5.0, { transform: "translateY(0%)" }, OUT]]);
+  K($("p-cover").querySelector("img"), D, [[4.7, { transform: "scale(.55) rotate(-6deg)", opacity: 0 }], [5.2, { transform: "scale(1) rotate(0deg)", opacity: 1 }, BACK]]);
+  // the three beats
+  rise($("b1"), D, 0.55, { stagger: 0.05, dur: 0.5, out: 2.8, outDur: 0.3 });
+  rise($("b2"), D, 2.98, { stagger: 0.06, dur: 0.5, out: 4.6, outDur: 0.3 });
+  K($("p-check"), D, [[3.35, { transform: "scale(0) rotate(-40deg)" }], [3.75, { transform: "scale(1) rotate(0deg)" }, BACK],
+    [4.55, { transform: "scale(1) rotate(0deg)" }], [4.85, { transform: "scale(0) rotate(20deg)" }, IN]]);
+  K($("p-tick"), D, [[3.6, { strokeDashoffset: 1 }], [3.95, { strokeDashoffset: 0 }, OUT]]);
+  rise($("b3"), D, 4.82, { stagger: 0.06, dur: 0.55 });
+  K($("b3-rule"), D, [[4.95, { transform: "scaleY(0)" }], [5.35, { transform: "scaleY(1)" }, OUT]]);
+  return D;
+}
+
+// ---- player ------------------------------------------------------------
+$("lk-letters").innerHTML = [..."RUN THE PLAY"].map((c) => c === " " ? `<span class="w" style="width:.2em"></span>` : `<span class="w">${c}</span>`).join("");
+
+let timer = null, current = null, raf = 0, turn = 0;
+const BUILD = { inning: buildInning, pitch: buildPitch };
+// The play: the one asked for, else the next in the list.
+const pick = (id) => RTP_PLAYS.find((q) => q.id === id) || RTP_PLAYS[turn++ % RTP_PLAYS.length];
+function frame() {
+  raf = requestAnimationFrame(frame);
+  if (current === "inning" && anims[0]) drawField(anims[0].currentTime / 1000);
+}
+function stop() {
+  clearTimeout(timer); timer = null;
+  cancelAnimationFrame(raf); raf = 0;
+  anims.forEach((a) => a.cancel()); anims = [];
+  document.querySelectorAll(".spot.on").forEach((s) => s.classList.remove("on"));
+  g.clearRect(0, 0, 1920, 1080);
+  current = null;
+}
+// Wait for the type and the logo, but never hold a spot back more than 2s.
+const capWait = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 2000))]);
+const ready = capWait(Promise.all([
+  ...(document.fonts ? ["600 40px Teko", "500 40px Teko", "700 20px 'Barlow Condensed'", "600 20px 'Barlow Condensed'"].map((f) => document.fonts.load(f)) : []),
+  ...[...document.images].map((i) => (i.decode ? i.decode() : Promise.resolve()).catch(() => {})),
+]).catch(() => {}));
+
+async function play(spot, opts = {}) {
+  if (!BUILD[spot]) return;
+  await ready;
+  stop();
+  if (opts.pos && /^(bl|bc|br|tl|tc|tr)$/.test(opts.pos)) $("pitch").dataset.pos = opts.pos;
+  $("pitch").style.setProperty("--lift", `${clamp(+opts.lift || 0, 0, 200)}px`);
+  $(spot).classList.add("on");   // on before building, so the words can be measured
+  const D = BUILD[spot](pick(opts.play));
+  current = spot;
+  frame();
+  timer = setTimeout(() => {
+    stop();
+    if (window.parent !== window) window.parent.postMessage({ type: "rtp:done", spot }, location.origin);
+    if (opts.onDone) opts.onDone();
+  }, D * 1000 + 50);
+}
+window.RTPSpot = { play, stop, get playing() { return current; }, plays: RTP_PLAYS.map((q) => q.id) };
+if (window.parent !== window) ready.then(() => window.parent.postMessage({ type: "rtp:ready" }, location.origin));
+addEventListener("message", (e) => {
+  if (e.source !== window.parent || e.origin !== location.origin) return;
+  const m = e.data || {};
+  if (m.type === "rtp:play") play(m.spot, { pos: m.pos, lift: m.lift, play: m.play });
+  if (m.type === "rtp:stop") stop();
+});
+
+// ---- demo panel / URL -------------------------------------------------
+const posSel = $("pos"), loopBox = $("loop"), plSel = $("pl");
+plSel.insertAdjacentHTML("beforeend", RTP_PLAYS.map((q) => `<option value="${q.id}">${q.label}</option>`).join(""));
+if (P.get("pos")) posSel.value = P.get("pos");
+if (P.get("play")) plSel.value = P.get("play");
+if (P.get("auto") === "1") loopBox.checked = true;
+const go = (spot) => play(spot, { pos: posSel.value, play: plSel.value || null, onDone: () => {
+  if (loopBox.checked) setTimeout(() => go(P.get("spot") ? spot : spot === "pitch" ? "inning" : "pitch"), 900);
+} });
+document.querySelectorAll("[data-play]").forEach((b) => b.addEventListener("click", () => go(b.dataset.play)));
+posSel.addEventListener("change", () => { if (current === "pitch") go("pitch"); });
+if (P.get("spot")) go(P.get("spot"));
+else if (P.get("auto") === "1") go("pitch");
 </script>
 </body>
 </html>
