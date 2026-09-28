@@ -211,3 +211,17 @@ body[data-theme="bluesteel"] .outs .dot.on { box-shadow: 0 0 9px var(--accent); 
 body[data-theme="bluesteel"] #bso-b .d.on { background: var(--steel); border-color: var(--steel); box-shadow: 0 0 8px rgba(127, 192, 239, 0.7); }
 body[data-theme="bluesteel"] .bso .d.on { box-shadow: 0 0 8px rgba(224, 121, 74, 0.7); }
 body[data-theme="bluesteel"] .bso-row em { font-family: var(--num); color: #5f7086; }
+
+/* Forever 20 — in memory of Julian, #20, Sanger TX. Ribbon purple with a gold
+   edge, to go with the Forever 20 animated scorebug (it colours the cards and
+   the ticker around it), or on its own with any layout. */
+body[data-theme="forever20"] {
+  --panel: rgba(52, 28, 84, 0.96); --panel-2: rgba(22, 9, 40, 0.6);
+  --line: rgba(201, 162, 74, 0.55); --chalk: #fbf3dc; --steel: #d9b85e; --accent: #f4c84a; --radius: 8px;
+}
+body[data-theme="forever20"] .bug {
+  background: linear-gradient(180deg, rgba(90, 55, 135, 0.97), rgba(52, 28, 84, 0.97) 45%, rgba(40, 18, 70, 0.97));
+  border: 2px solid #c9a24a; box-shadow: 0 0 0 2px rgba(26, 10, 46, 0.9), 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+body[data-theme="forever20"] .team .runs { color: #f2d27a; }
+body[data-theme="forever20"] .diamond .base.on rect { filter: drop-shadow(0 0 5px rgba(242, 210, 122, 0.8)); }

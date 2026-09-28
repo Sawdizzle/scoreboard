@@ -12,6 +12,7 @@ These fonts use the SIL Open Font License 1.1 (full text: [`/fonts/OFL.txt`](../
 | `bungee-400.woff2` | Bungee | Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee) |
 | `cabin-sketch-700.woff2` | Cabin Sketch | Copyright 2011 The Cabin Project Authors (impallari@gmail.com), with Reserved Font Name "Cabin", "Cabin Sketch" |
 | `comic-neue-700.woff2` | Comic Neue | Copyright 2014 The Comic Neue Project Authors (https://github.com/crozynski/comicneue) |
+| `graduate-400.woff2` | Graduate | Copyright (c) 2011 by Eduardo Tunni (http://www.tipo.net.ar), with Reserved Font Name "Graduate" |
 | `jetbrains-mono-var.woff2` | JetBrains Mono | Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono) |
 | `kalam-700.woff2` | Kalam | Copyright (c) 2014, Indian Type Foundry (info@indiantypefoundry.com) |
 | `press-start-2p-400.woff2` | Press Start 2P | Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name "Press Start 2P" |
@@ -23,4 +24,4 @@ This font uses the Apache License 2.0 (full text: [`APACHE-2.0.txt`](APACHE-2.0.
 |---|---|
 | `luckiest-guy-400.woff2` | Luckiest Guy |
 
-The Departures and Backglass bugs also use Barlow Condensed from `/fonts`, which is covered by `/fonts/OFL.txt`.
+The Departures, Backglass and Forever 20 bugs also use Barlow Condensed from `/fonts`, which is covered by `/fonts/OFL.txt`.
