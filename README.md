@@ -129,6 +129,7 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 - **Cards**: Batting order, Defense (baseball), Matchup, Sponsor. Optional card text sets a subtitle on the next card you raise.
 - **Full screen** (hides the scorebug; the camera keeps running behind): **Starting Soon** (countdown to the start time; every new game opens with it up, and the game going live takes it down), **Mid-Inning**, **Final screen**.
+- **Run the Play spot**: a quiz ad for our Run the Play app that plays once and clears itself. **Quick quiz** (7s) is a lower third on the edge away from the scorebug, for between pitches. **Full quiz** (13s) takes the screen, for between innings. The spot is its own page, `/ads/runtheplay`, which the overlay loads in the background.
 - **Delays & announcements**: the **Game paused** card (lightning, rain, weather, suspended, called) with an editable countdown and storm effects, and the **announcement ticker** that scrolls along the bottom of every scene until taken down.
 - **Moments**: Walk-Off, 🎺 Charge!, Rally (a glow until turned off). Everything else fires on its own.
 
