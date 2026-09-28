@@ -1,0 +1,26 @@
+// The apps with an on-air spot, for the pad (js/control.js), which deals the
+// next app and topic on each tap, and the overlay (js/app-spots.js), which
+// loads each app's page in its own frame and plays it. Every page is built on
+// ads/kit.js and speaks the kit's spot:* messages.
+//
+//   page    the spot page, loaded with ?embed=1
+//   topics  what the spot rotates through ({ id, label } at least)
+//   files   what the page loads beyond itself and the kit, for the overlay's
+//           check that a release has fully arrived before it reloads
+
+import { RTP_PLAYS } from './rtp-plays.js';
+import { YBT_TOPICS } from './ybt-topics.js';
+
+export const SPOT_APPS = [
+  {
+    id: 'rtp', name: 'Run the Play', page: '/ads/runtheplay', topics: RTP_PLAYS,
+    files: ['/ads/rtp-plays.js', '/ads/img/rtp-mark.png', '/fonts/ads/teko-500.woff2', '/fonts/ads/teko-600.woff2'],
+  },
+  {
+    id: 'ybt', name: 'Baseball Time', page: '/ads/baseballtime', topics: YBT_TOPICS,
+    files: ['/ads/ybt-topics.js', '/ads/img/ybt-mark.png', '/fonts/ads/barlow-condensed-800.woff2',
+      '/fonts/ads/barlow-semi-condensed-400.woff2', '/fonts/ads/barlow-semi-condensed-600.woff2'],
+  },
+];
+
+export const KIT_FILES = ['/ads/kit.js', '/ads/spots.js'];

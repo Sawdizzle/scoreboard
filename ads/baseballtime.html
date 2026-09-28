@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baseball Time spot</title>
+<link rel="preload" href="../fonts/ads/barlow-condensed-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/ads/barlow-semi-condensed-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="img/ybt-mark.png" as="image">
+<style>
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:block;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:block;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:800;font-display:block;src:url('../fonts/ads/barlow-condensed-800.woff2') format('woff2')}
+@font-face{font-family:'Barlow Semi Condensed';font-weight:400;font-display:block;src:url('../fonts/ads/barlow-semi-condensed-400.woff2') format('woff2')}
+@font-face{font-family:'Barlow Semi Condensed';font-weight:600;font-display:block;src:url('../fonts/ads/barlow-semi-condensed-600.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   BASEBALL TIME — an on-air spot for our tournament finder
+   (youthbaseballtime.com).
+
+   A showcase in the board's own look: the "outfield scoreboard"
+   palette (night navy, ice blue, condensed numerals), its date
+   tiles, class splits and team counts. Each topic is one age group
+   and one reason to use it (ads/ybt-topics.js); the tournaments are
+   samples, dated the coming weekend when the spot plays.
+
+     pitch   6.8s banner: the question, one row that answers it,
+             then the name.
+     inning  12.9s full screen: a scoreboard shutter drops, the age
+             chip lights, the board fills with counts that roll like
+             an outfield scoreboard, one row answers the question,
+             the rows flip away and the lockup takes the screen.
+
+   Timing, the player, URL params and the overlay's messages are the
+   shared kit's (ads/kit.js).
+   ============================================================ */
+:root{
+  --bg:#080d15; --bg2:#0d1420; --card:#0e1626; --chip:#131d2c; --tag:#16283f; --rail:#0b1119;
+  --line:#1e2b40; --line2:#24344c; --ice:#8ec8ef; --ink:#08111c; --ice-mid:#3a6ba3; --ice-hi:#5f9fd4;
+  --go:#5fd08a; --warm:#ffcf5c; --text:#e8eef6; --t2:#9fb5cd; --t3:#7c93ae;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Barlow Semi Condensed',sans-serif;color:var(--text);
+  background:radial-gradient(1200px 700px at 50% 38%,#26402b 0,#16241a 55%,#0c0d10 100%)}
+body.obs{background:transparent}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin:-540px 0 0 -960px;transform-origin:50% 50%;overflow:hidden}
+.spot{position:absolute;inset:0;visibility:hidden;pointer-events:none}
+.spot.on{visibility:visible}
+.clock{position:absolute;width:0;height:0}
+.mask{display:block;overflow:hidden;padding-top:.08em;margin-top:-.08em}
+.w{display:inline-block;will-change:transform}
+.bc{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
+
+/* digits that roll like an outfield scoreboard: one column per digit */
+.num{display:inline-flex;font:800 1em/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.dg{display:block;height:1em;overflow:hidden}
+.dg .strip{display:block;will-change:transform}
+.dg .strip span{display:block;height:1em;line-height:1em;text-align:center}
+
+/* ============== INNING ============== */
+#y-all{position:absolute;inset:0;will-change:clip-path}
+#y-scene{position:absolute;inset:0;background:
+  radial-gradient(900px 620px at 72% 44%,rgba(95,159,212,.13),rgba(95,159,212,0) 70%),
+  radial-gradient(1500px 900px at 30% 30%,#0e1828 0,#080d15 60%,#05080e 100%)}
+/* a faint lamp grid, like the dark face of a scoreboard */
+#y-scene::before{content:"";position:absolute;inset:0;opacity:.5;
+  background:radial-gradient(circle at 12px 12px,rgba(142,200,239,.07) 0 2px,transparent 2.6px) 0 0/24px 24px}
+#y-bar{position:absolute;left:0;right:0;top:0;height:10px;background:var(--ice);transform-origin:0 50%;z-index:5;will-change:transform}
+
+#y-left{position:absolute;left:110px;top:0;width:740px;height:1080px}
+#y-mast{position:absolute;left:0;top:150px;display:flex;align-items:center;gap:18px}
+#y-mast img{width:64px;height:64px;border-radius:14px;display:block;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#y-mast span{font:800 40px/1 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;padding-top:3px}
+#y-mast b,#y-word b,.b3 .nm b{color:var(--ice);font-weight:800}
+#y-ages{position:absolute;left:0;top:262px;display:flex;gap:4px;padding:6px;border:1.5px solid var(--line2);border-radius:999px;background:rgba(13,20,32,.7)}
+#y-ages span{font:700 29px/1 'Barlow Condensed',sans-serif;color:var(--t2);padding:11px 11px 9px;border-radius:999px;will-change:transform}
+#y-ages span.lit{color:var(--ink)}
+#y-ages .pill{position:absolute;top:6px;height:calc(100% - 12px);border-radius:999px;background:var(--ice);will-change:transform,opacity}
+#y-ages span{position:relative;z-index:1}
+#y-eye{position:absolute;left:0;top:398px;font:700 22px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--ice)}
+#y-qa{position:absolute;left:0;top:446px;width:760px}
+#y-qa .q,#y-qa .a{position:absolute;left:0;top:0;width:100%}
+.big .mask{white-space:nowrap}
+.big{font:800 100px/.94 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.005em}
+.big .hl{color:var(--ice)}
+#y-a{color:var(--ice);font-size:112px}
+#y-why{margin-top:28px;font:400 34px/1.3 'Barlow Semi Condensed',sans-serif;color:var(--t2);max-width:660px}
+#y-why b{color:var(--text);font-weight:600}
+
+#y-board{position:absolute;left:920px;top:148px;width:890px;background:rgba(11,17,25,.92);border:1.5px solid var(--line);border-radius:18px;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);padding:26px 30px 14px;perspective:1400px;will-change:transform,opacity}
+.bh{display:flex;align-items:center;gap:16px;height:56px}
+.bh .wk{font:800 38px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--ice)}
+.bh .dt{font:700 24px/1 'Barlow Condensed',sans-serif;color:var(--t3);padding-top:6px}
+.bh i{flex:1;height:1.5px;background:var(--line2);transform-origin:0 50%}
+.bh .age{font:700 24px/1 'Barlow Condensed',sans-serif;color:var(--ink);background:var(--ice);border-radius:999px;padding:8px 14px 6px}
+#y-rows{perspective:1400px}
+.row{position:relative;display:flex;align-items:center;gap:26px;height:172px;padding:0 18px;border-bottom:1.5px solid #16202f;border-radius:14px;transform-origin:50% 0;will-change:transform,opacity}
+.row:last-child{border-bottom:0}
+.row .hlbg{position:absolute;inset:6px -8px;border-radius:14px;border:2px solid var(--ice);background:rgba(142,200,239,.07);box-shadow:0 0 40px rgba(142,200,239,.18);opacity:0;will-change:opacity}
+.dtile{position:relative;flex:none;width:84px;height:104px;border:1.5px solid var(--line2);border-radius:12px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.dtile .m{font:700 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.12em;color:var(--ice);text-transform:uppercase}
+.dtile .d{font:800 38px/1 'Barlow Condensed',sans-serif;color:var(--text)}
+.dtile .wd{font:700 14px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+.info{position:relative;flex:1;min-width:0}
+.info .nm{font:700 42px/1.05 'Barlow Condensed',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info .sub{margin-top:6px;font:400 25px/1.2 'Barlow Semi Condensed',sans-serif;color:var(--t3)}
+.info .sub em{font-style:normal;color:var(--go);font-weight:600}
+.info .sp{margin-top:8px;display:flex;align-items:center;gap:12px;font:600 21px/1 'Barlow Semi Condensed',sans-serif;color:var(--t2)}
+.flag{font:800 21px/1 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:7px 12px 5px;white-space:nowrap}
+.flag.up{background:rgba(95,208,138,.16);color:var(--go);box-shadow:inset 0 0 0 1.5px rgba(95,208,138,.55)}
+.flag.low{background:rgba(255,207,92,.14);color:var(--warm);box-shadow:inset 0 0 0 1.5px rgba(255,207,92,.5)}
+.flag.new,.flag.far{background:rgba(142,200,239,.14);color:var(--ice);box-shadow:inset 0 0 0 1.5px rgba(142,200,239,.55)}
+.spark{flex:none;width:150px;height:56px;overflow:visible}
+.cnt{flex:none;width:118px;text-align:right}
+.cnt .num{font-size:92px;color:var(--text)}
+.cnt .lab{margin-top:4px;font:700 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;color:var(--t3);text-transform:uppercase}
+
+#y-lock{position:absolute;inset:0}
+#y-lock .glow{position:absolute;left:50%;top:300px;width:1200px;height:800px;margin:-400px 0 0 -600px;background:radial-gradient(closest-side,rgba(95,159,212,.28),rgba(95,159,212,0));will-change:transform,opacity}
+#y-logo{position:absolute;left:810px;top:118px;width:300px;height:300px;border-radius:56px;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 0 2px rgba(142,200,239,.25);will-change:transform,opacity}
+#y-logo img{width:100%;height:100%;display:block}
+#y-logo i{position:absolute;top:-20%;left:0;width:90px;height:140%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0));will-change:transform}
+#y-word{position:absolute;left:0;right:0;top:462px;text-align:center;font:800 150px/.9 'Barlow Condensed',sans-serif;letter-spacing:.07em;text-transform:uppercase}
+#y-tag{position:absolute;left:0;right:0;top:622px;text-align:center;font:700 58px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em}
+#y-tag .hl{color:var(--ice)}
+#y-url{position:absolute;left:50%;top:726px;transform:translateX(-50%);overflow:hidden;background:var(--ice);color:var(--ink);border-radius:999px;padding:14px 38px 10px;font:800 54px/1 'Barlow Condensed',sans-serif;letter-spacing:.02em;white-space:nowrap;will-change:clip-path}
+#y-url i{position:absolute;top:-20%;left:0;width:100px;height:140%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.65),rgba(255,255,255,0));will-change:transform}
+#y-badges{position:absolute;left:0;right:0;top:866px;display:flex;justify-content:center;gap:14px}
+#y-badges span{font:800 26px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--ice);background:var(--tag);border-radius:10px;padding:13px 18px 10px;will-change:transform,opacity}
+
+/* ============== PITCH ============== */
+#pitch .box{position:absolute;width:1064px;height:164px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.45))}
+#pitch[data-pos="bl"] .box{left:72px;bottom:calc(64px + var(--lift,0px))}
+#pitch[data-pos="bc"] .box{left:428px;bottom:calc(64px + var(--lift,0px))}
+#pitch[data-pos="br"] .box{right:72px;bottom:calc(64px + var(--lift,0px))}
+#pitch[data-pos="tl"] .box{left:72px;top:106px}
+#pitch[data-pos="tc"] .box{left:428px;top:106px}
+#pitch[data-pos="tr"] .box{right:72px;top:106px}
+#p-tab{position:absolute;left:164px;top:-42px;height:42px;background:var(--ice);color:var(--ink);display:flex;align-items:center;gap:10px;border-radius:10px 10px 0 0;
+  padding:0 18px 0 14px;font:800 24px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;will-change:transform}
+#p-tab span{padding-top:3px}
+#p-tab i{width:8px;height:8px;border-radius:50%;background:var(--ink)}
+#p-tile{position:absolute;left:0;top:0;width:164px;height:164px;background:var(--bg2);border-radius:18px 0 0 18px;overflow:hidden;z-index:2;display:grid;place-items:center;
+  box-shadow:inset 0 0 0 1.5px var(--line2);will-change:clip-path,transform}
+#p-tile img{width:124px;height:124px;border-radius:26px;display:block;will-change:transform}
+#p-plate{position:absolute;left:164px;top:0;width:900px;height:164px;background:var(--card);border-radius:0 18px 18px 0;box-shadow:inset 0 0 0 1.5px var(--line2);color:var(--text);z-index:1;will-change:clip-path}
+#p-bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--ice);transform-origin:0 50%;border-radius:0 0 18px 0;will-change:transform}
+#p-edge{position:absolute;top:-6px;height:176px;left:0;width:18px;margin-left:-9px;border-radius:9px;background:var(--ice);z-index:3;will-change:transform,opacity}
+.lane{position:absolute;left:36px;right:30px;top:0;bottom:6px;overflow:hidden}
+.beat{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center}
+.p-ctx{white-space:nowrap;font:700 22px/1 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+.p-big{font:800 64px/.95 'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap}
+.p-big .hl{color:var(--ice)}
+.b2{flex-direction:row;align-items:center;gap:22px}
+.b2 .dtile{width:70px;height:88px}
+.b2 .dtile .d{font-size:32px}
+.b2 .info .nm{font-size:40px}
+.b2 .info .sp{margin-top:10px}
+.b2 .cnt .num{font-size:78px}
+.b3{flex-direction:row;align-items:center;gap:26px}
+.b3 .nm{font:800 64px/.9 'Barlow Condensed',sans-serif;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.b3 .rule{width:3px;height:88px;background:var(--line2);flex:none}
+.b3 .url{font:800 36px/1 'Barlow Condensed',sans-serif;color:var(--ice);letter-spacing:.02em}
+.b3 .sub{font:700 20px/1 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-top:6px}
+
+/* ============== demo panel ============== */
+#pad{position:fixed;left:50%;top:14px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;
+  background:rgba(12,13,16,.86);backdrop-filter:blur(8px);border:1px solid #2a2b30;border-radius:12px;padding:10px 12px;font:600 14px system-ui,sans-serif;z-index:10;max-width:calc(100vw - 24px)}
+#pad button,#pad select{font:600 14px system-ui,sans-serif;color:#f1f1ef;background:#26272c;border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
+#pad button.go{background:var(--ice);color:var(--ink)}
+#pad label{color:#9a9ba2;display:flex;gap:6px;align-items:center}
+#pad button:focus-visible,#pad select:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+body.obs #pad{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===================== INNING ===================== -->
+  <section class="spot" id="inning" aria-hidden="true">
+    <div class="clock" id="y-clock"></div>
+    <div id="y-all">
+      <div id="y-scene">
+        <div id="y-left">
+          <div id="y-mast"><img src="img/ybt-mark.png" alt=""><span>Baseball <b>Time</b></span></div>
+          <div id="y-ages"><i class="pill" id="y-pill"></i></div>
+          <div id="y-eye">8U–18U select baseball · nationwide</div>
+          <div id="y-qa">
+            <div class="q big" id="y-q"></div>
+            <div class="a"><div class="big" id="y-a"></div><p id="y-why"></p></div>
+          </div>
+        </div>
+        <div id="y-board">
+          <div class="bh"><span class="wk">This weekend</span><span class="dt" id="y-dates"></span><i></i><span class="age" id="y-bage"></span></div>
+          <div id="y-rows"></div>
+        </div>
+      </div>
+      <div id="y-lock">
+        <div class="glow"></div>
+        <div id="y-logo"><img src="img/ybt-mark.png" alt=""><i></i></div>
+        <div id="y-word"><span class="mask"><span class="w">Baseball</span> <b class="w">Time</b></span></div>
+        <div id="y-tag"><span class="mask"><span class="w">Find</span> <span class="w">a</span> <span class="w">tournament</span> <span class="w hl">worth</span> <span class="w hl">the</span> <span class="w hl">drive.</span></span></div>
+        <div id="y-url">youthbaseballtime.com<i></i></div>
+        <div id="y-badges"><span>8U–18U</span><span>Rechecked twice a day</span><span>Free</span></div>
+      </div>
+    </div>
+    <div id="y-bar"></div>
+  </section>
+
+  <!-- ===================== PITCH ===================== -->
+  <section class="spot" id="pitch" data-pos="tr" aria-hidden="true">
+    <div class="box">
+      <div id="p-tab"><i></i><span>Baseball Time · Tournament finder</span></div>
+      <div id="p-plate">
+        <div class="lane">
+          <div class="beat" id="b1"><div class="p-ctx" id="p-ctx1"></div><div class="p-big" id="p-big1"></div></div>
+          <div class="beat b2" id="b2"></div>
+          <div class="beat b3" id="b3">
+            <div class="nm"><span class="mask"><span class="w">Baseball</span> <b class="w">Time</b></span></div>
+            <div class="rule" id="b3-rule"></div>
+            <div>
+              <div class="url"><span class="mask"><span class="w">youthbaseballtime.com</span></span></div>
+              <div class="sub"><span class="mask"><span class="w">Open brackets · live team counts</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div id="p-bar"></div>
+      </div>
+      <div id="p-tile"><img src="img/ybt-mark.png" alt=""></div>
+      <div id="p-edge"></div>
+    </div>
+  </section>
+</div>
+
+<div id="pad" role="toolbar" aria-label="Spot preview">
+  <button class="go" data-play="pitch">▶ Between pitches</button>
+  <button class="go" data-play="inning">▶ Between innings</button>
+  <label>Topic <select id="topic"><option value="">Rotate</option></select></label>
+  <label>Pitch cut at <select id="pos">
+    <option value="tr">Top right</option><option value="tc">Top centre</option><option value="tl">Top left</option>
+    <option value="bl">Bottom left</option><option value="bc">Bottom centre</option><option value="br">Bottom right</option>
+  </select></label>
+  <label><input type="checkbox" id="loop"> Loop</label>
+</div>
+
+<script type="module">
+import { YBT_TOPICS } from "./ybt-topics.js";
+import { $, all, OUT, IN, IO, WIPE, BACK, LIN, K, rise, words, whole, fitTo, startSpot } from "./kit.js";
+
+const AGES = ["8U", "9U", "10U", "11U", "12U", "13U", "14U", "15U", "16U", "17U", "18U"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// The coming weekend, the way the board writes it. On a Sunday that is today's.
+function weekend() {
+  const now = new Date(), day = now.getDay();
+  const sat = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (day === 0 ? -1 : 6 - day));
+  const sun = new Date(sat.getFullYear(), sat.getMonth(), sat.getDate() + 1);
+  const days = `${sat.getDate()}–${sun.getDate()}`;
+  const head = sat.getMonth() === sun.getMonth() ? `${MONTHS[sat.getMonth()]} ${days}` : `${MONTHS[sat.getMonth()]} ${sat.getDate()}–${MONTHS[sun.getMonth()]} ${sun.getDate()}`;
+  return { m: MONTHS[sat.getMonth()], days, head };
+}
+
+// ---- pieces ------------------------------------------------------------------
+const ROLL = "cubic-bezier(.2,.7,.15,1)";   // fast spin, long settle
+// A count as scoreboard digits: each column rolls past its digit twice, then lands.
+const digits = (n) => `<span class="num" data-n="${n}">${String(n).split("").map((d) =>
+  `<span class="dg"><span class="strip" data-d="${d}">${Array.from({ length: 30 }, (_, i) => `<span>${i % 10}</span>`).join("")}</span></span>`).join("")}</span>`;
+function rollDigits(root, D, t0, dur = 1.15) {
+  all(root, ".strip").forEach((s, i, list) => {
+    const d = +s.dataset.d, last = i === list.length - 1;
+    K(s, D, [[t0 + (last ? 0 : 0.08), { transform: "translateY(0em)" }], [t0 + dur + (last ? 0.1 : 0), { transform: `translateY(-${20 + d}em)` }, ROLL]]);
+  });
+}
+// A sparkline of sign-ups over the last few days.
+function spark(trend, hot) {
+  const max = Math.max(...trend, 1), n = trend.length;
+  const pts = trend.map((v, i) => [4 + i * (142 / (n - 1)), 50 - (v / max) * 44]);
+  const [lx, ly] = pts[n - 1];
+  return `<svg class="spark" viewBox="0 0 150 56"><polyline points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
+    stroke="${hot ? "#8ec8ef" : "#3a6ba3"}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1"/>
+    <circle cx="${lx}" cy="${ly}" r="6" fill="${hot ? "#8ec8ef" : "#5f9fd4"}"/></svg>`;
+}
+const dateTile = (wk) => `<div class="dtile"><span class="m">${wk.m}</span><span class="d">${wk.days}</span><span class="wd">Sat–Sun</span></div>`;
+function rowHTML(r, i, t, wk, hot) {
+  return `<div class="row" data-i="${i}"><i class="hlbg"></i>${dateTile(wk)}
+    <div class="info"><div class="nm">${r.name}</div><div class="sub">${r.town}${r.extra ? ` <em>· ${r.extra}</em>` : ""}</div>
+      <div class="sp"><span>${r.split}</span>${hot ? `<span class="flag ${t.tone}">${t.flag}</span>` : ""}</div></div>
+    ${spark(r.trend, hot)}
+    <div class="cnt">${digits(r.n)}<div class="lab">${t.age} teams</div></div></div>`;
+}
+
+// =============================================================================
+//  INNING — 12.9s
+// =============================================================================
+function buildInning(t) {
+  const D = 12.9, T_ANS = 4.3, T_LOCK = 7.2, T_OUT = 12.2;
+  const wk = weekend();
+  // ---- this topic's words and board
+  const ages = $("y-ages");
+  all(ages, "span").forEach((s) => s.remove());
+  ages.insertAdjacentHTML("beforeend", AGES.map((a) => `<span class="${a === t.age ? "lit" : ""}">${a}</span>`).join(""));
+  $("y-q").innerHTML = lines(t.q);
+  $("y-a").innerHTML = lines(t.answer.split("|").flatMap((l, i) => (i ? [["|"], [l.trim()]] : [[l.trim()]])));
+  fitBlock($("y-q"), 760); fitBlock($("y-a"), 760);
+  $("y-why").innerHTML = t.why;
+  $("y-dates").textContent = wk.head;
+  $("y-bage").textContent = t.age;
+  $("y-rows").innerHTML = t.rows.map((r, i) => rowHTML(r, i, t, wk, i === t.hl)).join("");
+  // the pill that slides under the lit age chip
+  const lit = ages.querySelector(".lit"), pill = $("y-pill");
+  pill.style.left = `${lit.offsetLeft}px`; pill.style.width = `${lit.offsetWidth}px`;
+  const first = ages.querySelector("span");
+
+  K($("y-clock"), D, [[0, { transform: "translateX(0px)" }], [D, { transform: "translateX(1px)" }]]);
+  // the ice rule runs across the top, then the board's shutter drops from it
+  K($("y-bar"), D, [[0, { transform: "scaleX(0)", transformOrigin: "0 50%" }], [0.5, { transform: "scaleX(1)", transformOrigin: "0 50%" }, WIPE],
+    [T_OUT + 0.25, { transform: "scaleX(1)", transformOrigin: "100% 50%" }, "step-end"], [T_OUT + 0.65, { transform: "scaleX(0)", transformOrigin: "100% 50%" }, WIPE]]);
+  K($("y-all"), D, [[0.22, { clipPath: "inset(0 0 100% 0)" }], [0.86, { clipPath: "inset(0 0 0% 0)" }, WIPE],
+    [T_OUT - 0.05, { clipPath: "inset(0 0 0% 0)" }], [T_OUT + 0.5, { clipPath: "inset(0 0 100% 0)" }, WIPE]]);
+
+  // ---- left: the masthead, the age chips, the question
+  K($("y-mast"), D, [[0.55, { transform: "translateX(-30px)", opacity: 0 }], [1.05, { transform: "translateX(0)", opacity: 1 }, OUT],
+    [T_LOCK - 0.1, { transform: "translateX(0)", opacity: 1 }], [T_LOCK + 0.3, { transform: "translateX(-30px)", opacity: 0 }, IN]]);
+  K(ages, D, [[0.7, { clipPath: "inset(0 100% 0 0 round 999px)", opacity: 1 }], [1.25, { clipPath: "inset(0 0% 0 0 round 999px)", opacity: 1 }, OUT],
+    [T_LOCK - 0.05, { clipPath: "inset(0 0% 0 0 round 999px)", opacity: 1 }], [T_LOCK + 0.3, { clipPath: "inset(0 0% 0 0 round 999px)", opacity: 0 }, IN]]);
+  // the pill slides in from 8U and lands on the age, which pops
+  const from = first.offsetLeft - lit.offsetLeft;
+  K(pill, D, [[1.1, { transform: `translateX(${from}px) scaleX(.6)`, opacity: 0 }], [1.2, { transform: `translateX(${from}px) scaleX(.6)`, opacity: 1 }],
+    [1.75, { transform: "translateX(0px) scaleX(1)", opacity: 1 }, ROLL]]);
+  K(lit, D, [[1.6, { transform: "scale(1)" }], [1.8, { transform: "scale(1.16)" }, OUT], [2.05, { transform: "scale(1)" }, BACK]]);
+  K($("y-eye"), D, [[0.95, { transform: "translateY(12px)", opacity: 0 }], [1.35, { transform: "translateY(0)", opacity: 1 }, OUT],
+    [T_LOCK - 0.1, { transform: "translateY(0)", opacity: 1 }], [T_LOCK + 0.25, { transform: "translateY(-12px)", opacity: 0 }, IN]]);
+  rise($("y-q"), D, 1.2, { stagger: 0.06, dur: 0.6, out: T_ANS - 0.25 });
+  rise($("y-a"), D, T_ANS + 0.2, { stagger: 0.07, dur: 0.65, out: T_LOCK - 0.1 });   // after the question has cleared
+  K($("y-why"), D, [[T_ANS + 0.45, { transform: "translateY(16px)", opacity: 0 }], [T_ANS + 0.95, { transform: "translateY(0)", opacity: 1 }, OUT],
+    [T_LOCK - 0.1, { transform: "translateY(0)", opacity: 1 }], [T_LOCK + 0.25, { transform: "translateY(-16px)", opacity: 0 }, IN]]);
+
+  // ---- right: the board fills, counts roll, one row answers, then the rows flip away
+  const board = $("y-board");
+  K(board, D, [[1.3, { transform: "translateX(90px)", opacity: 0 }], [1.95, { transform: "translateX(0)", opacity: 1 }, OUT],
+    [T_LOCK + 0.3, { transform: "translateX(0)", opacity: 1 }], [T_LOCK + 0.62, { transform: "translateX(60px)", opacity: 0 }, IN]]);
+  K(board.querySelector(".bh i"), D, [[1.7, { transform: "scaleX(0)" }], [2.3, { transform: "scaleX(1)" }, OUT]]);
+  all(board, ".row").forEach((row, i) => {
+    const t0 = 1.95 + i * 0.13, hot = i === t.hl;
+    K(row, D, [[t0, { transform: "translateY(26px) rotateX(0deg)", opacity: 0 }], [t0 + 0.5, { transform: "translateY(0) rotateX(0deg)", opacity: 1 }, OUT],
+      [T_ANS, { transform: "translateY(0) rotateX(0deg)", opacity: 1 }],
+      [T_ANS + 0.4, { transform: `translateY(0) rotateX(0deg) scale(${hot ? 1.025 : 1})`, opacity: hot ? 1 : 0.34 }, OUT],
+      [T_LOCK - 0.05 + i * 0.06, { transform: `translateY(0) rotateX(0deg) scale(${hot ? 1.025 : 1})`, opacity: hot ? 1 : 0.34 }],
+      [T_LOCK + 0.35 + i * 0.06, { transform: "translateY(-10px) rotateX(-92deg) scale(1)", opacity: 0 }, IN]]);
+    rollDigits(row, D, t0 + 0.35);
+    K(row.querySelector("polyline"), D, [[t0 + 0.45, { strokeDashoffset: 1 }], [t0 + 1.35, { strokeDashoffset: 0 }, OUT]]);
+    K(row.querySelector("circle"), D, [[t0 + 1.2, { transform: "scale(0)", transformOrigin: "center", transformBox: "fill-box" }], [t0 + 1.5, { transform: "scale(1)", transformOrigin: "center", transformBox: "fill-box" }, BACK]]);
+    if (hot) {
+      K(row.querySelector(".hlbg"), D, [[T_ANS + 0.05, { opacity: 0 }], [T_ANS + 0.45, { opacity: 1 }, OUT]]);
+      K(row.querySelector(".flag"), D, [[T_ANS + 0.35, { clipPath: "inset(0 100% 0 0 round 999px)" }], [T_ANS + 0.8, { clipPath: "inset(0 0% 0 0 round 999px)" }, OUT]]);
+    }
+  });
+
+  // ---- lockup
+  const L = T_LOCK + 0.65, lock = $("y-lock");   // once the board has gone
+  K(lock.querySelector(".glow"), D, [[L, { transform: "scale(.6)", opacity: 0 }], [L + 1.0, { transform: "scale(1)", opacity: 1 }, OUT],
+    [T_OUT, { transform: "scale(1.08)", opacity: 1 }]]);
+  K($("y-logo"), D, [[L + 0.05, { transform: "translateY(40px) scale(.55) rotate(-8deg)", opacity: 0 }], [L + 0.7, { transform: "translateY(0) scale(1) rotate(0deg)", opacity: 1 }, BACK],
+    [T_OUT, { transform: "translateY(0) scale(1.03) rotate(0deg)", opacity: 1 }]]);
+  K($("y-logo").querySelector("i"), D, [[L + 0.9, { transform: "translateX(-120px) skewX(-18deg)" }], [L + 1.5, { transform: "translateX(400px) skewX(-18deg)" }, IO]]);
+  rise($("y-word"), D, L + 0.35, { stagger: 0.1, dur: 0.6, from: 110 });
+  rise($("y-tag"), D, L + 0.7, { stagger: 0.05, dur: 0.55 });
+  K($("y-url"), D, [[L + 1.0, { clipPath: "inset(0 50% 0 50% round 999px)" }], [L + 1.45, { clipPath: "inset(0 0% 0 0% round 999px)" }, OUT]]);
+  K($("y-url").querySelector("i"), D, [[L + 1.6, { transform: "translateX(-140px) skewX(-18deg)" }], [L + 2.3, { transform: "translateX(820px) skewX(-18deg)" }, IO],
+    [L + 3.2, { transform: "translateX(-140px) skewX(-18deg)" }, "step-end"], [L + 3.9, { transform: "translateX(820px) skewX(-18deg)" }, IO]]);
+  all($("y-badges"), "span").forEach((b, i) => K(b, D, [[L + 1.3 + i * 0.1, { transform: "translateY(18px) scale(.9)", opacity: 0 }], [L + 1.7 + i * 0.1, { transform: "translateY(0) scale(1)", opacity: 1 }, BACK]]));
+  return D;
+}
+
+// Words that rise, one mask per line: a ["|"] part starts a new line, so each
+// line rises out of its own slot. On one line (the banner) the breaks drop out.
+function lines(parts) {
+  const out = [[]];
+  for (const p of parts) (p[0] === "|" ? out.push([]) : out[out.length - 1].push(p));
+  return out.map(words).join("");
+}
+const oneLine = (parts) => words(parts.filter((p) => p[0] !== "|"));
+// Shrink a block of lines together until its longest line fits.
+function fitBlock(el, maxW) {
+  el.style.fontSize = "";
+  const wd = Math.max(...all(el, ".mask").map((m) => m.scrollWidth));
+  if (wd > maxW) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * maxW / wd}px`;
+}
+
+// =============================================================================
+//  PITCH — 6.8s banner
+// =============================================================================
+function buildPitch(t) {
+  const D = 6.8, outAt = 6.25, wk = weekend(), r = t.rows[t.hl];
+  $("p-ctx1").innerHTML = whole(`Open brackets · live team counts`);
+  $("p-big1").innerHTML = oneLine(t.q);
+  $("b2").innerHTML = `${dateTile(wk)}<div class="info"><div class="nm">${r.name}</div>
+    <div class="sp"><span>${r.town} · ${r.split}</span><span class="flag ${t.tone}">${t.flag}</span></div></div>
+    <div class="cnt">${digits(r.n)}<div class="lab">${t.age} teams</div></div>`;
+  fitTo($("p-big1"), 828);
+
+  K($("p-tile"), D, [[0.02, { clipPath: "inset(50% 50% 50% 50% round 18px 0 0 18px)", transform: "scale(.72) rotate(-8deg)" }],
+    [0.46, { clipPath: "inset(0% 0% 0% 0% round 18px 0 0 18px)", transform: "scale(1) rotate(0deg)" }, BACK],
+    [outAt + 0.18, { clipPath: "inset(0% 0% 0% 0% round 18px 0 0 18px)", transform: "scale(1) rotate(0deg)" }],
+    [outAt + 0.5, { clipPath: "inset(50% 50% 50% 50% round 18px 0 0 18px)", transform: "scale(.72) rotate(8deg)" }, IN]]);
+  K($("p-tile").querySelector("img"), D, [[0.25, { transform: "scale(.6) rotate(-10deg)" }], [0.75, { transform: "scale(1) rotate(0deg)" }, BACK],
+    [4.7, { transform: "scale(1) rotate(0deg)" }], [4.95, { transform: "scale(1.12) rotate(0deg)" }, OUT], [5.25, { transform: "scale(1) rotate(0deg)" }, BACK]]);
+  const shut = "inset(0 100% 0 0 round 0 18px 18px 0)", open = "inset(0 0% 0 0 round 0 18px 18px 0)";
+  K($("p-plate"), D, [[0.2, { clipPath: shut }], [0.66, { clipPath: open }, WIPE], [outAt, { clipPath: open }], [outAt + 0.34, { clipPath: shut }, WIPE]]);
+  const ex = (f, o) => ({ transform: `translateX(${164 + f * 900}px)`, opacity: o });
+  K($("p-edge"), D, [[0.2, ex(0, 1)], [0.66, ex(1, 1), WIPE], [0.76, ex(1, 0)],
+    [outAt, ex(1, 0)], [outAt + 0.01, ex(1, 1), "step-end"], [outAt + 0.34, ex(0, 1), WIPE], [outAt + 0.42, ex(0, 0)]]);
+  K($("p-tab"), D, [[0.55, { transform: "translateY(100%)", clipPath: "inset(0 0% 0 0)" }], [0.95, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }, OUT],
+    [outAt - 0.08, { transform: "translateY(0%)", clipPath: "inset(0 0% 0 0)" }], [outAt + 0.22, { transform: "translateY(0%)", clipPath: "inset(0 100% 0 0)" }, WIPE]]);
+  K($("p-bar"), D, [[0.66, { transform: "scaleX(0)" }], [outAt, { transform: "scaleX(1)" }, LIN]]);
+  // beat 1: the question
+  rise($("b1"), D, 0.55, { stagger: 0.05, dur: 0.5, out: 2.8, outDur: 0.3 });
+  // beat 2: the row that answers it; its count rolls in
+  const b2 = $("b2");
+  const b2parts = [b2.querySelector(".dtile"), b2.querySelector(".info"), b2.querySelector(".cnt")];
+  b2parts.forEach((el, i) => K(el, D, [[2.95 + i * 0.08, { transform: "translateY(190%)" }], [3.45 + i * 0.08, { transform: "translateY(0%)" }, OUT],
+    [4.6 + i * 0.03, { transform: "translateY(0%)" }], [4.9 + i * 0.03, { transform: "translateY(-190%)" }, IN]]));
+  rollDigits(b2, D, 3.15, 0.8);
+  K(b2.querySelector(".flag"), D, [[3.65, { clipPath: "inset(0 100% 0 0 round 999px)" }], [4.05, { clipPath: "inset(0 0% 0 0 round 999px)" }, OUT]]);
+  // beat 3: the name
+  rise($("b3"), D, 4.82, { stagger: 0.06, dur: 0.55 });
+  K($("b3-rule"), D, [[4.95, { transform: "scaleY(0)" }], [5.35, { transform: "scaleY(1)" }, OUT]]);
+  return D;
+}
+
+startSpot({
+  topics: YBT_TOPICS,
+  build: { inning: buildInning, pitch: buildPitch },
+  fonts: ["800 40px 'Barlow Condensed'", "700 40px 'Barlow Condensed'", "400 20px 'Barlow Semi Condensed'", "600 20px 'Barlow Semi Condensed'"],
+});
+</script>
+</body>
+</html>
