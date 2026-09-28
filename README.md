@@ -6,7 +6,7 @@ A phone-controlled scoreboard overlay for live-streamed youth sports. You score 
 
 <table>
 <tr>
-<td width="55%" align="center"><img src="docs/img/primetime.png" alt="The Prime Time scorebug: River 4, Blue Steel 2, top of the 5th, runners on first and third, 2-2 count, one out, Ava Reyes batting against Ortiz on 58 pitches" /><br /><sub><b>The overlay</b> — a transparent Browser Source in OBS: here the Prime Time scorebug, one of eight animated designs (<a href="#looks">see them all</a>)</sub></td>
+<td width="55%" align="center"><img src="docs/img/primetime.png" alt="The Prime Time scorebug: River 4, Blue Steel 2, top of the 5th, runners on first and third, 2-2 count, one out, Ava Reyes batting against Ortiz on 58 pitches" /><br /><sub><b>The overlay</b> — a transparent Browser Source in OBS: here the Prime Time scorebug, one of nine animated designs (<a href="#looks">see them all</a>)</sub></td>
 <td width="45%" align="center"><img src="docs/img/pad.png" alt="The phone pad: score, count and bases up top, the batter, then BALL, STRIKE, FOUL and IN PLAY as full-height keys" /><br /><sub><b>The pad</b> — what you actually hold during the game</sub></td>
 </tr>
 </table>
@@ -134,7 +134,9 @@ The other sports use simple button grids. Corrections and End game for each are 
 
 ## Looks
 
-**Scorebugs.** Five layouts (Scorebox, Bar, Bug, Minimal, Lower-third) take any of 16 themes or your own colours. Or pick an animated scorebug: each one brings its own look and plays its own home runs, strikeouts, hits, walks, errors, walk-offs and half-inning changes, straight from the plays you tap on the pad. Seven of them are baseball's; Prime Time covers every sport. Try every one with a demo pad at `/bugs`.
+**Scorebugs.** Five layouts (Scorebox, Bar, Bug, Minimal, Lower-third) take any of 17 themes or your own colours. Or pick an animated scorebug: each one brings its own look and plays its own home runs, strikeouts, hits, walks, errors, walk-offs and half-inning changes, straight from the plays you tap on the pad. Eight of them are baseball's; Prime Time covers every sport. Try every one with a demo pad at `/bugs`.
+
+**Forever 20.** One bug is a memorial: in memory of Julian, #20, Sanger TX. It is built from his purple and gold ribbon, with the ribbon pinned to the bug. On a game that hasn't started it opens with a full-frame tribute (after Starting Soon, when the field comes up) that folds down into the pin. His line comes round in the strip between innings, and the ribbon's arrow carries every run and home run. A matching Forever 20 theme colours the cards and the ticker.
 
 <table>
 <tr>
@@ -202,7 +204,7 @@ Every animated scorebug ends a walk-off game its own way:
 - **Sport**: which sport the pad and overlay run.
 - **Times & rules**: start time (sorts the games list, drives the Starting Soon countdown), venue (local weather on Starting Soon and the Game paused card), time limit, regulation innings (arms the automatic walk-off).
 - **Show on overlay**: clock, batter, pitcher, pitch count, R-H-E on the bug, run-rule watch.
-- **Look & sound**: the scorebug design, the theme, the scene style (Simple, or Elevated: Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards in the network-TV look), the 3×3 position grid, scale, five sound packs, one volume, mute. A design is one of five layouts (Scorebox, Bar, Bug, Minimal, Lower-third), painted by one of 16 themes (including Blue Steel) or Custom colours. Or one of eight **animated** scorebugs (Prime Time, Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode), which bring their own look and play their own moments; Prime Time covers every sport, the rest are baseball. The theme then colours only the cards and the ticker. See them all at `/bugs`.
+- **Look & sound**: the scorebug design, the theme, the scene style (Simple, or Elevated: Starting Soon, Mid-Inning, Final, the delay screen and the smaller cards in the network-TV look), the 3×3 position grid, scale, five sound packs, one volume, mute. A design is one of five layouts (Scorebox, Bar, Bug, Minimal, Lower-third), painted by one of 17 themes (including Blue Steel and Forever 20) or Custom colours. Or one of nine **animated** scorebugs (Prime Time, Forever 20, Classic Green, Backglass, Chalk Talk, Ka-Pow, Departures, Play-by-Play Printer, Battle Mode), which bring their own look and play their own moments; Prime Time covers every sport, the rest are baseball. The theme then colours only the cards and the ticker. See them all at `/bugs`.
 - **Sponsors**: a list of names and logos, shown as a rotating "brought to you by" corner bug that hides while a full-screen card is up.
 - **OBS**: the OBS-buttons switch, current page-permission level, auto-clip, Go Live / Record / Buffer.
 - **This game**: Reset to 0–0 (keeps teams and look) and Delete (cannot be undone).

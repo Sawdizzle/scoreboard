@@ -6,7 +6,7 @@
 // doesn't cover keeps the regular bug.
 import { safeBases, currentBatter, currentPitcher, pitchCount, strikeoutsFor } from './logic.js';
 
-export const ANIM_BUGS = ['primetime', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
+export const ANIM_BUGS = ['primetime', 'forever20', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
 
 // Stingers the animated bug plays itself. The overlay's own version of these
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
@@ -153,9 +153,13 @@ export function syncAnimBug(s, anim) {
   return true;
 }
 
+// Files a bug loads beyond its page and the kit (fonts are optional: a missing
+// one falls back, a missing image leaves a hole).
+const EXTRA_FILES = { forever20: ['/bugs/img/forever20-ribbon.webp'] };
+
 // The files the animated bug on screen loads, for the release check before a
 // reload (overlay.js). None when no animated bug is up.
-export const animBugFiles = () => (slug ? [`/bugs/${slug}`, '/bugs/kit.js'] : []);
+export const animBugFiles = () => (slug ? [`/bugs/${slug}`, '/bugs/kit.js', ...(EXTRA_FILES[slug] || [])] : []);
 
 // Whether the overlay should still play this stinger itself.
 export const overlayPlays = (anim, onScreen) => !onScreen || !plays(anim && anim.type);
