@@ -54,8 +54,11 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--cream);
   background:radial-gradient(1200px 700px at 50% 38%,#26402b 0,#16241a 55%,#0c0d10 100%)}
 body.obs{background:transparent}
 #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin:-540px 0 0 -960px;transform-origin:50% 50%;overflow:hidden}
-.spot{position:absolute;inset:0;visibility:hidden;pointer-events:none}
-.spot.on{visibility:visible}
+/* display, not visibility: Chrome can keep an animated child's inherited
+   visibility from before the section came on, so a spot played "on" with its
+   animated parts still hidden (v4.40, from the second spot of a game on). */
+.spot{position:absolute;inset:0;display:none;pointer-events:none}
+.spot.on{display:block}
 .clock{position:absolute;width:0;height:0}
 /* Masked lines: words rise out of them. Teko sits low in its box, so
    each mask gets a little headroom that the line gives back. */

@@ -14,6 +14,10 @@
 //   pitch   the ~7s banner, between pitches
 //   inning  the ~13s full-screen spot, between innings
 //
+// Showing: a page's two sections are .spot, shown with .spot.on, which must be
+// display:none / block, not visibility (Chrome can leave an animated child with
+// the hidden visibility it inherited before the section came on).
+//
 // Timing: each build keys ONE Web Animation per element, in seconds, with K().
 // The first animation a build makes is its clock: clockTime() reads it, so a
 // canvas drawn from clockTime() stays in step, and seeking every animation
@@ -168,6 +172,7 @@ export function startSpot({ topics, build, frame = null, clear = null, fonts = [
     if (opts.pos && /^(bl|bc|br|tl|tc|tr)$/.test(opts.pos)) pitch.dataset.pos = opts.pos;
     pitch.style.setProperty("--lift", `${clamp(+opts.lift || 0, 0, 200)}px`);
     $(cut).classList.add("on");   // on before building, so the words can be measured
+    void $(cut).offsetWidth;       // and styled fresh before any animation starts
     const D = build[cut](pick(opts.topic));
     current = cut;
     tick();
