@@ -6,7 +6,7 @@
 // doesn't cover keeps the regular bug.
 import { safeBases, currentBatter, currentPitcher, pitchCount, strikeoutsFor } from './logic.js';
 
-export const ANIM_BUGS = ['primetime', 'bluesteel', 'forever20', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
+export const ANIM_BUGS = ['primetime', 'bluesteel', 'forever20', 'midnight', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
 
 // Stingers the animated bug plays itself. The overlay's own version of these
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
@@ -18,7 +18,7 @@ const OWN_SPORT = new Set(['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'goa
 // Which sports each bug covers. Everything else is baseball only.
 const SPORTS_OF = { primetime: ['baseball', 'football', 'soccer', 'basketball', 'volleyball'] };
 // Baseball bugs with a slot for the game's time limit (the Show clock switch).
-const BASEBALL_CLOCK = new Set(['bluesteel']);
+const BASEBALL_CLOCK = new Set(['bluesteel', 'midnight']);
 export const bugCovers = (name, sport) => (SPORTS_OF[name] || ['baseball']).includes(sport || 'baseball');
 // Bugs with a walk-off of their own (all of them, since v4.31). One left out of
 // this list gets the overlay's own celebration instead.
