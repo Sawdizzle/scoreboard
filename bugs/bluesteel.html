@@ -190,6 +190,19 @@ body.rally .plate::before{animation:rallyEdge 1.4s ease-in-out infinite}
 .bso i.pop::after{animation:ring .6s var(--ease-out)}
 @keyframes ring{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(2.6)}}
 
+/* the game's time limit, when it has one and Show clock is on */
+.clk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:96px;padding-left:14px;border-left:1px solid var(--line);align-self:stretch}
+.clk[hidden]{display:none}
+.clk em{font-family:var(--mono);font-style:normal;font-weight:700;font-size:10px;letter-spacing:.16em;color:var(--dim);line-height:1}
+.clk b{font-family:var(--mono);font-weight:700;font-size:21px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);transition:color .4s}
+.clk.low b{color:var(--clay-hi)}
+.clk.zero b{color:var(--red);animation:clkBlink 1s steps(2,jump-none) infinite}
+@keyframes clkBlink{50%{opacity:.25}}
+.clk.show{animation:clkIn .5s var(--ease-out)}
+@keyframes clkIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.clk.hit{animation:clkHit 1.2s ease-out}
+@keyframes clkHit{0%,30%{background:rgba(224,82,74,.35)}100%{background:transparent}}
+
 /* ---------- Strip: the at-bat, play tags, and the club line ---------- */
 .strip{position:relative;height:34px;margin:0 12px 0 32px;overflow:hidden;
   background:linear-gradient(180deg,#0d1422,#070b12);box-shadow:inset 0 1px 0 rgba(127,192,239,.18),inset 0 0 0 1px rgba(127,192,239,.14);
@@ -394,6 +407,7 @@ body[data-pos$="r"] #bug.intro .plate,body[data-pos$="r"] #bug.landed .plate{ani
               <em>S</em><div class="dots s"><i></i><i></i></div>
               <em>O</em><div class="dots o"><i></i><i></i></div>
             </div>
+            <div class="clk" hidden><em>TIME</em><b></b></div>
           </div>
         </div></div>
         <div class="strip"></div>
@@ -714,9 +728,36 @@ body[data-pos$="r"] #bug.intro .plate,body[data-pos$="r"] #bug.landed .plate{ani
       d.classList.toggle("on", on);
     });
   }
+  // The time limit: shown only while the overlay sends one. The last minute
+  // reads in clay; at zero it blinks red and the strip says so, once.
+  const clk = $(".clk");
+  let clkZero = null;
+  function clock(c) {
+    const off = !!c.hidden || !c.text;
+    if (clk.hidden && !off) restart(clk, "show");
+    clk.hidden = off;
+    if (off) { clkZero = null; return; }
+    $("b", clk).textContent = c.text;
+    clk.classList.toggle("low", !!c.low);
+    clk.classList.toggle("zero", !!c.zero);
+    if (c.zero && clkZero === false) {
+      restart(clk, "hit");
+      const [x, y] = pt(clk);
+      burst(x, y, { n: 18, spread: 360, pal: HOT, g: 500, speed: [120, 380], life: [0.3, 0.7], size: [1.2, 2.2] });
+      if (!heroBusy) say("TIME", "red", "Time limit reached", 4200);
+    }
+    clkZero = !!c.zero;
+  }
+
+  // A moment's flag and plate go back to hidden when they finish, so nothing
+  // is left drawn beside the bug.
+  $(".kflag").addEventListener("animationend", (e) => { if (/^cutIn/.test(e.animationName)) kflag.classList.remove("play"); });
+  $(".hr", hrw).addEventListener("animationend", (e) => { if (/^plateLife/.test(e.animationName)) hrw.classList.remove("play"); });
+
   BugKit.start({
     name: "Blue Steel",
     hrDelay: 2500,
+    clock,
     render(S, prev, first) {
       cur = S;
       for (const t of ["away", "home"]) {
@@ -829,13 +870,21 @@ body[data-pos$="r"] #bug.intro .plate,body[data-pos$="r"] #bug.landed .plate{ani
   if (demo) {
     const row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = `<button data-bs="hero">Play the intro</button><button data-bs="club">Club line</button>`;
+    row.innerHTML = `<button data-bs="hero">Play the intro</button><button data-bs="club">Club line</button><button data-bs="clock" aria-pressed="false">Time limit</button>`;
+    let secs = 0, tick = null;   // a demo time limit that runs into its last minute and out
+    const paint = () => { const t = Math.max(0, secs); clock({ hidden: false, text: `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, low: t <= 60 && t > 0, zero: t <= 0 }); secs--; };
     demo.querySelector("p").before(row);
     row.addEventListener("click", (e) => {
       const b = e.target.closest("[data-bs]");
       if (!b) return;
       if (b.dataset.bs === "hero" && !heroBusy) playHero();
       if (b.dataset.bs === "club") club();
+      if (b.dataset.bs === "clock") {
+        clearInterval(tick); tick = null;
+        const on = b.getAttribute("aria-pressed") !== "true";
+        b.setAttribute("aria-pressed", String(on));
+        if (on) { secs = 68; paint(); tick = setInterval(paint, 1000); } else clock({ hidden: true });
+      }
     });
   }
 })();

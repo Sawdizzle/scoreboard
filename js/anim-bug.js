@@ -17,6 +17,8 @@ const OWN = new Set(['run', 'homerun', 'play', 'strikeout', 'strikeoutlooking', 
 const OWN_SPORT = new Set(['touchdown', 'fieldgoal', 'turnover', 'bigplay', 'goal', 'three', 'ace', 'setwin']);
 // Which sports each bug covers. Everything else is baseball only.
 const SPORTS_OF = { primetime: ['baseball', 'football', 'soccer', 'basketball', 'volleyball'] };
+// Baseball bugs with a slot for the game's time limit (the Show clock switch).
+const BASEBALL_CLOCK = new Set(['bluesteel']);
 export const bugCovers = (name, sport) => (SPORTS_OF[name] || ['baseball']).includes(sport || 'baseball');
 // Bugs with a walk-off of their own (all of them, since v4.31). One left out of
 // this list gets the overlay's own celebration instead.
@@ -110,7 +112,7 @@ export function sitFor(s) {
 // The clock, as the overlay paints it (paintClock), for a bug that shows one.
 export function animBugClock(c) {
   clock = c;
-  if (frame && ready && sport !== 'baseball') frame.contentWindow.postMessage({ type: 'scoreboard:clock', clock: c }, location.origin);
+  if (frame && ready && (sport !== 'baseball' || BASEBALL_CLOCK.has(slug))) frame.contentWindow.postMessage({ type: 'scoreboard:clock', clock: c }, location.origin);
 }
 
 function post(msg) {
