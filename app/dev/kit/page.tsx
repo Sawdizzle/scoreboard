@@ -5,7 +5,7 @@ import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
 import { SpotsDemo } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
-import type { CardKind, Feed, Look } from '@/lib/onair';
+import type { CardKind, Feed, Look, QrPos } from '@/lib/onair';
 import { LiveGame } from '@/components/public/LiveGame';
 import type { PublicGame } from '@/lib/public';
 import type { Sport } from '@/lib/sports';
@@ -63,9 +63,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -80,7 +80,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
     return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
       season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
-      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: false, card: null, sponsor_name: 'Dairy Barn', bug_url: 'https://example.test' }} />;
+      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: false, card: null, sponsor_name: 'Dairy Barn', bug_url: 'https://example.test', qr: { on: true, size: 18, pos: 'tr', opacity: 1 } }} />;
   }
   if (v === 'scorepad') {
     // The score-only pad: /dev/kit?v=scorepad&sport=football (soccer, basketball, volleyball).
@@ -105,11 +105,12 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
     return <LiveGame initial={pub} />;
   }
   if (v === 'overlay') {
-    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final, &moment=1, &sport=football, &spot=pitch (or inning: plays one spot six seconds in).
+    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final, &moment=1, &sport=football, &spot=pitch (or inning: plays one spot six seconds in), &qr=br&qsize=12&qop=0.6.
     // Cards: batter, pitcher, dueup, leaders, box, lineup, defense, matchup, sponsor, mid.
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
     const feed: Feed = {
       v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null, sponsor: { name: 'Dairy Barn', line: 'Cold treats on Elm Street', logo: null }, bug: { text: 'Streamed by example.test', url: 'https://example.test/watch' },
+      qr: qr ? { on: true, size: Number(qsize) || 18, pos: (qr as QrPos), opacity: Number(qop) || 1 } : null,
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
       game: { id: 'g1', sport: (sport as Sport) ?? 'baseball', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
