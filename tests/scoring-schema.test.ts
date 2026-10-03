@@ -1,0 +1,102 @@
+// Stage 2c: plays, undo, and season stats that add scored games to imports.
+import { test, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { makeDb } from './db.ts';
+
+type Db = Awaited<ReturnType<typeof makeDb>>;
+let t: Db;
+let team = '', season = '', game = '', scrim = '', p7 = '', p12 = '';
+const fails = (p: Promise<unknown>, re: RegExp) => assert.rejects(p, re);
+
+before(async () => {
+  t = await makeDb();
+  for (const [k, n] of [['owner', 'Olive'], ['scorer', 'Sam'], ['media', 'Mel'], ['stranger', 'Stan']]) await t.signUp(k, n);
+  [{ id: team }] = await t.as<{ id: string }>('owner', `select id from create_team('Blue Steel', 'STEEL', '#2f63cc', '14U', 'Fall 2026')`);
+  [{ id: season }] = await t.as<{ id: string }>(null, `select id from seasons where team_id = $1`, [team]);
+  for (const role of ['scorer', 'media']) {
+    const [{ token }] = await t.as<{ token: string }>('owner', `insert into staff_invites (team_id, role) values ($1, $2) returning token`, [team, role]);
+    await t.as(role, `select accept_invite($1)`, [token]);
+  }
+  [{ id: p7 }] = await t.as<{ id: string }>('owner', `insert into players (team_id, first_name, number) values ($1, 'Johnny', '7') returning id`, [team]);
+  [{ id: p12 }] = await t.as<{ id: string }>('owner', `insert into players (team_id, first_name, number) values ($1, 'Ben', '12') returning id`, [team]);
+  [{ id: game }] = await t.as<{ id: string }>('owner', `insert into games (team_id, season_id, opponent_name, opponent_abbr) values ($1, $2, 'Hawks', 'HAWKS') returning id`, [team, season]);
+  [{ id: scrim }] = await t.as<{ id: string }>('owner', `insert into games (team_id, season_id, opponent_name, opponent_abbr, counts_for_stats) values ($1, $2, 'Scrim', 'SCRIM', false) returning id`, [team, season]);
+});
+
+type Res = { seq: number; live: Record<string, unknown>; status: string };
+const play = (who: string | null, g: string, seq: number, type: string, patch: object, stats: object[] = [], status: string | null = null) =>
+  t.as<{ apply_play: Res }>(who, `select apply_play($1, $2, $3, $4::jsonb, '{}'::jsonb, $5::jsonb, $6)`,
+    [g, seq, type, JSON.stringify(patch), JSON.stringify(stats), status]).then((r) => r[0].apply_play);
+
+test('a play moves the game on, makes it live, and counts', async () => {
+  const r = await play('scorer', game, 0, 'hit', { balls: 0, strikes: 0, bases: { first: true }, home_hits: 1, secret_name: 'Johnny' },
+    [{ side: 'us', bid: p7, b_pa: 1, b_ab: 1, b_h: 1 }, { side: 'them', bid: 'x1', p_bf: 1, p_h: 1, p_pitches: 1 }]);
+  assert.equal(r.seq, 1);
+  assert.equal(r.status, 'live');
+  assert.equal(r.live.home_hits, 1);
+  // Only game fields reach the public row.
+  assert.equal('secret_name' in r.live, false);
+  const [row] = await t.as(null, `select status, seq, live from games where id = $1`, [game]);
+  assert.equal(row.seq, 1);
+  const stats = await t.as(null, `select side, bid, player_id, b_h, p_h from game_stats where game_id = $1 order by side desc`, [game]);
+  assert.deepEqual(stats, [{ side: 'us', bid: p7, player_id: p7, b_h: 1, p_h: 0 }, { side: 'them', bid: 'x1', player_id: null, b_h: 0, p_h: 1 }]);
+});
+
+test('a play against an old count is refused: another phone got there first', async () => {
+  await fails(play('scorer', game, 0, 'ball', { balls: 1 }), /changed on another device/);
+});
+
+test('media, strangers and the public cannot score; nobody writes the log directly', async () => {
+  await fails(play('media', game, 1, 'ball', { balls: 1 }), /cannot score/);
+  await fails(play('stranger', game, 1, 'ball', { balls: 1 }), /cannot score/);
+  await fails(play(null, game, 1, 'ball', { balls: 1 }), /permission denied/);
+  await fails(t.as('owner', `insert into game_stats (event_id, game_id, side, bid) values (1, $1, 'us', 'x')`, [game]), /permission denied/);
+  await fails(t.as('owner', `update games set live = '{}' where id = $1`, [game]), /permission denied/);
+});
+
+test('a stat row cannot claim another team\'s player, or more than one hit on one play', async () => {
+  const [{ id: other }] = await t.as<{ id: string }>('stranger', `select id from create_team('Hawks', 'HAWKS', '#aa2222', null, null)`);
+  const [{ id: theirs }] = await t.as<{ id: string }>('stranger', `insert into players (team_id, first_name) values ($1, 'Hawk') returning id`, [other]);
+  const r = await play('scorer', game, 1, 'ball', { balls: 1 }, [{ side: 'us', bid: theirs, p_pitches: 1 }]);
+  const [row] = await t.as(null, `select player_id from game_stats where bid = $1`, [theirs]);
+  assert.equal(row.player_id, null);
+  await fails(play('scorer', game, r.seq, 'hit', {}, [{ side: 'us', bid: p7, b_h: 2 }]), /check constraint/);
+});
+
+test('undo puts the game back and takes the play\'s stats with it', async () => {
+  const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [game]);
+  const r = await play('scorer', game, seq, 'strikeout', { strikes: 0, outs: 1 }, [{ side: 'us', bid: p12, b_pa: 1, b_ab: 1, b_so: 1 }]);
+  const [{ undo_play: u }] = await t.as<{ undo_play: Res & { undone: string } }>('scorer', `select undo_play($1, $2)`, [game, r.seq]);
+  assert.equal(u.undone, 'strikeout');
+  assert.equal(u.seq, r.seq + 1);
+  assert.equal(u.live.outs, undefined);
+  assert.equal((await t.as(null, `select 1 from game_stats where bid = $1`, [p12])).length, 0);
+  // Undo the first plays too: back to before the first pitch, status and all.
+  let s = u.seq;
+  for (let i = 0; i < 2; i++) s = (await t.as<{ undo_play: Res }>('scorer', `select undo_play($1, $2)`, [game, s]))[0].undo_play.seq;
+  const [g] = await t.as(null, `select status, live from games where id = $1`, [game]);
+  assert.deepEqual(g, { status: 'scheduled', live: {} });
+  // Nothing left to undo: no change, no error.
+  const [{ undo_play: none }] = await t.as<{ undo_play: Res & { undone: null } }>('scorer', `select undo_play($1, $2)`, [game, s]);
+  assert.equal(none.undone, null);
+});
+
+test('season stats: imports plus counting games, our side only', async () => {
+  await t.as('owner', `select import_season_stats($1, $2::jsonb)`, [season, JSON.stringify([{ player_id: p7, b_g: 10, b_pa: 30, b_ab: 27, b_h: 9 }])]);
+  const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [game]);
+  const a = await play('scorer', game, seq, 'hit', {}, [{ side: 'us', bid: p7, b_pa: 1, b_ab: 1, b_h: 1, b_2b: 1 }, { side: 'them', bid: 'p9', p_bf: 1 }]);
+  await play('scorer', game, a.seq, 'out', {}, [{ side: 'us', bid: p7, b_pa: 1, b_ab: 1 }]);
+  // A scrimmage is scored but never added.
+  await play('scorer', scrim, 0, 'hit', {}, [{ side: 'us', bid: p7, b_pa: 1, b_ab: 1, b_h: 1 }]);
+  const [line] = await t.as(null, `select b_g, b_pa, b_ab, b_h, b_2b, imported_at is not null as has_import from season_stats where player_id = $1`, [p7]);
+  assert.deepEqual(line, { b_g: 11, b_pa: 32, b_ab: 29, b_h: 10, b_2b: 1, has_import: true });
+});
+
+test('a pitcher\'s games count once per game, not once per pitch', async () => {
+  const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [game]);
+  let s = seq;
+  for (let i = 0; i < 3; i++) s = (await play('scorer', game, s, 'ball', {}, [{ side: 'us', bid: p12, p_pitches: 1 }])).seq;
+  await play('scorer', game, s, 'out', {}, [{ side: 'us', bid: p12, p_bf: 1, p_outs: 1, p_pitches: 1 }]);
+  const [line] = await t.as(null, `select p_g, p_pitches, p_outs from season_stats where player_id = $1`, [p12]);
+  assert.deepEqual(line, { p_g: 1, p_pitches: 4, p_outs: 1 });
+});

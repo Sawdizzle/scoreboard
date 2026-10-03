@@ -66,7 +66,8 @@ Each stage ends with a checklist to run before the next one starts.
      (batting order, field positions that trade on a clash, bench, players typed in at the field).
    - **Team brand, built** (asked for before 2c): logo upload to Storage, palette read from the logo,
      primary and accent colours, a display name of up to 24 characters, one look for teams everywhere.
-   - **2c:** the pad; every play adds to the same season stats.
+   - **2c, built:** the pad (/pad/<team>/<game>) on Scoreboard's rules; every play writes a log entry and
+     per-player stat rows; undo takes both back; season stats add scored games to the import.
 
    Original scope — New Game picks two teams and their rosters load; lineup and field
    screen; the pad on the ported rules; every play writes a plate appearance; player

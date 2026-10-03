@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { TabBar, TeamTabs } from '@/components/TabBar';
 import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
+import { Pad } from '@/components/pad/Pad';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { TeamHeader } from '@/components/TeamHeader';
@@ -64,6 +65,15 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   const base = `/t/${team.slug}`;
   const at = v === 'today' ? base : `${base}/${v}`;
   const tabs = <div className="page-top" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} staff={4} at={at} /></div>;
+  if (v === 'pad') {
+    // A game in the 5th: two on, 2-1, the made-up lineups on both sides. Taps
+    // work on screen; they fail to save, since nothing is behind this page.
+    const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(30 + i), name: `River ${i + 1}` })), positions: { P: 'o8' } };
+    const live = { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: true, second: true, third: false }, home_score: 2, away_score: 4,
+      state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
+    return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
+      seasonAvg={{ p2: '.273' }} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore />;
+  }
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
       <TeamHeader team={team} role={role} season={season} />

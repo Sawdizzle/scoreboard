@@ -37,8 +37,8 @@ export function TodayView({ team, role, players, staff, season, stats = [], rost
           <div className="next-foot">
             <Readiness lineup={lineups.us} />
             <div className="btn-row">
-              <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-primary">Lineup</Link>
-              <Link href={`${base}/games/${game.id}`} className="btn btn-quiet">Game</Link>
+              <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary">{game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
+              <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>
             </div>
           </div>
         </section>
