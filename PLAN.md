@@ -89,6 +89,16 @@ Each stage ends with a checklist to run before the next one starts.
    updates it. Six came over on 2026-10-03; the two Blue Steel copies and Krum (both already teams
    here) did not, and logos did not (they were links to other sites' images).
 
+6. **Extras, built** (the list left over after Stage 5):
+   - On Air: lineup, defense, matchup, sponsor and mid-inning cards; the mid-inning board by itself
+     between halves; a moment called out above the Pressbox bug for a hit, strikeout, home run,
+     double play or steal.
+   - A new stream link when the old one has got out (Team look screen).
+   - Earned runs from the errors the scorer records; wins, losses, saves and starts worked out when
+     a game goes final.
+   - The season average on the animated bugs, beside the batter's name.
+   - Football, soccer, basketball and volleyball, score only: points, the period, volleyball sets.
+
 ## Open questions
 
 1. **Name.** "Pressbox" is a placeholder.

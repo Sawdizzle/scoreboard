@@ -7,6 +7,8 @@ import { Stage } from '@/components/overlay/Stage';
 import type { CardKind, Feed, Look } from '@/lib/onair';
 import { LiveGame } from '@/components/public/LiveGame';
 import type { PublicGame } from '@/lib/public';
+import type { Sport } from '@/lib/sports';
+import { ScorePad } from '@/components/pad/ScorePad';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { TeamHeader } from '@/components/TeamHeader';
@@ -53,16 +55,16 @@ const stats: SeasonLine[] = [
   L(4, 10, 29, 9, 2, 1, 9, 3, 8, 0), L(5, 11, 31, 8, 1, 0, 5, 4, 7, 2, { p_g: 6, p_gs: 5, p_outs: 71, p_bf: 101, p_pitches: 412, p_h: 18, p_r: 11, p_er: 8, p_bb: 9, p_so: 31 }),
   L(6, 11, 35, 8, 2, 0, 4, 2, 11, 3), L(9, 10, 25, 6, 1, 0, 4, 3, 6, 1, { p_g: 4, p_gs: 2, p_outs: 29, p_bf: 48, p_pitches: 170, p_h: 12, p_r: 9, p_er: 7, p_bb: 6, p_so: 14 }),
 ];
-const game: Game = { id: 'g1', team_id: 't1', season_id: 's1', counts_for_stats: true, opponent_team_id: 'o1', opponent_name: 'River 14U',
+const game: Game = { id: 'g1', sport: 'baseball', team_id: 't1', season_id: 's1', counts_for_stats: true, opponent_team_id: 'o1', opponent_name: 'River 14U',
   opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {},
   opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U' } };
 const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -77,7 +79,12 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
     return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
       season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
-      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, card: null }} />;
+      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: false, card: null, sponsor_name: 'Dairy Barn' }} />;
+  }
+  if (v === 'scorepad') {
+    // The score-only pad: /dev/kit?v=scorepad&sport=football (soccer, basketball, volleyball).
+    return <ScorePad slug={team.slug} team={team} canScore token={null}
+      game={{ ...game, sport: (sport as Sport) ?? 'football', status: 'live', seq: 0, live: { home_score: 14, away_score: 7, state: { period: 2 } } }} />;
   }
   if (v === 'public-game') {
     // The public game page, mid-game: /dev/kit?v=public-game (&status=final, scheduled).
@@ -97,13 +104,14 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
     return <LiveGame initial={pub} />;
   }
   if (v === 'overlay') {
-    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final.
+    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final, &moment=1, &sport=football.
+    // Cards: batter, pitcher, dueup, leaders, box, lineup, defense, matchup, sponsor, mid.
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
     const feed: Feed = {
-      v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null,
+      v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null, sponsor: { name: 'Dairy Barn', line: 'Cold treats on Elm Street', logo: null },
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
-      game: { id: 'g1', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
+      game: { id: 'g1', sport: (sport as Sport) ?? 'baseball', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
         live: { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: false, second: true, third: false }, home_score: 2, away_score: 4,
           home_hits: 4, away_hits: 6, home_errors: 0, away_errors: 1, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }],
           state: { batIdx: { home: 1 }, pitches: { away: 58 } } } },
@@ -112,7 +120,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       pas: [{ side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8' }],
       season_stats: stats,
     };
-    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} /></div>;
+    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park' } : null} /></div>;
   }
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>

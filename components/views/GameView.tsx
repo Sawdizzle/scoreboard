@@ -5,6 +5,7 @@ import { GameFields } from '@/components/GameFields';
 import { Matchup, Readiness } from '@/components/GameBits';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
+import { SPORT_LABEL } from '@/lib/sports';
 import { canEditTeam, canRunGames, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
 export function GameView({ team, role, game, lineups, seasons }: {
@@ -27,12 +28,12 @@ export function GameView({ team, role, game, lineups, seasons }: {
         <Matchup team={team} game={game} />
         <div className="next-foot">
           <span className="sub">
-            {game.counts_for_stats ? `Counts for ${season?.name ?? 'no season'}` : 'Scrimmage: scored, not added to stats'}
+            {game.sport !== 'baseball' ? `${SPORT_LABEL[game.sport]} · score only` : game.counts_for_stats ? `Counts for ${season?.name ?? 'no season'}` : 'Scrimmage: scored, not added to stats'}
           </span>
         </div>
       </section>
 
-      <section className="rows">
+      {game.sport === 'baseball' && <section className="rows">
         {(['us', 'them'] as const).map((side) => (
           <Link key={side} href={`${base}/lineup?side=${side}`} className="row" style={{ paddingTop: 10, paddingBottom: 10 }}>
             <span className="row-main" style={{ gap: 8 }}>
@@ -42,7 +43,7 @@ export function GameView({ team, role, game, lineups, seasons }: {
             <span className="chev"><ChevronRight /></span>
           </Link>
         ))}
-      </section>
+      </section>}
 
       {run && (
         <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary btn-big">

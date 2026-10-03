@@ -6,9 +6,10 @@ import * as L from './rules/logic.js';
 import { positionOf } from './rules/roster.js';
 import { engineGame, tonight, type EngineSide, type G, type StatKey } from './scoring.ts';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
+import { sitFor, type Sport, type SportLive } from './sports.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
-export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box';
+export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid';
 
 // How the scorebug looks: Pressbox's own, or one of Scoreboard's animated
 // bugs (public/bugs/<slug>.html), which draw the game themselves.
@@ -28,10 +29,13 @@ export type Feed = {
   v: string;
   show_line: boolean; auto_card: boolean; card: CardKind | null; look?: Look;
   // The play that made the game what it is now; null after an undo.
-  last?: { seq: number; type: string; kind: string | null } | null;
+  last?: { seq: number; type: string; kind: string | null; rolled?: boolean } | null;
+  // Put the mid-inning board up by itself between halves.
+  auto_mid?: boolean;
+  sponsor?: { name: string; line: string | null; logo: string | null } | null;
   roster?: { id: string; num: string; name: string }[];
   team: FeedTeam; opponent: FeedTeam;
-  game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & { seq: number }) | null;
+  game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & { seq: number; sport?: Sport }) | null;
   season: { name: string; game_innings: number } | null;
   lineups: { us: Lineup | null; them: Lineup | null };
   tonight: (Line & { side: Side; bid: string })[];
@@ -59,6 +63,9 @@ export type PitcherView = {
 export type AirView = {
   batSide: EngineSide; fieldSide: EngineSide;
   batter: BatterView | null; pitcher: PitcherView | null; dueUp: BatterView[];
+  // The batting side's whole order, and the fielding side by position.
+  order: BatterView[];
+  defense: { pos: string; num: string; name: string }[];
 };
 export type AirCtx = {
   tonight: Record<string, Line>;
@@ -79,6 +86,7 @@ export function paText(pa: Pick<Pa, 'kind' | 'code'>) {
   return pa.code && CODED.has(pa.kind) ? `${label} ${pa.code}` : label;
 }
 
+const FIELD = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 const known = (b: { num?: string; name?: string } | undefined) => !!b && !!(b.num || b.name);
 
 function batterView(lineup: Lineup | undefined, idx: number, ctx: AirCtx): BatterView | null {
@@ -121,7 +129,12 @@ export function airView(g: G, ctx: AirCtx): AirView {
       season: r ? [{ v: rate2(r.era), k: 'ERA' }, { v: String(s.p_so), k: 'K' }, { v: rate2(r.whip), k: 'WHIP' }] : null,
     };
   }
-  return { batSide, fieldSide, batter: batterView(bat, idx, ctx), pitcher, dueUp };
+  const order = Array.from({ length: n }, (_, i) => batterView(bat, i, ctx)).filter((b): b is BatterView => !!b);
+  const defense = FIELD.map((pos) => {
+    const b = field?.batters?.find((x) => x.bid === field?.positions?.[pos]);
+    return b && known(b) ? { pos, num: b.num, name: b.name || `#${b.num}` } : null;
+  }).filter((d): d is { pos: string; num: string; name: string } => !!d);
+  return { batSide, fieldSide, batter: batterView(bat, idx, ctx), pitcher, dueUp, order, defense };
 }
 
 // The feed, ready to draw: the game as the rules see it, and the view of it.
@@ -188,13 +201,16 @@ export function bugState(feed: Feed, g: G, air: AirView) {
     };
   };
   const b = L.safeBases(g.bases);
+  const sport = feed.game!.sport ?? 'baseball';
   return {
     away: team('away'), home: team('home'),
     inning: g.inning | 0 || 1, half: g.half === 'bottom' ? 'bot' : 'top',
     balls: g.balls | 0, strikes: g.strikes | 0, outs: g.outs | 0,
     bases: [b.first, b.second, b.third],
-    batter: air.batter?.name ?? '', pitcher: air.pitcher?.name ?? '', pitchCount: air.pitcher ? air.pitcher.pitches : 0,
-    sport: 'baseball', sit: null,
+    // These bugs have one line for the batter: his average rides on it when the season line is on.
+    batter: air.batter ? air.batter.name + (feed.show_line && air.batter.avg ? ` · ${air.batter.avg}` : '') : '',
+    pitcher: air.pitcher?.name ?? '', pitchCount: air.pitcher ? air.pitcher.pitches : 0,
+    sport, sit: sport === 'baseball' ? null : sitFor(sport, feed.game!.live as SportLive),
   };
 }
 // The stinger a play earns on an animated bug, in the kit's terms. Anything
@@ -206,4 +222,18 @@ export function bugAnim(last: Feed['last']) {
   if (last.kind === 'DP') return { type: 'doubleplay', meta: {} };
   const text = last.kind ? (L.PLAY_LABEL as Record<string, string>)[last.kind] : '';
   return last.type === 'play' && text ? { type: 'play', meta: { text } } : null;
+}
+
+// The words for a play worth a moment on Pressbox's own bug, or null.
+const MOMENTS: Record<string, string> = { H1: 'Single', H2: 'Double', H3: 'Triple', DP: 'Double play', SB: 'Stolen base', SF: 'Sac fly' };
+export function momentText(last: Feed['last']) {
+  if (!last) return null;
+  if (last.type === 'homerun') return 'Home run';
+  if (last.type === 'strikeout') return last.kind === 'KL' ? 'Strikeout looking' : 'Strikeout';
+  return (last.kind && MOMENTS[last.kind]) || null;
+}
+
+// "Middle of the 5th" after the top, "End of the 5th" after the bottom.
+export function breakText(g: G) {
+  return g.half === 'bottom' ? `Middle of the ${ordinal(g.inning | 0)}` : `End of the ${ordinal(Math.max(1, (g.inning | 0) - 1))}`;
 }

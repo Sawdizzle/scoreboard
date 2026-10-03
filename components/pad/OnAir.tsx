@@ -5,7 +5,7 @@ import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import type { AirView, CardKind } from '@/lib/onair';
 
-export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; card: CardKind | null };
+export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null };
 
 // What the stream is showing, run from the field. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
@@ -63,6 +63,15 @@ export function OnAir({ channel, gameId, view, brand, when, live, final, score, 
         </button>
       </div>
 
+      <div className="pgrid three">
+        {([['lineup', 'Lineup', dueUp.length > 0], ['defense', 'Defense', view.defense.length > 0], ['matchup', 'Matchup', !!batter && !!pitcher], ['mid', 'Mid-inning', true]] as const).map(([k, label, ok]) => (
+          <button key={k} type="button" className={`pchoice${up(k) ? ' on' : ''}`} aria-pressed={up(k)} disabled={!live || !ok} onClick={() => flip(k)}><b>{label}</b></button>
+        ))}
+        {channel.sponsor_name && (
+          <button type="button" className={`pchoice${up('sponsor') ? ' on' : ''}`} aria-pressed={up('sponsor')} onClick={() => flip('sponsor')}><b>Sponsor</b><small>{channel.sponsor_name}</small></button>
+        )}
+      </div>
+
       <div className="air-autos">
         <label className="switch">
           <span className="switch-text"><b>Season line on the scorebug</b><small>AVG and tonight, beside the batter</small></span>
@@ -71,6 +80,10 @@ export function OnAir({ channel, gameId, view, brand, when, live, final, score, 
         <label className="switch">
           <span className="switch-text"><b>Pop the card for each new batter</b><small>Six seconds, then it clears itself</small></span>
           <input type="checkbox" checked={channel.auto_card} onChange={(e) => onSet({ auto_card: e.target.checked })} />
+        </label>
+        <label className="switch">
+          <span className="switch-text"><b>Mid-inning board between halves</b><small>Line score and who is due up, until the next pitch</small></span>
+          <input type="checkbox" checked={channel.auto_mid} onChange={(e) => onSet({ auto_mid: e.target.checked })} />
         </label>
       </div>
     </Sheet>

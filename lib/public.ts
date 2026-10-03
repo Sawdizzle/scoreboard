@@ -2,13 +2,14 @@
 // worked out from it. No account, no staff names: what a grandparent sees.
 import { ordinal, paText, type Feed, type FeedTeam, type Line, type Pa } from './onair.ts';
 import { innings } from './stats.ts';
+import type { Sport } from './sports.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
 export type PublicTeam = FeedTeam & { slug: string | null };
 export type PublicGame = {
   v: string;
   team: PublicTeam; opponent: PublicTeam;
-  game: Pick<Game, 'id' | 'is_home' | 'status' | 'live' | 'starts_at' | 'venue' | 'counts_for_stats'> & { seq: number };
+  game: Pick<Game, 'id' | 'is_home' | 'status' | 'live' | 'starts_at' | 'venue' | 'counts_for_stats'> & { seq: number; sport?: Sport };
   season: Feed['season'];
   lineups: { us: Lineup | null; them: Lineup | null };
   tonight: (Line & { side: Side; bid: string })[];

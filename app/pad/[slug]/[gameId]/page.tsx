@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Pad } from '@/components/pad/Pad';
+import { ScorePad } from '@/components/pad/ScorePad';
 import { getGame, getLineups, listSeasons, loadTeam, seasonStats } from '@/lib/data';
 import type { Channel } from '@/components/pad/OnAir';
 import type { StatRow } from '@/lib/scoring';
@@ -24,7 +25,11 @@ export default async function PadPage({ params }: { params: Promise<{ slug: stri
   const season = seasons.find((s) => s.id === game.season_id) ?? seasons.find((s) => s.is_current);
   const lines = season ? await seasonStats(supabase, team.id, season.id) : [];
   // Before the Stage 3 migration there is no channel; the pad then has no On Air.
-  const { data: channel } = await supabase.from('channels').select('token, game_id, show_line, auto_card, card').eq('team_id', team.id).maybeSingle<Channel>();
+  const { data: channel } = await supabase.from('channels').select('token, game_id, show_line, auto_card, auto_mid, card, sponsor_name').eq('team_id', team.id).maybeSingle<Channel>();
+  if (game.sport !== 'baseball') {
+    return <ScorePad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
+      canScore={canRunGames(role)} token={channel?.token ?? null} />;
+  }
   return (
     <Pad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
       lineups={lineups} season={lines} tonightRows={(stats.data ?? []) as StatRow[]}

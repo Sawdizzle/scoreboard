@@ -8,6 +8,7 @@ import * as L from '@/lib/rules/logic.js';
 import { boxScore, feedView } from '@/lib/onair';
 import { BAT_COLS, PITCH_COLS, asFeed, boxLines, plays, type BoxRow, type PublicGame } from '@/lib/public';
 import { browserClient } from '@/lib/supabase/browser';
+import { periodText, type SportLive } from '@/lib/sports';
 import type { Side } from '@/lib/types';
 
 const POLL_MS = 5000;
@@ -61,6 +62,8 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
   const sideOf = (e: 'home' | 'away'): Side => ((e === 'home') === game.game.is_home ? 'us' : 'them');
   const status = game.game.status;
   const live = status === 'live';
+  const sport = game.game.sport ?? 'baseball';
+  const ball = sport === 'baseball';
   const box = boxScore(g, game.season?.game_innings ?? 7);
   const b = L.safeBases(g.bases) as { first: boolean; second: boolean; third: boolean };
   const list = plays(game);
@@ -77,7 +80,7 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
             <div><Slab brand={home} sub="Home" compact right /><b>{g.home_score | 0}</b></div>
           </div>
           <div className="pub-state" role="status">
-            {live ? (
+            {live && !ball ? <><span className="eyebrow gold">Live</span><b>{periodText(sport, game.game.live as SportLive)}</b></> : live ? (
               <>
                 <span className="eyebrow gold">Live</span>
                 <b>{g.half === 'top' ? 'Top' : 'Bottom'} {g.inning}</b>
@@ -89,12 +92,12 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
             ) : status === 'final' ? <><span className="eyebrow gold">Final</span><span>{game.game.venue}</span></>
               : <><span className="eyebrow">Scheduled</span><b><LocalTime iso={game.game.starts_at} /></b><span>{game.game.venue}</span></>}
           </div>
-          {live && air.batter && (
+          {ball && live && air.batter && (
             <p className="pub-now">At bat: <b>{air.batter.name}</b>{air.batter.today ? ` (${air.batter.today})` : ''}{air.pitcher ? <> · Pitching: <b>{air.pitcher.name}</b>, {air.pitcher.pitches} pitches</> : null}</p>
           )}
         </section>
 
-        {status !== 'scheduled' && (
+        {ball && status !== 'scheduled' && (
           <div className="table-box">
             <table className="stat-table pub-line">
               <thead><tr><th />{box.innings.map((n) => <th key={n}>{n}</th>)}<th className="key">R</th><th>H</th><th>E</th></tr></thead>
@@ -111,7 +114,7 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
           </div>
         )}
 
-        {status !== 'scheduled' && (['away', 'home'] as const).map((e) => {
+        {ball && status !== 'scheduled' && (['away', 'home'] as const).map((e) => {
           const lines = boxLines(game, sideOf(e));
           const br = e === 'away' ? away : home;
           if (!lines.batting.length && !lines.pitching.length) return null;

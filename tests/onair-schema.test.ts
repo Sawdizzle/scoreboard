@@ -133,7 +133,7 @@ test('the feed carries short codes, our public roster, and the newest play until
   const f = (await feed(token))!;
   assert.deepEqual([f.team.abbr, f.opponent.abbr], ['STEEL', 'OPP']);
   assert.deepEqual(f.roster.map((r: Feed) => [r.num, r.name]), [['3', ''], ['7', 'Johnny Vance'], ['12', 'Ben O.']]);
-  assert.deepEqual(f.last, { seq: 2, type: 'play', kind: 'H2' });
+  assert.deepEqual(f.last, { seq: 2, type: 'play', kind: 'H2', rolled: false });
   await t.as('scorer', `select undo_play($1, 2)`, [game]);
   assert.equal((await feed(token))!.last, null);
 });
@@ -150,4 +150,30 @@ test('the public game: our players under their public names, typed-in guests by 
   // The stream still names the guest: the scorer put him on it.
   assert.equal((await feed(token))!.lineups.them.batters[0].name, 'Dane Kell');
   assert.equal((await t.as(null, `select public_game('00000000-0000-4000-8000-000000000000') f`))[0].f, null);
+});
+
+test('the sponsor and a new link are for the team\'s leads; the old link dies at once', async () => {
+  await fails(t.as('media', `select set_sponsor($1, 'Dairy Barn', 'Cold treats', null)`, [team]), /organizer or head coach/);
+  await t.as('owner', `select set_sponsor($1, ' Dairy Barn ', 'Cold treats on Elm', 'https://example.test/logo.png')`, [team]);
+  await t.as('media', `update channels set card = 'sponsor', auto_mid = true where team_id = $1`, [team]);
+  const f = (await feed(token))!;
+  assert.deepEqual(f.sponsor, { name: 'Dairy Barn', line: 'Cold treats on Elm', logo: 'https://example.test/logo.png' });
+  assert.deepEqual([f.card, f.auto_mid, f.game.sport], ['sponsor', true, 'baseball']);
+  // Taking the sponsor away takes its card off air.
+  await t.as('owner', `select set_sponsor($1, '', '', '')`, [team]);
+  const g = (await feed(token))!;
+  assert.deepEqual([g.sponsor, g.card], [null, null]);
+  await fails(t.as('scorer', `select reset_stream_link($1)`, [team]), /organizer or head coach/);
+  const [{ reset_stream_link: fresh }] = await t.as<{ reset_stream_link: string }>('owner', `select reset_stream_link($1)`, [team]);
+  assert.equal(await feed(token), null);
+  assert.equal((await feed(fresh))!.game.id, game);
+  token = fresh;
+});
+
+test('the newest play says whether it ended a half', async () => {
+  const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [game]);
+  await t.as('scorer', `select apply_play($1, $2, 'out', '{"outs":1}'::jsonb, '{}'::jsonb, '[]'::jsonb, null)`, [game, seq]);
+  assert.equal((await feed(token))!.last.rolled, false);
+  await t.as('scorer', `select apply_play($1, $2, 'out', '{"outs":0,"half":"bottom"}'::jsonb, '{}'::jsonb, '[]'::jsonb, null)`, [game, seq + 1]);
+  assert.equal((await feed(token))!.last.rolled, true);
 });

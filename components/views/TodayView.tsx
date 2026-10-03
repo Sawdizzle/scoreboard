@@ -35,10 +35,10 @@ export function TodayView({ team, role, players, staff, season, stats = [], rost
           </div>
           <Matchup team={team} game={game} />
           <div className="next-foot">
-            <Readiness lineup={lineups.us} />
+            {game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
             <div className="btn-row">
               <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary">{game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
-              <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>
+              {game.sport === 'baseball' && <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>}
             </div>
           </div>
         </section>

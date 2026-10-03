@@ -11,8 +11,9 @@ export default async function Settings({ params, searchParams }: {
 }) {
   const { slug } = await params;
   const { supabase, team, role } = await loadTeam(slug);
-  const { data: channel } = await supabase.from('channels').select('*').eq('team_id', team.id).maybeSingle<{ token: string; look?: Look }>();
+  const { data: channel } = await supabase.from('channels').select('*').eq('team_id', team.id).maybeSingle<{ token: string; look?: Look; sponsor_name?: string | null; sponsor_line?: string | null; sponsor_logo?: string | null }>();
   const at = await origin();
   return <SettingsView team={team} role={role} welcome={(await searchParams).new === '1'} publicUrl={`${at}/team/${team.slug}`}
-    streamUrl={channel ? `${at}/overlay/${channel.token}` : undefined} look={channel?.look} />;
+    streamUrl={channel ? `${at}/overlay/${channel.token}` : undefined} look={channel?.look}
+    sponsor={{ name: channel?.sponsor_name ?? null, line: channel?.sponsor_line ?? null, logo: channel?.sponsor_logo ?? null }} />;
 }

@@ -13,6 +13,7 @@ import { parseRoster } from '@/lib/roster-parse';
 import { abbrFor } from '@/lib/format';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
+import { SPORTS, type Sport } from '@/lib/sports';
 import { POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -429,8 +430,16 @@ export async function createGame(slug: string, _: FormState, fd: FormData): Prom
   const { supabase, team } = await loadTeam(slug);
   const f = await gameFields(fd, team.id, supabase);
   if ('error' in f) return f;
-  const { data, error } = await supabase.from('games').insert({ team_id: team.id, ...f }).select('id').single();
+  const picked = str(fd, 'sport');
+  const sport: Sport = (SPORTS as readonly string[]).includes(picked) ? (picked as Sport) : 'baseball';
+  // Only baseball has season stats here.
+  const { data, error } = await supabase.from('games')
+    .insert({ team_id: team.id, sport, ...f, ...(sport === 'baseball' ? {} : { counts_for_stats: false }) }).select('id').single();
   if (error) return { error: error.code === '42501' ? 'Your seat cannot make games.' : say(error) };
+  if (sport !== 'baseball') {
+    revalidatePath(`/t/${slug}`, 'layout');
+    redirect(`/t/${slug}/games/${data.id}`);
+  }
   // An opponent that is not a team here is remembered: a new one is added to
   // the list, and one already on it brings the lineup last typed for it.
   if (!f.opponent_team_id) {
@@ -466,6 +475,49 @@ export async function deleteGame(slug: string, gameId: string, _: FormState): Pr
 // A whole side's lineup at once. The browser holds the lineup while it is
 // edited and sends it back on Save; it is rebuilt here from what a lineup may
 // contain before it is stored.
+// The stream's sponsor: a name, a line under it and a logo. Leads only (the
+// database checks); the logo goes in the team's own folder, like its own.
+export async function saveSponsor(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const name = str(fd, 'sponsor_name'), line = str(fd, 'sponsor_line');
+  if (name.length > 40) return { error: 'Keep the sponsor\'s name to 40 characters.' };
+  if (line.length > 60) return { error: 'Keep the line under it to 60 characters.' };
+  const { supabase, team } = await loadTeam(slug);
+  const { data: ch } = await supabase.from('channels').select('sponsor_logo').eq('team_id', team.id).maybeSingle<{ sponsor_logo: string | null }>();
+  let logo = name ? ch?.sponsor_logo ?? null : null;
+  const file = fd.get('sponsor_logo');
+  let uploaded: string | null = null;
+  if (name && file instanceof File && file.size > 0) {
+    const ext = LOGO_TYPES[file.type];
+    if (!ext) return { error: 'A logo is a PNG, WebP or JPEG image.' };
+    if (file.size > 1024 * 1024) return { error: 'That logo is over 1 MB. Try a smaller image.' };
+    const path = `${team.id}/${crypto.randomUUID()}.${ext}`;
+    const up = await supabase.storage.from(LOGO_BUCKET).upload(path, file, { contentType: file.type, cacheControl: '31536000', upsert: false });
+    if (up.error) return { error: 'The logo did not upload. Only an organizer or head coach can set the sponsor.' };
+    uploaded = path;
+    logo = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+  } else if (fd.get('remove_sponsor_logo') === 'on') {
+    logo = null;
+  }
+  const { error } = await supabase.rpc('set_sponsor', { p_team: team.id, p_name: name, p_line: line, p_logo: logo ?? '' });
+  if (error) {
+    if (uploaded) await supabase.storage.from(LOGO_BUCKET).remove([uploaded]);
+    return { error: error.code === '42501' ? 'Only an organizer or head coach can set the sponsor.' : say(error) };
+  }
+  const old = ch?.sponsor_logo && ch.sponsor_logo !== logo ? logoPath(ch.sponsor_logo, team.id) : null;
+  if (old) await supabase.storage.from(LOGO_BUCKET).remove([old]);
+  revalidatePath(`/t/${slug}/settings`);
+  return { ok: name ? 'Sponsor saved.' : 'Sponsor removed.' };
+}
+
+// A new Browser Source link. The old one stops working at once.
+export async function resetStreamLink(slug: string, _: FormState): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const { error } = await supabase.rpc('reset_stream_link', { p_team: team.id });
+  if (error) return { error: error.code === '42501' ? 'Only an organizer or head coach can change the stream link.' : say(error) };
+  revalidatePath(`/t/${slug}/settings`);
+  return { ok: 'New link made. Copy it into OBS; the old one no longer works.' };
+}
+
 // Forget an opponent: its name and saved lineup. Games already played keep theirs.
 export async function deleteOpponent(slug: string, id: string, _: FormState): Promise<FormState> {
   const { supabase, team } = await loadTeam(slug);
