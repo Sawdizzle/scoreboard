@@ -1,5 +1,6 @@
 import { TodayView } from '@/components/views/TodayView';
-import { listPlayers, listSeasons, loadTeam, seasonStats } from '@/lib/data';
+import { nextGame } from '@/components/GameBits';
+import { getLineups, listGames, listPlayers, listSeasons, loadTeam, seasonStats } from '@/lib/data';
 
 export default async function Today({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -11,5 +12,7 @@ export default async function Today({ params }: { params: Promise<{ slug: string
   ]);
   const season = seasons.find((s) => s.is_current);
   const [stats, roster] = season ? await Promise.all([seasonStats(supabase, team.id, season.id), listPlayers(supabase, team.id)]) : [[], []];
-  return <TodayView team={team} role={role} players={players.count ?? 0} staff={staff.count ?? 0} season={season} stats={stats} roster={roster} />;
+  const game = nextGame(await listGames(supabase, team.id));
+  const lineups = game ? await getLineups(supabase, game.id) : {};
+  return <TodayView team={team} role={role} players={players.count ?? 0} staff={staff.count ?? 0} season={season} stats={stats} roster={roster} game={game} lineups={lineups} />;
 }

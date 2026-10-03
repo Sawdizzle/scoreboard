@@ -12,8 +12,9 @@ cp .env.example .env.local   # the project URL and publishable key
 npm run dev                  # http://localhost:3000
 ```
 
-`/dev/kit?v=today` (also `roster`, `empty`, `player`, `staff`, `staff-link`,
-`season`, `settings`; add `&role=coach` for a seat that cannot edit) draws every
+`/dev/kit?v=today` (also `today-empty`, `roster`, `empty`, `player`, `pitcher`,
+`staff`, `staff-link`, `season`, `season-empty`, `settings`, `import`, `game`,
+`lineup`, `lineup-them`; add `&role=coach` for a seat that cannot edit) draws every
 team screen from made-up data with no database. It is for checking layout at
 phone width, and returns 404 in a production build.
 
@@ -40,6 +41,9 @@ one current season, and the public roster's name masking.
 | `app/actions.ts` | Every write. Each runs as the signed-in user; Postgres policies decide |
 | `lib/data.ts` | Reads, and `loadTeam()`, which every team page goes through |
 | `lib/roster-parse.ts` | Pasted rosters, carried over from Scoreboard's `js/roster.js` |
+| `lib/rules/` | Scoreboard's rules engine (`logic.js`, `roster.js`), copied unchanged; not linted here |
+| `lib/lineup.ts` | Lineups built from a roster or last game, and checked before they are stored |
+| `lib/gamechanger.ts`, `lib/stats.ts` | GameChanger export parsing, and every rate (AVG, ERA ...) from counts |
 | `components/views/` | The team screens, data in, markup out, so `/dev/kit` can draw them |
 | `proxy.ts` | Refreshes the session cookie and sends signed-out visitors to sign in |
 

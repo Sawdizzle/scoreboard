@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { Check, ChevronRight } from '@/components/icons';
 import { leaders } from '@/components/StatTables';
+import { Matchup, Readiness } from '@/components/GameBits';
+import { LocalTime } from '@/components/LocalTime';
 import { fullName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
-import { SEATS, canEditTeam, type Player, type Role, type Season, type Team } from '@/lib/types';
+import { SEATS, canEditTeam, canRunGames, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
-export function TodayView({ team, role, players, staff, season, stats = [], roster = [] }: {
+export function TodayView({ team, role, players, staff, season, stats = [], roster = [], game = null, lineups = {} }: {
   team: Team; role: Role; players: number; staff: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
+  game?: Game | null; lineups?: Partial<Record<Side, Lineup>>;
 }) {
   const who = new Map(roster.map((p) => [p.id, p]));
   const top = leaders(stats);
@@ -23,19 +26,37 @@ export function TodayView({ team, role, players, staff, season, stats = [], rost
   ];
   return (
     <div className="page" style={{ paddingTop: 10 }}>
-      <section className="card next-game">
-        <div className="next-top">
-          <span className="eyebrow gold">Next game</span>
-          <span className="sub">{season?.name}</span>
-        </div>
-        <div className="next-slab slab">
-          <span className="disp">{team.abbr}</span>
-          <small>{team.name}{team.age_group ? ` ${team.age_group}` : ''}</small>
-        </div>
-        <div className="next-foot">
-          <p className="sub">No game on the schedule. Games, lineups and scoring are the next part of the build; the team you set up here is what they will use.</p>
-        </div>
-      </section>
+      {game ? (
+        <section className="card next-game">
+          <div className="next-top">
+            <span className="eyebrow gold">{game.status === 'live' ? 'Live now' : <LocalTime iso={game.starts_at} />}</span>
+            <span className="sub">{game.venue}</span>
+          </div>
+          <Matchup team={team} game={game} />
+          <div className="next-foot">
+            <Readiness lineup={lineups.us} />
+            <div className="btn-row">
+              <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-primary">Lineup</Link>
+              <Link href={`${base}/games/${game.id}`} className="btn btn-quiet">Game</Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="card next-game">
+          <div className="next-top">
+            <span className="eyebrow gold">Next game</span>
+            <span className="sub">{season?.name}</span>
+          </div>
+          <div className="next-slab slab">
+            <span className="disp">{team.abbr}</span>
+            <small>{team.name}{team.age_group ? ` ${team.age_group}` : ''}</small>
+          </div>
+          <div className="next-foot">
+            <p className="sub">Nothing on the schedule.</p>
+            {canRunGames(role) && <Link href={`${base}/games/new`} className="btn btn-primary">New game</Link>}
+          </div>
+        </section>
+      )}
 
       {top.length > 0 && (
         <section className="leaders">

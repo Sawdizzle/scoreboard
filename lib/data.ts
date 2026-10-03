@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient, supabaseConfigured } from './supabase/server';
 import type { SeasonLine } from './stats';
-import type { Invite, Player, Role, Season, StaffMember, Team } from './types';
+import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
 const TEAM_COLS = 'id, slug, name, abbr, color, logo_url, age_group';
 const PLAYER_COLS = 'id, team_id, first_name, last_name, number, bats, throws, positions, public_name, active';
@@ -87,4 +87,46 @@ export async function seasonStats(db: Db, teamId: string, seasonId: string) {
 export async function playerStats(db: Db, playerId: string) {
   const { data } = await db.from('season_stats').select('*').eq('player_id', playerId);
   return (data ?? []) as SeasonLine[];
+}
+
+const GAME_COLS = 'id, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live';
+
+// A team's games, soonest first; games with no time yet sort last.
+export async function listGames(db: Db, teamId: string, seasonId?: string) {
+  let q = db.from('games').select(GAME_COLS).eq('team_id', teamId);
+  if (seasonId) q = q.eq('season_id', seasonId);
+  const { data } = await q.order('starts_at', { ascending: true, nullsFirst: false });
+  return (data ?? []) as Game[];
+}
+export async function getGame(db: Db, teamId: string, id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const { data } = await db.from('games').select(GAME_COLS).eq('team_id', teamId).eq('id', id).maybeSingle<Game>();
+  return data;
+}
+export async function getLineups(db: Db, gameId: string) {
+  const { data } = await db.from('game_lineups').select('side, data').eq('game_id', gameId);
+  const out: Partial<Record<Side, Lineup>> = {};
+  for (const r of (data ?? []) as { side: Side; data: Lineup }[]) out[r.side] = r.data;
+  return out;
+}
+// Our lineup from the most recent other game that has one, for "Same as last game".
+export async function lastLineup(db: Db, teamId: string, exceptGame: string) {
+  const { data } = await db.from('games').select('id, starts_at, game_lineups!inner(side, data)')
+    .eq('team_id', teamId).neq('id', exceptGame).eq('game_lineups.side', 'us')
+    .order('starts_at', { ascending: false, nullsFirst: false }).limit(1);
+  const row = (data ?? [])[0] as { game_lineups: { data: Lineup }[] } | undefined;
+  return row?.game_lineups?.[0]?.data ?? null;
+}
+// Another team's roster as the public sees it: names under each player's own
+// public-name setting.
+export async function publicRoster(db: Db, teamId: string) {
+  const { data } = await db.rpc('public_roster', { p_team: teamId });
+  return (data ?? []) as { id: string; number: string; display_name: string | null; positions: string[] }[];
+}
+// Teams on Pressbox whose name matches, for picking an opponent.
+export async function findTeams(db: Db, q: string, notTeam: string) {
+  const term = q.replace(/[%_,()]/g, ' ').trim();
+  if (term.length < 2) return [];
+  const { data } = await db.from('teams').select(TEAM_COLS).ilike('name', `%${term}%`).neq('id', notTeam).order('name').limit(8);
+  return (data ?? []) as Team[];
 }

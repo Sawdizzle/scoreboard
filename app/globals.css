@@ -266,3 +266,39 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .leaders .row-title { font-size: 15.5px; }
 .leader-k { flex: 0 0 40px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--body); }
 .leader-v { font-family: var(--disp); font-weight: 700; font-size: 28px; font-variant-numeric: tabular-nums; }
+
+/* ---- Games and lineups ---------------------------------------------------- */
+.field-box { position: relative; height: 200px; border-radius: 18px; overflow: hidden; background: #10261a; border: 1px solid #1f4a30; }
+.field-box svg { position: absolute; inset: 0; }
+.spot { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border-radius: 10px; background: var(--bg); color: var(--chalk); border: 1.5px solid #3d5a48; cursor: pointer; }
+.spot b { font-family: var(--disp); font-weight: 700; font-size: 21px; line-height: 0.9; }
+.spot small { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.04em; opacity: 0.85; }
+.spot.open { border-style: dashed; color: #a9c8b5; }
+.spot.on { background: var(--gold); border-color: #ffe08a; color: #1a1300; }
+.order { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.order-row { display: flex; align-items: center; gap: 6px; min-height: 50px; padding: 2px 0 2px 4px; border-top: 1px solid var(--raised); }
+.order-row:first-child { border-top: 0; }
+.order-row.on { background: var(--take-bg, #1c2c40); border-radius: 12px; }
+.order-n { flex: 0 0 18px; font-family: var(--mono); font-size: 11px; color: var(--body); }
+.order-who { flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.order-who .jersey { flex-basis: 32px; font-size: 24px; }
+.order-who .row-title { flex: 1; min-width: 0; font-size: 15.5px; }
+.order-avg { font-family: var(--disp); font-weight: 600; font-size: 18px; color: var(--soft); font-variant-numeric: tabular-nums; }
+.order-ctl { flex: 0 0 auto; display: flex; gap: 4px; }
+.icon-btn.sm { width: 36px; height: 44px; border-radius: 10px; font-size: 11px; }
+.icon-btn[disabled] { opacity: 0.3; cursor: default; }
+.tag.dim { background: none; border: 1px dashed var(--line-2); color: var(--muted); }
+.save-bar { position: sticky; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35); }
+.save-bar .bad { color: var(--bad-text); }
+
+.matchup { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; overflow: hidden; }
+.matchup > div { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 88px; padding: 12px 16px; background: var(--hatch), var(--c); color: var(--ink); }
+.matchup > div:last-child { align-items: flex-end; text-align: right; }
+.matchup .disp { font-size: 34px; }
+.matchup small { font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+.game-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 4px; border-top: 1px solid var(--raised); }
+.rows > .game-row:first-child { border-top: 0; }
+.game-when { flex: 0 0 74px; display: flex; flex-direction: column; gap: 2px; font-family: var(--mono); font-size: 10.5px; color: var(--body); }
+.ha { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--muted); }

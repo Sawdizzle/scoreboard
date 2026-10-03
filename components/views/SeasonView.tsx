@@ -3,9 +3,10 @@ import { createSeason, deleteSeason, makeSeasonCurrent, updateSeason } from '@/a
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { Plus } from '@/components/icons';
 import { StatTables } from '@/components/StatTables';
+import { ScheduleList } from '@/components/GameBits';
 import { guessSeason, shortDate } from '@/lib/format';
 import { batting, rate3, type SeasonLine } from '@/lib/stats';
-import { canEditTeam, type Player, type Role, type Season, type Team } from '@/lib/types';
+import { canEditTeam, canRunGames, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
 
 function SeasonFields({ s }: { s?: Season }) {
   return (
@@ -35,9 +36,9 @@ function teamLine(stats: SeasonLine[]) {
   ];
 }
 
-export function SeasonView({ team, role, seasons, selectedId, stats = [], players = [], imported }: {
+export function SeasonView({ team, role, seasons, selectedId, stats = [], players = [], imported, games = [] }: {
   team: Team; role: Role; seasons: Season[]; selectedId?: string;
-  stats?: SeasonLine[]; players?: Player[]; imported?: string;
+  stats?: SeasonLine[]; players?: Player[]; imported?: string; games?: Game[];
 }) {
   const edit = canEditTeam(role);
   const base = `/t/${team.slug}/season`;
@@ -66,6 +67,14 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
           </section>
 
           {imported && <p role="status" className="note note-good">Imported {imported} players from GameChanger.</p>}
+
+          <section className="stack" style={{ gap: 6 }}>
+            <div className="h-row" style={{ padding: '0 4px', alignItems: 'center' }}>
+              <h2 className="h-sec">Schedule</h2>
+              {canRunGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
+            </div>
+            {games.length ? <ScheduleList slug={team.slug} games={games} /> : <p className="sub" style={{ padding: '0 4px' }}>No games in {sel.name} yet.</p>}
+          </section>
 
           {stats.length > 0 ? (
             <>

@@ -11,6 +11,7 @@ import { loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
+import { cleanLineup } from '@/lib/lineup';
 import { POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -350,4 +351,87 @@ export async function importStats(slug: string, _: FormState, fd: FormData): Pro
   if (error) return { error: say(error) };
   revalidatePath(`/t/${slug}`, 'layout');
   redirect(`/t/${slug}/season?s=${seasonId}&imported=${n as number}`);
+}
+
+// ---- Games -------------------------------------------------------------------
+async function gameFields(fd: FormData, teamId: string, supabase: Awaited<ReturnType<typeof createClient>>) {
+  const oppId = str(fd, 'opponent_team_id');
+  let name = str(fd, 'opponent_name'), abbr = str(fd, 'opponent_abbr').toUpperCase(), color = str(fd, 'opponent_color') || '#7a8794';
+  if (oppId) {
+    if (!UUID.test(oppId) || oppId === teamId) return { error: 'Pick the other team again.' } as const;
+    // The opponent's identity comes from its own row, not from the form.
+    const { data: t } = await supabase.from('teams').select('name, abbr, color, age_group').eq('id', oppId).maybeSingle<{ name: string; abbr: string; color: string; age_group: string | null }>();
+    if (!t) return { error: 'That team is no longer on Pressbox. Type its name instead.' } as const;
+    name = `${t.name}${t.age_group ? ` ${t.age_group}` : ''}`.slice(0, 60); abbr = t.abbr; color = t.color;
+  }
+  if (!name) return { error: 'Who are you playing? Pick a team or type a name.' } as const;
+  if (name.length > 60) return { error: 'Keep the opponent\'s name to 60 characters.' } as const;
+  if (!abbr) abbr = name.split(/\s+/).pop()!.slice(0, 6).toUpperCase();
+  if (abbr.length > 6) return { error: 'The opponent\'s scorebug name is up to 6 characters.' } as const;
+  if (!/^#[0-9a-f]{6}$/i.test(color)) color = '#7a8794';
+  const startsAt = str(fd, 'starts_at');
+  if (startsAt && Number.isNaN(Date.parse(startsAt))) return { error: 'Pick the date and time again.' } as const;
+  const venue = str(fd, 'venue');
+  if (venue.length > 80) return { error: 'Keep the place to 80 characters.' } as const;
+  const seasonId = str(fd, 'season_id');
+  return {
+    opponent_team_id: oppId || null, opponent_name: name, opponent_abbr: abbr, opponent_color: color,
+    is_home: str(fd, 'is_home') !== 'away',
+    starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+    venue: venue || null,
+    season_id: UUID.test(seasonId) ? seasonId : null,
+    counts_for_stats: fd.get('counts_for_stats') === 'on',
+  } as const;
+}
+
+export async function createGame(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const f = await gameFields(fd, team.id, supabase);
+  if ('error' in f) return f;
+  const { data, error } = await supabase.from('games').insert({ team_id: team.id, ...f }).select('id').single();
+  if (error) return { error: error.code === '42501' ? 'Your seat cannot make games.' : say(error) };
+  revalidatePath(`/t/${slug}`, 'layout');
+  redirect(`/t/${slug}/games/${data.id}/lineup`);
+}
+
+export async function updateGame(slug: string, gameId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const f = await gameFields(fd, team.id, supabase);
+  if ('error' in f) return f;
+  const { data, error } = await supabase.from('games').update(f).eq('team_id', team.id).eq('id', gameId).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}`, 'layout');
+  return { ok: 'Saved.' };
+}
+
+export async function deleteGame(slug: string, gameId: string, _: FormState): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const { data, error } = await supabase.from('games').delete().eq('team_id', team.id).eq('id', gameId).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return { error: 'Only an organizer or head coach can delete a game.' };
+  revalidatePath(`/t/${slug}`, 'layout');
+  redirect(`/t/${slug}/season`);
+}
+
+// A whole side's lineup at once. The browser holds the lineup while it is
+// edited and sends it back on Save; it is rebuilt here from what a lineup may
+// contain before it is stored.
+export async function saveLineup(slug: string, gameId: string, side: 'us' | 'them', _: FormState, fd: FormData): Promise<FormState> {
+  if (side !== 'us' && side !== 'them') return { error: 'Pick a side.' };
+  let raw: unknown;
+  try { raw = JSON.parse(String(fd.get('lineup') ?? '')); } catch { return { error: 'The lineup did not come through. Try Save again.' }; }
+  const lineup = cleanLineup(raw);
+  if (!lineup) return { error: 'Something in that lineup is not valid. Reload and try again.' };
+  const { supabase, team } = await loadTeam(slug);
+  const { data: game } = await supabase.from('games').select('id').eq('team_id', team.id).eq('id', gameId).maybeSingle();
+  if (!game) return { error: 'That game is gone.' };
+  // Update, else insert: an upsert would also rewrite game_id and side, which
+  // the grants keep fixed once a lineup exists.
+  const up = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('side');
+  let error = up.error;
+  if (!error && !up.data?.length) error = (await supabase.from('game_lineups').insert({ game_id: gameId, side, data: lineup })).error;
+  if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
+  revalidatePath(`/t/${slug}`, 'layout');
+  return { ok: 'Lineup saved.' };
 }

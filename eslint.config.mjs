@@ -10,7 +10,8 @@ const config = [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
+  // lib/rules is Scoreboard's engine, copied unchanged; it is linted there.
+  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'lib/rules/**'] },
 ];
 
 export default config;

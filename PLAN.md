@@ -62,7 +62,8 @@ Each stage ends with a checklist to run before the next one starts.
    links, roster, seasons. No scoring yet. **Built.**
 2. **Game night**, in three parts:
    - **2a, built:** GameChanger season import, season stats, stats on Player, Season, Roster and Today.
-   - **2b:** games and lineups.
+   - **2b, built:** games (Pressbox opponents or typed names), schedule, Today's next game, lineup editor
+     (batting order, field positions that trade on a clash, bench, players typed in at the field).
    - **2c:** the pad; every play adds to the same season stats.
 
    Original scope — New Game picks two teams and their rosters load; lineup and field
