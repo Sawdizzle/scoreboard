@@ -44,7 +44,11 @@ export function GameView({ team, role, game, lineups, seasons }: {
         ))}
       </section>
 
-      <p className="note note-plain">Scoring from the pad arrives in the next build. Lineups set here are what it will use.</p>
+      {run && (
+        <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary btn-big">
+          {game.status === 'live' ? 'Back to the pad' : game.status === 'final' ? 'Open the pad · final' : 'Open the pad'}
+        </Link>
+      )}
 
       {run && (
         <details className="fold">

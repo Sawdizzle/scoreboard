@@ -1,0 +1,294 @@
+// What a play means for people. Scoreboard's rules (lib/rules/logic.js) decide
+// what a tap does to the game: the count, the outs, the bases, the score. This
+// file decides who it happened to, and what it adds to their line:
+//
+//   - the batter: a plate appearance, an at-bat, a hit, a walk, RBI ...
+//   - the pitcher: a pitch, a batter faced, an out, a hit or walk allowed ...
+//   - the runners: a run scored, a steal, caught stealing.
+//
+// The rules keep bases as true/false, so they cannot say who scored. This
+// keeps a second map beside them, game.state.runners = { first: bid, ... },
+// moved by the same play, and checked against the rules' own bases after
+// every play: wherever the two disagree (a correction on the Situation
+// screen, say), the rules win and the runner there becomes unknown. An
+// unknown runner who scores still counts as a run for the pitcher; it just
+// is not credited to anyone's R.
+//
+// Earned runs: every run is counted as earned. Youth scorers rarely rule on
+// it, and GameChanger's own youth numbers are close to the same thing.
+import * as L from './rules/logic.js';
+import type { Game, Lineup, Side } from './types.ts';
+
+export type Bases = { first: boolean; second: boolean; third: boolean };
+export type Runners = { first: string | null; second: string | null; third: string | null };
+export type EngineSide = 'home' | 'away';
+// The game as the rules see it: the live fields plus both lineups by
+// home and away. Loose on purpose; the rules read what they need.
+export type G = Record<string, unknown> & {
+  inning: number; half: 'top' | 'bottom'; balls: number; strikes: number; outs: number; bases: Bases;
+  home_score: number; away_score: number; state: Record<string, unknown>;
+  lineups: Record<EngineSide, Lineup>;
+};
+export type Res = { type: string; patch: Record<string, unknown>; payload?: Record<string, unknown>; text?: string; sheet?: string };
+export type StatRow = { side: Side; bid: string } & Partial<Record<StatKey, number>>;
+export type StatKey =
+  | 'b_pa' | 'b_ab' | 'b_h' | 'b_2b' | 'b_3b' | 'b_hr' | 'b_rbi' | 'b_r' | 'b_bb' | 'b_so' | 'b_kl' | 'b_hbp'
+  | 'b_sac' | 'b_sf' | 'b_roe' | 'b_fc' | 'b_sb' | 'b_cs'
+  | 'p_outs' | 'p_bf' | 'p_pitches' | 'p_h' | 'p_r' | 'p_er' | 'p_bb' | 'p_so' | 'p_hbp' | 'p_wp' | 'p_bk';
+
+export const START_LIVE = {
+  inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0, bases: { first: false, second: false, third: false },
+  home_score: 0, away_score: 0, home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0, line_score: [], state: {},
+};
+
+// Which of our sides (us/them) is home or away in this game, and back.
+export const engineSideOf = (game: Pick<Game, 'is_home'>, side: Side): EngineSide =>
+  (side === 'us') === game.is_home ? 'home' : 'away';
+export const sideOf = (game: Pick<Game, 'is_home'>, e: EngineSide): Side =>
+  (e === 'home') === game.is_home ? 'us' : 'them';
+
+export function engineGame(game: Pick<Game, 'is_home' | 'live' | 'status'>, lineups: Partial<Record<Side, Lineup>>, regulationInnings = 0): G {
+  const us = lineups.us ?? { batters: [], positions: {} };
+  const them = lineups.them ?? { batters: [], positions: {} };
+  return {
+    ...START_LIVE, ...(game.live as object), status: game.status, regulation_innings: regulationInnings,
+    lineups: game.is_home ? { home: us, away: them } : { home: them, away: us },
+  } as G;
+}
+
+const EMPTY: Runners = { first: null, second: null, third: null };
+const BASES = ['first', 'second', 'third'] as const;
+export const runnersOf = (g: G): Runners => ({ ...EMPTY, ...((g.state?.runners as Runners | undefined) ?? {}) });
+const bases = (g: G): Bases => L.safeBases(g.bases) as Bases;
+
+// The batter at the plate and the pitcher on the mound, by id, before a play.
+export function batterBid(g: G): string | null {
+  const side = L.battingSide(g) as EngineSide;
+  const b = g.lineups[side]?.batters?.[L.currentBatterIdx(g, side)];
+  return b && (b.num || b.name) ? b.bid : null;
+}
+export function pitcherBid(g: G): string | null {
+  const side = L.fieldingSide(g) as EngineSide;
+  return g.lineups[side]?.positions?.P ?? null;
+}
+
+// Types that are corrections, not plays: they move the game but put nothing
+// on anyone's line.
+const NO_STATS = new Set(['adj-score', 'adj-hits', 'adj-errors', 'adj-outs', 'adj-balls', 'adj-strikes', 'base', 'clear',
+  'inning', 'half', 'batter', 'batidx', 'count', 'endhalf', 'pitcher', 'pitchadj', 'run', 'end_game', 'reopen_game', 'error']);
+
+// The scorebook kind of a play that ended a plate appearance, or null.
+export function paKind(res: Res, prev: G): string | null {
+  const p = (res.payload ?? {}) as { play?: { kind?: string }; inputs?: { kind?: string }; subject?: string; reached?: number };
+  switch (res.type) {
+    case 'walk': return 'BB';
+    case 'ibb': return 'IBB';
+    case 'hbp': return 'HBP';
+    case 'ci': return 'CI';
+    case 'strikeout': return p.play?.kind ?? 'K';
+    case 'out': return 'OUT';
+    case 'homerun': return 'HR';
+    case 'hit': return p.reached ? `H${p.reached}` : null;
+    case 'play': return p.inputs?.kind ?? p.play?.kind ?? null;
+    case 'bint': return p.subject === 'runner@third' ? null : 'BI';
+  }
+  void prev;
+  return null;
+}
+
+// Where the runners went. Mirrors the rules for each kind of play, then defers
+// to the rules' own bases wherever the two disagree.
+export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
+  const before = runnersOf(prev);
+  const scored: (string | null)[] = [];
+  const stole: string[] = [], caught: string[] = [];
+  let r: Runners = { ...before };
+  const p = (res.payload ?? {}) as { from?: keyof Runners; kind?: string; inputs?: { dest?: Record<string, number | 'out'>; kind?: string }; reached?: number; runs?: number };
+  const kind = paKind(res, prev);
+
+  const forced = () => {
+    // Batter to first; each runner moves only if pushed.
+    const b = bases(prev);
+    if (b.first && b.second && b.third) scored.push(before.third);
+    const third = b.first && b.second ? before.second : b.third ? before.third : null;
+    const second = b.first ? before.first : b.second ? before.second : null;
+    r = { first: batter, second: b.first || b.second ? second : null, third: (b.first && b.second) || b.third ? third : null };
+  };
+  const advanceAll = (n: number, withBatter: boolean) => {
+    const out: Runners = { ...EMPTY };
+    BASES.forEach((k, i) => {
+      const who = before[k];
+      if (!bases(prev)[k]) return;
+      const to = i + 1 + n;
+      if (to >= 4) scored.push(who); else out[BASES[to - 1]] = who;
+    });
+    if (withBatter) { if (n >= 4) scored.push(batter); else out[BASES[n - 1]] = batter; }
+    r = out;
+  };
+
+  switch (res.type) {
+    case 'walk': case 'ibb': case 'hbp': case 'ci': forced(); break;
+    case 'hit': advanceAll(p.reached ?? 1, true); break;
+    case 'homerun': advanceAll(4, true); break;
+    case 'balk': case 'advance': advanceAll(1, false); break;
+    case 'play': {
+      const dest = p.inputs?.dest ?? {};
+      const out: Runners = { ...EMPTY };
+      const who = (k: string) => (k === 'batter' ? batter : before[k as keyof Runners]);
+      for (const [k, to] of Object.entries(dest)) {
+        if (to === 'out') continue;
+        if (to === 4) scored.push(who(k));
+        else if (to >= 1 && to <= 3) out[BASES[to - 1]] = who(k);
+      }
+      r = out;
+      // The rules take back runs scored on a third out by the batter or a force.
+      if ((p.runs ?? 0) === 0) scored.length = 0;
+      break;
+    }
+    case 'runner': {
+      const from = p.from;
+      if (!from) break;
+      const who = before[from];
+      r = { ...before, [from]: null };
+      if (p.kind === 'SB' || p.kind === 'ADV') {
+        const i = BASES.indexOf(from);
+        if (i === 2) scored.push(who); else r[BASES[i + 1]] = who;
+        if (p.kind === 'SB' && who) stole.push(who);
+      } else if (p.kind === 'CS' && who) caught.push(who);
+      break;
+    }
+    case 'bint':
+      if (!kind) r = { ...before, third: null };
+      break;
+  }
+
+  // A new half starts with nobody on.
+  if (next.half !== prev.half || next.inning !== prev.inning) r = { ...EMPTY };
+  // The rules' bases are the truth.
+  const truth = bases(next);
+  for (const k of BASES) if (!truth[k]) r[k] = null;
+  return { runners: r, scored, stole, caught };
+}
+
+// The rows a play adds to people's lines, and the runner map to store with it.
+export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => Side) {
+  const batSide = L.battingSide(prev) as EngineSide;
+  const fieldSide = L.fieldingSide(prev) as EngineSide;
+  const batter = batterBid(prev), pitcher = pitcherBid(prev);
+  const moved = moveRunners(prev, res, next, batter);
+  const rows = new Map<string, StatRow>();
+  const add = (side: EngineSide, bid: string | null, k: StatKey, n = 1) => {
+    if (!bid || !n) return;
+    const key = `${side}:${bid}`;
+    const row = rows.get(key) ?? { side: sides(side), bid };
+    row[k] = (row[k] ?? 0) + n;
+    rows.set(key, row);
+  };
+  if (NO_STATS.has(res.type)) return { rows: [], runners: moved.runners };
+
+  const scoreKey = batSide === 'home' ? 'home_score' : 'away_score';
+  const runs = Math.max(0, (Number(next[scoreKey]) || 0) - (Number(prev[scoreKey]) || 0));
+  const halfOver = next.half !== prev.half || next.inning !== prev.inning;
+  const outs = halfOver ? Math.max(0, 3 - (prev.outs | 0)) : Math.max(0, (next.outs | 0) - (prev.outs | 0));
+  const pitchesOf = (g: G) => Number(((g.state?.pitches as Record<string, number> | undefined) ?? {})[fieldSide]) || 0;
+  const pitches = Math.max(0, Math.min(1, pitchesOf(next) - pitchesOf(prev)));
+
+  // The pitcher.
+  add(fieldSide, pitcher, 'p_pitches', pitches);
+  add(fieldSide, pitcher, 'p_outs', Math.min(3, outs));
+  add(fieldSide, pitcher, 'p_r', Math.min(4, runs));
+  add(fieldSide, pitcher, 'p_er', Math.min(4, runs));
+  if (res.type === 'balk') add(fieldSide, pitcher, 'p_bk');
+
+  // The batter, when the play ended the plate appearance.
+  const kind = paKind(res, prev);
+  if (kind) {
+    const b = (k: StatKey, n = 1) => add(batSide, batter, k, n);
+    const p = (k: StatKey) => add(fieldSide, pitcher, k);
+    b('b_pa'); p('p_bf');
+    const atBat = !['BB', 'IBB', 'HBP', 'CI', 'SF', 'SAC'].includes(kind);
+    if (atBat) b('b_ab');
+    switch (kind) {
+      case 'BB': case 'IBB': b('b_bb'); p('p_bb'); break;
+      case 'HBP': b('b_hbp'); p('p_hbp'); break;
+      case 'K': case 'KL': case 'K3': b('b_so'); p('p_so'); if (kind === 'KL') b('b_kl'); break;
+      case 'H1': b('b_h'); p('p_h'); break;
+      case 'H2': b('b_h'); b('b_2b'); p('p_h'); break;
+      case 'H3': b('b_h'); b('b_3b'); p('p_h'); break;
+      case 'HR': b('b_h'); b('b_hr'); p('p_h'); break;
+      case 'E': b('b_roe'); break;
+      case 'FC': b('b_fc'); break;
+      case 'SF': b('b_sf'); break;
+      case 'SAC': b('b_sac'); break;
+    }
+    // No RBI on an error or a double play.
+    if (kind !== 'E' && kind !== 'DP') b('b_rbi', Math.min(4, runs));
+  }
+
+  // The runners.
+  for (const who of moved.scored) add(batSide, who, 'b_r');
+  for (const who of moved.stole) add(batSide, who, 'b_sb');
+  for (const who of moved.caught) add(batSide, who, 'b_cs');
+
+  return { rows: [...rows.values()], runners: moved.runners };
+}
+
+// Run a tap through the rules and the stats together: the patch to store
+// (with the runner map folded into its state) and the rows to add.
+export function record(prev: G, res: Res | null, sides: (e: EngineSide) => Side) {
+  if (!res || !res.patch || !Object.keys(res.patch).length) return null;
+  const stamped = L.stamp(res, prev) as Res;
+  const next = { ...prev, ...stamped.patch } as G;
+  const { rows, runners } = scorePlay(prev, stamped, next, sides);
+  // Who was pitching for each side when this was written, so a pitching
+  // change made on the lineup screen can be noticed on the pad (pitcherChange).
+  const pitcherBid = { home: next.lineups.home?.positions?.P ?? null, away: next.lineups.away?.positions?.P ?? null };
+  const state = { ...((next.state as object) ?? {}), runners, pitcherBid };
+  const patch = { ...stamped.patch, state };
+  return { res: stamped, patch, rows, next: { ...next, state } as G };
+}
+
+// The one-line "Last" text for the pad.
+const COUNT_TYPES: Record<string, string> = { ball: 'Ball', strike: 'Strike', foul: 'Foul' };
+export function lastPlayText(res: Res, prev: G, next: G) {
+  if (COUNT_TYPES[res.type]) return `${COUNT_TYPES[res.type]} · ${next.balls | 0}-${next.strikes | 0}`;
+  const pl = (res.payload as { play?: { kind: string; code?: string } } | undefined)?.play;
+  let t = res.text || (pl && (L.PLAY_LABEL as Record<string, string>)[pl.kind]
+    ? (L.PLAY_LABEL as Record<string, string>)[pl.kind] + (pl.code && pl.kind !== 'K3' ? ` ${pl.code}` : '') : '');
+  if (!t) t = ({ walk: 'Walk', run: 'Run scored', base: 'Runner moved', advance: 'Runners advanced', clear: 'Bases cleared',
+    endhalf: 'Half-inning ended', batter: 'Next batter', end_game: 'Game ended', reopen_game: 'Game reopened' } as Record<string, string>)[res.type] ?? '';
+  if (!t && res.type.startsWith('adj')) t = 'Corrected';
+  const scoreKey = L.battingSide(prev) === 'home' ? 'home_score' : 'away_score';
+  const runs = Math.max(0, (Number(next[scoreKey]) || 0) - (Number(prev[scoreKey]) || 0));
+  if (runs && !/run/i.test(t)) t += ` · ${runs} run${runs > 1 ? 's' : ''}`;
+  if (next.half !== prev.half) t += ' · side retired';
+  return t;
+}
+
+// A pitcher changed on the lineup screen since the last play: the rules move
+// the pitch count over (the new pitcher starts from his own count). One side
+// at a time; null when nothing changed or the game has not started.
+export function pitcherChange(g: G): Res | null {
+  const seen = (g.state?.pitcherBid as Record<EngineSide, string | null> | undefined);
+  if (!seen) return null;
+  for (const side of ['home', 'away'] as const) {
+    const now = g.lineups[side]?.positions?.P ?? null;
+    if (now !== (seen[side] ?? null)) {
+      const r = L.onPitcherChange(g, side, seen[side] ?? null, now) as Res | null;
+      return r ?? { type: 'pitcher', patch: { state: { ...g.state } }, payload: { inputs: { side, from: seen[side] ?? null, to: now } } };
+    }
+  }
+  return null;
+}
+
+// "1-3, 2B, BB": a hitter's game so far, the way GameChanger writes it.
+export function tonight(line: Partial<Record<StatKey, number>> | undefined) {
+  if (!line || !line.b_pa) return '';
+  const parts = [`${line.b_h ?? 0}-${line.b_ab ?? 0}`];
+  const n = (k: StatKey, label: string) => { const v = line[k] ?? 0; if (v) parts.push(v > 1 ? `${v} ${label}` : label); };
+  n('b_hr', 'HR'); n('b_3b', '3B'); n('b_2b', '2B'); n('b_rbi', 'RBI'); n('b_bb', 'BB'); n('b_hbp', 'HBP'); n('b_so', 'K'); n('b_sb', 'SB');
+  return parts.join(', ');
+}
+
+// The rules' onPlay, typed: a fielder may be named or not.
+export const onPlay = L.onPlay as unknown as (g: G, p: { kind: string; pos: string | null; dest: Record<string, number | 'out'> }) => Res | null;
