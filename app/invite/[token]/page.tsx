@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { acceptInvite } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { getUserId } from '@/lib/data';
-import { inkOn } from '@/lib/format';
+import { Slab } from '@/components/TeamBrand';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { ROLE_CAN, ROLE_LABEL, type Role } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Team invite', robots: { index: false } };
 
-type Preview = { team_name: string; team_abbr: string; team_color: string; age_group: string | null; role: Role; state: 'open' | 'used' | 'expired' | 'full' };
+type Preview = { team_name: string; display_name: string; team_color: string; team_color2: string; logo_url: string | null; age_group: string | null; role: Role; state: 'open' | 'used' | 'expired' | 'full' };
 const CLOSED: Record<Exclude<Preview['state'], 'open'>, string> = {
   used: 'This invite link was already used. Ask the organizer for a new one.',
   expired: 'This invite link has expired. Ask the organizer for a new one.',
@@ -37,9 +37,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           </>
         ) : (
           <>
-            <div className="next-slab slab" style={{ '--team': pv.team_color, '--team-ink': inkOn(pv.team_color), borderRadius: 16 } as React.CSSProperties}>
-              <span className="disp">{pv.team_abbr}</span>
-              <small>{pv.team_name}{pv.age_group ? ` ${pv.age_group}` : ''}</small>
+            <div style={{ borderRadius: 16, overflow: 'hidden' }}>
+              <Slab brand={{ name: pv.team_name, display: pv.display_name, color: pv.team_color, color2: pv.team_color2, logo: pv.logo_url }}
+                sub={`${pv.team_name}${pv.age_group ? ` ${pv.age_group}` : ''}`} />
             </div>
             <span className="eyebrow gold">You are invited as</span>
             <h1 className="disp h1">{ROLE_LABEL[pv.role]}</h1>

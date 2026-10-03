@@ -11,7 +11,6 @@ import { SeasonView } from '@/components/views/SeasonView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { StaffView } from '@/components/views/StaffView';
 import { TodayView } from '@/components/views/TodayView';
-import { inkOn } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } from '@/lib/types';
 
@@ -19,7 +18,7 @@ import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } 
 // /dev/kit?v=roster (today, roster, player, staff, season, settings), and
 // &role=coach to see a seat that cannot edit. Development only. The forms are
 // real, so submitting one here fails at the first query; it is for looking.
-const team: Team = { id: 't1', slug: 'blue-steel-14u', name: 'Blue Steel', abbr: 'STEEL', color: '#2857b5', logo_url: null, age_group: '14U' };
+const baseTeam: Team = { id: 't1', slug: 'blue-steel-14u', name: 'Blue Steel Baseball', display_name: 'Blue Steel', abbr: 'STEEL', color: '#2857b5', color2: '#e0a92a', palette: ['#2857b5', '#e0a92a', '#ffffff'], logo_url: null, age_group: '14U' };
 const season: Season = { id: 's1', team_id: 't1', name: 'Fall 2026', starts_on: '2026-09-05', ends_on: '2026-11-15', is_current: true, game_innings: 7 };
 const seasons: Season[] = [season, { id: 's2', team_id: 't1', name: 'Spring 2026', starts_on: null, ends_on: null, is_current: false, game_innings: 7 }];
 const P = (id: number, number: string, first_name: string, last_name: string, positions: Position[], bats: Player['bats'], throws: Player['throws'], active = true): Player =>
@@ -50,20 +49,23 @@ const stats: SeasonLine[] = [
   L(6, 11, 35, 8, 2, 0, 4, 2, 11, 3), L(9, 10, 25, 6, 1, 0, 4, 3, 6, 1, { p_g: 4, p_gs: 2, p_outs: 29, p_bf: 48, p_pitches: 170, p_h: 12, p_r: 9, p_er: 7, p_bb: 6, p_so: 14 }),
 ];
 const game: Game = { id: 'g1', team_id: 't1', season_id: 's1', counts_for_stats: true, opponent_team_id: 'o1', opponent_name: 'River 14U',
-  opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {} };
+  opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {},
+  opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U' } };
 const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r } = await searchParams;
+  const { v = 'today', role: r, logo } = await searchParams;
+  // &logo=1 gives the team a made-up crest, to see every screen with a logo.
+  const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
   const base = `/t/${team.slug}`;
   const at = v === 'today' ? base : `${base}/${v}`;
   const tabs = <div className="page-top" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} staff={4} at={at} /></div>;
   return (
-    <div className="shell has-tabs" style={{ '--team': team.color, '--team-ink': inkOn(team.color) } as React.CSSProperties}>
+    <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
       <TeamHeader team={team} role={role} season={season} />
       {v === 'today' && <TodayView team={team} role={role} players={11} staff={4} season={season} stats={stats} roster={players} game={game} lineups={{ us: lineup }} />}
       {v === 'today-empty' && <TodayView team={team} role={role} players={11} staff={4} season={season} />}

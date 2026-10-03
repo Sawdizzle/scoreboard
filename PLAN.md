@@ -64,6 +64,8 @@ Each stage ends with a checklist to run before the next one starts.
    - **2a, built:** GameChanger season import, season stats, stats on Player, Season, Roster and Today.
    - **2b, built:** games (Pressbox opponents or typed names), schedule, Today's next game, lineup editor
      (batting order, field positions that trade on a clash, bench, players typed in at the field).
+   - **Team brand, built** (asked for before 2c): logo upload to Storage, palette read from the logo,
+     primary and accent colours, a display name of up to 24 characters, one look for teams everywhere.
    - **2c:** the pad; every play adds to the same season stats.
 
    Original scope — New Game picks two teams and their rosters load; lineup and field

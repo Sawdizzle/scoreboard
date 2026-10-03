@@ -37,8 +37,13 @@ export type Team = {
   id: string;
   slug: string;
   name: string;
+  // What screens and the scorebug show; up to 24 characters.
+  display_name: string;
+  // Up to 6, for the tightest spots only (a line-score row).
   abbr: string;
   color: string;
+  color2: string;
+  palette: string[];
   logo_url: string | null;
   age_group: string | null;
 };
@@ -86,6 +91,8 @@ export type Game = {
   venue: string | null;
   status: 'scheduled' | 'live' | 'final';
   live: Record<string, unknown>;
+  // The opponent's own team row, when they are on Pressbox.
+  opponent?: Team | null;
 };
 
 // A lineup, in the shape Scoreboard's rules engine (lib/rules) works on. `bid`

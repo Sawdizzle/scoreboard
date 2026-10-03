@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { DateTimeField } from '@/components/LocalTime';
-import { inkOn } from '@/lib/format';
+import { TeamMark, brandOf } from '@/components/TeamBrand';
 import type { Game, Season, Team } from '@/lib/types';
 
 // Who, where, when, and whether it counts. `opponent` is a team picked from
@@ -14,7 +14,7 @@ export function GameFields({ seasons, game, opponent, changeHref }: {
       {opponent ? (
         <div className="card seat">
           <input type="hidden" name="opponent_team_id" value={opponent.id} />
-          <span className="crest" style={{ '--team': opponent.color, '--team-ink': inkOn(opponent.color), fontSize: opponent.abbr.length > 4 ? 13 : 19 } as React.CSSProperties}>{opponent.abbr}</span>
+          <TeamMark brand={brandOf(opponent)} />
           <span className="row-main">
             <span className="row-title">{opponent.name}{opponent.age_group && <small>{opponent.age_group}</small>}</span>
             <span className="row-meta">On Pressbox · their roster loads into the lineup</span>
@@ -22,14 +22,13 @@ export function GameFields({ seasons, game, opponent, changeHref }: {
           {changeHref && <Link href={changeHref} className="link">Change</Link>}
         </div>
       ) : (
-        <div className="field-row" style={{ gridTemplateColumns: '1fr 110px' }}>
+        <div className="field-row" style={{ gridTemplateColumns: '1fr 84px' }}>
           <label className="field"><span>Opponent</span>
             <input className="input" name="opponent_name" defaultValue={game?.opponent_team_id ? '' : game?.opponent_name} maxLength={60} required autoComplete="off" />
           </label>
-          <label className="field"><span>Scorebug</span>
-            <input className="input" name="opponent_abbr" defaultValue={game?.opponent_team_id ? '' : game?.opponent_abbr} maxLength={6} autoComplete="off" autoCapitalize="characters" placeholder="Auto" />
+          <label className="field"><span>Colour</span>
+            <input className="input" type="color" name="opponent_color" defaultValue={game?.opponent_color ?? '#7a8794'} />
           </label>
-          <input type="hidden" name="opponent_color" value={game?.opponent_color ?? '#7a8794'} />
         </div>
       )}
       <fieldset>

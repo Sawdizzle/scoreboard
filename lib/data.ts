@@ -4,7 +4,7 @@ import { createClient, supabaseConfigured } from './supabase/server';
 import type { SeasonLine } from './stats';
 import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
-const TEAM_COLS = 'id, slug, name, abbr, color, logo_url, age_group';
+export const TEAM_COLS = 'id, slug, name, display_name, abbr, color, color2, palette, logo_url, age_group';
 const PLAYER_COLS = 'id, team_id, first_name, last_name, number, bats, throws, positions, public_name, active';
 const SEASON_COLS = 'id, team_id, name, starts_on, ends_on, is_current, game_innings';
 
@@ -89,14 +89,14 @@ export async function playerStats(db: Db, playerId: string) {
   return (data ?? []) as SeasonLine[];
 }
 
-const GAME_COLS = 'id, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live';
+const GAME_COLS = `id, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS})`;
 
 // A team's games, soonest first; games with no time yet sort last.
 export async function listGames(db: Db, teamId: string, seasonId?: string) {
   let q = db.from('games').select(GAME_COLS).eq('team_id', teamId);
   if (seasonId) q = q.eq('season_id', seasonId);
   const { data } = await q.order('starts_at', { ascending: true, nullsFirst: false });
-  return (data ?? []) as Game[];
+  return (data ?? []) as unknown as Game[];
 }
 export async function getGame(db: Db, teamId: string, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;

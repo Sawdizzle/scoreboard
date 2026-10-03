@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { createTeam } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { ChevronLeft } from '@/components/icons';
-import { TeamFields } from '@/components/TeamFields';
 import { requireUserId } from '@/lib/data';
 import { guessSeason } from '@/lib/format';
 
 export const metadata: Metadata = { title: 'New team' };
 
+// A name to start; the logo, colours and display name come on the next screen.
 export default async function NewTeam() {
   await requireUserId('/t/new');
   return (
@@ -21,11 +21,18 @@ export default async function NewTeam() {
       </div>
       <div className="page">
         <ActionForm action={createTeam} className="form">
-          <TeamFields />
-          <label className="field"><span>First season</span>
-            <input className="input" name="season" defaultValue={guessSeason()} maxLength={40} autoComplete="off" />
+          <label className="field"><span>Team name</span>
+            <input className="input" name="name" maxLength={60} required autoComplete="off" placeholder="Blue Steel Baseball" />
           </label>
-          <p className="hint">You take the first of five staff seats, as the organizer. Players and the other seats come next.</p>
+          <div className="field-row">
+            <label className="field"><span>Age group</span>
+              <input className="input" name="age_group" maxLength={12} placeholder="14U" autoComplete="off" />
+            </label>
+            <label className="field"><span>First season</span>
+              <input className="input" name="season" defaultValue={guessSeason()} maxLength={40} autoComplete="off" />
+            </label>
+          </div>
+          <p className="hint">You take the first of five staff seats, as the organizer. Next: your logo and colours.</p>
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create team</Submit>
         </ActionForm>
       </div>

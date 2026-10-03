@@ -3,7 +3,7 @@ import { deletePlayer, updatePlayer } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { ChevronLeft } from '@/components/icons';
 import { PlayerFields } from '@/components/PlayerFields';
-import { fullName, publicName, shortDate } from '@/lib/format';
+import { fullName, inkOn, publicName, shortDate } from '@/lib/format';
 import { batting, hasPitching, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
 import { canEditTeam, type Player, type PublicName, type Role, type Season, type Team } from '@/lib/types';
 
@@ -23,7 +23,9 @@ export function PlayerView({ team, role, player: p, lines = [], seasons = [], se
   const facts = [p.number && `No. ${p.number}`, p.positions.join(' · '), p.bats && `Bats ${p.bats}`, p.throws && `Throws ${p.throws}`].filter(Boolean);
   return (
     <>
-      <div className="hero slab">
+      <div className="hero slab2" style={{ '--c': team.color, '--c2': team.color2, '--ink': inkOn(team.color) } as React.CSSProperties}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the team logo, small */}
+        {team.logo_url && <img className="hero-logo" src={team.logo_url} alt="" />}
         {p.number && <span className="hero-num" aria-hidden="true">{p.number}</span>}
         <Link href={`/t/${team.slug}/roster`} aria-label="Back to roster" className="back"><ChevronLeft /></Link>
         <span className="eyebrow">{facts.length ? facts.join(' · ') : team.name}{!p.active && ' · Not active'}</span>

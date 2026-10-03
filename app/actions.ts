@@ -10,6 +10,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
+import { abbrFor } from '@/lib/format';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
 import { POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Position, type PublicName, type Role } from '@/lib/types';
@@ -73,41 +74,82 @@ export async function signOut() {
 }
 
 // ---- Teams ------------------------------------------------------------------
-function teamFields(fd: FormData) {
-  const name = str(fd, 'name'), abbr = str(fd, 'abbr').toUpperCase(), color = str(fd, 'color'), age = str(fd, 'age_group');
-  if (!name) return { error: 'Give the team a name.' } as const;
-  if (name.length > 60) return { error: 'Keep the team name to 60 characters.' } as const;
-  if (!abbr || abbr.length > 6) return { error: 'The abbreviation is 1 to 6 characters. It is what the scorebug shows.' } as const;
-  if (!/^#[0-9a-f]{6}$/i.test(color)) return { error: 'Pick a team colour.' } as const;
-  if (age.length > 12) return { error: 'Keep the age group to 12 characters, like 14U.' } as const;
-  return { name, abbr, color, age } as const;
-}
-
+// A new team needs only a name: the look comes next, on the brand screen,
+// where the logo can set it.
 export async function createTeam(_: FormState, fd: FormData): Promise<FormState> {
   if (!supabaseConfigured) return NOT_CONNECTED;
-  const f = teamFields(fd);
-  if ('error' in f) return f;
-  const season = str(fd, 'season');
+  const name = str(fd, 'name'), age = str(fd, 'age_group'), season = str(fd, 'season');
+  if (!name) return { error: 'Give the team a name.' };
+  if (name.length > 60) return { error: 'Keep the team name to 60 characters.' };
+  if (age.length > 12) return { error: 'Keep the age group to 12 characters, like 14U.' };
   if (season.length > 40) return { error: 'Keep the season name to 40 characters.' };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('create_team', {
-    p_name: f.name, p_abbr: f.abbr, p_color: f.color, p_age_group: f.age || null, p_season: season || null,
+    p_name: name, p_abbr: abbrFor(name) || 'TEAM', p_color: '#2f63cc', p_age_group: age || null, p_season: season || null,
   });
   if (error) return { error: say(error) };
   revalidatePath('/t');
-  redirect(`/t/${(data as { slug: string }).slug}`);
+  redirect(`/t/${(data as { slug: string }).slug}/settings?new=1`);
 }
 
-export async function updateTeam(slug: string, _: FormState, fd: FormData): Promise<FormState> {
-  const f = teamFields(fd);
-  if ('error' in f) return f;
+const HEX = /^#[0-9a-f]{6}$/i;
+const LOGO_TYPES: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' };
+const LOGO_BUCKET = 'team-logos';
+
+// The brand screen: names, colours, palette, and the logo. The browser has
+// already shrunk the logo and read its colours; this checks all of it again,
+// stores the file under the team's own folder, and removes the one it replaces.
+export async function saveBrand(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const name = str(fd, 'name'), display = str(fd, 'display_name'), age = str(fd, 'age_group');
+  const color = str(fd, 'color'), color2 = str(fd, 'color2');
+  let abbr = str(fd, 'abbr').toUpperCase();
+  if (!name || name.length > 60) return { error: 'The team name is 1 to 60 characters.' };
+  if (!display || display.length > 24) return { error: 'The display name is 1 to 24 characters.' };
+  if (!abbr) abbr = abbrFor(display) || 'TEAM';
+  if (abbr.length > 6) return { error: 'The short code is up to 6 characters.' };
+  if (age.length > 12) return { error: 'Keep the age group to 12 characters, like 14U.' };
+  if (!HEX.test(color) || !HEX.test(color2)) return { error: 'Pick a primary and an accent colour.' };
+  let palette: string[] = [];
+  try { const p = JSON.parse(String(fd.get('palette') ?? '[]')); if (Array.isArray(p)) palette = p.filter((x) => typeof x === 'string' && HEX.test(x)).slice(0, 8); } catch { /* keep [] */ }
+
   const { supabase, team } = await loadTeam(slug);
+  let logo_url = team.logo_url;
+  const file = fd.get('logo');
+  let uploaded: string | null = null;
+  if (file instanceof File && file.size > 0) {
+    const ext = LOGO_TYPES[file.type];
+    if (!ext) return { error: 'A logo is a PNG, WebP or JPEG image.' };
+    if (file.size > 1024 * 1024) return { error: 'That logo is over 1 MB even after shrinking. Try a smaller image.' };
+    const path = `${team.id}/${crypto.randomUUID()}.${ext}`;
+    const up = await supabase.storage.from(LOGO_BUCKET).upload(path, file, { contentType: file.type, cacheControl: '31536000', upsert: false });
+    if (up.error) return { error: 'The logo did not upload. Only an organizer or head coach can change it.' };
+    uploaded = path;
+    logo_url = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+  } else if (fd.get('remove_logo') === '1') {
+    logo_url = null;
+  }
+
   const { data, error } = await supabase.from('teams')
-    .update({ name: f.name, abbr: f.abbr, color: f.color, age_group: f.age || null }).eq('id', team.id).select('id');
-  if (error) return { error: say(error) };
-  if (!data.length) return NO_SEAT;
+    .update({ name, display_name: display, abbr, age_group: age || null, color, color2, palette, logo_url })
+    .eq('id', team.id).select('id');
+  if (error || !data.length) {
+    if (uploaded) await supabase.storage.from(LOGO_BUCKET).remove([uploaded]);
+    return error ? { error: say(error) } : NO_SEAT;
+  }
+  // The old file goes once the team points at the new one (or at none).
+  const old = team.logo_url && team.logo_url !== logo_url ? logoPath(team.logo_url, team.id) : null;
+  if (old) await supabase.storage.from(LOGO_BUCKET).remove([old]);
   revalidatePath(`/t/${slug}`, 'layout');
+  revalidatePath('/t');
   return { ok: 'Saved.' };
+}
+// The storage path inside our bucket, only for this team's own folder.
+function logoPath(url: string, teamId: string) {
+  const marker = `/storage/v1/object/public/${LOGO_BUCKET}/`;
+  const i = url.indexOf(marker);
+  if (i < 0) return null;
+  const path = decodeURIComponent(url.slice(i + marker.length));
+  return path.startsWith(`${teamId}/`) ? path : null;
 }
 
 export async function deleteTeam(slug: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -366,8 +408,7 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
   }
   if (!name) return { error: 'Who are you playing? Pick a team or type a name.' } as const;
   if (name.length > 60) return { error: 'Keep the opponent\'s name to 60 characters.' } as const;
-  if (!abbr) abbr = name.split(/\s+/).pop()!.slice(0, 6).toUpperCase();
-  if (abbr.length > 6) return { error: 'The opponent\'s scorebug name is up to 6 characters.' } as const;
+  if (!abbr || abbr.length > 6) abbr = abbrFor(name) || 'OPP';
   if (!/^#[0-9a-f]{6}$/i.test(color)) color = '#7a8794';
   const startsAt = str(fd, 'starts_at');
   if (startsAt && Number.isNaN(Date.parse(startsAt))) return { error: 'Pick the date and time again.' } as const;

@@ -4,8 +4,8 @@ import { createGame } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
 import { ChevronLeft } from '@/components/icons';
-import { findTeams, listSeasons, loadTeam } from '@/lib/data';
-import { inkOn } from '@/lib/format';
+import { TEAM_COLS, findTeams, listSeasons, loadTeam } from '@/lib/data';
+import { TeamMark, brandOf } from '@/components/TeamBrand';
 import { canRunGames, type Team } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'New game' };
@@ -22,7 +22,7 @@ export default async function NewGame({ params, searchParams }: {
   const results = q ? await findTeams(supabase, q, team.id) : [];
   let opponent: Team | null = null;
   if (opp && /^[0-9a-f-]{36}$/i.test(opp) && opp !== team.id) {
-    const { data } = await supabase.from('teams').select('id, slug, name, abbr, color, logo_url, age_group').eq('id', opp).maybeSingle<Team>();
+    const { data } = await supabase.from('teams').select(TEAM_COLS).eq('id', opp).maybeSingle<Team>();
     opponent = data;
   }
   const base = `/t/${slug}/games/new`;
@@ -48,7 +48,7 @@ export default async function NewGame({ params, searchParams }: {
               {results.length === 0 && <p className="sub" style={{ padding: '0 4px' }}>No team called &ldquo;{q}&rdquo; on Pressbox.</p>}
               {results.map((t) => (
                 <Link key={t.id} href={`${base}?opp=${t.id}`} className="card seat">
-                  <span className="crest" style={{ '--team': t.color, '--team-ink': inkOn(t.color), fontSize: t.abbr.length > 4 ? 13 : 19 } as React.CSSProperties}>{t.abbr}</span>
+                  <TeamMark brand={brandOf(t)} />
                   <span className="row-main">
                     <span className="row-title">{t.name}{t.age_group && <small>{t.age_group}</small>}</span>
                     <span className="row-meta">On Pressbox · roster loads itself</span>

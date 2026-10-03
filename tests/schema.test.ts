@@ -57,7 +57,7 @@ test('only an organizer makes invite links; the preview is public and says littl
   await fails(as('stranger', `insert into staff_invites (team_id, role) values ($1, 'coach')`, [teamId]), /row-level security/);
   const [inv] = await as<{ token: string }>('owner', `insert into staff_invites (team_id, role) values ($1, 'head_coach') returning token`, [teamId]);
   const [pv] = await as(null, `select * from invite_preview($1)`, [inv.token]);
-  assert.deepEqual(pv, { team_name: 'Blue Steel', team_abbr: 'STEEL', team_color: '#2f63cc', age_group: '14U', role: 'head_coach', state: 'open' });
+  assert.deepEqual(pv, { team_name: 'Blue Steel', display_name: 'Blue Steel', team_color: '#2f63cc', team_color2: '#f2f6fc', logo_url: null, age_group: '14U', role: 'head_coach', state: 'open' });
   assert.equal((await as(null, `select * from invite_preview(gen_random_uuid())`)).length, 0);
   await fails(as(null, `select * from staff_invites`), /permission denied/);
   assert.equal((await as('stranger', `select * from staff_invites`)).length, 0);

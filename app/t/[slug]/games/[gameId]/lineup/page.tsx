@@ -51,8 +51,8 @@ export default async function LineupPage({ params, searchParams }: {
       <div className="h-row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 2 }}>
         <Link href={`/t/${slug}/games/${game.id}`} aria-label="Back to the game" className="icon-btn" style={{ border: 0, marginLeft: -10 }}><ChevronLeft /></Link>
         <nav className="seg" aria-label="Side" style={{ flex: 1 }}>
-          <Link href="?side=us" className="seg-item" aria-current={side === 'us' ? 'page' : undefined}>{team.abbr}</Link>
-          <Link href="?side=them" className="seg-item" aria-current={side === 'them' ? 'page' : undefined}>{game.opponent_abbr}</Link>
+          <Link href="?side=us" className="seg-item" aria-current={side === 'us' ? 'page' : undefined}>{team.display_name}</Link>
+          <Link href="?side=them" className="seg-item" aria-current={side === 'them' ? 'page' : undefined}>{game.opponent?.display_name ?? game.opponent_name}</Link>
         </nav>
       </div>
       <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets} canEdit={canRunGames(role)} />

@@ -5,7 +5,7 @@ import { ActionForm, Submit } from '@/components/ActionForm';
 import { createClient } from '@/lib/supabase/server';
 import { ChevronRight, Plus } from '@/components/icons';
 import { myTeams, requireUserId } from '@/lib/data';
-import { inkOn } from '@/lib/format';
+import { TeamMark, brandOf } from '@/components/TeamBrand';
 import { ROLE_LABEL } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Your teams' };
@@ -32,9 +32,9 @@ export default async function Teams() {
           <div className="stack">
             {teams.map(({ team, role }) => (
               <Link key={team.id} href={`/t/${team.slug}`} className="card seat">
-                <span className="crest" style={{ '--team': team.color, '--team-ink': inkOn(team.color), fontSize: team.abbr.length > 4 ? 13 : 19 } as React.CSSProperties}>{team.abbr}</span>
+                <TeamMark brand={brandOf(team)} size={50} />
                 <span className="row-main">
-                  <span className="row-title">{team.name}{team.age_group && <small>{team.age_group}</small>}</span>
+                  <span className="row-title">{team.display_name}{team.age_group && <small>{team.age_group}</small>}</span>
                   <span className="row-meta">{ROLE_LABEL[role]}</span>
                 </span>
                 <span className="chev"><ChevronRight /></span>

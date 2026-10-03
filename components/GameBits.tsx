@@ -1,23 +1,10 @@
 import Link from 'next/link';
 import { Check, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
-import { inkOn } from '@/lib/format';
 import { lineupStatus } from '@/lib/lineup';
-import type { Game, Lineup, Team } from '@/lib/types';
+import type { Game, Lineup } from '@/lib/types';
 
-// Away on the left, home on the right, the way a scoreboard reads.
-export function Matchup({ team, game }: { team: Team; game: Game }) {
-  const us = { abbr: team.abbr, name: `${team.name}${team.age_group ? ` ${team.age_group}` : ''}`, color: team.color };
-  const them = { abbr: game.opponent_abbr, name: game.opponent_name, color: game.opponent_color };
-  const [away, home] = game.is_home ? [them, us] : [us, them];
-  const slab = (t: typeof us, label: string) => (
-    <div style={{ '--c': t.color, '--ink': inkOn(t.color) } as React.CSSProperties}>
-      <span className="disp">{t.abbr}</span>
-      <small>{label} · {t.name}</small>
-    </div>
-  );
-  return <div className="matchup">{slab(away, 'Away')}{slab(home, 'Home')}</div>;
-}
+export { Matchup } from '@/components/TeamBrand';
 
 // "Lineup 9/9 · Field 9/9", or what is still missing.
 export function Readiness({ lineup, label = 'Lineup' }: { lineup?: Lineup; label?: string }) {

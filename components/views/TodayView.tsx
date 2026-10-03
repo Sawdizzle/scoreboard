@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Check, ChevronRight } from '@/components/icons';
 import { leaders } from '@/components/StatTables';
 import { Matchup, Readiness } from '@/components/GameBits';
+import { Slab, brandOf } from '@/components/TeamBrand';
 import { LocalTime } from '@/components/LocalTime';
 import { fullName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
@@ -47,10 +48,7 @@ export function TodayView({ team, role, players, staff, season, stats = [], rost
             <span className="eyebrow gold">Next game</span>
             <span className="sub">{season?.name}</span>
           </div>
-          <div className="next-slab slab">
-            <span className="disp">{team.abbr}</span>
-            <small>{team.name}{team.age_group ? ` ${team.age_group}` : ''}</small>
-          </div>
+          <Slab brand={brandOf(team)} sub={`${team.name}${team.age_group ? ` ${team.age_group}` : ''}`} />
           <div className="next-foot">
             <p className="sub">Nothing on the schedule.</p>
             {canRunGames(role) && <Link href={`${base}/games/new`} className="btn btn-primary">New game</Link>}
