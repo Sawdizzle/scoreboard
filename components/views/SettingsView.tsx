@@ -9,10 +9,17 @@ import { canEditTeam, canManageSeats, type Role, type Team } from '@/lib/types';
 
 // streamUrl is the team's Browser Source link, for any seat: whoever runs the
 // broadcast sets up OBS, and that is often not the organizer.
-export function SettingsView({ team, role, welcome, streamUrl, look }: { team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look }) {
+export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl }: { team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string }) {
   return (
     <div className="page">
       <BrandEditor team={team} canEdit={canEditTeam(role)} welcome={welcome} />
+      {publicUrl && (
+        <section className="card pad">
+          <h2>Public team page</h2>
+          <p className="hint">Schedule, live scores, box scores, roster and season stats, for families and fans. No account needed. Players appear under the name chosen on their player screen.</p>
+          <CopyLink url={publicUrl} label="Public team page link" />
+        </section>
+      )}
       {streamUrl && (
         <section className="card pad">
           <h2>Stream scorebug</h2>
