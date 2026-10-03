@@ -451,3 +451,29 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pdest.on { background: var(--steel); border-color: var(--steel); color: var(--on-steel); }
 .pstep { display: grid; grid-template-columns: 1fr 44px 70px 44px; align-items: center; gap: 8px; min-height: 48px; }
 .pstep span { font-size: 14.5px; font-weight: 600; } .pstep b { text-align: center; font-family: var(--disp); font-size: 24px; }
+
+/* ---- Public pages --------------------------------------------------------- */
+.pub-live { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-color: var(--gold); }
+.pub-live b { font-family: var(--disp); font-size: 30px; text-transform: uppercase; line-height: 1; }
+.pub-result { font-family: var(--disp); font-weight: 700; font-size: 20px; color: var(--soft); white-space: nowrap; }
+.pub-result.live { color: var(--gold); }
+.pub-score { overflow: hidden; }
+.pub-sides { display: grid; grid-template-columns: 1fr 1fr; }
+.pub-sides > div { position: relative; min-width: 0; }
+.pub-sides > div > b { display: block; padding: 10px 0 4px; text-align: center; font-family: var(--disp); font-weight: 700; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.pub-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; padding: 8px 14px 14px; font-size: 14.5px; color: var(--soft); }
+.pub-state b { color: var(--chalk); }
+.pub-bases { display: inline-flex; align-items: flex-end; gap: 3px; height: 22px; padding: 0 4px; }
+.pub-bases i { width: 11px; height: 11px; transform: rotate(45deg); border: 1.5px solid var(--line-2); border-radius: 2px; }
+.pub-bases i.up { margin-bottom: 9px; }
+.pub-bases i.on { background: var(--gold); border-color: #ffe08a; }
+.pub-now { margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 14.5px; color: var(--soft); }
+.pub-now b { color: var(--chalk); }
+.pub-line th, .pub-line td { text-align: center; }
+.pub-line th, .pub-line td { padding-left: 2px; padding-right: 2px; min-width: 22px; }
+.pub-line .who { padding-left: 12px; }
+.pub-line .who > span { display: block; max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
+.pub-line td:last-child, .pub-line th:last-child { padding-right: 10px; }
+.pub-inn { flex: 0 0 44px; padding-left: 8px; border-left: 4px solid var(--c); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--body); }
+.pub-foot { text-align: center; font-size: 13px; color: var(--muted); }
+.stat-table .who > span { display: flex; align-items: center; gap: 8px; }

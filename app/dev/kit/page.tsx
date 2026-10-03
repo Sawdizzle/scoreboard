@@ -5,6 +5,8 @@ import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
 import { Stage } from '@/components/overlay/Stage';
 import type { CardKind, Feed, Look } from '@/lib/onair';
+import { LiveGame } from '@/components/public/LiveGame';
+import type { PublicGame } from '@/lib/public';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { TeamHeader } from '@/components/TeamHeader';
@@ -77,6 +79,23 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
       channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, card: null }} />;
   }
+  if (v === 'public-game') {
+    // The public game page, mid-game: /dev/kit?v=public-game (&status=final, scheduled).
+    const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: '' })), positions: { P: 'o0' } };
+    const pub: PublicGame = {
+      v: 'kit', team: { ...team, slug: team.slug }, opponent: { ...game.opponent!, slug: null }, season: { name: season.name, game_innings: 7 },
+      game: { id: 'g1', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9, starts_at: game.starts_at, venue: game.venue, counts_for_stats: true,
+        live: { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: false, second: true, third: false }, home_score: 2, away_score: 4,
+          home_hits: 4, away_hits: 6, home_errors: 0, away_errors: 1, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }],
+          state: { batIdx: { home: 1 }, pitches: { away: 58 } } } },
+      lineups: { us: lineup, them },
+      tonight: [{ side: 'us', bid: 'p1', b_pa: 2, b_ab: 1, b_bb: 1 }, { side: 'us', bid: 'p3', b_pa: 2, b_ab: 2, b_h: 1, b_rbi: 2 }, { side: 'us', bid: 'p5', p_outs: 12, p_bf: 19, p_h: 6, p_r: 4, p_er: 4, p_so: 5, p_pitches: 71 },
+        { side: 'them', bid: 'o0', b_pa: 2, b_ab: 2, b_h: 1, b_r: 1, p_outs: 13, p_bf: 17, p_h: 4, p_r: 2, p_er: 2, p_so: 4, p_pitches: 58 }],
+      pas: [{ side: 'them', bid: 'o0', inning: 1, kind: 'H1', code: '', rbi: 0 }, { side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null, rbi: 0 },
+        { side: 'us', bid: 'p3', inning: 2, kind: 'H2', code: '', rbi: 2 }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8', rbi: 0 }],
+    };
+    return <LiveGame initial={pub} />;
+  }
   if (v === 'overlay') {
     // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final.
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
@@ -112,7 +131,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} />}
       {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)} /></div>}
       {v === 'season-empty' && <SeasonView team={team} role={role} seasons={seasons} />}
-      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000" /></>}
+      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000" /></>}
       <TabBar slug={team.slug} at={at} />
     </div>
   );

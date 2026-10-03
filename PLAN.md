@@ -80,7 +80,9 @@ Each stage ends with a checklist to run before the next one starts.
    - **3b, built:** Scoreboard's eleven animated bugs as looks (Team look screen), fed the game and the
      stinger for each big play; team leaders and box score cards. Still to come from the canvas's On Air:
      lineup, defense, matchup, sponsor, mid-inning, moments.
-4. **Public** — team page, live game page, box score.
+4. **Public, built** — /team/<slug> (schedule and results, season stats, roster) and
+   /team/<slug>/game/<id> (live score, line score, both box scores, each time up). No account.
+   Players typed in at the field show by number only.
 5. **Bring it over** — the nine saved teams from Scoreboard. (The GameChanger CSV
    import moved up into 2a.)
 

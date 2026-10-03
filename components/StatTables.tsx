@@ -5,20 +5,16 @@ import type { Player } from '@/lib/types';
 
 // A season's batting and pitching, one row per player who did either. Sorted
 // the way a coach reads them: hitters by average, pitchers by innings.
-export function StatTables({ slug, lines, players, gameInnings }: {
-  slug: string; lines: SeasonLine[]; players: Player[]; gameInnings: number;
+// `players` need only an id, a number and a name; the public page passes
+// public names and no link (there is no public player page).
+export function StatTables({ slug, lines, players, gameInnings, link = true }: {
+  slug: string; lines: SeasonLine[]; players: Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>[]; gameInnings: number; link?: boolean;
 }) {
   const who = new Map(players.map((p) => [p.id, p]));
   const cell = (s: SeasonLine) => {
     const p = who.get(s.player_id);
-    return (
-      <td className="who">
-        <Link href={`/t/${slug}/player/${s.player_id}?s=${s.season_id}`}>
-          <span className="jersey">{p?.number || '–'}</span>
-          {p ? fullName(p) || `No. ${p.number}` : 'Removed player'}
-        </Link>
-      </td>
-    );
+    const body = <><span className="jersey">{p?.number || '–'}</span>{p ? fullName(p) || `No. ${p.number}` : 'Removed player'}</>;
+    return <td className="who">{link ? <Link href={`/t/${slug}/player/${s.player_id}?s=${s.season_id}`}>{body}</Link> : <span>{body}</span>}</td>;
   };
   const hitters = lines.filter(hasBatting)
     .map((s) => ({ s, b: batting(s) }))

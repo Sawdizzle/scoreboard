@@ -137,3 +137,17 @@ test('the feed carries short codes, our public roster, and the newest play until
   await t.as('scorer', `select undo_play($1, 2)`, [game]);
   assert.equal((await feed(token))!.last, null);
 });
+
+test('the public game: our players under their public names, typed-in guests by number only', async () => {
+  const pg = (have: string | null = null) => t.as<{ f: Feed | null }>(null, `select public_game($1, $2) f`, [game, have]).then((r) => r[0].f!);
+  const f = await pg();
+  assert.deepEqual(f.lineups.us.batters.map((b: Feed) => b.name), ['Johnny Vance', 'Ben O.', '']);
+  assert.deepEqual(f.lineups.them.batters, [{ bid: 'x1', num: '19', name: '' }]);
+  assert.equal(f.team.slug.startsWith('blue-steel'), true);
+  assert.equal(f.opponent.slug, null);
+  assert.equal(f.game.id, game);
+  assert.deepEqual(await pg(f.v), { v: f.v });
+  // The stream still names the guest: the scorer put him on it.
+  assert.equal((await feed(token))!.lineups.them.batters[0].name, 'Dane Kell');
+  assert.equal((await t.as(null, `select public_game('00000000-0000-4000-8000-000000000000') f`))[0].f, null);
+});
