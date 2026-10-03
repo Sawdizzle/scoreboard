@@ -25,7 +25,8 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const path = request.nextUrl.pathname;
-  if (!data?.claims && (path.startsWith('/t') || path.startsWith('/pad'))) {
+  // The staff side is /t and /pad. /team (the public pages) is not: match whole segments.
+  if (!data?.claims && /^\/(t|pad)(\/|$)/.test(path)) {
     const to = request.nextUrl.clone();
     to.pathname = '/sign-in';
     to.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
