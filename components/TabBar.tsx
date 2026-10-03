@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// Three places a team lives: today, the people, the season. Roster, Staff and
-// the team's own settings are all "Team".
+// Three places a team lives: today, the people, the season. Roster, Staff,
+// the team's own settings and its stream are all "Team".
 // `at` overrides the address, for the component sheet at /dev/kit.
 export function TabBar({ slug, at }: { slug: string; at?: string }) {
   const here = usePathname();
@@ -12,7 +12,7 @@ export function TabBar({ slug, at }: { slug: string; at?: string }) {
   const base = `/t/${slug}`;
   const tabs = [
     { href: base, label: 'Today', on: path === base },
-    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/staff', '/settings', '/player'].some((p) => path.startsWith(base + p)) },
+    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/staff', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)) },
     { href: `${base}/season`, label: 'Season', on: path.startsWith(`${base}/season`) },
   ];
   return (
@@ -33,8 +33,9 @@ export function TeamTabs({ slug, players, staff, at }: { slug: string; players: 
   const base = `/t/${slug}`;
   const tabs = [
     { href: `${base}/roster`, label: `Roster · ${players}`, on: path.startsWith(`${base}/roster`) },
-    { href: `${base}/staff`, label: `Staff · ${staff} of 5`, on: path.startsWith(`${base}/staff`) },
+    { href: `${base}/staff`, label: `Staff · ${staff}/5`, on: path.startsWith(`${base}/staff`) },
     { href: `${base}/settings`, label: 'Team', on: path.startsWith(`${base}/settings`) },
+    { href: `${base}/stream`, label: 'Stream', on: path.startsWith(`${base}/stream`) },
   ];
   return (
     <nav className="seg" aria-label="Team sections">

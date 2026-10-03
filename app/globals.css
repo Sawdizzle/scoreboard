@@ -495,3 +495,16 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .air-pos small { grid-column: 4; grid-row: 1 / span 3; padding-left: 10px; font-size: 13px; color: var(--body); }
 .air-pos.two { grid-template-columns: repeat(3, 56px) 1fr; }
 .air-pos.two small { grid-row: 1 / span 2; }
+/* ---- Stream setup ----------------------------------------------------------- */
+.stream-prev { position: sticky; top: 8px; z-index: 5; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-2);
+  background: linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); }
+.stream-prev iframe { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; border: 0; pointer-events: none; color-scheme: normal; transform-origin: 0 0; transform: scale(var(--k, 0.25)); }
+.stream-prev > span { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+.chips-row { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.chips-row::-webkit-scrollbar { display: none; }
+.chips-row .chip { flex: 0 0 auto; min-height: 38px; cursor: pointer; }
+.chips-row .chip.on { background: var(--chalk); border-color: var(--chalk); color: var(--on-steel); }
+/* Thirteen looks in one row to swipe, so the size controls stay near the preview. */
+.stream .looks { display: flex; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scrollbar-width: none; }
+.stream .looks::-webkit-scrollbar { display: none; }
+.stream .look { flex: 0 0 148px; width: 148px; min-width: 0; }

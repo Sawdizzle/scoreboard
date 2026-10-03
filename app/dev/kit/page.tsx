@@ -17,6 +17,7 @@ import { PlayerView } from '@/components/views/PlayerView';
 import { RosterView } from '@/components/views/RosterView';
 import { SeasonView } from '@/components/views/SeasonView';
 import { SettingsView } from '@/components/views/SettingsView';
+import { StreamSetup } from '@/components/stream/StreamSetup';
 import { StaffView } from '@/components/views/StaffView';
 import { TodayView } from '@/components/views/TodayView';
 import type { SeasonLine } from '@/lib/stats';
@@ -142,7 +143,9 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} />}
       {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)} /></div>}
       {v === 'season-empty' && <SeasonView team={team} role={role} seasons={seasons} />}
-      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000" /></>}
+      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" /></>}
+      {v === 'stream' && <>{tabs}<StreamSetup team={team} canLead={role !== 'coach'} streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000"
+        channel={{ look: 'pressbox', layout: null, qr: null, show_line: true, bug_text: 'Streamed by example.test', bug_url: 'https://example.test', sponsor_name: 'Dairy Barn', sponsor_line: 'Cold treats on Elm Street', sponsor_logo: null }} /></>}
       <TabBar slug={team.slug} at={at} />
     </div>
   );

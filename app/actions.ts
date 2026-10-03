@@ -505,7 +505,7 @@ export async function saveSponsor(slug: string, _: FormState, fd: FormData): Pro
   }
   const old = ch?.sponsor_logo && ch.sponsor_logo !== logo ? logoPath(ch.sponsor_logo, team.id) : null;
   if (old) await supabase.storage.from(LOGO_BUCKET).remove([old]);
-  revalidatePath(`/t/${slug}/settings`);
+  revalidatePath(`/t/${slug}/stream`);
   return { ok: name ? 'Sponsor saved.' : 'Sponsor removed.' };
 }
 
@@ -522,7 +522,7 @@ export async function saveStreamBug(slug: string, _: FormState, fd: FormData): P
   const { supabase, team } = await loadTeam(slug);
   const { error } = await supabase.rpc('set_stream_bug', { p_team: team.id, p_text: text, p_url: url });
   if (error) return { error: error.code === '42501' ? 'Only an organizer or head coach can set the channel bug.' : say(error) };
-  revalidatePath(`/t/${slug}/settings`);
+  revalidatePath(`/t/${slug}/stream`);
   return { ok: text || url ? 'Channel bug saved.' : 'Channel bug removed.' };
 }
 
@@ -531,7 +531,7 @@ export async function resetStreamLink(slug: string, _: FormState): Promise<FormS
   const { supabase, team } = await loadTeam(slug);
   const { error } = await supabase.rpc('reset_stream_link', { p_team: team.id });
   if (error) return { error: error.code === '42501' ? 'Only an organizer or head coach can change the stream link.' : say(error) };
-  revalidatePath(`/t/${slug}/settings`);
+  revalidatePath(`/t/${slug}/stream`);
   return { ok: 'New link made. Copy it into OBS; the old one no longer works.' };
 }
 
