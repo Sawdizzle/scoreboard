@@ -118,7 +118,7 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
 
       <section className="card pad">
         <h2>Stat cards</h2>
-        <p className="hint">Pick a card above to see it. Cards are raised and cleared from On Air in the pad.</p>
+        <p className="hint">A card slides out from behind the scorebug, on whichever side has room. Pick one above to see it; they are raised and cleared from On Air in the pad.</p>
         <div className="air-autos air-qr">
           <label className="air-slide" style={{ borderTop: 0 }}><span>Size<b>{pct(lay.cards.scale)}</b></span>
             <input type="range" min={CARD_SCALE.min} max={CARD_SCALE.max} step={0.05} value={lay.cards.scale} onChange={(e) => moveLay({ ...lay, cards: { scale: Number(e.target.value) } })} />

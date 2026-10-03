@@ -13,8 +13,8 @@ import { periodText, type SportLive } from '@/lib/sports';
 // with the root font size tied to the width of the source: it fills a 720p,
 // 1080p or 4K Browser Source alike, with no script doing the scaling.
 //
-// Everything is always in the page; a card that is off air is only faded and
-// moved out, so raising and clearing one is a transition, not a pop.
+// Everything is always in the page; a card that is off air is only tucked
+// behind the scorebug, so raising and clearing one is a slide, not a pop.
 const ROOT = 'html{font-size:calc(100vw/128);background:transparent}body{background:transparent;min-height:0;overflow:hidden}';
 
 const vars = (b: Brand) => ({ '--c': b.color, '--c2': b.color2, '--ink': inkOn(b.color) }) as React.CSSProperties;
@@ -254,21 +254,22 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
       <style>{ROOT}</style>
       {/* The framed bugs are drawn small on a 1920 stage: 1.4 of theirs is 1 of ours. */}
       {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} pos={lay.bug.pos} scale={lay.bug.scale * 1.4} />}
-      <div className="ov-right">
-        <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
-        <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
-        <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
-        <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
-        <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} on={shown === 'mid'} />
-        <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
-        <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
-        <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
-        <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
-      </div>
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
       <Qr bug={feed.bug} qr={feed.qr} />
       <div className="ov-dock">
-        <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
+        {/* Every card is an extension of the scorebug: one slot on its far side, and a card slides out from behind the plate. */}
+        <div className="ov-ext">
+          <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
+          <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
+          <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
+          <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
+          <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
+          <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} on={shown === 'mid'} />
+          <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
+          <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
+          <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
+          <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
+        </div>
         {classic && <ClassicBug g={g} air={air} away={away} home={home} abbrs={{ away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) }}
           status={status} period={ball ? null : periodText(sport, feed.game!.live as SportLive)} showLine={feed.show_line} moment={moment} />}
         {!look && !classic && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
