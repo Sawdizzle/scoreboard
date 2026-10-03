@@ -10,8 +10,8 @@ export type Channel = { token: string; game_id: string | null; show_line: boolea
 // What the stream is showing, run from the field. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
 // the scorebug does by itself.
-export function OnAir({ channel, gameId, view, brand, when, live, onSet, onClose }: {
-  channel: Channel; gameId: string; view: AirView; brand: Brand; when: string; live: boolean;
+export function OnAir({ channel, gameId, view, brand, when, live, final, score, onSet, onClose }: {
+  channel: Channel; gameId: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
   onSet: (patch: Partial<Channel>) => void; onClose: () => void;
 }) {
   const here = channel.game_id === gameId;
@@ -27,7 +27,7 @@ export function OnAir({ channel, gameId, view, brand, when, live, onSet, onClose
           <small>{channel.game_id ? 'The stream is showing another game.' : 'The stream follows the pad from the first pitch; this puts it up now.'}</small>
         </button>
       )}
-      <p className="eyebrow">{live ? `Right now · ${when}` : 'Cards come up once the game is live'}</p>
+      <p className="eyebrow">{live ? `Right now · ${when}` : final ? 'Final · the box score can stay up' : 'Cards come up once the game is live'}</p>
 
       <button type="button" className={`air-batter${up('batter') ? ' on' : ''}`} aria-pressed={up('batter')} disabled={!live || !batter} onClick={() => flip('batter')}>
         <span className="air-num" style={{ '--c': brand.color, '--ink': inkOn(brand.color) } as React.CSSProperties}>{batter?.num || '–'}</span>
@@ -51,6 +51,15 @@ export function OnAir({ channel, gameId, view, brand, when, live, onSet, onClose
         <button type="button" className={`pchoice${up('dueup') ? ' on' : ''}`} aria-pressed={up('dueup')} disabled={!live || !dueUp.length} onClick={() => flip('dueup')}>
           <b>Due up</b>
           <small>{dueUp.map((b) => b.name.split(' ').pop()).join(', ') || 'No lineup set'}</small>
+        </button>
+      </div>
+
+      <div className="pgrid two">
+        <button type="button" className={`pchoice${up('leaders') ? ' on' : ''}`} aria-pressed={up('leaders')} disabled={!live} onClick={() => flip('leaders')}>
+          <b>Team leaders</b><small>AVG · HR · RBI · SB</small>
+        </button>
+        <button type="button" className={`pchoice${up('box') ? ' on' : ''}`} aria-pressed={up('box')} disabled={!live && !final} onClick={() => flip('box')}>
+          <b>Box score</b><small>{score}</small>
         </button>
       </div>
 

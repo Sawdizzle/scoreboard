@@ -68,7 +68,8 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---- Surfaces ------------------------------------------------------------- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
-.card.pad { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+/* Not the scoring pad (.pad, below): undo its full-screen sizing. */
+.card.pad { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: auto; max-width: none; margin: 0; }
 .card.open { background: var(--panel); border: 1.5px dashed var(--dash); }
 
 .rows { display: flex; flex-direction: column; }
@@ -421,6 +422,13 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pchoice.hit { background: var(--good-bg); border-color: var(--good-line); } .pchoice.strike { background: var(--bad-bg); border-color: var(--bad-line); }
 .pchoice[disabled] { opacity: 0.45; cursor: default; }
 .pchoice.on { border-color: var(--gold); }
+.looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.look { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 14px; background: var(--bg); border: 1.5px solid var(--line-2); color: var(--soft); cursor: pointer; text-align: left; }
+.look.on { border-color: var(--gold); color: var(--chalk); }
+.look b { font-size: 14px; padding: 0 2px; }
+.look-thumb { height: 46px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: #23452a; }
+.look-thumb img { max-width: 100%; max-height: 100%; }
+.look-thumb .bug-rail { transform: scale(0.62); transform-origin: center; flex: 0 0 auto; }
 .air-batter { display: flex; align-items: stretch; padding: 0; border-radius: 18px; overflow: hidden; background: var(--card); border: 1.5px solid var(--line); color: var(--chalk); text-align: left; cursor: pointer; }
 .air-batter.on { border-color: var(--gold); }
 .air-batter[disabled] { opacity: 0.45; cursor: default; }

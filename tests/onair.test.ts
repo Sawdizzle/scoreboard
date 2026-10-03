@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, feedView, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, boxScore, bugAnim, bugState, feedView, leaders, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -90,4 +90,44 @@ test('inning names and play names', () => {
   assert.equal(paText({ kind: 'K', code: null }), 'Strikeout');
   assert.equal(paText({ kind: 'H2', code: '' }), 'Double');
   assert.equal(paText({ kind: 'GB', code: '6-3' }), 'Groundout 6-3');
+});
+
+test('team leaders: the best of ours in each column, with at-bats behind an average', () => {
+  const roster = [{ id: 'a1', num: '1', name: 'Al One' }, { id: 'a2', num: '2', name: '' }, { id: 'a3', num: '3', name: 'Cy Three' }];
+  const lines = [
+    line('a1', { b_pa: 3, b_ab: 2, b_h: 2, b_rbi: 1 }),             // 1.000, but two at-bats
+    line('a2', { b_pa: 40, b_ab: 33, b_h: 9, b_hr: 1, b_rbi: 7, b_sb: 4 }),
+    line('a3', { b_pa: 40, b_ab: 36, b_h: 13, b_rbi: 6, b_sb: 9 }),
+    line('zz', { b_pa: 50, b_ab: 40, b_h: 30, b_hr: 9, b_rbi: 40, b_sb: 20 }), // not on our roster
+  ];
+  assert.deepEqual(leaders(lines, roster), [
+    { k: 'AVG', v: '.361', num: '3', name: 'Cy Three' }, { k: 'HR', v: '1', num: '2', name: '#2' },
+    { k: 'RBI', v: '7', num: '2', name: '#2' }, { k: 'SB', v: '9', num: '3', name: 'Cy Three' }]);
+  assert.deepEqual(leaders([], roster), []);
+});
+
+test('the box score: runs by inning, blank for halves not yet played', () => {
+  const game = engineGame({ is_home: true, status: 'live', live: { ...live, home_hits: 4, away_hits: 6, away_errors: 1,
+    line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }] } }, {}, 7);
+  assert.deepEqual(boxScore(game, 7), {
+    innings: [1, 2, 3, 4, 5, 6, 7], away: ['1', '0', '3', '0', '0', '', ''], home: ['0', '2', '0', '0', '0', '', ''],
+    awayTot: ['4', '6', '1'], homeTot: ['2', '4', '0'] });
+  const top = engineGame({ is_home: true, status: 'live', live: { ...live, half: 'top', line_score: [] } }, {}, 7);
+  assert.deepEqual([boxScore(top, 7).away[4], boxScore(top, 7).home[4]], ['0', '']);
+});
+
+test('an animated bug gets the game in its own shape, and a stinger for the big plays', () => {
+  const feed = {
+    team: { name: 'Blue Steel Baseball', display_name: 'Blue Steel', abbr: 'STEEL', color: '#111111', color2: '#222222', logo_url: null, age_group: null },
+    opponent: { name: 'Hawks', display_name: 'Hawks', color: '#333333', color2: '#444444', logo_url: null, age_group: null },
+    game: { id: 'g', is_home: true, status: 'live', seq: 3, live },
+  } as unknown as Feed;
+  const s = bugState(feed, g(), airView(g(), ctx));
+  assert.deepEqual([s.away.abbr, s.away.r, s.home.abbr, s.home.r, s.home.name], ['HAWKS', 4, 'STEEL', 2, 'Blue Steel']);
+  assert.deepEqual([s.inning, s.half, s.balls, s.strikes, s.outs, s.batter, s.pitcher, s.pitchCount], [5, 'bot', 2, 1, 1, 'A Player2', 'H Player9', 58]);
+  assert.deepEqual(bugAnim({ seq: 1, type: 'homerun', kind: 'HR' }), { type: 'homerun', meta: {} });
+  assert.deepEqual(bugAnim({ seq: 1, type: 'strikeout', kind: 'KL' }), { type: 'strikeoutlooking', meta: {} });
+  assert.deepEqual(bugAnim({ seq: 1, type: 'play', kind: 'H2' }), { type: 'play', meta: { text: 'Double' } });
+  assert.equal(bugAnim({ seq: 1, type: 'ball', kind: null }), null);
+  assert.equal(bugAnim(null), null);
 });
