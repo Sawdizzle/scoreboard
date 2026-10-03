@@ -60,15 +60,20 @@ Each stage ends with a checklist to run before the next one starts.
 0. **Design** — the canvas above. Approved.
 1. **Team HQ** — app shell, accounts, the schema, teams, five staff seats with invite
    links, roster, seasons. No scoring yet. **Built.**
-2. **Game night** — New Game picks two teams and their rosters load; lineup and field
+2. **Game night**, in three parts:
+   - **2a, built:** GameChanger season import, season stats, stats on Player, Season, Roster and Today.
+   - **2b:** games and lineups.
+   - **2c:** the pad; every play adds to the same season stats.
+
+   Original scope — New Game picks two teams and their rosters load; lineup and field
    screen; the pad on the ported rules; every play writes a plate appearance; player
    and season screens show real numbers.
 3. **On stream** — the Browser Source page, the eleven bugs, the batter's season line
    on the bug, and the stat cards (batter, pitcher, due up) raised from On Air or
    popped automatically for each new batter.
 4. **Public** — team page, live game page, box score.
-5. **Bring it over** — the nine saved teams from Scoreboard, and a GameChanger CSV
-   import so Fall 2026 does not start at zero.
+5. **Bring it over** — the nine saved teams from Scoreboard. (The GameChanger CSV
+   import moved up into 2a.)
 
 ## Open questions
 
