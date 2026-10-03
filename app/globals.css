@@ -238,3 +238,31 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---- Stats ---------------------------------------------------------------- */
+.input.file { padding: 12px 14px; font-size: 15px; }
+.import-row { align-items: center; }
+.import-row .row-main { gap: 6px; padding: 6px 0; }
+.import-row .select-chip { align-self: flex-start; max-width: 100%; }
+
+.counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; border-radius: 16px; overflow: hidden; background: var(--line); border: 1px solid var(--line); }
+.counts > div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 0 8px; background: var(--card); }
+.counts b { font-family: var(--disp); font-weight: 600; font-size: 25px; line-height: 1; font-variant-numeric: tabular-nums; }
+.counts span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--body); }
+.slash b.live { color: var(--chalk); }
+.slash b.gold { color: var(--gold); }
+
+.table-box { overflow-x: auto; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
+.stat-table { width: 100%; min-width: 420px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.stat-table th { padding: 11px 8px 9px; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: 0.08em; color: var(--muted); text-align: right; white-space: nowrap; }
+.stat-table td { padding: 0 8px; height: 46px; border-top: 1px solid var(--line); text-align: right; font-size: 15px; color: var(--soft); white-space: nowrap; }
+.stat-table th:first-child, .stat-table td:first-child { padding-left: 14px; }
+.stat-table th:last-child, .stat-table td:last-child { padding-right: 14px; }
+.stat-table .who { text-align: left; color: var(--chalk); font-weight: 600; }
+.stat-table .who a { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.stat-table .who .jersey { flex: 0 0 30px; font-size: 22px; }
+.stat-table .key { font-family: var(--disp); font-weight: 700; font-size: 20px; color: var(--gold); }
+.source { font-size: 12.5px; color: var(--body); padding: 0 4px; }
+.leaders .row-title { font-size: 15.5px; }
+.leader-k { flex: 0 0 40px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--body); }
+.leader-v { font-family: var(--disp); font-weight: 700; font-size: 28px; font-variant-numeric: tabular-nums; }

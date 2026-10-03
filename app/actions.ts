@@ -10,6 +10,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
+import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -184,7 +185,9 @@ function seasonFields(fd: FormData) {
   const day = /^\d{4}-\d{2}-\d{2}$/;
   if ((starts_on && !day.test(starts_on)) || (ends_on && !day.test(ends_on))) return { error: 'Use the date picker for the dates.' } as const;
   if (starts_on && ends_on && ends_on < starts_on) return { error: 'The season ends before it starts.' } as const;
-  return { name, starts_on, ends_on } as const;
+  const game_innings = Number(str(fd, 'game_innings') || 7);
+  if (!Number.isInteger(game_innings) || game_innings < 3 || game_innings > 9) return { error: 'A game is 3 to 9 innings.' } as const;
+  return { name, starts_on, ends_on, game_innings } as const;
 }
 
 export async function createSeason(slug: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -278,4 +281,73 @@ export async function acceptInvite(token: string, _: FormState): Promise<FormSta
   if (error) return { error: error.code === '42501' ? 'Sign in to accept this invite.' : say(error) };
   revalidatePath('/t');
   redirect(`/t/${data as string}`);
+}
+
+// ---- Your account -----------------------------------------------------------
+export async function updateProfile(_: FormState, fd: FormData): Promise<FormState> {
+  if (!supabaseConfigured) return NOT_CONNECTED;
+  const name = str(fd, 'display_name');
+  if (!name || name.length > 60) return { error: 'Your name is 1 to 60 characters.' };
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims?.sub as string | undefined;
+  if (!me) return { error: 'Sign in again to change your name.' };
+  const { error } = await supabase.from('profiles').update({ display_name: name }).eq('id', me);
+  if (error) return { error: say(error) };
+  revalidatePath('/t', 'layout');
+  return { ok: 'Saved.' };
+}
+
+// ---- GameChanger import -------------------------------------------------------
+// The browser parses the export and shows who each row is; this receives the
+// rows it settled on. Every number is checked again here, because the payload
+// is whatever the browser sent: only known columns, whole numbers, in range.
+type ImportChoice = { match: string; number: string; first_name: string; last_name: string; counts: Partial<ImportCounts> };
+const COUNT_KEYS = Object.keys(emptyCounts()) as (keyof ImportCounts)[];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function importStats(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const seasonId = str(fd, 'season_id');
+  let choices: ImportChoice[];
+  try { choices = JSON.parse(String(fd.get('rows') ?? '[]')); } catch { return { error: 'The import did not come through. Choose the file again.' }; }
+  if (!UUID.test(seasonId)) return { error: 'Pick a season to import into.' };
+  if (!Array.isArray(choices) || !choices.length) return { error: 'There is nothing to import.' };
+  if (choices.length > 60) return { error: 'An import is at most 60 players.' };
+
+  const { supabase, team } = await loadTeam(slug);
+  const kept = choices.filter((c) => c && c.match !== 'skip');
+  if (!kept.length) return { error: 'Every row is set to skip.' };
+
+  const clean = (c: ImportChoice) => Object.fromEntries(COUNT_KEYS.map((k) => {
+    const v = Number(c.counts?.[k] ?? 0);
+    return [k, Number.isInteger(v) && v >= 0 && v <= 100000 ? v : 0];
+  }));
+
+  // New players first, so every row has a roster id to hang on.
+  const fresh = kept.filter((c) => c.match === 'new');
+  const ids = new Map<ImportChoice, string>();
+  if (fresh.length) {
+    const rows = fresh.map((c) => ({
+      team_id: team.id,
+      number: /^\d{1,3}$/.test(String(c.number)) ? String(c.number) : '',
+      first_name: String(c.first_name ?? '').trim().slice(0, 40),
+      last_name: String(c.last_name ?? '').trim().slice(0, 40),
+    }));
+    if (rows.some((r) => !r.number && !r.first_name && !r.last_name)) return { error: 'A new player needs a name or a number.' };
+    const { data, error } = await supabase.from('players').insert(rows).select('id');
+    if (error) return { error: say(error) };
+    fresh.forEach((c, i) => ids.set(c, (data as { id: string }[])[i].id));
+  }
+  for (const c of kept) {
+    if (c.match === 'new') continue;
+    if (!UUID.test(c.match)) return { error: 'One of the rows points at a player that is not on this roster.' };
+    ids.set(c, c.match);
+  }
+  if (new Set(ids.values()).size !== ids.size) return { error: 'Two rows point at the same player. Each player can take one row.' };
+
+  const payload = kept.map((c) => ({ player_id: ids.get(c), ...clean(c) }));
+  const { data: n, error } = await supabase.rpc('import_season_stats', { p_season: seasonId, p_rows: payload });
+  if (error) return { error: say(error) };
+  revalidatePath(`/t/${slug}`, 'layout');
+  redirect(`/t/${slug}/season?s=${seasonId}&imported=${n as number}`);
 }

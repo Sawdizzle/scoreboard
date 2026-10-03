@@ -1,12 +1,17 @@
 import Link from 'next/link';
 import { Check, ChevronRight } from '@/components/icons';
-import { SEATS, canEditTeam, type Role, type Season, type Team } from '@/lib/types';
+import { leaders } from '@/components/StatTables';
+import { fullName } from '@/lib/format';
+import type { SeasonLine } from '@/lib/stats';
+import { SEATS, canEditTeam, type Player, type Role, type Season, type Team } from '@/lib/types';
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
-export function TodayView({ team, role, players, staff, season }: {
-  team: Team; role: Role; players: number; staff: number; season?: Season;
+export function TodayView({ team, role, players, staff, season, stats = [], roster = [] }: {
+  team: Team; role: Role; players: number; staff: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
 }) {
+  const who = new Map(roster.map((p) => [p.id, p]));
+  const top = leaders(stats);
   const base = `/t/${team.slug}`;
   const steps = [
     { href: `${base}/roster`, title: 'Roster', done: players >= 9,
@@ -31,6 +36,28 @@ export function TodayView({ team, role, players, staff, season }: {
           <p className="sub">No game on the schedule. Games, lineups and scoring are the next part of the build; the team you set up here is what they will use.</p>
         </div>
       </section>
+
+      {top.length > 0 && (
+        <section className="leaders">
+          <div className="h-row" style={{ padding: '2px 4px 2px' }}>
+            <h2 className="h-sec">Team leaders</h2>
+            <Link href={`${base}/season`} className="link">Full stats</Link>
+          </div>
+          <div className="rows">
+            {top.map(({ k, best, show }) => {
+              const p = who.get(best.s.player_id);
+              return (
+                <Link key={k} href={`${base}/player/${best.s.player_id}`} className="row">
+                  <span className="leader-k">{k}</span>
+                  <span className="jersey" style={{ flexBasis: 34, fontSize: 24 }}>{p?.number || '–'}</span>
+                  <span className="row-main"><span className="row-title">{p ? fullName(p) || `No. ${p.number}` : 'Player'}</span></span>
+                  <span className="leader-v">{show(best.v)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="h-row" style={{ padding: '2px 4px 6px' }}>

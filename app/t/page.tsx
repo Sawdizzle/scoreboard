@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { signOut } from '@/app/actions';
+import { signOut, updateProfile } from '@/app/actions';
+import { ActionForm, Submit } from '@/components/ActionForm';
+import { createClient } from '@/lib/supabase/server';
 import { ChevronRight, Plus } from '@/components/icons';
 import { myTeams, requireUserId } from '@/lib/data';
 import { inkOn } from '@/lib/format';
@@ -9,8 +11,9 @@ import { ROLE_LABEL } from '@/lib/types';
 export const metadata: Metadata = { title: 'Your teams' };
 
 export default async function Teams() {
-  await requireUserId('/t');
+  const me = await requireUserId('/t');
   const teams = await myTeams();
+  const { data: profile } = await (await createClient()).from('profiles').select('display_name').eq('id', me).maybeSingle<{ display_name: string }>();
   return (
     <main className="shell">
       <div className="page-top">
@@ -40,6 +43,17 @@ export default async function Teams() {
           </div>
         )}
         <Link href="/t/new" className="btn btn-primary btn-big"><Plus /> New team</Link>
+        <details className="fold">
+          <summary>Your name · {profile?.display_name ?? ''}</summary>
+          <div className="fold-body">
+            <ActionForm action={updateProfile} className="form">
+              <label className="field"><span>Shown on staff lists</span>
+                <input className="input" name="display_name" defaultValue={profile?.display_name ?? ''} maxLength={60} required autoComplete="name" />
+              </label>
+              <Submit busy="Saving…">Save name</Submit>
+            </ActionForm>
+          </div>
+        </details>
       </div>
     </main>
   );

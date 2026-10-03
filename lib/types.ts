@@ -61,6 +61,7 @@ export type Season = {
   starts_on: string | null;
   ends_on: string | null;
   is_current: boolean;
+  game_innings: number;
 };
 
 export type StaffMember = { user_id: string; role: Role; display_name: string };

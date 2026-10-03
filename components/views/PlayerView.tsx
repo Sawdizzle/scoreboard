@@ -3,12 +3,22 @@ import { deletePlayer, updatePlayer } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { ChevronLeft } from '@/components/icons';
 import { PlayerFields } from '@/components/PlayerFields';
-import { fullName, publicName } from '@/lib/format';
-import { canEditTeam, type Player, type PublicName, type Role, type Team } from '@/lib/types';
+import { fullName, publicName, shortDate } from '@/lib/format';
+import { batting, hasPitching, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
+import { canEditTeam, type Player, type PublicName, type Role, type Season, type Team } from '@/lib/types';
 
 const PUBLIC_LABEL: Record<PublicName, string> = { full: 'Full name', first_initial: 'First name, last initial', number: 'Number only' };
 
-export function PlayerView({ team, role, player: p }: { team: Team; role: Role; player: Player }) {
+export function PlayerView({ team, role, player: p, lines = [], seasons = [], seasonId }: {
+  team: Team; role: Role; player: Player; lines?: SeasonLine[]; seasons?: Season[]; seasonId?: string;
+}) {
+  // Seasons this player has numbers in, plus the current one; newest first.
+  const shown = seasons.filter((s) => s.is_current || lines.some((l) => l.season_id === s.id));
+  const sel = shown.find((s) => s.id === seasonId) ?? shown.find((s) => lines.some((l) => l.season_id === s.id) && s.is_current)
+    ?? shown.find((s) => lines.some((l) => l.season_id === s.id)) ?? shown[0];
+  const line = sel ? lines.find((l) => l.season_id === sel.id) : undefined;
+  const b = line ? batting(line) : null;
+  const pi = line && hasPitching(line) ? pitching(line, sel?.game_innings) : null;
   const edit = canEditTeam(role);
   const facts = [p.number && `No. ${p.number}`, p.positions.join(' · '), p.bats && `Bats ${p.bats}`, p.throws && `Throws ${p.throws}`].filter(Boolean);
   return (
@@ -21,11 +31,44 @@ export function PlayerView({ team, role, player: p }: { team: Team; role: Role; 
       </div>
 
       <div className="page" style={{ paddingTop: 18 }}>
+        {shown.length > 1 && (
+          <nav className="chips" aria-label="Seasons">
+            {shown.map((x) => (
+              <Link key={x.id} href={`/t/${team.slug}/player/${p.id}?s=${x.id}`} className="chip" aria-current={x.id === sel?.id ? 'page' : undefined}>
+                {x.is_current && <span className="dot" title="Current season" />}{x.name}
+              </Link>
+            ))}
+          </nav>
+        )}
+
         <section className="stack">
-          <div className="slash" aria-label="Season batting line, no games yet">
-            {['AVG', 'OBP', 'SLG', 'OPS'].map((k) => <div key={k}><b>–</b><span>{k}</span></div>)}
+          <div className="slash" aria-label={`${sel?.name ?? 'Season'} batting line`}>
+            {([['AVG', b?.avg], ['OBP', b?.obp], ['SLG', b?.slg], ['OPS', b?.ops]] as const).map(([k, v], i) => (
+              <div key={k}><b className={line && line.b_pa ? (i === 3 ? 'gold' : 'live') : ''}>{line && line.b_pa ? rate3(v ?? null) : '–'}</b><span>{k}</span></div>
+            ))}
           </div>
-          <p className="sub" style={{ padding: '0 4px' }}>No games scored yet. This line fills itself from the first one.</p>
+          {line && line.b_pa > 0 ? (
+            <div className="counts">
+              {([['G', line.b_g], ['AB', line.b_ab], ['H', line.b_h], ['2B', line.b_2b], ['HR', line.b_hr],
+                ['RBI', line.b_rbi], ['R', line.b_r], ['BB', line.b_bb], ['K', line.b_so], ['SB', line.b_sb]] as const).map(([k, v]) => (
+                <div key={k}><b>{v}</b><span>{k}</span></div>
+              ))}
+            </div>
+          ) : (
+            <p className="sub" style={{ padding: '0 4px' }}>No {sel?.name ?? 'season'} at-bats yet. Import from GameChanger on the Season tab, or score a game.</p>
+          )}
+          {line && pi && (
+            <>
+              <h2 className="h-sec" style={{ padding: '6px 4px 0' }}>Pitching</h2>
+              <div className="counts">
+                {([['IP', innings(line.p_outs)], ['ERA', rate2(pi.era)], ['K', line.p_so], ['BB', line.p_bb], ['WHIP', rate2(pi.whip)],
+                  ['H', line.p_h], ['ER', line.p_er], ['BF', line.p_bf], ['P', line.p_pitches], ['GS', line.p_gs]] as const).map(([k, v]) => (
+                  <div key={k}><b>{v}</b><span>{k}</span></div>
+                ))}
+              </div>
+            </>
+          )}
+          {line?.imported_at && <p className="source">From GameChanger, imported {shortDate(line.imported_at)}.</p>}
         </section>
 
         {edit ? (

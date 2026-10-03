@@ -6,55 +6,19 @@
 // request arrives as `anon` or `authenticated` and Postgres decides the rest.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { PGlite } from '@electric-sql/pglite';
+import { makeDb } from './db.ts';
 
-const SUPABASE_STUB = `
-  create role anon nologin;
-  create role authenticated nologin;
-  create schema auth;
-  create table auth.users (
-    id uuid primary key default gen_random_uuid(),
-    email text,
-    raw_user_meta_data jsonb not null default '{}'
-  );
-  create function auth.uid() returns uuid language sql stable as
-    $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-  grant usage on schema auth to anon, authenticated;
-  grant usage on schema public to anon, authenticated;
-`;
-
-let db: PGlite;
-const users: Record<string, string> = {};
-
-// Run SQL as a signed-in user (or as anon when `who` is null), then drop back
-// to the superuser so the next call starts clean.
-async function as<T = Record<string, unknown>>(who: string | null, sql: string, params: unknown[] = []) {
-  await db.exec(`set role ${who ? 'authenticated' : 'anon'}; select set_config('request.jwt.claim.sub', '${who ? users[who] : ''}', false);`);
-  try {
-    return (await db.query<T>(sql, params)).rows;
-  } finally {
-    await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`);
-  }
-}
+type Db = Awaited<ReturnType<typeof makeDb>>;
+let db: Db['db'];
+let as: Db['as'];
+let signUp: Db['signUp'];
+let users: Db['users'];
 const fails = (p: Promise<unknown>, re: RegExp) => assert.rejects(p, re);
-
-async function signUp(key: string, name: string) {
-  const { rows } = await db.query<{ id: string }>(
-    `insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id`,
-    [`${key}@example.test`, JSON.stringify({ display_name: name })]);
-  users[key] = rows[0].id;
-}
 
 let teamId = '';
 
 before(async () => {
-  db = new PGlite();
-  await db.exec(SUPABASE_STUB);
-  const dir = new URL('../supabase/migrations/', import.meta.url);
-  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) {
-    await db.exec(readFileSync(new URL(f, dir), 'utf8'));
-  }
+  ({ db, as, signUp, users } = await makeDb());
   for (const [k, n] of [['owner', 'Olive Owner'], ['head', 'Hank Head'], ['coach', 'Cora Coach'],
     ['scorer', 'Sam Scorer'], ['media', 'Mel Media'], ['sixth', 'Sid Sixth'], ['stranger', 'Stan Stranger']]) {
     await signUp(k, n);

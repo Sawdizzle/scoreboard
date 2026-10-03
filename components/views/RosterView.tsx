@@ -4,9 +4,12 @@ import { ActionForm, Submit } from '@/components/ActionForm';
 import { ChevronRight, Plus } from '@/components/icons';
 import { PlayerFields } from '@/components/PlayerFields';
 import { byJersey, fullName } from '@/lib/format';
+import { batting, rate3, type SeasonLine } from '@/lib/stats';
 import { canEditTeam, type Player, type Role, type Team } from '@/lib/types';
 
-export function RosterView({ team, role, players }: { team: Team; role: Role; players: Player[] }) {
+export function RosterView({ team, role, players, stats = [] }: { team: Team; role: Role; players: Player[]; stats?: SeasonLine[] }) {
+  const avg = new Map(stats.filter((s) => s.b_pa > 0).map((s) => [s.player_id, rate3(batting(s).avg)]));
+  const showAvg = avg.size > 0;
   const edit = canEditTeam(role);
   const active = players.filter((p) => p.active).sort(byJersey);
   const inactive = players.filter((p) => !p.active).sort(byJersey);
@@ -17,6 +20,7 @@ export function RosterView({ team, role, players }: { team: Team; role: Role; pl
         <span className="row-title">{fullName(p) || `No. ${p.number}`}{p.positions.length > 0 && <small>{p.positions.join(' · ')}</small>}</span>
       </span>
       <span className="row-meta" style={{ width: 44, textAlign: 'right' }}>{p.bats || p.throws ? `${p.bats ?? '–'}/${p.throws ?? '–'}` : ''}</span>
+      {showAvg && <span className="leader-v" style={{ width: 48, textAlign: 'right', fontSize: 21, fontWeight: 600 }}>{avg.get(p.id) ?? '–'}</span>}
       <span className="chev"><ChevronRight /></span>
     </Link>
   );
@@ -33,6 +37,7 @@ export function RosterView({ team, role, players }: { team: Team; role: Role; pl
             <span style={{ flex: '0 0 40px' }}>No.</span>
             <span style={{ flex: 1 }}>Player</span>
             <span style={{ width: 44, textAlign: 'right' }}>B/T</span>
+            {showAvg && <span style={{ width: 48, textAlign: 'right' }}>Avg</span>}
             <span style={{ width: 16 }} />
           </div>
           <div className="rows">{active.map(row)}</div>

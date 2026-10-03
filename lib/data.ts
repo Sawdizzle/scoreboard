@@ -1,11 +1,12 @@
 import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient, supabaseConfigured } from './supabase/server';
+import type { SeasonLine } from './stats';
 import type { Invite, Player, Role, Season, StaffMember, Team } from './types';
 
 const TEAM_COLS = 'id, slug, name, abbr, color, logo_url, age_group';
 const PLAYER_COLS = 'id, team_id, first_name, last_name, number, bats, throws, positions, public_name, active';
-const SEASON_COLS = 'id, team_id, name, starts_on, ends_on, is_current';
+const SEASON_COLS = 'id, team_id, name, starts_on, ends_on, is_current, game_innings';
 
 // Only ever a path on this site: "/t/steel", never "//evil.example" or a URL.
 export function safeNext(next: string | null | undefined, fallback = '/t') {
@@ -75,4 +76,15 @@ export async function listInvites(db: Db, teamId: string) {
   const { data } = await db.from('staff_invites').select('token, role, expires_at')
     .eq('team_id', teamId).is('used_at', null).gt('expires_at', new Date().toISOString()).order('created_at');
   return (data ?? []) as Invite[];
+}
+
+// Season lines, every source added up (the season_stats view). By season for
+// a team's tables, by player for a player's card.
+export async function seasonStats(db: Db, teamId: string, seasonId: string) {
+  const { data } = await db.from('season_stats').select('*').eq('team_id', teamId).eq('season_id', seasonId);
+  return (data ?? []) as SeasonLine[];
+}
+export async function playerStats(db: Db, playerId: string) {
+  const { data } = await db.from('season_stats').select('*').eq('player_id', playerId);
+  return (data ?? []) as SeasonLine[];
 }

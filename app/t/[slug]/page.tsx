@@ -1,5 +1,5 @@
 import { TodayView } from '@/components/views/TodayView';
-import { listSeasons, loadTeam } from '@/lib/data';
+import { listPlayers, listSeasons, loadTeam, seasonStats } from '@/lib/data';
 
 export default async function Today({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -9,5 +9,7 @@ export default async function Today({ params }: { params: Promise<{ slug: string
     supabase.from('team_staff').select('user_id', { count: 'exact', head: true }).eq('team_id', team.id),
     listSeasons(supabase, team.id),
   ]);
-  return <TodayView team={team} role={role} players={players.count ?? 0} staff={staff.count ?? 0} season={seasons.find((s) => s.is_current)} />;
+  const season = seasons.find((s) => s.is_current);
+  const [stats, roster] = season ? await Promise.all([seasonStats(supabase, team.id, season.id), listPlayers(supabase, team.id)]) : [[], []];
+  return <TodayView team={team} role={role} players={players.count ?? 0} staff={staff.count ?? 0} season={season} stats={stats} roster={roster} />;
 }

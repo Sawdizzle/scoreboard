@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { createSeason, deleteSeason, makeSeasonCurrent, updateSeason } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { Plus } from '@/components/icons';
+import { StatTables } from '@/components/StatTables';
 import { guessSeason, shortDate } from '@/lib/format';
-import { canEditTeam, type Role, type Season, type Team } from '@/lib/types';
+import { batting, rate3, type SeasonLine } from '@/lib/stats';
+import { canEditTeam, type Player, type Role, type Season, type Team } from '@/lib/types';
 
 function SeasonFields({ s }: { s?: Season }) {
   return (
@@ -15,11 +17,28 @@ function SeasonFields({ s }: { s?: Season }) {
         <label className="field"><span>Starts</span><input className="input" type="date" name="starts_on" defaultValue={s?.starts_on ?? ''} /></label>
         <label className="field"><span>Ends</span><input className="input" type="date" name="ends_on" defaultValue={s?.ends_on ?? ''} /></label>
       </div>
+      <label className="field"><span>Innings in a game · for ERA</span>
+        <input className="input" type="number" name="game_innings" min={3} max={9} defaultValue={s?.game_innings ?? 7} inputMode="numeric" />
+      </label>
     </>
   );
 }
 
-export function SeasonView({ team, role, seasons, selectedId }: { team: Team; role: Role; seasons: Season[]; selectedId?: string }) {
+// The whole team's season added into one line, for the strip at the top.
+function teamLine(stats: SeasonLine[]) {
+  const sum = (k: keyof SeasonLine) => stats.reduce((a, s) => a + (Number(s[k]) || 0), 0);
+  const t = Object.fromEntries(Object.keys(stats[0]).map((k) => [k, sum(k as keyof SeasonLine)])) as unknown as SeasonLine;
+  const b = batting(t);
+  return [
+    { v: rate3(b.avg), k: 'Team avg' }, { v: rate3(b.obp), k: 'OBP' },
+    { v: String(t.b_r), k: 'Runs' }, { v: String(t.b_sb), k: 'Steals' },
+  ];
+}
+
+export function SeasonView({ team, role, seasons, selectedId, stats = [], players = [], imported }: {
+  team: Team; role: Role; seasons: Season[]; selectedId?: string;
+  stats?: SeasonLine[]; players?: Player[]; imported?: string;
+}) {
   const edit = canEditTeam(role);
   const base = `/t/${team.slug}/season`;
   const sel = seasons.find((s) => s.id === selectedId) ?? seasons.find((s) => s.is_current) ?? seasons[0];
@@ -40,14 +59,34 @@ export function SeasonView({ team, role, seasons, selectedId }: { team: Team; ro
 
       {sel ? (
         <>
-          <section className="record">
-            <b>0–0</b>
-            <div>
-              <span className={`eyebrow${sel.is_current ? ' gold' : ''}`}>{sel.is_current ? 'Current season' : 'Past season'}</span>
-              <span className="sub">{sel.name}{dates && ` · ${dates}`}</span>
-              <span className="sub">No games scored yet</span>
-            </div>
+          <section className="stack" style={{ gap: 6, padding: '0 4px' }}>
+            <span className={`eyebrow${sel.is_current ? ' gold' : ''}`}>{sel.is_current ? 'Current season' : 'Past season'}</span>
+            <h1 className="disp h1">{sel.name}</h1>
+            <span className="sub">{[dates, `${sel.game_innings}-inning games`].filter(Boolean).join(' · ')}</span>
           </section>
+
+          {imported && <p role="status" className="note note-good">Imported {imported} players from GameChanger.</p>}
+
+          {stats.length > 0 ? (
+            <>
+              <div className="slash">
+                {teamLine(stats).map((x) => <div key={x.k}><b className="live">{x.v}</b><span>{x.k.toUpperCase()}</span></div>)}
+              </div>
+              <StatTables slug={team.slug} lines={stats} players={players} gameInnings={sel.game_innings} />
+              <p className="source">From GameChanger, imported {shortDate(stats.reduce((a, s) => (s.imported_at && s.imported_at > a ? s.imported_at : a), ''))}.</p>
+            </>
+          ) : (
+            <div className="card empty">
+              <b>No stats for {sel.name} yet</b>
+              {edit ? 'Bring in what GameChanger already has, or score games here once game night is built.' : 'They arrive from GameChanger imports and scored games.'}
+            </div>
+          )}
+
+          {edit && (
+            <Link href={`/t/${team.slug}/season/import?s=${sel.id}`} className="btn btn-quiet btn-block">
+              {stats.length ? 'Import from GameChanger again' : 'Import from GameChanger'}
+            </Link>
+          )}
 
           {edit && (
             <div className="folds">
