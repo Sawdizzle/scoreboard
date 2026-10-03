@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: Midnight</title>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-600.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (latin subset), so nothing reaches a font CDN on air. */
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:swap;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:swap;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   MIDNIGHT — under the lights.
+   The Midnight theme's navy, chalk, steel and gold, turned into a
+   night game. The bug is a window on the sky over the park: stars
+   drift through the plate, a moon sits at its edge, the lights glow
+   warm along the bottom. A run is a shooting star that lands in the
+   score. A home run is a moonshot: the ball climbs off the diamond,
+   bursts, and its stardust settles into the words. A strikeout is
+   a bank of stadium bulbs that punches a K on and then goes dark. A
+   walk-off lights fireworks. Before the first pitch the stars gather
+   into UNDER THE LIGHTS and the light banks switch on one by one.
+   Everything that flies is one canvas that sleeps when empty; the
+   idle loops (stars, the moon) are transform and opacity only.
+   ============================================================ */
+:root{
+  --night:#101621; --night-hi:#1b2742; --night-lo:#090e19; --well:#050810;
+  --chalk:#f4f7fb; --steel:#8fb6de; --steel-hi:#c9def2; --steel-lo:#4a6f96;
+  --gold:#e8b23a; --gold-hi:#ffd98a; --gold-lo:#a87a1c; --dim:#8595ab; --line:rgba(244,247,251,.13);
+  --red:#ff5d55; --green:#5fcf8a;
+  --disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-in:cubic-bezier(.7,0,.84,0); --ease-io:cubic-bezier(.65,0,.35,1);
+}
+body{--demo-accent:var(--gold)}
+body.preview{background:
+  radial-gradient(ellipse at 50% 0%,rgba(255,240,200,.10),transparent 55%),
+  linear-gradient(170deg,#1f3a2a 0%,#1a3325 40%,#4a3a2a 72%,#2c2118 100%)}
+#stage{font-family:var(--disp);color:var(--chalk);-webkit-font-smoothing:antialiased;font-synthesis:none}
+#fx{position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none;z-index:20}
+
+/* ---------- The sky: two star layers that drift, stars that twinkle ---------- */
+.sky{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.sky .l1,.sky .l2{position:absolute;top:0;bottom:0;left:0;width:calc(100% + 600px);background-repeat:repeat}
+.sky .l1{background-image:var(--stars1);opacity:.75;animation:drift 150s linear infinite}
+.sky .l2{background-image:var(--stars2);opacity:.9;animation:drift 70s linear infinite}
+@keyframes drift{to{transform:translateX(-600px)}}
+.sky .tw{position:absolute;width:3px;height:3px;margin:-1.5px;border-radius:50%;background:#fff;
+  box-shadow:0 0 4px 1px rgba(220,236,255,.8);opacity:.15;animation:tw var(--d,3s) var(--dl,0s) ease-in-out infinite}
+.sky .tw.g{background:#fff4d6;box-shadow:0 0 4px 1px rgba(255,217,138,.8)}
+@keyframes tw{0%,100%{opacity:.12;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+body.rally .sky .tw{animation-duration:1.1s}
+/* a shooting star, thrown across by script */
+.sky .shoot{position:absolute;left:0;top:0;width:130px;height:2px;border-radius:2px;opacity:0;transform-origin:100% 50%;
+  background:linear-gradient(90deg,transparent,rgba(201,222,242,.35) 55%,#fff)}
+.sky .shoot::after{content:"";position:absolute;right:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 8px 3px rgba(255,236,190,.8)}
+/* rally: an aurora of the park's own colours moves through the sky */
+.sky .aur{position:absolute;left:-40%;top:-60%;width:180%;height:220%;opacity:0;transition:opacity 1.2s;
+  -webkit-mask:linear-gradient(180deg,#000 30%,transparent 62%);mask:linear-gradient(180deg,#000 30%,transparent 62%);
+  background:repeating-linear-gradient(90deg,transparent 0 14px,rgba(255,255,255,.035) 14px 17px),
+    linear-gradient(100deg,transparent 26%,rgba(232,178,58,.2) 34%,transparent 41%,rgba(95,207,170,.16) 47%,transparent 54%,rgba(232,178,58,.16) 60%,transparent 68%)}
+.sky .aur.a2{background:linear-gradient(80deg,transparent 30%,rgba(143,182,222,.18) 38%,transparent 45%,rgba(255,217,138,.18) 52%,transparent 60%)}
+body.rally .sky .aur{opacity:1;animation:aur 7s ease-in-out infinite alternate}
+body.rally .sky .aur.a2{animation-duration:9.5s;animation-direction:alternate-reverse}
+@keyframes aur{0%{transform:translateX(-14%) skewX(-12deg)}100%{transform:translateX(12%) skewX(10deg)}}
+
+/* ---------- The moon ---------- */
+.mn{position:relative}
+.mn svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.mn .halo{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,244,214,.34) 0%,rgba(246,226,170,.14) 32%,rgba(143,182,222,.06) 50%,transparent 68%);
+  animation:halo 7s ease-in-out infinite}
+@keyframes halo{0%,100%{opacity:.65;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+.mn.flare .halo{animation:haloFlare 1.6s var(--ease-out),halo 7s 1.6s ease-in-out infinite}
+@keyframes haloFlare{0%{opacity:.7;transform:scale(1)}16%{opacity:1;transform:scale(1.5);filter:brightness(1.6)}100%{opacity:.7;transform:scale(1)}}
+body.rally .mn .halo{background:radial-gradient(circle,rgba(255,217,138,.55) 0%,rgba(232,178,58,.22) 34%,transparent 66%);animation-duration:2.2s}
+.mn .cl{position:absolute;left:0;top:44%;width:74%;height:22%;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(96,114,148,.9) 0%,rgba(70,86,118,.55) 45%,transparent 72%)}
+.mn .cl + .cl{top:60%;width:52%;height:15%}
+.mn.cloud .cl{animation:cloud 11s linear}
+.mn.cloud .cl + .cl{animation-duration:13s;animation-delay:.8s}
+@keyframes cloud{0%{opacity:0;transform:translateX(-90%)}15%{opacity:.85}85%{opacity:.85}100%{opacity:0;transform:translateX(150%)}}
+
+/* ---------- Bug: the moon, then the plate with its strip ---------- */
+#bug.await{visibility:hidden}
+.pkg{display:flex;align-items:center}
+body[data-pos$="r"] .pkg{flex-direction:row-reverse}
+.pkg > .mn{z-index:3;width:104px;height:104px;margin-right:-36px;flex:0 0 auto}
+body[data-pos$="r"] .pkg > .mn{margin:0 0 0 -36px}
+.main{position:relative}
+.stack{display:flex;flex-direction:column;align-items:stretch}
+body[data-pos^="b"] .stack{flex-direction:column-reverse}
+
+/* the plate: a navy window on the night, rimmed cool on top and warm below */
+.plate{position:relative;z-index:2;height:72px;padding:1px;border-radius:13px;
+  background:linear-gradient(180deg,rgba(201,222,242,.42),rgba(143,182,222,.12) 38%,rgba(232,178,58,.14) 70%,rgba(255,217,138,.5));
+  box-shadow:0 14px 32px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.35)}
+.rail{position:relative;display:flex;align-items:stretch;height:100%;padding:5px 10px 5px 46px;border-radius:12px;overflow:hidden;
+  background:radial-gradient(ellipse 65% 110% at 50% 160%,rgba(232,178,58,.2),transparent 62%),
+    linear-gradient(180deg,var(--night-hi) 0%,#111a2e 52%,var(--night-lo) 100%);
+  box-shadow:inset 0 1px 0 rgba(201,222,242,.16)}
+body[data-pos$="r"] .rail{padding:5px 46px 5px 10px}
+.rail > :not(.sky):not(.sweep):not(.dark){position:relative;z-index:1}
+/* a searchlight that sweeps the plate on big moments and between halves */
+.rail .sweep{position:absolute;inset:-20% 0;pointer-events:none;z-index:2;transform:translateX(-120%);
+  background:linear-gradient(100deg,transparent 36%,rgba(255,246,220,.07) 44%,rgba(255,246,220,.22) 50%,rgba(255,246,220,.07) 56%,transparent 64%)}
+.rail.sweeping .sweep{animation:sweep 1.5s var(--ease-io)}
+@keyframes sweep{to{transform:translateX(120%)}}
+/* the lights hiccup (an error) */
+.rail .dark{position:absolute;inset:0;background:#02040a;opacity:0;pointer-events:none;z-index:3}
+.rail.flick .dark{animation:flick .95s linear}
+@keyframes flick{0%{opacity:.62}7%{opacity:0}13%{opacity:.74}18%{opacity:.08}27%{opacity:.5}33%{opacity:0}46%{opacity:.18}52%,100%{opacity:0}}
+
+/* team block: a team-colour light, the abbreviation, the score in its well */
+.team{display:flex;align-items:center}
+.team + .team{margin-left:14px}
+.pip{width:6px;height:38px;border-radius:3px;background:var(--tc);margin-right:12px;flex:0 0 auto;
+  box-shadow:0 0 12px -1px var(--tc),inset 0 0 0 1px rgba(255,255,255,.28)}
+.ab{font-weight:700;font-size:33px;letter-spacing:.035em;line-height:1;text-transform:uppercase;white-space:nowrap;text-shadow:0 2px 0 rgba(0,0,0,.45)}
+.score{position:relative;display:flex;align-items:center;justify-content:center;align-self:stretch;width:62px;margin-left:12px;border-radius:9px;
+  background:rgba(5,8,16,.62);box-shadow:inset 0 2px 8px rgba(0,0,0,.72),inset 0 0 0 1px rgba(143,182,222,.16)}
+.score .roll{font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;color:var(--chalk)}
+/* batting: a strip of the park's light under the team */
+.team::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--gold) 20%,var(--gold-hi) 50%,var(--gold) 80%,transparent);
+  box-shadow:0 0 10px rgba(232,178,58,.9);transform:scaleX(0);transition:transform .5s var(--ease-out)}
+.team.bat::after{transform:scaleX(1)}
+/* a run: the score is struck with starlight and settles back to chalk */
+.team.lit .score{animation:wellLit 2.3s ease-out}
+@keyframes wellLit{0%{background:rgba(255,226,150,.55);box-shadow:inset 0 0 18px rgba(255,240,200,.95),0 0 28px rgba(232,178,58,.9)}
+  38%{background:rgba(232,178,58,.18);box-shadow:inset 0 0 12px rgba(232,178,58,.5),0 0 14px rgba(232,178,58,.4)}100%{}}
+.team.lit .score .roll{animation:numLit 2.3s ease-out}
+@keyframes numLit{0%{color:#fff;text-shadow:0 0 6px #fff,0 0 18px #ffd98a,0 0 34px #e8b23a;scale:1.4}
+  14%{scale:1}40%{color:#ffe6a8;text-shadow:0 0 12px rgba(232,178,58,.7)}100%{}}
+.team.win .score{animation:winPulse 1.1s ease-in-out 5}
+@keyframes winPulse{50%{box-shadow:inset 0 0 0 2px var(--gold-hi),inset 0 0 22px rgba(232,178,58,.5),0 0 22px rgba(232,178,58,.6)}}
+
+/* rolling numerals: every value stacks in one grid cell and slides */
+.roll{position:relative;display:inline-grid;overflow:hidden;vertical-align:bottom}
+.roll > b{grid-area:1/1;font-weight:inherit;text-align:center}
+
+/* ---------- Situation: inning, diamond, count, outs ---------- */
+.sit{display:flex;align-items:center;gap:15px;margin-left:16px;padding-left:15px;border-left:1px solid var(--line)}
+.inn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:44px;height:62px;overflow:hidden}
+.inn .arr{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;opacity:.2;transition:opacity .3s}
+.inn .up{border-bottom:8px solid var(--gold)} .inn .dn{border-top:8px solid var(--gold)}
+.inn .arr.on{opacity:1;filter:drop-shadow(0 0 4px rgba(232,178,58,.85))}
+.inn .n{font-weight:700;font-size:29px;line-height:1.02;margin:3px 0}
+/* between halves a small moon rises in the inning box */
+.inn .rise{position:absolute;left:0;top:9px;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:translateY(160%);color:#18223a;
+  background:radial-gradient(circle at 30% 64%,rgba(150,132,90,.35) 0 4px,transparent 5px),radial-gradient(circle at 64% 30%,rgba(150,132,90,.28) 0 3px,transparent 4px),
+    radial-gradient(circle at 36% 34%,#fffdf4,#f3e6c2 48%,#d6c392 82%,#bba878);
+  box-shadow:0 0 14px rgba(255,236,190,.55)}
+.inn .rise small{font-weight:700;font-size:10px;letter-spacing:.14em;line-height:1;margin-right:-.14em}
+.inn .rise b{font-weight:700;font-size:21px;line-height:1}
+.inn.rising .rise{animation:moonRise 3.1s linear forwards}
+@keyframes moonRise{0%{transform:translateY(160%);animation-timing-function:var(--ease-out)}20%{transform:none}
+  84%{transform:none;animation-timing-function:var(--ease-in)}100%{transform:translateY(160%)}}
+.inn.rising > .arr,.inn.rising > .n{animation:innHide 3.1s linear}
+@keyframes innHide{0%,100%{opacity:1}10%,90%{opacity:0}}
+
+.dia{width:62px;height:54px;overflow:visible}
+.dia .path{fill:none;stroke:rgba(143,182,222,.18);stroke-width:1.4}
+.dia .trace{fill:none;stroke:var(--gold-hi);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.dia .plateH{fill:rgba(244,247,251,.35)}
+.dia .b{fill:rgba(5,8,16,.7);stroke:rgba(143,182,222,.5);stroke-width:1.8;transform-box:fill-box;transform-origin:50% 50%;transition:fill .3s,stroke .3s}
+.dia .b.on{fill:var(--gold);stroke:#fff1c8;filter:drop-shadow(0 0 5px rgba(232,178,58,.9))}
+.dia .b.pop{animation:basePop .55s var(--ease-out)}
+@keyframes basePop{0%{transform:scale(.3)}60%{transform:scale(1.35)}100%{transform:scale(1)}}
+
+.bso{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:7px;row-gap:5px}
+.bso em{font-style:normal;font-weight:700;font-size:13px;letter-spacing:.06em;color:var(--dim);line-height:1}
+.bso .dots{display:flex;gap:5px}
+.bso i{position:relative;width:12px;height:12px;border-radius:50%;background:#161d2c;box-shadow:inset 0 0 0 1.5px rgba(244,247,251,.2);
+  transition:background .25s,box-shadow .25s}
+.bso .b i.on{background:var(--steel);box-shadow:0 0 8px rgba(143,182,222,.85)}
+.bso .s i.on,.bso .o i.on{background:var(--gold);box-shadow:0 0 8px rgba(232,178,58,.85)}
+.bso i.pop{animation:dotPop .45s var(--ease-out)}
+@keyframes dotPop{0%{transform:scale(1.9)}100%{transform:scale(1)}}
+.bso i::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--gold-hi);opacity:0}
+.bso .b i::after{border-color:var(--steel-hi)}
+.bso i.pop::after{animation:ring .6s var(--ease-out)}
+@keyframes ring{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(2.6)}}
+
+/* the game's time limit, when it has one and Show clock is on */
+.clk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:84px;padding-left:14px;border-left:1px solid var(--line);align-self:stretch}
+.clk[hidden]{display:none}
+.clk em{font-style:normal;font-weight:700;font-size:12px;letter-spacing:.18em;color:var(--dim);line-height:1}
+.clk b{font-weight:700;font-size:27px;line-height:1;font-variant-numeric:tabular-nums;transition:color .4s}
+.clk.low b{color:var(--gold-hi)}
+.clk.zero b{color:var(--red);animation:clkBlink 1s steps(2,jump-none) infinite}
+@keyframes clkBlink{50%{opacity:.25}}
+.clk.show{animation:clkIn .5s var(--ease-out)}
+@keyframes clkIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.clk.hit{animation:clkHit 1.2s ease-out}
+@keyframes clkHit{0%,30%{background:rgba(255,93,85,.3)}100%{background:transparent}}
+
+/* ---------- Strip: the at-bat and play tags ---------- */
+.strip{position:relative;z-index:1;height:34px;margin:0 16px 0 50px;overflow:hidden;border-radius:0 0 11px 11px;
+  background:linear-gradient(180deg,rgba(12,18,32,.95),rgba(6,9,17,.95));
+  box-shadow:inset 0 0 0 1px rgba(143,182,222,.14),0 10px 22px rgba(0,0,0,.4)}
+body[data-pos^="b"] .strip{border-radius:11px 11px 0 0}
+body[data-pos$="r"] .strip{margin:0 50px 0 16px}
+.line{position:absolute;inset:0;display:flex;align-items:center;gap:11px;padding:0 16px;white-space:nowrap}
+.line .tag{flex:0 0 auto;padding:4px 8px 3px;border-radius:4px;font-weight:700;font-size:14px;letter-spacing:.08em;line-height:1;
+  background:rgba(143,182,222,.15);color:var(--steel-hi)}
+.line .tag.hot{background:var(--gold);color:#1c1405}
+.line .tag.ice{background:var(--steel);color:#0c1322}
+.line .tag.red{background:var(--red);color:#fff}
+.line .tag.green{background:var(--green);color:#06210f}
+.line .txt{font-weight:700;font-size:21px;letter-spacing:.045em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.line .side{margin-left:auto;font-weight:600;font-size:15px;letter-spacing:.07em;color:var(--dim);text-transform:uppercase}
+.line .side b{color:var(--chalk);font-weight:700;margin-left:6px}
+.line.in{animation:lineIn .42s .14s var(--ease-out) both}
+.line.out{animation:lineOut .3s var(--ease-in) both}
+@keyframes lineIn{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes lineOut{from{transform:none;opacity:1}to{transform:translateY(-100%);opacity:0}}
+
+/* ---------- Strikeout: a bank of stadium bulbs punches a K ---------- */
+.kw{position:absolute;top:0;left:calc(100% + 12px);height:72px;visibility:hidden;white-space:nowrap}
+body[data-pos^="b"] .kw{top:auto;bottom:0}
+body[data-pos$="r"] .kw{left:auto;right:calc(100% + 12px)}
+.kw.play{visibility:visible}
+.kflag{display:flex;align-items:center;gap:16px;height:100%;padding:1px;border-radius:13px;
+  background:linear-gradient(180deg,rgba(201,222,242,.42),rgba(143,182,222,.12) 40%,rgba(255,217,138,.5));box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.kin{display:flex;align-items:center;gap:16px;height:100%;padding:0 26px 0 7px;border-radius:12px;
+  background:radial-gradient(ellipse 60% 120% at 12% 50%,rgba(232,178,58,.16),transparent 70%),linear-gradient(180deg,var(--night-hi),var(--night-lo))}
+body[data-pos$="r"] .kin{flex-direction:row-reverse;padding:0 7px 0 26px}
+.bank{display:grid;grid-template-columns:repeat(5,8px);grid-auto-rows:8px;gap:1.2px;padding:3px 5px;border-radius:6px;
+  background:#04070d;box-shadow:inset 0 0 0 1px rgba(143,182,222,.2),inset 0 2px 6px rgba(0,0,0,.8)}
+.bank i{border-radius:50%;background:#161d2b;box-shadow:inset 0 -1px 1px rgba(0,0,0,.6)}
+.bank i.on{background:radial-gradient(circle at 40% 35%,#fff 0,#fff1c8 40%,#e8b23a 90%);box-shadow:0 0 6px 1px rgba(255,214,120,.85);
+  animation:bulbOn .32s linear}
+@keyframes bulbOn{0%{opacity:.2;transform:scale(.7)}25%{opacity:1;transform:scale(1.3);filter:brightness(1.8)}40%{opacity:.45}55%{opacity:1;transform:scale(1)}100%{opacity:1}}
+.bank i.off{animation:bulbOff .55s ease-out forwards}
+@keyframes bulbOff{0%{background:#fff1c8;box-shadow:0 0 6px 1px rgba(255,214,120,.85)}30%{background:#e8963a;box-shadow:0 0 4px rgba(232,150,58,.6)}
+  100%{background:#161d2b;box-shadow:inset 0 -1px 1px rgba(0,0,0,.6)}}
+.kt{display:flex;flex-direction:column;justify-content:center;gap:6px}
+body[data-pos$="r"] .kt{align-items:flex-end}
+.kt b{font-weight:700;font-size:30px;line-height:1;letter-spacing:.035em;text-transform:uppercase}
+.kt small{font-weight:600;font-size:16px;line-height:1;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.kt small em{font-style:normal;font-weight:700;color:var(--gold-hi)}
+.kw.play .kflag{animation:kLife 3.9s linear forwards}
+body[data-pos$="r"] .kw.play .kflag{animation-name:kLifeR}
+@keyframes kLife{0%{clip-path:inset(0 100% 0 0 round 13px);animation-timing-function:var(--ease-out)}9%{clip-path:inset(0 0 0 0 round 13px)}
+  88%{clip-path:inset(0 0 0 0 round 13px);opacity:1;animation-timing-function:var(--ease-in)}100%{clip-path:inset(0 0 0 100% round 13px);opacity:.4}}
+@keyframes kLifeR{0%{clip-path:inset(0 0 0 100% round 13px);animation-timing-function:var(--ease-out)}9%{clip-path:inset(0 0 0 0 round 13px)}
+  88%{clip-path:inset(0 0 0 0 round 13px);opacity:1;animation-timing-function:var(--ease-in)}100%{clip-path:inset(0 100% 0 0 round 13px);opacity:.4}}
+.kw.play .kt > *{animation:rise .5s .5s var(--ease-out) both}
+.kw.play .kt small{animation-delay:.62s}
+@keyframes rise{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Home run: a moonshot, written in stardust ---------- */
+.hrw{position:absolute;left:-54px;bottom:calc(100% + 26px);width:940px;height:196px;pointer-events:none;visibility:hidden}
+body[data-pos^="t"] .hrw{bottom:auto;top:calc(100% + 26px)}
+body[data-pos$="r"] .hrw{left:auto;right:-54px}
+.hrw.play{visibility:visible}
+.hr{position:absolute;inset:0;padding:1px;border-radius:17px;
+  background:linear-gradient(180deg,rgba(201,222,242,.5),rgba(143,182,222,.12) 40%,rgba(255,217,138,.6));box-shadow:0 20px 44px rgba(0,0,0,.55)}
+.hin{position:relative;height:100%;border-radius:16px;overflow:hidden;
+  background:radial-gradient(ellipse 70% 90% at 50% 150%,rgba(232,178,58,.24),transparent 62%),
+    linear-gradient(180deg,#16223d 0%,#0f172a 55%,#080c16 100%)}
+.hin .beam{position:absolute;bottom:-10px;width:220px;height:460px;margin-left:-110px;transform-origin:50% 100%;opacity:.55;
+  background:linear-gradient(0deg,rgba(255,246,220,.3),rgba(255,246,220,.06) 70%,transparent);clip-path:polygon(46% 100%,54% 100%,100% 0,0 0)}
+.hin .beam.b1{left:22%;animation:beam 3.4s ease-in-out infinite alternate}
+.hin .beam.b2{left:74%;animation:beam 2.9s ease-in-out infinite alternate-reverse}
+@keyframes beam{from{transform:rotate(-28deg)}to{transform:rotate(24deg)}}
+.hin .bigmoon{position:absolute;right:46px;top:-26px;width:190px;height:190px;opacity:0}
+.hbody{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 60px 0 48px}
+body[data-pos$="r"] .hbody{padding:0 250px 0 48px}
+.hbody .t1{white-space:nowrap;line-height:1;height:108px}
+.t1 .tx,.w1 .tx{display:inline-block;font-weight:700;letter-spacing:.035em;color:#fff8ea;opacity:0;line-height:1}
+.hbody .t1 .tx{font-size:112px}
+.bl{display:inline-block;width:0;height:0;vertical-align:baseline}
+.t1.solid .tx,.w1.solid .tx{animation:solid .8s var(--ease-out) forwards}
+@keyframes solid{0%{opacity:0;text-shadow:0 0 30px rgba(255,236,190,1)}100%{opacity:1;text-shadow:0 0 22px rgba(232,178,58,.5),0 4px 0 rgba(0,0,0,.4)}}
+.hbody .t2{display:flex;align-items:center;gap:14px;white-space:nowrap;overflow:hidden;opacity:0}
+.hbody .t2 i{width:6px;height:28px;border-radius:3px;background:var(--tc);box-shadow:0 0 10px var(--tc);flex:0 0 auto}
+.hbody .t2 b{font-weight:700;font-size:31px;letter-spacing:.045em;text-transform:uppercase}
+.hbody .t2 span{font-weight:700;font-size:20px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-hi)}
+.hrw.play .hr{animation:hrLife 6.8s linear forwards}
+.hrw.play.wo .hr{animation-duration:9s}
+@keyframes hrLife{0%{clip-path:inset(0 50% 0 50% round 17px);animation-timing-function:var(--ease-out)}6%{clip-path:inset(0 0 0 0 round 17px)}
+  92%{clip-path:inset(0 0 0 0 round 17px);opacity:1;animation-timing-function:var(--ease-in)}100%{clip-path:inset(49% 0 49% 0 round 17px);opacity:.6}}
+.hrw.play .bigmoon{animation:bigMoon 2.2s .15s var(--ease-out) forwards}
+@keyframes bigMoon{from{opacity:0;transform:translateY(90px) scale(.9)}to{opacity:1;transform:none}}
+.hrw.play .t2{animation:t2In .6s 2.25s var(--ease-out) forwards}
+@keyframes t2In{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hrw.play .t1.gone .tx,.hrw.play .t2.gone{animation:gone .7s var(--ease-in) forwards}
+@keyframes gone{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+
+/* ---------- The intro: full frame, before the first pitch ---------- */
+.hero{position:absolute;inset:0;display:none;pointer-events:none;z-index:10}
+.hero.on{display:block}
+.hero .veil{position:absolute;inset:0;opacity:0;
+  background:radial-gradient(ellipse 80% 55% at 50% 118%,rgba(232,178,58,.2),transparent 62%),
+    radial-gradient(ellipse 70% 80% at 50% 30%,#141e36 0%,#0b1122 55%,#04070e 100%)}
+.hero .hsky{position:absolute;inset:0;opacity:0}
+.hero.on .veil,.hero.on .lb{animation:veil 10.6s linear forwards}
+.hero.on .hsky{animation:veil 10.6s linear forwards}
+@keyframes veil{0%{opacity:0}6%{opacity:1}82%{opacity:1}94%,100%{opacity:0}}
+.hero .flash{position:absolute;inset:0;background:radial-gradient(ellipse 90% 70% at 50% 10%,rgba(255,250,235,.3),rgba(255,250,235,.06) 60%,transparent);opacity:0}
+.hero .flash.go{animation:flash .5s ease-out}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+.hero .hmoon{position:absolute;left:50%;top:64px;width:270px;height:270px;margin-left:-135px;opacity:0}
+.hero.on .hmoon{animation:hmoon 2.8s .4s var(--ease-out) both}
+@keyframes hmoon{from{opacity:0;transform:translateY(240px) scale(.85)}to{opacity:1;transform:none}}
+.lb{position:absolute;top:36px;left:var(--x);width:0;height:0}
+.lb .head{position:absolute;left:-82px;top:0;width:164px;display:grid;grid-template-columns:repeat(8,14px);gap:5px;padding:8px;border-radius:6px;
+  background:linear-gradient(180deg,#1a2233,#0b1019);box-shadow:inset 0 0 0 2px #2a3448,0 8px 18px rgba(0,0,0,.6)}
+.lb .head i{height:14px;border-radius:50%;background:#1a2231;box-shadow:inset 0 -2px 2px rgba(0,0,0,.6);transition:background .1s}
+.lb.on .head i{background:radial-gradient(circle at 40% 35%,#fff 0,#fff6dc 45%,#f3cf7a 95%);box-shadow:0 0 10px 2px rgba(255,236,190,.8);
+  animation:bulbOn .4s linear both;animation-delay:calc(var(--j) * 14ms)}
+.lb .bloom{position:absolute;left:-230px;top:-160px;width:460px;height:380px;border-radius:50%;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(255,248,228,.55),rgba(255,240,200,.14) 40%,transparent 68%)}
+.lb .cone{position:absolute;left:-460px;top:54px;width:920px;height:1100px;opacity:0;transform-origin:50% 0;transform:rotate(var(--r));
+  background:linear-gradient(180deg,rgba(255,247,225,.3),rgba(255,247,225,.1) 40%,rgba(255,247,225,.03) 75%,transparent);
+  clip-path:polygon(45.5% 0,54.5% 0,100% 100%,0 100%)}
+.lb.on .bloom{animation:bloom .7s linear forwards}
+.lb.on .cone{animation:cone .7s linear forwards}
+@keyframes bloom{0%{opacity:1}12%{opacity:.3}20%{opacity:1}100%{opacity:.8}}
+@keyframes cone{0%{opacity:.9}12%{opacity:.2}22%{opacity:.8}30%{opacity:.4}100%{opacity:1}}
+.hero .word{position:absolute;left:0;right:0;top:382px;display:flex;flex-direction:column;align-items:center;gap:22px}
+.hero .w0{font-weight:700;font-size:36px;letter-spacing:.7em;margin-right:-.7em;color:var(--steel-hi);text-shadow:0 0 18px rgba(143,182,222,.6);opacity:0;text-transform:uppercase}
+.hero.on .w0{animation:track 1.6s 1s var(--ease-out) both}
+@keyframes track{from{opacity:0;letter-spacing:1.3em;margin-right:-1.3em}to{opacity:1;letter-spacing:.7em;margin-right:-.7em}}
+.hero .w1{white-space:nowrap;line-height:1;height:140px}
+.hero .w1 .tx{font-size:146px;letter-spacing:.05em}
+.hero .w2{display:flex;align-items:center;gap:30px;opacity:0}
+.hero .w2 span{font-weight:700;font-size:66px;letter-spacing:.06em;text-transform:uppercase;text-shadow:0 4px 0 rgba(0,0,0,.5)}
+.hero .w2 em{font-style:normal;font-weight:600;font-size:36px;letter-spacing:.2em;color:var(--gold)}
+.hero .w2 i{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
+.hero .w2 i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+.hero.on .w2{animation:fadeUp 1s 5.5s var(--ease-out) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.hero.on .word{animation:wordOut .8s 8.1s var(--ease-in) forwards}
+@keyframes wordOut{to{opacity:0;transform:translateY(-16px)}}
+
+/* ---------- First paint: the plate opens out of the moon ---------- */
+#bug.intro .pkg > .mn{animation:moonPop .7s var(--ease-out) both}
+#bug.intro .plate{animation:build .75s .15s var(--ease-out) both}
+#bug.intro .strip{animation:lineIn .5s .55s var(--ease-out) both}
+#bug.landed .plate{animation:build .85s var(--ease-out) both}
+#bug.landed .strip{animation:lineIn .5s .45s var(--ease-out) both}
+@keyframes moonPop{from{transform:scale(.3) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes build{from{clip-path:inset(0 100% 0 0 round 13px)}to{clip-path:inset(0 0 0 0 round 13px)}}
+body[data-pos$="r"] #bug.intro .plate,body[data-pos$="r"] #bug.landed .plate{animation-name:buildR}
+@keyframes buildR{from{clip-path:inset(0 0 0 100% round 13px)}to{clip-path:inset(0 0 0 0 round 13px)}}
+
+@media (prefers-reduced-motion:reduce){
+  .sky .l1,.sky .l2,.sky .tw,.mn .halo,.hin .beam,body.rally .sky .aur{animation:none!important}
+  .dia .b.pop,.bso i.pop,#bug.intro *,#bug.landed *{animation:none!important}
+}
+</style>
+</head>
+<body>
+<!-- The moon, drawn once and used wherever it appears. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="mnLit" cx="36%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#fffdf5"/><stop offset=".45" stop-color="#f5eacb"/><stop offset=".8" stop-color="#dccb9c"/><stop offset="1" stop-color="#bfae80"/>
+    </radialGradient>
+    <radialGradient id="mnDark" cx="64%" cy="34%" r="72%"><stop offset="0" stop-color="#2a3550"/><stop offset="1" stop-color="#151c2e"/></radialGradient>
+    <radialGradient id="mnCr" cx="45%" cy="40%" r="60%">
+      <stop offset="0" stop-color="#b3a273" stop-opacity=".15"/><stop offset=".7" stop-color="#a38f62" stop-opacity=".55"/><stop offset="1" stop-color="#8f7c52" stop-opacity=".2"/>
+    </radialGradient>
+    <filter id="mnSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4"/></filter>
+    <mask id="mnMask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect width="100" height="100" fill="#fff"/>
+      <circle cx="73" cy="33" r="36" fill="#000" filter="url(#mnSoft)"/>
+    </mask>
+    <symbol id="mnMoon" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" fill="url(#mnDark)" opacity=".8"/>
+      <g mask="url(#mnMask)">
+        <circle cx="50" cy="50" r="40" fill="url(#mnLit)"/>
+        <circle cx="33" cy="58" r="8.5" fill="url(#mnCr)"/>
+        <circle cx="47" cy="76" r="5.5" fill="url(#mnCr)"/>
+        <circle cx="22" cy="42" r="4.6" fill="url(#mnCr)"/>
+        <circle cx="29" cy="75" r="3.2" fill="url(#mnCr)"/>
+        <circle cx="59" cy="66" r="3.6" fill="url(#mnCr)"/>
+        <circle cx="18" cy="58" r="2.4" fill="url(#mnCr)"/>
+      </g>
+      <circle cx="50" cy="50" r="39.6" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="0.8"/>
+    </symbol>
+  </defs>
+</svg>
+<div id="stage">
+  <div id="bug">
+    <div class="pkg">
+      <div class="mn"></div>
+      <div class="main">
+        <div class="stack">
+        <div class="plate"><div class="rail">
+          <div class="sky"><i class="l1"></i><i class="l2"></i><i class="aur"></i><i class="aur a2"></i><i class="shoot"></i></div>
+          <div class="team" data-t="away"><i class="pip"></i><span class="ab"></span><div class="score"><span class="roll" data-k="away"></span></div></div>
+          <div class="team" data-t="home"><i class="pip"></i><span class="ab"></span><div class="score"><span class="roll" data-k="home"></span></div></div>
+          <div class="sit">
+            <div class="inn">
+              <i class="arr up"></i><span class="n roll" data-k="inning"></span><i class="arr dn"></i>
+              <div class="rise"><small>MID</small><b>1</b></div>
+            </div>
+            <svg class="dia" viewBox="0 0 64 56" aria-hidden="true">
+              <path class="path" d="M32 49 L51 30 L32 11 L13 30 Z"/>
+              <path class="plateH" d="M28.5 46.5 h7 v3.2 l-3.5 3 l-3.5 -3 z"/>
+              <path class="trace" pathLength="4" d="M32 49 L51 30 L32 11 L13 30 L32 49"/>
+              <g class="b" data-b="2"><rect x="25.5" y="4.5" width="13" height="13" transform="rotate(45 32 11)"/></g>
+              <g class="b" data-b="3"><rect x="6.5" y="23.5" width="13" height="13" transform="rotate(45 13 30)"/></g>
+              <g class="b" data-b="1"><rect x="44.5" y="23.5" width="13" height="13" transform="rotate(45 51 30)"/></g>
+            </svg>
+            <div class="bso">
+              <em>B</em><div class="dots b"><i></i><i></i><i></i></div>
+              <em>S</em><div class="dots s"><i></i><i></i></div>
+              <em>O</em><div class="dots o"><i></i><i></i></div>
+            </div>
+            <div class="clk" hidden><em>TIME</em><b></b></div>
+          </div>
+          <i class="sweep"></i><i class="dark"></i>
+        </div></div>
+        <div class="strip"></div>
+        </div>
+        <div class="kw"><div class="kflag"><div class="kin"><div class="bank"></div><div class="kt"><b></b><small></small></div></div></div></div>
+        <div class="hrw">
+          <div class="hr"><div class="hin">
+            <div class="sky"><i class="l1"></i><i class="l2"></i></div>
+            <i class="beam b1"></i><i class="beam b2"></i>
+            <div class="bigmoon mn"></div>
+            <div class="hbody"><div class="t1"><span class="tx"></span><i class="bl"></i></div><div class="t2"><i></i><b></b><span></span></div></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero" aria-hidden="true">
+    <div class="veil"></div>
+    <div class="hsky sky"><i class="l1"></i><i class="l2"></i></div>
+    <div class="hmoon mn"></div>
+    <div class="lb" style="--x:250px;--r:-17deg"><i class="cone"></i><i class="bloom"></i><div class="head"></div></div>
+    <div class="lb" style="--x:640px;--r:-7deg"><i class="cone"></i><i class="bloom"></i><div class="head"></div></div>
+    <div class="lb" style="--x:1280px;--r:7deg"><i class="cone"></i><i class="bloom"></i><div class="head"></div></div>
+    <div class="lb" style="--x:1670px;--r:17deg"><i class="cone"></i><i class="bloom"></i><div class="head"></div></div>
+    <div class="flash"></div>
+    <div class="word">
+      <div class="w0">Tonight</div>
+      <div class="w1"><span class="tx">UNDER THE LIGHTS</span><i class="bl"></i></div>
+      <div class="w2"><i></i><span></span><em>AT</em><span></span><i></i></div>
+    </div>
+  </div>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam, fieldingTeam, params } = BugKit;
+  const stage = $("#stage"), bug = $("#bug"), pkg = $(".pkg"), rail = $(".rail"), strip = $(".strip"), hrw = $(".hrw"), kw = $(".kw"), inn = $(".inn");
+  const hero = $(".hero");
+  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const up = (t) => String(t ?? "").toUpperCase();
+  const words = (n) => String(n || "").trim().split(/\s+/).filter(Boolean);
+  const surname = (n) => { const w = words(n); return w.length ? w[w.length - 1] : ""; };
+  const ordinal = (n) => { const s = ["TH", "ST", "ND", "RD"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const abbrOf = (S, t) => up(S[t].abbr || S[t].name);
+  const team = (t) => $(`.team[data-t="${t}"]`);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const later = (ms, fn) => setTimeout(fn, ms);
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const easeOut = (u) => 1 - (1 - u) ** 3;
+  const easeIO = (u) => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
+  const topPos = () => document.body.dataset.pos[0] === "t";
+  const rightPos = () => document.body.dataset.pos[1] === "r";
+  let cur = null;
+  const ks = new Map();   // strikeouts by pitcher, this broadcast (demo)
+
+  /* ---------- The sky: star tiles drawn once, twinkles placed at random ---------- */
+  function seeded(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function starTile(seed, n, big) {
+    const c = document.createElement("canvas"); c.width = 600; c.height = 240;
+    const g = c.getContext("2d"), r = seeded(seed);
+    for (let i = 0; i < n; i++) {
+      const x = r() * 600, y = r() * 240, s = big ? 0.6 + r() * 0.9 : 0.35 + r() * 0.55, a = big ? 0.45 + r() * 0.5 : 0.25 + r() * 0.45;
+      const tint = r(), col = tint < 0.15 ? "255,232,180" : tint < 0.4 ? "200,222,248" : "255,255,255";
+      if (big && r() < 0.3) { const gr = g.createRadialGradient(x, y, 0, x, y, s * 4); gr.addColorStop(0, `rgba(${col},${a * 0.5})`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(x - s * 4, y - s * 4, s * 8, s * 8); }
+      g.fillStyle = `rgba(${col},${a})`; g.beginPath(); g.arc(x, y, s, 0, 6.2832); g.fill();
+    }
+    return `url(${c.toDataURL("image/png")})`;
+  }
+  document.documentElement.style.setProperty("--stars1", starTile(7, 150, false));
+  document.documentElement.style.setProperty("--stars2", starTile(21, 34, true));
+  function twinkles(sky, n) {
+    for (let i = 0; i < n; i++) {
+      const t = document.createElement("i");
+      t.className = "tw" + (Math.random() < 0.3 ? " g" : "");
+      t.style.cssText = `left:${rnd(2, 98)}%;top:${Math.random() < 0.5 ? rnd(5, 24) : rnd(80, 95)}%;--d:${rnd(2.2, 5.2).toFixed(2)}s;--dl:${-rnd(0, 5).toFixed(2)}s`;
+      sky.prepend(t);
+    }
+  }
+  twinkles($(".rail .sky"), 11);
+  twinkles($(".hin .sky"), 18);
+  twinkles($(".hero .hsky"), 40);
+
+  /* ---------- The moon, wherever it appears ---------- */
+  const MOON = `<i class="halo"></i><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#mnMoon"/></svg><i class="cl"></i><i class="cl"></i>`;
+  for (const el of $$(".mn")) el.innerHTML = MOON;
+  const moon = $(".pkg > .mn");
+  const flare = (m = moon) => restart(m, "flare");
+  const sweep = () => restart(rail, "sweeping");
+
+  /* ---------- One canvas for everything that flies ----------
+     P  sparks and motes      C  comets (a ball, a shooting star)
+     R  flashes and rings     F  firework shells
+     G  star text: stars that fly to the shape of a word, rest there, and blow away */
+  const fxc = $("#fx"), ctx = fxc.getContext("2d");
+  const GOLD = [[255, 253, 244], [255, 232, 170], [240, 190, 80], [190, 120, 40], [70, 35, 10]];
+  const ICE = [[255, 255, 255], [222, 236, 252], [160, 196, 232], [80, 118, 160], [22, 36, 62]];
+  const WARM = [[255, 255, 250], [255, 244, 214], [255, 214, 140], [220, 150, 70], [60, 30, 12]];
+  const rgbOf = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "")); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const palFrom = (hex) => { const c = rgbOf(hex); if (!c) return GOLD; const mix = (k) => c.map((v) => Math.round(v + (255 - v) * k)); return [[255, 255, 255], mix(0.55), mix(0.2), c, c.map((v) => v * 0.3 | 0)]; };
+  function sprite(rgb, r = 16) {
+    const c = document.createElement("canvas"); c.width = c.height = r * 2;
+    const g = c.getContext("2d"), gr = g.createRadialGradient(r, r, 0, r, r, r);
+    gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(0.22, `rgba(${rgb},.5)`); gr.addColorStop(0.55, `rgba(${rgb},.12)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = gr; g.fillRect(0, 0, r * 2, r * 2); return c;
+  }
+  const GLOW = { white: sprite("255,255,255", 32), gold: sprite("255,214,130", 32), ice: sprite("170,205,245", 32) };
+  const STAR_RGB = ["255,250,236", "255,226,160", "205,225,248"];
+  let P = [], C = [], R = [], F = [], G = [], raf = 0, last = 0;
+  const tint = (pal, t) => {
+    const x = Math.min(pal.length - 1.001, Math.max(0, t) * (pal.length - 1)), i = x | 0, f = x - i, a = pal[i], b = pal[i + 1];
+    return `${(a[0] + (b[0] - a[0]) * f) | 0},${(a[1] + (b[1] - a[1]) * f) | 0},${(a[2] + (b[2] - a[2]) * f) | 0}`;
+  };
+  function wake() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); } }
+  function step(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const T = now / 1000;
+    ctx.clearRect(0, 0, 1920, 1080);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    drawText(dt, T); drawShells(dt); drawComets(dt); drawSparks(dt); drawRings(dt);
+    ctx.globalAlpha = 1;
+    if (P.length || C.length || R.length || F.length || G.length) raf = requestAnimationFrame(step);
+    else { raf = 0; ctx.clearRect(0, 0, 1920, 1080); }
+  }
+
+  function drawSparks(dt) {
+    P = P.filter((p) => (p.age += dt) < p.life);
+    for (const p of P) {
+      const t = p.age / p.life;
+      if (p.mote) {
+        p.vx += Math.sin(p.age * p.w + p.ph) * p.sway * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        const a = Math.min(1, t / 0.15) * (1 - t) * p.o;
+        ctx.globalAlpha = a * 0.5; ctx.drawImage(p.glow, p.x - p.s * 4, p.y - p.s * 4, p.s * 8, p.s * 8);
+        ctx.globalAlpha = a; ctx.fillStyle = `rgb(${tint(p.pal, 0.15 + t * 0.5)})`; ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+        continue;
+      }
+      const k = Math.max(0, 1 - p.drag * dt);
+      p.vx *= k; p.vy = p.vy * k + p.g * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      let a = 1 - t * t;
+      if (p.crackle && t > 0.55) a *= Math.random() < 0.45 ? 1 : 0.1;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = `rgb(${tint(p.pal, t)})`;
+      ctx.lineWidth = p.s * (1 - t * 0.55);
+      ctx.beginPath(); ctx.moveTo(p.x - p.vx * p.tail, p.y - p.vy * p.tail); ctx.lineTo(p.x, p.y); ctx.stroke();
+      if (p.glint && t < 0.7) { ctx.globalAlpha = a * 0.8; ctx.drawImage(p.glint, p.x - 7, p.y - 7, 14, 14); }
+    }
+  }
+  // A burst of sparks from (x, y) in stage pixels, thrown along `angle` (degrees, 0 = right, -90 = up).
+  function burst(x, y, { n = 24, speed = [220, 620], angle = -90, spread = 150, pal = GOLD, g = 900, life = [0.35, 0.9], size = [1.4, 2.8], drag = 1.6, tail = 0.04, crackle = 0 } = {}) {
+    if (P.length > 1600) return;
+    for (let i = 0; i < n; i++) {
+      const a = (angle + rnd(-spread / 2, spread / 2)) * Math.PI / 180, v = rnd(...speed);
+      P.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g, drag, pal, tail, life: rnd(...life), s: rnd(...size), crackle: Math.random() < crackle, age: 0 });
+    }
+    wake();
+  }
+  // Motes drifting from a span of (x0..x1, y): fireflies, dust in a light beam.
+  function motes(x0, x1, y0, y1, n, pal = WARM, { vy = [-20, -60], life = [1.6, 3.2], size = [1.2, 2.2], o = 0.85, glow = GLOW.gold } = {}) {
+    if (P.length > 1600) return;
+    for (let i = 0; i < n; i++) {
+      P.push({ mote: true, x: rnd(x0, x1), y: rnd(y0, y1), vx: rnd(-10, 10), vy: rnd(...vy), sway: rnd(14, 40), w: rnd(1.2, 3), ph: rnd(0, 6),
+        pal, life: rnd(...life), s: rnd(...size), o, glow, age: 0 });
+    }
+    wake();
+  }
+  function flash(x, y, r = 90, life = 0.4, glow = GLOW.white) { R.push({ flash: true, x, y, r, life, glow, age: 0 }); wake(); }
+  function ringAt(x, y, r0 = 6, r1 = 90, life = 0.6, rgb = "255,236,190", w = 2.4) { R.push({ x, y, r0, r1, life, rgb, w, age: 0 }); wake(); }
+  function drawRings(dt) {
+    R = R.filter((r) => (r.age += dt) < r.life);
+    for (const r of R) {
+      const k = r.age / r.life;
+      if (r.flash) { const s = r.r * (0.6 + 0.4 * easeOut(k)); ctx.globalAlpha = (1 - k) ** 2; ctx.drawImage(r.glow, r.x - s, r.y - s, s * 2, s * 2); continue; }
+      ctx.globalAlpha = (1 - k) * 0.9; ctx.strokeStyle = `rgb(${r.rgb})`; ctx.lineWidth = r.w * (1 - k) + 0.4;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r0 + (r.r1 - r.r0) * easeOut(k), 0, 6.2832); ctx.stroke();
+    }
+  }
+
+  // Comets: a head that runs a path(u) over `dur` seconds with a fading tail.
+  const quad = (a, c, b) => (u) => { const v = 1 - u; return [v * v * a[0] + 2 * v * u * c[0] + u * u * b[0], v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]]; };
+  function poly(pts) {
+    const segs = []; let L = 0;
+    for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); segs.push([L, l, pts[i - 1], pts[i]]); L += l; }
+    return (u) => { const d = u * L; for (const [s, l, a, b] of segs) if (d <= s + l || b === pts[pts.length - 1]) { const f = l ? clamp01((d - s) / l) : 1; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; } return pts[pts.length - 1]; };
+  }
+  function comet(path, dur, { size = 3, glow = GLOW.gold, trail = 24, ease = (u) => u, debris = 0, pal = GOLD, onEnd, delay = 0 } = {}) {
+    C.push({ path, dur, size, glow, trail, ease, debris, pal, onEnd, age: -delay, tr: [], done: false });
+    wake();
+  }
+  function drawComets(dt) {
+    for (const c of C) {
+      c.age += dt;
+      if (c.age < 0) continue;
+      if (!c.done) {
+        const u = clamp01(c.age / c.dur), [x, y] = c.path(c.ease(u));
+        c.tr.push([x, y]); if (c.tr.length > c.trail) c.tr.shift();
+        if (c.debris && Math.random() < c.debris) P.push({ x, y, vx: rnd(-40, 40), vy: rnd(-40, 40), g: 60, drag: 2, pal: c.pal, tail: 0.02, life: rnd(0.3, 0.7), s: rnd(0.8, 1.6), age: 0 });
+        if (u >= 1) { c.done = true; c.onEnd?.(x, y); }
+      } else c.tr.shift();
+      const n = c.tr.length;
+      for (let i = 1; i < n; i++) {
+        const k = i / n;
+        ctx.globalAlpha = k * k * 0.9; ctx.strokeStyle = `rgb(${tint(c.pal, 1 - k)})`; ctx.lineWidth = c.size * k * 1.5;
+        ctx.beginPath(); ctx.moveTo(c.tr[i - 1][0], c.tr[i - 1][1]); ctx.lineTo(c.tr[i][0], c.tr[i][1]); ctx.stroke();
+      }
+      if (!c.done && n) {
+        const [x, y] = c.tr[n - 1], s = c.size * 9;
+        ctx.globalAlpha = 1; ctx.drawImage(c.glow, x - s, y - s, s * 2, s * 2);
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, c.size * 0.8, 0, 6.2832); ctx.fill();
+      }
+    }
+    C = C.filter((c) => !(c.done && !c.tr.length));
+  }
+
+  // Fireworks: a shell climbs from (x, y0) to (x, y1), then breaks.
+  function shell(x, y0, y1, { pal = GOLD, n = 72, kind = "peony", delay = 0, speed = 300 } = {}) {
+    F.push({ x, y: y0, x0: x, y0, y1, pal, n, kind, speed, dur: rnd(0.55, 0.8), age: -delay }); wake();
+  }
+  function breakShell(s) {
+    flash(s.x, s.y, 120, 0.45, s.pal === ICE ? GLOW.ice : GLOW.gold);
+    const willow = s.kind === "willow", ring = s.kind === "ring";
+    for (let i = 0; i < s.n; i++) {
+      const a = (i / s.n) * 6.2832 + rnd(-0.04, 0.04), v = s.speed * (ring ? 1 : rnd(0.55, 1));
+      P.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: willow ? 150 : 230, drag: willow ? 2.4 : 1.5, pal: s.pal, tail: willow ? 0.08 : 0.045,
+        life: willow ? rnd(1.8, 2.6) : rnd(1.0, 1.6), s: willow ? rnd(1.4, 2) : rnd(2, 3), crackle: Math.random() < (willow ? 0.5 : 0.25),
+        glint: !willow && Math.random() < 0.3 ? (s.pal === ICE ? GLOW.ice : GLOW.gold) : null, age: 0 });
+    }
+    if (s.kind === "peony") for (let i = 0; i < 18; i++) {   // a bright heart
+      const a = rnd(0, 6.2832), v = rnd(40, 110);
+      P.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 120, drag: 2, pal: WARM, tail: 0.03, life: rnd(0.5, 0.9), s: 2, age: 0 });
+    }
+  }
+  function drawShells(dt) {
+    for (const s of F) {
+      s.age += dt;
+      if (s.age < 0) continue;
+      const k = clamp01(s.age / s.dur);
+      s.y = s.y0 + (s.y1 - s.y0) * (1 - (1 - k) ** 2); s.x = s.x0 + Math.sin(k * 9) * 2;
+      if (Math.random() < 0.8) P.push({ x: s.x, y: s.y, vx: rnd(-14, 14), vy: rnd(10, 50), g: 80, drag: 2, pal: WARM, tail: 0.02, life: rnd(0.25, 0.5), s: 1.3, age: 0 });
+      ctx.globalAlpha = 1; ctx.drawImage(GLOW.gold, s.x - 8, s.y - 8, 16, 16);
+      if (k >= 1) { s.gone = true; breakShell(s); }
+    }
+    F = F.filter((s) => !s.gone);
+  }
+
+  /* ---------- Star text ----------
+     A word is drawn once off screen in the same face, size and spacing as the
+     page shows it, and sampled: every lit point is a star's place. The stars
+     fly there, rest (twinkling) while the crisp word fades in under them,
+     then blow away. */
+  function sampleText(box, max = 1400, step = 3) {
+    const tx = $(".tx", box), bl = $(".bl", box);
+    const st = stage.getBoundingClientRect(), s = st.width / 1920;
+    const r = tx.getBoundingClientRect(), k = r.width / s / (tx.offsetWidth || 1);
+    const cs = getComputedStyle(tx);
+    const fs = parseFloat(cs.fontSize) * k, ls = (parseFloat(cs.letterSpacing) || 0) * k;
+    const x0 = (r.left - st.left) / s, base = (bl.getBoundingClientRect().top - st.top) / s;
+    const W = Math.ceil(r.width / s) + 24, H = Math.ceil(fs * 1.3), by = Math.round(fs);
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.font = `${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
+    if ("letterSpacing" in g) g.letterSpacing = ls + "px";
+    g.fillStyle = "#fff"; g.textBaseline = "alphabetic";
+    g.fillText(tx.textContent, 0, by);
+    const d = g.getImageData(0, 0, W, H).data, pts = [];
+    for (let y = 0; y < H; y += step) for (let x = (y / step) % 2 ? step / 2 : 0; x < W; x += step) {
+      if (d[((y | 0) * W + (x | 0)) * 4 + 3] > 150) pts.push([x0 + x + rnd(-0.7, 0.7), base - by + y + rnd(-0.7, 0.7)]);
+    }
+    for (let i = pts.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+    return pts.slice(0, max);
+  }
+  function mkStar(x, y) {
+    const r = Math.random();
+    return { x, y, px: x, py: y, sx: x, sy: y, tx: x, ty: y, dl: 0, du: 1, cu: 0, s: rnd(1.1, 2.2), ph: rnd(0, 6.28), w: rnd(1.4, 4.2),
+      c: r < 0.58 ? 0 : r < 0.82 ? 1 : 2, glow: Math.random() < 0.09, fa: 1, fi: 0, age: 0, mode: "idle" };
+  }
+  // A group of idle stars scattered over a box (they fade in, then twinkle).
+  function starField(n, [x0, y0, x1, y1], fadeIn = 1.4) {
+    const g = { stars: [], dim: 1, dimTo: 1, age: 0 };
+    for (let i = 0; i < n; i++) { const s = mkStar(rnd(x0, x1), rnd(y0, y1)); s.fa = 0; s.fi = rnd(0.2, fadeIn); g.stars.push(s); }
+    g.stars.sort((a, b) => a.c - b.c);
+    G.push(g); wake(); return g;
+  }
+  // Send stars to the points: the group's idle stars first, then new ones from `from()`.
+  function assemble(g, pts, { from, fly = [0.9, 1.4], delay = [0, 0.35], curl = 70 } = {}) {
+    g ||= { stars: [], dim: 1, dimTo: 1, age: 0 };
+    const idle = g.stars.filter((s) => s.mode === "idle");
+    pts.forEach(([tx, ty], i) => {
+      let s = idle[i];
+      if (!s) { const [x, y] = from(); s = mkStar(x, y); s.fa = 0; s.fi = 0.25; g.stars.push(s); }
+      Object.assign(s, { sx: s.x, sy: s.y, px: s.x, py: s.y, tx, ty, dl: rnd(...delay), du: rnd(...fly), cu: rnd(-curl, curl), age: 0, mode: "fly" });
+    });
+    g.stars.sort((a, b) => a.c - b.c);
+    if (!G.includes(g)) G.push(g);
+    wake(); return g;
+  }
+  function scatter(g, { wind = 0, lift = -90 } = {}) {
+    if (!g) return;
+    for (const s of g.stars) Object.assign(s, { mode: "gone", age: 0, vx: rnd(-50, 50) + wind, vy: rnd(-40, 10) + lift * rnd(0.4, 1.3), sl: rnd(0.8, 1.6) });
+    g.dimTo = g.dim;
+  }
+  function drawText(dt, T) {
+    for (const g of G) {
+      g.age += dt; g.dim += (g.dimTo - g.dim) * Math.min(1, dt * 2.5);
+      let col = -1;
+      for (const s of g.stars) {
+        s.age += dt;
+        if (s.fa < 1) s.fa = Math.min(1, s.fa + dt / Math.max(0.05, s.fi || 0.05));
+        let a, x, y;
+        if (s.mode === "fly") {
+          const u = clamp01((s.age - s.dl) / s.du), e = easeIO(u);
+          const dx = s.tx - s.sx, dy = s.ty - s.sy, L = Math.hypot(dx, dy) || 1, off = s.cu * Math.sin(Math.PI * e);
+          x = s.sx + dx * e - (dy / L) * off; y = s.sy + dy * e + (dx / L) * off;
+          if (u >= 1) { s.mode = "rest"; x = s.tx; y = s.ty; }
+          a = s.fa * (u > 0 && u < 1 ? 1 : 0.8);
+          if (u > 0 && u < 1) {
+            ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${STAR_RGB[s.c]})`; ctx.lineWidth = s.s * 0.9;
+            ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(x, y); ctx.stroke();
+            s.px = x; s.py = y; col = -1; continue;
+          }
+          s.px = x; s.py = y;
+        } else if (s.mode === "gone") {
+          s.vy -= 20 * dt; s.x += s.vx * dt; s.y += s.vy * dt; x = s.x; y = s.y;
+          a = s.fa * Math.max(0, 1 - s.age / s.sl) * g.dim;
+          if (a <= 0) { s.dead = true; continue; }
+        } else { x = s.mode === "rest" ? s.tx : s.x; y = s.mode === "rest" ? s.ty : s.y; }
+        if (s.mode !== "gone") a = s.fa * (0.5 + 0.5 * Math.sin(T * s.w + s.ph)) * (s.mode === "rest" ? g.dim : 1);
+        s.x = x; s.y = y;
+        ctx.globalAlpha = a;
+        if (s.glow) { const r = s.s * 4.5; ctx.drawImage(s.c === 2 ? GLOW.ice : GLOW.gold, x - r, y - r, r * 2, r * 2); col = -1; }
+        if (col !== s.c) { ctx.fillStyle = `rgb(${STAR_RGB[s.c]})`; col = s.c; }
+        ctx.fillRect(x - s.s / 2, y - s.s / 2, s.s, s.s);
+      }
+      g.stars = g.stars.filter((s) => !s.dead);
+    }
+    G = G.filter((g) => g.stars.length && !g.kill);
+  }
+
+  // An element's point in stage pixels (fx, fy: 0..1 across it).
+  function pt(el, fx = 0.5, fy = 0.5) {
+    const s = stage.getBoundingClientRect(), k = s.width / 1920, r = el.getBoundingClientRect();
+    return [(r.left - s.left + r.width * fx) / k, (r.top - s.top + r.height * fy) / k];
+  }
+  // A point on the little diamond, in stage pixels (svg viewBox 64 x 56).
+  const DIA = [[32, 49], [51, 30], [32, 11], [13, 30], [32, 49]];
+  const diaPt = ([x, y]) => pt($(".dia"), x / 64, y / 56);
+  const shake = (el = pkg, amp = 4) => el.animate([
+    { transform: "none" }, { transform: `translate(${-amp}px,${amp * 0.6}px)` }, { transform: `translate(${amp}px,${-amp * 0.5}px)` },
+    { transform: `translate(${-amp * 0.5}px,${amp * 0.3}px)` }, { transform: "none" }], { duration: 320, easing: "ease-out" });
+
+  /* ---------- Shooting stars through the plate (idle, and often in a rally) ---------- */
+  const shootEl = $(".rail .shoot");
+  function shoot() {
+    const w = rail.offsetWidth, h = rail.offsetHeight, ang = rnd(160, 172) * Math.PI / 180;
+    const x0 = rnd(w * 0.45, w * 1.05), y0 = rnd(-6, h * 0.3), L = rnd(w * 0.4, w * 0.7);
+    const deg = ang * 180 / Math.PI;
+    shootEl.animate([
+      { transform: `translate(${x0 - 130}px,${y0}px) rotate(${deg}deg)`, opacity: 0 },
+      { opacity: 1, offset: 0.25 },
+      { transform: `translate(${x0 - 130 + Math.cos(ang) * L}px,${y0 + Math.sin(ang) * L}px) rotate(${deg}deg)`, opacity: 0 }],
+      { duration: rnd(650, 1000), easing: "cubic-bezier(.3,0,.7,1)" });
+  }
+  (function idleShoot() { later(document.body.classList.contains("rally") ? rnd(1600, 3200) : rnd(14e3, 30e3), () => { shoot(); idleShoot(); }); })();
+  (function idleCloud() { later(rnd(38e3, 70e3), () => { restart(moon, "cloud"); idleCloud(); }); })();
+
+  /* ---------- Rolling numerals ---------- */
+  function roll(el, val, instant) {
+    const v = String(val);
+    if (el.dataset.v === v) return;
+    const from = Number(el.dataset.v);
+    el.dataset.v = v;
+    const old = el.lastElementChild;
+    if (instant || !old) { el.innerHTML = `<b>${esc(v)}</b>`; return; }
+    const d = Number.isFinite(from) && Number(v) < from ? -1 : 1;
+    const nu = document.createElement("b");
+    nu.textContent = v;
+    el.appendChild(nu);
+    old.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: `translateY(${-90 * d}%)`, opacity: 0 }],
+      { duration: 300, easing: "cubic-bezier(.7,0,.84,0)", fill: "forwards" }).onfinish = () => old.remove();
+    nu.animate([{ transform: `translateY(${90 * d}%)`, opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+      { duration: 420, delay: 90, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
+  }
+
+  /* ---------- The strip: the at-bat, or a play tag for a moment ---------- */
+  let holdUntil = 0, holdTimer = null, lastSay = { at: 0 };
+  function setLine(main, side, animate, cls) {
+    const old = strip.querySelector(".line:not(.out)");
+    if (old && old.dataset.main === main) {
+      const sd = old.querySelector(".side");
+      if (sd && sd.innerHTML !== side) sd.innerHTML = side;
+      return;
+    }
+    const nu = document.createElement("div");
+    nu.className = "line" + (cls ? " " + cls : "");
+    nu.dataset.main = main;
+    nu.innerHTML = main + (side != null ? `<span class="side">${side}</span>` : "");
+    if (old) {
+      if (animate) { old.classList.add("out"); setTimeout(() => old.remove(), 320); nu.classList.add("in"); }
+      else old.remove();
+    }
+    strip.appendChild(nu);
+  }
+  function atBat(S, animate) {
+    const pc = S.pitchCount ? `<b>${S.pitchCount}</b>` : "";
+    const side = S.pitcher ? `P · ${esc(up(surname(S.pitcher)))}${pc}` : pc ? `Pitches${pc}` : "";
+    const outs = S.outs === 1 ? "1 out" : `${Math.min(S.outs, 2)} outs`;
+    const main = S.batter ? `<span class="tag">AB</span><span class="txt">${esc(up(S.batter))}</span>`
+      : `<span class="tag">${S.half === "top" ? "TOP" : "BOT"} ${S.inning}</span><span class="txt">${esc(up(outs))}</span>`;
+    setLine(main, side, animate);
+  }
+  function say(tag, cls, text, ms = 2800) {
+    lastSay = { tag, cls, text, at: Date.now() };
+    holdUntil = Date.now() + ms;
+    setLine(`<span class="tag ${cls}">${esc(tag)}</span><span class="txt">${esc(up(text))}</span>`, null, true);
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => { holdUntil = 0; if (cur) atBat(cur, true); }, ms);
+  }
+
+  /* ---------- Runs: a shooting star lands in the score ---------- */
+  function meteor(from, t, i, onLand) {
+    const sc = $(".score", team(t)), [x1, y1] = pt(sc, 0.5, 0.5);
+    const [x0, y0] = from || [x1 + (rightPos() ? -1 : 1) * rnd(360, 520), y1 - rnd(260, 380)];
+    const c = [x0 + (x1 - x0) * 0.35, y0 + (y1 - y0) * 0.1 - 40];
+    comet(quad([x0, y0], c, [x1, y1]), from ? 0.62 : 0.5, { size: 3, trail: 26, debris: 0.7, delay: i * 0.17, ease: (u) => u * u * (0.5 + 0.5 * u) + u * 0.25 * (1 - u),
+      onEnd: (x, y) => {
+        flash(x, y, 80, 0.45); ringAt(x, y, 8, 70, 0.55);
+        burst(x, y, { n: 18, spread: 360, g: 500, speed: [120, 420], life: [0.35, 0.8], size: [1.2, 2.4] });
+        onLand?.();
+      } });
+  }
+  function landRun(t, runs, from) {
+    const el = team(t);
+    for (let i = 0; i < Math.min(runs, 4); i++) meteor(from, t, i, i ? null : () => {
+      el.classList.remove("lit"); void el.offsetWidth; el.classList.add("lit");
+      flare(); sweep();
+    });
+  }
+
+  /* ---------- Hits: a comet runs the little diamond ---------- */
+  const trace = $(".dia .trace");
+  function run(bases, pal = GOLD, glow = GLOW.gold) {
+    trace.getAnimations().forEach((a) => a.cancel());
+    const k = Math.min(4, bases);
+    trace.style.strokeDasharray = `${k} 8`;
+    trace.animate([{ strokeDashoffset: k, opacity: 0.9 }, { strokeDashoffset: 0, opacity: 0.9, offset: 0.55 }, { strokeDashoffset: 0, opacity: 0 }],
+      { duration: 700 + k * 280, easing: "cubic-bezier(.45,0,.2,1)" });
+    const pts = DIA.slice(0, k + 1).map(diaPt);
+    comet(poly(pts), 0.3 + k * 0.2, { size: 1.8, trail: 16, glow, pal, ease: easeIO, debris: 0.3, onEnd: (x, y) => {
+      ringAt(x, y, 4, 26, 0.45, pal === ICE ? "200,225,250" : "255,236,190", 1.8);
+      burst(x, y, { n: 8, spread: 360, g: 200, speed: [60, 180], life: [0.25, 0.5], size: [1, 1.8], pal });
+    } });
+  }
+
+  /* ---------- Home run: the moonshot ---------- */
+  let hrStars = null;
+  function banner(S, t, title, who, what, wo) {
+    const hr = $(".hr", hrw), t1 = $(".t1", hr), t2 = $(".t2", hr);
+    hr.style.setProperty("--tc", S[t].color);
+    $(".tx", t1).textContent = up(title);
+    $("b", t2).textContent = who;
+    $("span", t2).textContent = what;
+    t1.classList.remove("solid", "gone"); t2.classList.remove("gone");
+    hrw.classList.toggle("wo", !!wo);
+    restart(hrw, "play");
+    scatter(hrStars);
+    const life = wo ? 9000 : 6800, big = /slam|walk/i.test(title);
+    const pts = sampleText(t1, big ? 1500 : 1300);
+    const [tx, ty] = pt($(".tx", t1), 0.5, 0.55);
+    const [hx, hy] = diaPt([32, 49]);
+    // Crack of the bat, then the ball climbs out of the diamond and hangs in the night.
+    flash(hx, hy, 50, 0.35); ringAt(hx, hy, 4, 40, 0.4);
+    const apex = Math.min(hy, ty) - (topPos() ? 150 : 260);
+    comet(quad([hx, hy], [(hx + tx) / 2 + (rightPos() ? 120 : -120), apex], [tx, ty]), 1.0, { size: 4, trail: 34, glow: GLOW.white, pal: WARM, debris: 0.9,
+      ease: (u) => easeIO(u) * 0.7 + u * 0.3, delay: 0.12,
+      onEnd: (x, y) => {   // it bursts, and the stardust becomes the words
+        flash(x, y, 260, 0.6); flash(x, y, 120, 0.9, GLOW.gold); ringAt(x, y, 10, 300, 0.9, "255,236,190", 3);
+        burst(x, y, { n: 40, spread: 360, g: 250, speed: [200, 700], life: [0.4, 1.0], size: [1.2, 2.6], pal: WARM });
+        hrStars = assemble(null, pts, { from: () => [x + rnd(-12, 12), y + rnd(-12, 12)], fly: [0.75, 1.25], delay: [0, 0.25], curl: 90 });
+        shake(hr, big ? 5 : 3);
+      } });
+    later(2150, () => { t1.classList.add("solid"); if (hrStars) hrStars.dimTo = 0.55; flare(); flare($(".bigmoon", hr)); sweep(); });
+    // Fireworks over the banner.
+    const [bx0, by0] = pt(hr, 0.06, 1), [bx1, by1] = pt(hr, 0.94, 0);
+    const pals = [GOLD, ICE, palFrom(S[t].color), WARM];
+    const shells = big ? 7 : 4;
+    for (let i = 0; i < shells; i++) {
+      const x = bx0 + (bx1 - bx0) * ((i + 0.5) / shells) + rnd(-40, 40);
+      const [y0, y1] = topPos() ? [by0 + 280, by0 + rnd(50, 130)] : [by1 + 8, by1 - rnd(30, 110)];   // they bloom in the open sky beside the banner
+      shell(x, y0, y1, { pal: pals[i % pals.length], kind: i % 3 === 2 ? "willow" : i === 1 ? "ring" : "peony", delay: 2.3 + i * 0.33 + rnd(0, 0.15), n: rnd(56, 80) | 0, speed: rnd(240, 320) });
+    }
+    if (wo) {   // a walk-off lights the whole sky
+      for (let i = 0; i < 14; i++) shell(rnd(180, 1740), 1100, rnd(140, 520), { pal: [GOLD, ICE, WARM, palFrom(S[t].color)][i % 4], kind: ["peony", "willow", "ring", "peony"][i % 4], delay: 2.6 + i * 0.42 + rnd(0, 0.2), n: rnd(70, 96) | 0, speed: rnd(280, 380) });
+    }
+    later(life - 1300, () => { t1.classList.add("gone"); t2.classList.add("gone"); scatter(hrStars, { wind: rightPos() ? -60 : 60 }); hrStars = null; });
+  }
+
+  /* ---------- Strikeout: the light bank ---------- */
+  const bank = $(".bank");
+  bank.innerHTML = "<i></i>".repeat(35);
+  const bulbs = $$("i", bank);
+  // A K on a 5 x 7 bank, in the order the bulbs strike: the stem, then both arms out from the middle.
+  const K_ORDER = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [1, 3], [2, 2], [2, 4], [3, 1], [3, 5], [4, 0], [4, 6]];
+  let kTimers = [];
+  function lightK(looking) {
+    kTimers.forEach(clearTimeout); kTimers = [];
+    bulbs.forEach((b) => b.classList.remove("on", "off"));
+    const order = K_ORDER.map(([c, r]) => r * 5 + (looking ? 4 - c : c));
+    order.forEach((idx, i) => kTimers.push(later(260 + i * 42 + (i >= 7 ? 60 : 0), () => {
+      bulbs[idx].classList.add("on");
+      if (i === 6 || i === order.length - 1) { const [x, y] = pt(bank, looking ? 0.8 : 0.2, 0.5); burst(x, y, { n: 10, spread: 360, g: 300, speed: [80, 260], life: [0.25, 0.6], size: [1, 1.8], pal: WARM }); }
+    })));
+    [...order].reverse().forEach((idx, i) => kTimers.push(later(3050 + i * 26, () => { bulbs[idx].classList.remove("on"); bulbs[idx].classList.add("off"); })));
+  }
+
+  /* ---------- The intro (full frame, before the first pitch) ----------
+     Plays once, when the bug first shows on a game that hasn't started: a
+     night sky fills in, the moon rises, TONIGHT tracks in, the stars gather
+     into UNDER THE LIGHTS, and the four light banks switch on one by one; the
+     last one lights the words. Then the teams, and the moon sets into the
+     bug, which opens out of it. Inside the live overlay it waits while a
+     full-frame card (Starting Soon) hides the bug. ?intro=1 forces it on the
+     demo page; ?intro=0 turns it off. */
+  let heroBusy = false, heroStars = null, heroDust = null;
+  const heads = $$(".lb .head", hero);
+  heads.forEach((h) => { h.innerHTML = Array.from({ length: 24 }, (_, j) => `<i style="--j:${(j * 7) % 24}"></i>`).join(""); });
+  const pregame = (S) => S.inning === 1 && S.half === "top" && !S.outs && !S.balls && !S.strikes &&
+    !S.away.r && !S.home.r && !S.bases.some(Boolean);
+  const shown = () => {
+    try { const f = window.frameElement; return !f || getComputedStyle(f).visibility !== "hidden"; } catch { return true; }
+  };
+  function playHero() {
+    heroBusy = true;
+    bug.classList.add("await");
+    const S = cur;
+    const w2 = $$(".w2 span", hero);
+    w2[0].textContent = S ? abbrOf(S, "away") : "";
+    w2[1].textContent = S ? abbrOf(S, "home") : "";
+    $(".w2", hero).style.display = S ? "" : "none";
+    const w1 = $(".w1", hero);
+    w1.classList.remove("solid");
+    $$(".lb", hero).forEach((b) => b.classList.remove("on"));
+    const hm = $(".hmoon", hero);
+    hm.getAnimations().forEach((a) => a.cancel());
+    hero.classList.remove("on"); void hero.offsetWidth; hero.classList.add("on");
+    scatter(heroStars);
+    heroStars = starField(420, [40, 30, 1880, 1050], 1.6);
+    later(900, () => flare(hm));
+    later(2500, () => {   // the stars gather into the words
+      const pts = sampleText(w1, 1800, 3);
+      assemble(heroStars, pts, { from: () => [rnd(0, 1920), rnd(-80, 1100)], fly: [1.1, 1.7], delay: [0, 0.5], curl: 140 });
+    });
+    $$(".lb", hero).forEach((b, i) => later(4100 + i * 320, () => {   // ka-chunk
+      b.classList.add("on");
+      restart($(".flash", hero), "go");
+      const [x, y] = pt($(".head", b), 0.5, 0.5);
+      flash(x, y, 220, 0.6); burst(x, y + 20, { n: 16, spread: 120, angle: 90, g: 700, speed: [80, 300], life: [0.3, 0.8], size: [1, 2], pal: WARM });
+      if (i === 3) {
+        w1.classList.add("solid"); heroStars.dimTo = 0.5; flare(hm);
+        shake($(".word", hero), 5);
+      }
+    }));
+    clearInterval(heroDust);
+    later(4400, () => { heroDust = setInterval(() => { for (const x of [250, 640, 1280, 1670]) motes(x - 260, x + 260, 250, 1000, 1, WARM, { vy: [-12, 12], life: [2, 3.6], size: [1, 2], o: 0.55 }); }, 180); });
+    later(8000, () => { clearInterval(heroDust); scatter(heroStars, { lift: -140 }); heroStars = null; });
+    later(8600, fold);
+  }
+  function fold() {
+    // Set the big moon into the bug's, in stage pixels.
+    const big = $(".hmoon", hero), s = stage.getBoundingClientRect().width / 1920;
+    const a = big.getBoundingClientRect(), b = moon.getBoundingClientRect();
+    const dx = (b.left + b.width / 2 - (a.left + a.width / 2)) / s, dy = (b.top + b.height / 2 - (a.top + a.height / 2)) / s;
+    const k = b.height / a.height;
+    big.animate([{ transform: "none" }, { transform: `translate(${dx}px,${dy}px) scale(${k})` }],
+      { duration: 1200, easing: "cubic-bezier(.65,0,.35,1)", fill: "forwards" }).onfinish = () => {
+      bug.classList.remove("await");
+      restart(bug, "landed");
+      flare();
+      const [x, y] = pt(moon);
+      flash(x, y, 120, 0.5); ringAt(x, y, 20, 110, 0.7);
+      burst(x, y, { n: 26, spread: 360, pal: WARM, g: 300, speed: [120, 380], life: [0.4, 0.9], size: [1, 2] });
+      setTimeout(() => { hero.classList.remove("on"); big.getAnimations().forEach((x) => x.cancel()); heroBusy = false; }, 1000);
+    };
+  }
+  let heroArmed = params.get("intro") !== "0";
+  function maybeHero(S) {
+    if (!heroArmed) return false;
+    heroArmed = false;
+    if (params.get("intro") !== "1" && !pregame(S)) return false;
+    if (shown()) { playHero(); return true; }
+    bug.classList.add("await");
+    const wait = setInterval(() => { if (shown()) { clearInterval(wait); playHero(); } }, 400);
+    return true;
+  }
+
+  /* ---------- Rally: aurora in the plate, fireflies off it ---------- */
+  let rallyTimer = null;
+  new MutationObserver(() => {
+    const on = document.body.classList.contains("rally");
+    if (on && !rallyTimer) {
+      flare(); shoot();
+      rallyTimer = setInterval(() => {
+        if (heroBusy) return;
+        const plate = $(".plate"), top = topPos();
+        const [x0, y] = pt(plate, 0.04, top ? 1 : 0), [x1] = pt(plate, 0.96, 0);
+        motes(x0, x1, y - 4, y + 4, 2, Math.random() < 0.7 ? WARM : ICE, { vy: top ? [20, 60] : [-30, -80], life: [1.4, 2.6], size: [1.2, 2.2] });
+      }, 280);
+    } else if (!on && rallyTimer) { clearInterval(rallyTimer); rallyTimer = null; }
+  }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+  /* ---------- Paint ---------- */
+  function dots(sel, n, first) {
+    $$(sel + " i").forEach((d, i) => {
+      const on = i < n;
+      if (on && !d.classList.contains("on") && !first) restart(d, "pop");
+      d.classList.toggle("on", on);
+    });
+  }
+  // The time limit: shown only while the overlay sends one. The last minute
+  // reads in gold; at zero it blinks red and the strip says so, once.
+  const clk = $(".clk");
+  let clkZero = null;
+  function clock(c) {
+    const off = !!c.hidden || !c.text;
+    if (clk.hidden && !off) restart(clk, "show");
+    clk.hidden = off;
+    if (off) { clkZero = null; return; }
+    $("b", clk).textContent = c.text;
+    clk.classList.toggle("low", !!c.low);
+    clk.classList.toggle("zero", !!c.zero);
+    if (c.zero && clkZero === false) {
+      restart(clk, "hit");
+      const [x, y] = pt(clk);
+      burst(x, y, { n: 18, spread: 360, pal: WARM, g: 400, speed: [120, 360], life: [0.3, 0.7], size: [1.2, 2.2] });
+      if (!heroBusy) say("TIME", "red", "Time limit reached", 4200);
+    }
+    clkZero = !!c.zero;
+  }
+
+  // A moment's flag and banner go back to hidden when they finish, so nothing
+  // is left drawn beside the bug.
+  $(".kflag").addEventListener("animationend", (e) => { if (/^kLife/.test(e.animationName)) kw.classList.remove("play"); });
+  $(".hr", hrw).addEventListener("animationend", (e) => { if (e.animationName === "hrLife") hrw.classList.remove("play"); });
+
+  BugKit.start({
+    name: "Midnight",
+    hrDelay: 2700,
+    clock,
+    render(S, prev, first) {
+      cur = S;
+      for (const t of ["away", "home"]) {
+        const el = team(t);
+        el.style.setProperty("--tc", S[t].color);
+        $(".ab", el).textContent = abbrOf(S, t);
+        roll($(".score .roll", el), S[t].r, first);
+        el.classList.toggle("bat", battingTeam(S) === t);
+      }
+      roll($(".inn .n"), S.inning, first);
+      $(".inn .up").classList.toggle("on", S.half === "top");
+      $(".inn .dn").classList.toggle("on", S.half !== "top");
+      $$(".dia .b").forEach((g) => {
+        const i = +g.dataset.b - 1, on = !!S.bases[i];
+        if (on && !g.classList.contains("on") && !first) restart(g, "pop");
+        g.classList.toggle("on", on);
+      });
+      // the board never shows four balls or three strikes; the play says that
+      dots(".bso .b", Math.min(S.balls, 3), first);
+      dots(".bso .s", Math.min(S.strikes, 2), first);
+      dots(".bso .o", Math.min(S.outs, 2), first);
+      if (first) { atBat(S, false); if (!maybeHero(S)) { restart(bug, "intro"); later(300, () => flare()); } }
+      else if (Date.now() > holdUntil) atBat(S, true);
+    },
+    fx: {
+      run({ team: t, runs = 1, hr: homer }, S) {
+        t ||= battingTeam(S);
+        // after a home run the star falls out of the banner's words
+        const from = homer && hrw.classList.contains("play") ? pt($(".hbody .t1 .tx"), 0.5, 0.5) : null;
+        landRun(t, runs, from);
+        if (homer) return;
+        const scored = runs === 1 ? "Run scores" : `${runs} runs score`;
+        if (Date.now() - lastSay.at < 250) say(lastSay.tag, lastSay.cls, `${lastSay.text} · ${scored}`);
+        else say("RUN", "hot", `${scored} · ${abbrOf(S, t)} ${S[t].r}`);
+      },
+      hr({ runs = 1, batter, team: t }, S) {
+        t ||= battingTeam(S);
+        const who = batter || S.batter;
+        const what = runs === 4 ? "Four runs score" : runs === 1 ? "Solo moonshot" : `${runs}-run moonshot`;
+        banner(S, t, runs === 4 ? "Grand slam" : "Home run", who ? `${who} · ${abbrOf(S, t)}` : abbrOf(S, t), what);
+        flare(); sweep();
+        const kind = runs === 1 ? "solo" : runs === 4 ? "grand slam" : runs + "-run";
+        say("HR", "hot", who ? `${who} · ${kind}` : `${kind} home run`, 5600);
+      },
+      k({ looking, batter }, S) {
+        const ft = fieldingTeam(S);
+        const who = S.pitcher || abbrOf(S, ft);
+        ks.set(who, (ks.get(who) || 0) + 1);
+        const n = S[ft].k > 0 ? S[ft].k : ks.get(who);
+        $(".kt b", kw).textContent = looking ? "Called strike three" : "Strikes out swinging";
+        const bat = surname(batter || S.batter);
+        $(".kt small", kw).innerHTML = `${bat ? esc(up(bat)) + " · " : ""}${esc(up(surname(who)))} <em>${n}K</em>`;
+        restart(kw, "play");
+        lightK(!!looking);
+        later(300, () => flare());
+        const b = batter || S.batter;
+        say(looking ? "ꓘ" : "K", "red", b ? `${b} ${looking ? "caught looking" : "strikes out"}` : looking ? "Called strike three" : "Strikeout swinging");
+      },
+      hit({ bases = 1, batter }) {
+        run(bases);
+        if (bases >= 2) sweep();
+        say(["SINGLE", "DOUBLE", "TRIPLE"][bases - 1] || "HIT", "ice", batter || "Base hit");
+      },
+      walk({ batter }) { run(1, ICE, GLOW.ice); say("WALK", "green", batter ? `${batter} takes first` : "Ball four"); },
+      error({ team: t }, S) { restart(rail, "flick"); later(120, () => shake(pkg, 2)); say("E", "hot", `Error · ${abbrOf(S, t || fieldingTeam(S))}`); },
+      out({ batter }, S) {
+        later(40, () => {
+          const d = $$(".bso .o i")[Math.min(S.outs, 2) - 1];
+          if (d) { const [x, y] = pt(d); ringAt(x, y, 4, 24, 0.45, "255,226,160", 1.6); burst(x, y, { n: 8, spread: 360, pal: GOLD, g: 150, speed: [60, 180], life: [0.25, 0.5], size: [1, 1.8] }); }
+        });
+        say("OUT", "", batter || (S.outs >= 3 ? "Side retired" : S.outs === 2 ? "Two down" : "One down"), 1800);
+      },
+      half({ inning, half }, S) {
+        const was = half === "bot" ? inning : inning - 1;
+        $(".rise small", inn).textContent = half === "bot" ? "MID" : "END";
+        $(".rise b", inn).textContent = was;
+        restart(inn, "rising");
+        later(150, sweep);
+        later(700, () => { const [x, y] = pt($(".rise", inn)); flash(x, y, 50, 0.6); });
+        say(`${half === "bot" ? "MID" : "END"} ${ordinal(was)}`, "ice", `${abbrOf(S, battingTeam(S))} coming to bat`, 2900);
+      },
+      walkoff({ team: t, batter }, S) {
+        t ||= battingTeam(S);
+        const o = t === "away" ? "home" : "away";
+        const line = `${abbrOf(S, t)} win ${S[t].r}-${S[o].r}`;
+        banner(S, t, "Walk-off", batter || S.batter || abbrOf(S, t), line, true);
+        restart(team(t), "win");
+        say("WALK-OFF", "hot", line, 8200);
+      },
+      reset() { ks.clear(); restart(bug, "intro"); later(300, () => flare()); }
+    }
+  });
+
+  // Demo page: play the intro again, throw a shooting star, run a time limit.
+  const demo = $("#demo");
+  if (demo) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<button data-mn="hero">Play the intro</button><button data-mn="shoot">Shooting star</button><button data-mn="clock" aria-pressed="false">Time limit</button>`;
+    let secs = 0, tick = null;   // a demo time limit that runs into its last minute and out
+    const paint = () => { const t = Math.max(0, secs); clock({ hidden: false, text: `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`, low: t <= 60 && t > 0, zero: t <= 0 }); secs--; };
+    demo.querySelector("p").before(row);
+    row.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-mn]");
+      if (!b) return;
+      if (b.dataset.mn === "hero" && !heroBusy) playHero();
+      if (b.dataset.mn === "shoot") { shoot(); restart(moon, "cloud"); }
+      if (b.dataset.mn === "clock") {
+        clearInterval(tick); tick = null;
+        const on = b.getAttribute("aria-pressed") !== "true";
+        b.setAttribute("aria-pressed", String(on));
+        if (on) { secs = 68; paint(); tick = setInterval(paint, 1000); } else clock({ hidden: true });
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

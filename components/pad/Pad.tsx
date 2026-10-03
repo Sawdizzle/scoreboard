@@ -278,7 +278,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       {sheet && typeof sheet === 'object' && <Runner g={g} from={sheet.runner} who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
       {sheet === 'air' && chan && <OnAir channel={chan} gameId={game.id} view={onAir} brand={batSide === 'home' ? homeB : awayB}
-        when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} onSet={air} onClose={() => setSheet(null)} />}
+        when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
+        score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
         onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} />}
     </div>

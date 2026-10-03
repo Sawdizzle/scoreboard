@@ -1,9 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
+import { AnimBug } from '@/components/overlay/AnimBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { feedView, type BatterView, type CardKind, type Feed, type PitcherView } from '@/lib/onair';
+import { boxScore, bugAnim, bugState, feedView, leaders, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 
 // The stream, drawn. A transparent page laid out on a 1280 x 720 grid in rem,
 // with the root font size tied to the width of the source: it fills a 720p,
@@ -96,6 +97,39 @@ function DueUp({ list, brand, when, on }: { list: BatterView[]; brand: Brand; wh
   );
 }
 
+function Leaders({ list, brand, season, on }: { list: Leader[]; brand: Brand; season: string; on: boolean }) {
+  return (
+    <div className={`ov-card ov-panel${on && list.length ? ' on' : ''}`} aria-hidden={!on}>
+      <div className="ov-phead" style={vars(brand)}><b>Leaders · {brand.display}</b><span>{season}</span></div>
+      {list.map((l) => (
+        <div key={l.k} className="ov-due ov-lead">
+          <small>{l.k}</small>
+          <div><strong style={fit(l.name, 3, 22)}>{l.name}</strong></div>
+          <b>{l.v}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Box({ box, away, home, final, on }: { box: ReturnType<typeof boxScore>; away: Brand; home: Brand; final: boolean; on: boolean }) {
+  const row = (b: Brand, cells: string[], tot: string[]) => (
+    <tr>
+      <th style={vars(b)}><i />{b.display}</th>
+      {cells.map((c, i) => <td key={i}>{c}</td>)}
+      {tot.map((c, i) => <td key={`t${i}`} className={i === 0 ? 'r' : 't'}>{c}</td>)}
+    </tr>
+  );
+  return (
+    <div className={`ov-card ov-panel ov-box${on ? ' on' : ''}`} aria-hidden={!on}>
+      <table>
+        <thead><tr><th>{final ? 'Final' : 'Box score'}</th>{box.innings.map((n) => <td key={n}>{n}</td>)}<td className="r">R</td><td className="t">H</td><td className="t">E</td></tr></thead>
+        <tbody>{row(away, box.away, box.awayTot)}{row(home, box.home, box.homeTot)}</tbody>
+      </table>
+    </div>
+  );
+}
+
 export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null }) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
@@ -108,21 +142,26 @@ export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null
   const top = g.half === 'top';
   const b = L.safeBases(g.bases) as { first: boolean; second: boolean; third: boolean };
   const batUs = brandFor(air.batSide) === us;
-  const shown = live ? card : null;
+  // The box score stands after the last out; the rest are for a game in play.
+  const shown = live || (card === 'box' && status === 'final') ? card : null;
+  const look = feed.look && feed.look !== 'pressbox' ? feed.look : null;
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
 
   return (
-    <div className="ov">
+    <div className={`ov${look ? ' framed' : ''}`}>
       <style>{ROOT}</style>
+      {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} />}
       <div className="ov-right">
         <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
         <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
+        <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
+        <Box box={boxScore(g, feed.season?.game_innings ?? 7)} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
       </div>
       <div className="ov-dock">
         <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
-        <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
+        {!look && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={live && top} />
             <Team brand={home} score={g.home_score | 0} bat={live && !top} />
@@ -151,7 +190,7 @@ export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null
               {air.pitcher && <span className="ov-p">P · {air.pitcher.last} <b>{air.pitcher.pitches}</b></span>}
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

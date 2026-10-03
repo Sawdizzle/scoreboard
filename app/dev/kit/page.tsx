@@ -4,7 +4,7 @@ import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
 import { Stage } from '@/components/overlay/Stage';
-import type { CardKind, Feed } from '@/lib/onair';
+import type { CardKind, Feed, Look } from '@/lib/onair';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { TeamHeader } from '@/components/TeamHeader';
@@ -58,9 +58,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -78,13 +78,15 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, card: null }} />;
   }
   if (v === 'overlay') {
-    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup), &line=0, &status=final.
+    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final.
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
     const feed: Feed = {
-      v: 'kit', show_line: line !== '0', auto_card: false, card: null,
+      v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null,
+      roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
       game: { id: 'g1', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
         live: { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: false, second: true, third: false }, home_score: 2, away_score: 4,
+          home_hits: 4, away_hits: 6, home_errors: 0, away_errors: 1, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }],
           state: { batIdx: { home: 1 }, pitches: { away: 58 } } } },
       lineups: { us: lineup, them },
       tonight: [{ side: 'us', bid: 'p1', b_pa: 2, b_ab: 1, b_bb: 1 }, { side: 'us', bid: 'p3', b_pa: 2, b_ab: 2, b_h: 1 }, { side: 'them', bid: 'o0', p_outs: 13, p_r: 2, p_so: 4, p_pitches: 58 }],

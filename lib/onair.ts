@@ -8,16 +8,28 @@ import { engineGame, tonight, type EngineSide, type G, type StatKey } from './sc
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
-export type CardKind = 'batter' | 'pitcher' | 'dueup';
+export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box';
+
+// How the scorebug looks: Pressbox's own, or one of Scoreboard's animated
+// bugs (public/bugs/<slug>.html), which draw the game themselves.
+export const LOOKS = [
+  ['pressbox', 'Pressbox'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
+  ['classic-green', 'Classic Green'], ['pinball-dmd', 'Pinball'], ['chalkboard', 'Chalkboard'], ['comic', 'Comic'],
+  ['split-flap', 'Split Flap'], ['receipt', 'Receipt'], ['pixel-rpg', 'Pixel RPG'],
+] as const;
+export type Look = (typeof LOOKS)[number][0];
 export type Line = Partial<Record<StatKey, number>>;
 export type Pa = { side: Side; bid: string; inning: number | null; kind: string; code: string | null };
-export type FeedTeam = { name: string; display_name: string; color: string; color2: string; logo_url: string | null; age_group: string | null };
+export type FeedTeam = { name: string; display_name: string; abbr?: string; color: string; color2: string; logo_url: string | null; age_group: string | null };
 
 // overlay_feed(), as it arrives. With no game to show, `game` is null and the
 // rest is absent.
 export type Feed = {
   v: string;
-  show_line: boolean; auto_card: boolean; card: CardKind | null;
+  show_line: boolean; auto_card: boolean; card: CardKind | null; look?: Look;
+  // The play that made the game what it is now; null after an undo.
+  last?: { seq: number; type: string; kind: string | null } | null;
+  roster?: { id: string; num: string; name: string }[];
   team: FeedTeam; opponent: FeedTeam;
   game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & { seq: number }) | null;
   season: { name: string; game_innings: number } | null;
@@ -123,4 +135,75 @@ export function feedView(feed: Feed) {
     pas: feed.pas, gameInnings,
   };
   return { g, air: airView(g, ctx) };
+}
+
+// ---- Team leaders ---------------------------------------------------------
+export type Leader = { k: string; v: string; num: string; name: string };
+// The season's best in each column, ours only. A batting average needs at-bats
+// behind it: ten, or half the team's most when the season is young.
+export function leaders(lines: SeasonLine[], roster: { id: string; num: string; name: string }[]): Leader[] {
+  const who = new Map(roster.map((r) => [r.id, r]));
+  const mine = lines.filter((l) => who.has(l.player_id) && l.b_pa > 0);
+  const need = Math.min(10, Math.ceil(Math.max(0, ...mine.map((l) => l.b_ab)) / 2));
+  const top = (k: string, of: SeasonLine[], val: (l: SeasonLine) => number, show: (n: number) => string): Leader | null => {
+    const best = of.reduce<SeasonLine | null>((a, l) => (val(l) > (a ? val(a) : 0) ? l : a), null);
+    if (!best) return null;
+    const r = who.get(best.player_id)!;
+    return { k, v: show(val(best)), num: r.num, name: r.name || `#${r.num}` };
+  };
+  return [
+    top('AVG', mine.filter((l) => l.b_ab > 0 && l.b_ab >= need), (l) => batting(l).avg ?? 0, (n) => rate3(n)),
+    top('HR', mine, (l) => l.b_hr, String), top('RBI', mine, (l) => l.b_rbi, String), top('SB', mine, (l) => l.b_sb, String),
+  ].filter((x): x is Leader => !!x);
+}
+
+// ---- The box score ----------------------------------------------------------
+// Runs by inning for both sides, the last nine when a game runs long, with a
+// dash for a half not yet played.
+export function boxScore(g: G, innings: number) {
+  const ls = (Array.isArray(g.line_score) ? g.line_score : []) as { top?: number; bottom?: number }[];
+  const n = Math.max(innings, g.inning | 0, ls.length);
+  const from = Math.max(0, n - 9);
+  const played = (i: number, half: 'top' | 'bottom') =>
+    i + 1 < g.inning || (i + 1 === g.inning && (half === 'top' || g.half === 'bottom')) || g.status === 'final' && i < ls.length;
+  const row = (half: 'top' | 'bottom') => Array.from({ length: n - from }, (_, j) => {
+    const i = from + j;
+    return played(i, half) ? String(ls[i]?.[half] ?? 0) : '';
+  });
+  const tot = (side: EngineSide) => [g[`${side}_score`], g[`${side}_hits`], g[`${side}_errors`]].map((x) => String(Number(x) || 0));
+  return { innings: Array.from({ length: n - from }, (_, j) => from + j + 1), away: row('top'), home: row('bottom'), awayTot: tot('away'), homeTot: tot('home') };
+}
+
+// ---- Scoreboard's animated bugs ---------------------------------------------
+// The game in the shape bugs/kit.js takes ("scoreboard:live").
+export function bugState(feed: Feed, g: G, air: AirView) {
+  const us = feed.team, them = feed.opponent;
+  const of = (side: EngineSide) => ((side === 'home') === feed.game!.is_home ? us : them);
+  const team = (side: EngineSide) => {
+    const t = of(side);
+    return {
+      name: t.display_name || t.name, abbr: (t.abbr || t.display_name || t.name).toUpperCase(), color: t.color,
+      r: Number(g[`${side}_score`]) || 0, h: Number(g[`${side}_hits`]) || 0, e: Number(g[`${side}_errors`]) || 0, line: [],
+      k: L.strikeoutsFor(g, side),
+    };
+  };
+  const b = L.safeBases(g.bases);
+  return {
+    away: team('away'), home: team('home'),
+    inning: g.inning | 0 || 1, half: g.half === 'bottom' ? 'bot' : 'top',
+    balls: g.balls | 0, strikes: g.strikes | 0, outs: g.outs | 0,
+    bases: [b.first, b.second, b.third],
+    batter: air.batter?.name ?? '', pitcher: air.pitcher?.name ?? '', pitchCount: air.pitcher ? air.pitcher.pitches : 0,
+    sport: 'baseball', sit: null,
+  };
+}
+// The stinger a play earns on an animated bug, in the kit's terms. Anything
+// not listed is read off the game row by the kit itself.
+export function bugAnim(last: Feed['last']) {
+  if (!last) return null;
+  if (last.type === 'homerun') return { type: 'homerun', meta: {} };
+  if (last.type === 'strikeout') return { type: last.kind === 'KL' ? 'strikeoutlooking' : 'strikeout', meta: {} };
+  if (last.kind === 'DP') return { type: 'doubleplay', meta: {} };
+  const text = last.kind ? (L.PLAY_LABEL as Record<string, string>)[last.kind] : '';
+  return last.type === 'play' && text ? { type: 'play', meta: { text } } : null;
 }

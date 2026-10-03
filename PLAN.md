@@ -77,8 +77,9 @@ Each stage ends with a checklist to run before the next one starts.
      (/overlay/<token>) with the batter's season average and tonight's line; batter, pitcher and due-up
      cards; On Air in the pad to raise them, and to pop the batter card for each new batter. The stream
      follows whichever game the pad is scoring.
-   - **3b, next:** Scoreboard's eleven animated bugs as looks to pick from, and the rest of the canvas's
-     On Air (team leaders, box score, lineup, defense, sponsor, mid-inning).
+   - **3b, built:** Scoreboard's eleven animated bugs as looks (Team look screen), fed the game and the
+     stinger for each big play; team leaders and box score cards. Still to come from the canvas's On Air:
+     lineup, defense, matchup, sponsor, mid-inning, moments.
 4. **Public** — team page, live game page, box score.
 5. **Bring it over** — the nine saved teams from Scoreboard. (The GameChanger CSV
    import moved up into 2a.)

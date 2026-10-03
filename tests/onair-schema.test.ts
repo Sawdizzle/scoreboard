@@ -118,3 +118,22 @@ test('staff can put a game on the stream by hand; a new team gets its own channe
   const c = await t.db.query<{ n: number }>(`select count(*)::int n from channels`);
   assert.equal(c.rows[0].n, n[0].n);
 });
+
+test('a look and the two new cards; only a known look is taken', async () => {
+  assert.equal((await feed(token))!.look, 'pressbox');
+  await t.as('media', `update channels set look = 'primetime', card = 'box' where team_id = $1`, [team]);
+  const f = (await feed(token))!;
+  assert.deepEqual([f.look, f.card], ['primetime', 'box']);
+  await t.as('media', `update channels set card = 'leaders' where team_id = $1`, [team]);
+  await fails(t.as('owner', `update channels set look = 'my-own-page' where team_id = $1`, [team]), /check constraint/);
+});
+
+test('the feed carries short codes, our public roster, and the newest play until it is undone', async () => {
+  await t.as('media', `update channels set game_id = $2 where team_id = $1`, [team, game]);
+  const f = (await feed(token))!;
+  assert.deepEqual([f.team.abbr, f.opponent.abbr], ['STEEL', 'OPP']);
+  assert.deepEqual(f.roster.map((r: Feed) => [r.num, r.name]), [['3', ''], ['7', 'Johnny Vance'], ['12', 'Ben O.']]);
+  assert.deepEqual(f.last, { seq: 2, type: 'play', kind: 'H2' });
+  await t.as('scorer', `select undo_play($1, 2)`, [game]);
+  assert.equal((await feed(token))!.last, null);
+});
