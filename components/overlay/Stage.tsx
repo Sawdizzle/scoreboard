@@ -5,6 +5,7 @@ import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
 import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { qrPath } from '@/lib/qr';
 import { periodText, type SportLive } from '@/lib/sports';
 
 // The stream, drawn. A transparent page laid out on a 1280 x 720 grid in rem,
@@ -201,6 +202,20 @@ function Sponsor({ sp, on }: { sp: Feed['sponsor']; on: boolean }) {
   );
 }
 
+// The channel's link as a code a phone can read off the screen.
+function Qr({ bug, on }: { bug: Feed['bug']; on: boolean }) {
+  const url = bug?.url;
+  const qr = on && url ? qrPath(url) : null;
+  return (
+    <div className={`ov-card ov-panel ov-qr${qr ? ' on' : ''}`} aria-hidden={!on}>
+      {qr && url && <>
+        <svg viewBox={`-2 -2 ${qr.size + 4} ${qr.size + 4}`} shapeRendering="crispEdges" aria-hidden="true"><rect x="-2" y="-2" width={qr.size + 4} height={qr.size + 4} fill="#fff" /><path d={qr.d} fill="#000" /></svg>
+        <div><small>Scan</small>{bug?.text && <strong style={fit(bug.text, 3, 20)}>{bug.text}</strong>}<span>{url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '')}</span></div>
+      </>}
+    </div>
+  );
+}
+
 export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string } | null }) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
@@ -218,7 +233,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   // A card held by hand comes first; else the mid-inning board between halves, when that is on.
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
-  const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
+  const shown = want === 'sponsor' || want === 'qr' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
   // Only Prime Time draws the other sports.
   const look = feed.look && feed.look !== 'pressbox' && (ball || feed.look === 'primetime') ? feed.look : null;
   const box = boxScore(g, feed.season?.game_innings ?? 7);
@@ -240,7 +255,9 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
         <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
         <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
         <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
+        <Qr bug={feed.bug} on={shown === 'qr'} />
       </div>
+      {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
       <div className="ov-dock">
         <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
         {!look && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}

@@ -177,3 +177,17 @@ test('the newest play says whether it ended a half', async () => {
   await t.as('scorer', `select apply_play($1, $2, 'out', '{"outs":0,"half":"bottom"}'::jsonb, '{}'::jsonb, '[]'::jsonb, null)`, [game, seq + 1]);
   assert.equal((await feed(token))!.last.rolled, true);
 });
+
+test('a spot is a tap by any seat; the channel bug is set by the leads', async () => {
+  await t.as('media', `update channels set spot = '{"n":1,"cut":"pitch"}' where team_id = $1`, [team]);
+  await fails(t.as('media', `select set_stream_bug($1, 'Streamed by Sam', 'https://example.test')`, [team]), /organizer or head coach/);
+  await t.as('owner', `select set_stream_bug($1, ' Streamed by Sam ', 'https://example.test')`, [team]);
+  await t.as('media', `update channels set card = 'qr' where team_id = $1`, [team]);
+  const f = (await feed(token))!;
+  assert.deepEqual([f.spot, f.bug, f.card], [{ n: 1, cut: 'pitch' }, { text: 'Streamed by Sam', url: 'https://example.test' }, 'qr']);
+  await fails(t.as('owner', `select set_stream_bug($1, 'x', 'http://not-secure.test')`, [team]), /check constraint/);
+  // No link, no QR card.
+  await t.as('owner', `select set_stream_bug($1, 'Streamed by Sam', '')`, [team]);
+  const g = (await feed(token))!;
+  assert.deepEqual([g.bug, g.card], [{ text: 'Streamed by Sam', url: null }, null]);
+});

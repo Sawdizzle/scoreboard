@@ -509,6 +509,23 @@ export async function saveSponsor(slug: string, _: FormState, fd: FormData): Pro
   return { ok: name ? 'Sponsor saved.' : 'Sponsor removed.' };
 }
 
+// The channel bug: the line that stays in the corner of the stream, and the
+// link On Air can put up as a QR code. Leads only (the database checks).
+export async function saveStreamBug(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const text = str(fd, 'bug_text');
+  let url = str(fd, 'bug_url');
+  if (text.length > 40) return { error: 'Keep the line to 40 characters.' };
+  if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+  url = url.replace(/^http:\/\//i, 'https://');
+  if (url.length > 200) return { error: 'Keep the link to 200 characters.' };
+  if (url) { try { new URL(url); } catch { return { error: 'That link does not look right. Try it as sawman.app or https://sawman.app.' }; } }
+  const { supabase, team } = await loadTeam(slug);
+  const { error } = await supabase.rpc('set_stream_bug', { p_team: team.id, p_text: text, p_url: url });
+  if (error) return { error: error.code === '42501' ? 'Only an organizer or head coach can set the channel bug.' : say(error) };
+  revalidatePath(`/t/${slug}/settings`);
+  return { ok: text || url ? 'Channel bug saved.' : 'Channel bug removed.' };
+}
+
 // A new Browser Source link. The old one stops working at once.
 export async function resetStreamLink(slug: string, _: FormState): Promise<FormState> {
   const { supabase, team } = await loadTeam(slug);

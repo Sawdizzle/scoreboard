@@ -5,7 +5,8 @@ import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import type { AirView, CardKind } from '@/lib/onair';
 
-export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null };
+export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null;
+  bug_url: string | null; spot?: { n: number; cut: 'pitch' | 'inning' } | null };
 
 // What the stream is showing, run from the field. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
@@ -70,6 +71,15 @@ export function OnAir({ channel, gameId, view, brand, when, live, final, score, 
         {channel.sponsor_name && (
           <button type="button" className={`pchoice${up('sponsor') ? ' on' : ''}`} aria-pressed={up('sponsor')} onClick={() => flip('sponsor')}><b>Sponsor</b><small>{channel.sponsor_name}</small></button>
         )}
+        {channel.bug_url && (
+          <button type="button" className={`pchoice${up('qr') ? ' on' : ''}`} aria-pressed={up('qr')} onClick={() => flip('qr')}><b>QR code</b><small>Your link, to scan</small></button>
+        )}
+      </div>
+
+      <p className="eyebrow">Spots · play once per tap</p>
+      <div className="pgrid two">
+        <button type="button" className="pchoice" onClick={() => onSet({ spot: { n: Date.now(), cut: 'pitch' }, ...(here ? {} : { game_id: gameId }) })}><b>Quick spot</b><small>A banner, about 7 seconds</small></button>
+        <button type="button" className="pchoice" onClick={() => onSet({ spot: { n: Date.now(), cut: 'inning' }, ...(here ? {} : { game_id: gameId }) })}><b>Full spot</b><small>Full screen, about 13 seconds</small></button>
       </div>
 
       <div className="air-autos">

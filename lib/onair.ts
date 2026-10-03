@@ -9,7 +9,7 @@ import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './sta
 import { sitFor, type Sport, type SportLive } from './sports.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
-export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid';
+export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid' | 'qr';
 
 // How the scorebug looks: Pressbox's own, or one of Scoreboard's animated
 // bugs (public/bugs/<slug>.html), which draw the game themselves.
@@ -33,6 +33,10 @@ export type Feed = {
   // Put the mid-inning board up by itself between halves.
   auto_mid?: boolean;
   sponsor?: { name: string; line: string | null; logo: string | null } | null;
+  // The corner line that stays up, and the link On Air can raise as a QR code.
+  bug?: { text: string | null; url: string | null } | null;
+  // The last spot tapped in On Air: a new stamp plays one.
+  spot?: { n: number; cut: 'pitch' | 'inning' } | null;
   roster?: { id: string; num: string; name: string }[];
   team: FeedTeam; opponent: FeedTeam;
   game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & { seq: number; sport?: Sport }) | null;
