@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, boxScore, bugAnim, bugState, feedView, leaders, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, boxScore, breakText, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -61,7 +61,7 @@ test('due up is the hitter at the plate and the two behind him, around the order
 
 test('no lineup: no batter, no pitcher, nothing due up, and no crash', () => {
   const bare = engineGame({ is_home: true, live, status: 'live' }, {}, 7);
-  assert.deepEqual(airView(bare, ctx), { batSide: 'home', fieldSide: 'away', batter: null, pitcher: null, dueUp: [] });
+  assert.deepEqual(airView(bare, ctx), { batSide: 'home', fieldSide: 'away', batter: null, pitcher: null, dueUp: [], order: [], defense: [] });
 });
 
 test('a number-only player goes by his number', () => {
@@ -125,9 +125,26 @@ test('an animated bug gets the game in its own shape, and a stinger for the big 
   const s = bugState(feed, g(), airView(g(), ctx));
   assert.deepEqual([s.away.abbr, s.away.r, s.home.abbr, s.home.r, s.home.name], ['HAWKS', 4, 'STEEL', 2, 'Blue Steel']);
   assert.deepEqual([s.inning, s.half, s.balls, s.strikes, s.outs, s.batter, s.pitcher, s.pitchCount], [5, 'bot', 2, 1, 1, 'A Player2', 'H Player9', 58]);
+  assert.equal(bugState({ ...feed, show_line: true } as Feed, g(), airView(g(), ctx)).batter, 'A Player2 · .273');
   assert.deepEqual(bugAnim({ seq: 1, type: 'homerun', kind: 'HR' }), { type: 'homerun', meta: {} });
   assert.deepEqual(bugAnim({ seq: 1, type: 'strikeout', kind: 'KL' }), { type: 'strikeoutlooking', meta: {} });
   assert.deepEqual(bugAnim({ seq: 1, type: 'play', kind: 'H2' }), { type: 'play', meta: { text: 'Double' } });
   assert.equal(bugAnim({ seq: 1, type: 'ball', kind: null }), null);
   assert.equal(bugAnim(null), null);
+});
+
+test('the whole order and the defense, for the lineup and defense cards', () => {
+  const v = airView(g(), ctx);
+  assert.equal(v.order.length, 9);
+  assert.deepEqual(v.order[1].bid, 'a2');
+  assert.deepEqual(v.defense, [{ pos: 'P', num: '9', name: 'H Player9' }, { pos: 'SS', num: '2', name: 'H Player2' }]);
+});
+
+test('moments and the break between halves', () => {
+  assert.equal(momentText({ seq: 1, type: 'homerun', kind: 'HR' }), 'Home run');
+  assert.equal(momentText({ seq: 1, type: 'strikeout', kind: 'KL' }), 'Strikeout looking');
+  assert.equal(momentText({ seq: 1, type: 'play', kind: 'H3' }), 'Triple');
+  assert.equal(momentText({ seq: 1, type: 'play', kind: 'GB' }), null);
+  assert.equal(breakText(g()), 'Middle of the 5th');
+  assert.equal(breakText(engineGame({ is_home: true, live: { inning: 6, half: 'top' }, status: 'live' }, {}, 7)), 'End of the 5th');
 });

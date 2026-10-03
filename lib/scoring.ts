@@ -14,8 +14,7 @@
 // unknown runner who scores still counts as a run for the pitcher; it just
 // is not credited to anyone's R.
 //
-// Earned runs: every run is counted as earned. Youth scorers rarely rule on
-// it, and GameChanger's own youth numbers are close to the same thing.
+// Earned runs follow the errors the scorer records (see moveRunners).
 import * as L from './rules/logic.js';
 import type { Game, Lineup, Side } from './types.ts';
 
@@ -96,34 +95,33 @@ export function paKind(res: Res, prev: G): string | null {
   return null;
 }
 
-// Where the runners went. Mirrors the rules for each kind of play, then defers
-// to the rules' own bases wherever the two disagree.
-export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
-  const before = runnersOf(prev);
-  const scored: (string | null)[] = [];
-  const stole: string[] = [], caught: string[] = [];
-  let r: Runners = { ...before };
+// Where everyone went, by where they started: the batter, or the runner from
+// a base. Mirrors the rules for each kind of play. Two maps ride on it: who
+// the runners are, and which of them would not be on base but for an error.
+type Src = 'batter' | keyof Runners;
+type Trace = { to: Record<keyof Runners, Src | null>; scored: Src[]; stole: Src[]; caught: Src[] };
+function trace(prev: G, res: Res): Trace {
+  const on = bases(prev);
+  const stay = (): Trace['to'] => ({ first: on.first ? 'first' : null, second: on.second ? 'second' : null, third: on.third ? 'third' : null });
+  const none = (): Trace['to'] => ({ first: null, second: null, third: null });
+  let to = stay();
+  const scored: Src[] = [], stole: Src[] = [], caught: Src[] = [];
   const p = (res.payload ?? {}) as { from?: keyof Runners; kind?: string; inputs?: { dest?: Record<string, number | 'out'>; kind?: string }; reached?: number; runs?: number };
-  const kind = paKind(res, prev);
 
   const forced = () => {
     // Batter to first; each runner moves only if pushed.
-    const b = bases(prev);
-    if (b.first && b.second && b.third) scored.push(before.third);
-    const third = b.first && b.second ? before.second : b.third ? before.third : null;
-    const second = b.first ? before.first : b.second ? before.second : null;
-    r = { first: batter, second: b.first || b.second ? second : null, third: (b.first && b.second) || b.third ? third : null };
+    if (on.first && on.second && on.third) scored.push('third');
+    to = { first: 'batter', second: on.first ? 'first' : on.second ? 'second' : null, third: on.first && on.second ? 'second' : on.third ? 'third' : null };
   };
   const advanceAll = (n: number, withBatter: boolean) => {
-    const out: Runners = { ...EMPTY };
+    const out = none();
     BASES.forEach((k, i) => {
-      const who = before[k];
-      if (!bases(prev)[k]) return;
-      const to = i + 1 + n;
-      if (to >= 4) scored.push(who); else out[BASES[to - 1]] = who;
+      if (!on[k]) return;
+      const at = i + 1 + n;
+      if (at >= 4) scored.push(k); else out[BASES[at - 1]] = k;
     });
-    if (withBatter) { if (n >= 4) scored.push(batter); else out[BASES[n - 1]] = batter; }
-    r = out;
+    if (withBatter) { if (n >= 4) scored.push('batter'); else out[BASES[n - 1]] = 'batter'; }
+    to = out;
   };
 
   switch (res.type) {
@@ -132,15 +130,13 @@ export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
     case 'homerun': advanceAll(4, true); break;
     case 'balk': case 'advance': advanceAll(1, false); break;
     case 'play': {
-      const dest = p.inputs?.dest ?? {};
-      const out: Runners = { ...EMPTY };
-      const who = (k: string) => (k === 'batter' ? batter : before[k as keyof Runners]);
-      for (const [k, to] of Object.entries(dest)) {
-        if (to === 'out') continue;
-        if (to === 4) scored.push(who(k));
-        else if (to >= 1 && to <= 3) out[BASES[to - 1]] = who(k);
+      const out = none();
+      for (const [k, at] of Object.entries(p.inputs?.dest ?? {})) {
+        if (at === 'out') continue;
+        if (at === 4) scored.push(k as Src);
+        else if (at >= 1 && at <= 3) out[BASES[at - 1]] = k as Src;
       }
-      r = out;
+      to = out;
       // The rules take back runs scored on a third out by the batter or a force.
       if ((p.runs ?? 0) === 0) scored.length = 0;
       break;
@@ -148,26 +144,60 @@ export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
     case 'runner': {
       const from = p.from;
       if (!from) break;
-      const who = before[from];
-      r = { ...before, [from]: null };
+      to = { ...to, [from]: null };
       if (p.kind === 'SB' || p.kind === 'ADV') {
         const i = BASES.indexOf(from);
-        if (i === 2) scored.push(who); else r[BASES[i + 1]] = who;
-        if (p.kind === 'SB' && who) stole.push(who);
-      } else if (p.kind === 'CS' && who) caught.push(who);
+        if (i === 2) scored.push(from); else to[BASES[i + 1]] = from;
+        if (p.kind === 'SB') stole.push(from);
+      } else if (p.kind === 'CS') caught.push(from);
       break;
     }
     case 'bint':
-      if (!kind) r = { ...before, third: null };
+      if (!paKind(res, prev)) to = { ...to, third: null };
       break;
   }
+  return { to, scored, stole, caught };
+}
 
-  // A new half starts with nobody on.
-  if (next.half !== prev.half || next.inning !== prev.inning) r = { ...EMPTY };
-  // The rules' bases are the truth.
+export type Tainted = { first: boolean; second: boolean; third: boolean };
+const CLEAN: Tainted = { first: false, second: false, third: false };
+export const taintedOf = (g: G): Tainted => ({ ...CLEAN, ...((g.state?.unearned as Tainted | undefined) ?? {}) });
+// Errors this half that should have been outs. Once outs plus these reach
+// three, the inning should be over, and nothing after it is earned.
+export const errOutsOf = (g: G) => Number(g.state?.errOuts) || 0;
+
+// Where the runners went, and how many of the runs were earned. Defers to the
+// rules' own bases wherever the two disagree.
+//
+// Earned runs, the scorebook's rule as far as the pad can know it:
+//   - a batter who reached on an error or catcher's interference is unearned
+//     wherever he scores from;
+//   - every run on the error play itself is unearned;
+//   - once outs plus errors-that-were-outs reach three, the rest of the half
+//     is unearned.
+// It does not know passed balls or an extra base taken on a throwing error.
+export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
+  const before = runnersOf(prev), taint = taintedOf(prev);
+  const t = trace(prev, res);
+  const kind = paKind(res, prev);
+  const reachedOnError = kind === 'E' || kind === 'CI';
+  const who = (s: Src) => (s === 'batter' ? batter : before[s]);
+  const dirty = (s: Src) => (s === 'batter' ? reachedOnError : taint[s]);
+  const ids = (list: Src[]) => list.map(who).filter((x): x is string => !!x);
+
+  const over = next.half !== prev.half || next.inning !== prev.inning;
   const truth = bases(next);
-  for (const k of BASES) if (!truth[k]) r[k] = null;
-  return { runners: r, scored, stole, caught };
+  const r: Runners = { ...EMPTY }, u: Tainted = { ...CLEAN };
+  // A new half starts with nobody on; and the rules' bases are the truth.
+  if (!over) for (const k of BASES) { const s = t.to[k]; if (s && truth[k]) { r[k] = who(s); u[k] = dirty(s); } }
+
+  const past = (prev.outs | 0) + errOutsOf(prev) >= 3;
+  return {
+    runners: r, unearned: u, errOuts: over ? 0 : errOutsOf(prev) + (kind === 'E' ? 1 : 0),
+    scored: t.scored.map(who), stole: ids(t.stole), caught: ids(t.caught),
+    // null when the half is past saving or the play was the error: no run is earned.
+    earned: past || kind === 'E' ? 0 : t.scored.filter((s) => !dirty(s)).length, traced: t.scored.length,
+  };
 }
 
 // The rows a play adds to people's lines, and the runner map to store with it.
@@ -184,7 +214,8 @@ export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => 
     row[k] = (row[k] ?? 0) + n;
     rows.set(key, row);
   };
-  if (NO_STATS.has(res.type)) return { rows: [], runners: moved.runners };
+  const carry = { runners: moved.runners, unearned: moved.unearned, errOuts: moved.errOuts };
+  if (NO_STATS.has(res.type)) return { rows: [], ...carry };
 
   const scoreKey = batSide === 'home' ? 'home_score' : 'away_score';
   const runs = Math.max(0, (Number(next[scoreKey]) || 0) - (Number(prev[scoreKey]) || 0));
@@ -197,7 +228,8 @@ export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => 
   add(fieldSide, pitcher, 'p_pitches', pitches);
   add(fieldSide, pitcher, 'p_outs', Math.min(3, outs));
   add(fieldSide, pitcher, 'p_r', Math.min(4, runs));
-  add(fieldSide, pitcher, 'p_er', Math.min(4, runs));
+  // Where the trace and the rules disagree on how many scored, the rules' count stands as earned.
+  add(fieldSide, pitcher, 'p_er', Math.min(4, moved.traced === runs ? moved.earned : runs));
   if (res.type === 'balk') add(fieldSide, pitcher, 'p_bk');
 
   // The batter, when the play ended the plate appearance.
@@ -230,7 +262,7 @@ export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => 
   for (const who of moved.stole) add(batSide, who, 'b_sb');
   for (const who of moved.caught) add(batSide, who, 'b_cs');
 
-  return { rows: [...rows.values()], runners: moved.runners };
+  return { rows: [...rows.values()], ...carry };
 }
 
 // Run a tap through the rules and the stats together: the patch to store
@@ -239,11 +271,11 @@ export function record(prev: G, res: Res | null, sides: (e: EngineSide) => Side)
   if (!res || !res.patch || !Object.keys(res.patch).length) return null;
   const stamped = L.stamp(res, prev) as Res;
   const next = { ...prev, ...stamped.patch } as G;
-  const { rows, runners } = scorePlay(prev, stamped, next, sides);
+  const { rows, runners, unearned, errOuts } = scorePlay(prev, stamped, next, sides);
   // Who was pitching for each side when this was written, so a pitching
   // change made on the lineup screen can be noticed on the pad (pitcherChange).
   const pitcherBid = { home: next.lineups.home?.positions?.P ?? null, away: next.lineups.away?.positions?.P ?? null };
-  const state = { ...((next.state as object) ?? {}), runners, pitcherBid };
+  const state = { ...((next.state as object) ?? {}), runners, unearned, errOuts, pitcherBid };
   const patch = { ...stamped.patch, state };
   return { res: stamped, patch, rows, next: { ...next, state } as G };
 }

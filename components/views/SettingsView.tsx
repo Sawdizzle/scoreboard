@@ -1,4 +1,4 @@
-import { deleteTeam } from '@/app/actions';
+import { deleteTeam, resetStreamLink, saveSponsor } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
@@ -9,7 +9,10 @@ import { canEditTeam, canManageSeats, type Role, type Team } from '@/lib/types';
 
 // streamUrl is the team's Browser Source link, for any seat: whoever runs the
 // broadcast sets up OBS, and that is often not the organizer.
-export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl }: { team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string }) {
+export type SponsorInfo = { name: string | null; line: string | null; logo: string | null };
+export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, sponsor }: {
+  team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string; sponsor?: SponsorInfo;
+}) {
   return (
     <div className="page">
       <BrandEditor team={team} canEdit={canEditTeam(role)} welcome={welcome} />
@@ -29,6 +32,38 @@ export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl }
           <h3>Look</h3>
           <p className="hint">Pressbox shows the batter&rsquo;s season line on the scorebug. The others are Scoreboard&rsquo;s animated bugs: they play each hit, strikeout and home run, and show the batter by name. Stat cards work with every look.</p>
           <LookPicker teamId={team.id} brand={brandOf(team)} initial={look ?? 'pressbox'} />
+          {canEditTeam(role) && (
+            <details className="fold">
+              <summary>Sponsor</summary>
+              <div className="fold-body">
+                <ActionForm action={saveSponsor.bind(null, team.slug)} className="form">
+                  <p className="hint">Shown as a card from On Air in the pad: &ldquo;Brought to you by&rdquo;, the logo, the name and a line under it. Clear the name to remove the sponsor.</p>
+                  <label className="field"><span>Sponsor name</span>
+                    <input className="input" name="sponsor_name" defaultValue={sponsor?.name ?? ''} maxLength={40} autoComplete="off" />
+                  </label>
+                  <label className="field"><span>Line under it</span>
+                    <input className="input" name="sponsor_line" defaultValue={sponsor?.line ?? ''} maxLength={60} autoComplete="off" placeholder="Cold treats on Elm Street" />
+                  </label>
+                  <label className="field"><span>Logo (PNG, WebP or JPEG, under 1 MB)</span>
+                    <input className="input" type="file" name="sponsor_logo" accept="image/png,image/webp,image/jpeg" />
+                  </label>
+                  {sponsor?.logo && <label className="switch"><span className="switch-text"><b>Remove the current logo</b></span><input type="checkbox" name="remove_sponsor_logo" /></label>}
+                  <Submit busy="Saving…">Save sponsor</Submit>
+                </ActionForm>
+              </div>
+            </details>
+          )}
+          {canEditTeam(role) && (
+            <details className="fold danger">
+              <summary>Make a new stream link</summary>
+              <div className="fold-body">
+                <ActionForm action={resetStreamLink.bind(null, team.slug)} className="form">
+                  <p className="hint">For when the link has got out. The old link stops working at once, and OBS shows nothing until you paste in the new one.</p>
+                  <Submit className="btn btn-danger" busy="Making…">Make a new link</Submit>
+                </ActionForm>
+              </div>
+            </details>
+          )}
         </section>
       )}
       {canManageSeats(role) && (

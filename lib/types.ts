@@ -1,6 +1,8 @@
 // Row shapes, written by hand to match supabase/migrations. Swap for generated
 // types once the project exists and `supabase gen types` can run against it.
 
+import type { Sport } from './sports.ts';
+
 export const ROLES = ['organizer', 'head_coach', 'coach', 'scorer', 'media'] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -79,6 +81,8 @@ export type FormState = { error?: string; ok?: string };
 
 export type Game = {
   id: string;
+  // Baseball has lineups, the pad and stats; the others are score only.
+  sport: Sport;
   team_id: string;
   season_id: string | null;
   counts_for_stats: boolean;

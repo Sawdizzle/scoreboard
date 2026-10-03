@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Stage } from '@/components/overlay/Stage';
-import { feedView, type Feed } from '@/lib/onair';
+import { feedView, momentText, type Feed } from '@/lib/onair';
 import { browserClient } from '@/lib/supabase/browser';
 
 const POLL_MS = 2500;
 const AUTO_CARD_MS = 6000;
+const MOMENT_MS = 4500;
 export const airTopic = (token: string) => `overlay:${token}`;
 
 // The page OBS loads. It has no account: it asks for the feed by the link's
@@ -16,11 +17,15 @@ export const airTopic = (token: string) => `overlay:${token}`;
 export function Overlay({ token, initial }: { token: string; initial: Feed | null }) {
   const [feed, setFeed] = useState<Feed | null>(initial);
   const [auto, setAuto] = useState(false);
+  const [moment, setMoment] = useState<{ text: string; who: string } | null>(null);
   const first = useRef(initial);
 
   useEffect(() => {
     const sb = browserClient();
-    let stopped = false, busy = false, again = false, timer = 0;
+    let stopped = false, busy = false, again = false, timer = 0, momentTimer = 0;
+    // The newest play already called out, and who was batting before it: the play is his.
+    let seenPlay = first.current?.last?.seq ?? (first.current ? 0 : undefined);
+    let batterName = first.current ? feedView(first.current)?.air.batter?.name ?? '' : '';
     let have = first.current?.v ?? null;
     // undefined until the first feed: a card never pops just because the page loaded.
     let batter: string | null | undefined = first.current ? feedView(first.current)?.air.batter?.bid ?? null : undefined;
@@ -33,7 +38,16 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
         const f = data as Feed | { v: string } | null;
         if (stopped || !f || !('game' in f)) return;
         have = f.v;
-        const now = feedView(f)?.air.batter?.bid ?? null;
+        const view = feedView(f);
+        const now = view?.air.batter?.bid ?? null;
+        const text = momentText(f.last);
+        if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && text && f.game?.status === 'live') {
+          setMoment({ text, who: f.last.kind === 'SB' ? '' : batterName });
+          window.clearTimeout(momentTimer);
+          momentTimer = window.setTimeout(() => setMoment(null), MOMENT_MS);
+        }
+        seenPlay = f.last?.seq ?? seenPlay ?? 0;
+        batterName = view?.air.batter?.name ?? '';
         if (batter !== undefined && now && now !== batter && f.auto_card && f.game?.status === 'live') {
           setAuto(true);
           window.clearTimeout(timer);
@@ -54,9 +68,10 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
       stopped = true;
       window.clearInterval(poll);
       window.clearTimeout(timer);
+      window.clearTimeout(momentTimer);
       void sb.removeChannel(channel);
     };
   }, [token]);
 
-  return <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} />;
+  return <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} />;
 }

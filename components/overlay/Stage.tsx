@@ -4,7 +4,8 @@ import { AnimBug } from '@/components/overlay/AnimBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, bugAnim, bugState, feedView, leaders, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { periodText, type SportLive } from '@/lib/sports';
 
 // The stream, drawn. A transparent page laid out on a 1280 x 720 grid in rem,
 // with the root font size tied to the width of the source: it fills a 720p,
@@ -112,7 +113,7 @@ function Leaders({ list, brand, season, on }: { list: Leader[]; brand: Brand; se
   );
 }
 
-function Box({ box, away, home, final, on }: { box: ReturnType<typeof boxScore>; away: Brand; home: Brand; final: boolean; on: boolean }) {
+function LineTable({ box, away, home, title }: { box: ReturnType<typeof boxScore>; away: Brand; home: Brand; title: string }) {
   const row = (b: Brand, cells: string[], tot: string[]) => (
     <tr>
       <th style={vars(b)}><i />{b.display}</th>
@@ -121,16 +122,86 @@ function Box({ box, away, home, final, on }: { box: ReturnType<typeof boxScore>;
     </tr>
   );
   return (
+    <table>
+      <thead><tr><th>{title}</th>{box.innings.map((n) => <td key={n}>{n}</td>)}<td className="r">R</td><td className="t">H</td><td className="t">E</td></tr></thead>
+      <tbody>{row(away, box.away, box.awayTot)}{row(home, box.home, box.homeTot)}</tbody>
+    </table>
+  );
+}
+type BoxProps = { box: ReturnType<typeof boxScore>; away: Brand; home: Brand };
+
+function Box({ final, on, ...t }: BoxProps & { final: boolean; on: boolean }) {
+  return <div className={`ov-card ov-panel ov-box${on ? ' on' : ''}`} aria-hidden={!on}><LineTable {...t} title={final ? 'Final' : 'Box score'} /></div>;
+}
+
+// Between halves: where the game stands and who comes up next.
+function Mid({ title, list, on, ...t }: BoxProps & { title: string; list: BatterView[]; on: boolean }) {
+  return (
     <div className={`ov-card ov-panel ov-box${on ? ' on' : ''}`} aria-hidden={!on}>
-      <table>
-        <thead><tr><th>{final ? 'Final' : 'Box score'}</th>{box.innings.map((n) => <td key={n}>{n}</td>)}<td className="r">R</td><td className="t">H</td><td className="t">E</td></tr></thead>
-        <tbody>{row(away, box.away, box.awayTot)}{row(home, box.home, box.homeTot)}</tbody>
-      </table>
+      <LineTable {...t} title={title} />
+      {list.length > 0 && <div className="ov-next"><small>Due up</small>{list.map((b) => <span key={b.bid}><i>{b.num}</i>{b.name}{b.avg && <b>{b.avg}</b>}</span>)}</div>}
     </div>
   );
 }
 
-export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null }) {
+function Lineup({ list, at, brand, on }: { list: BatterView[]; at: string | null; brand: Brand; on: boolean }) {
+  return (
+    <div className={`ov-card ov-panel${on && list.length ? ' on' : ''}`} aria-hidden={!on}>
+      <div className="ov-phead" style={vars(brand)}><b>Lineup · {brand.display}</b></div>
+      {list.map((b, i) => (
+        <div key={b.bid} className={`ov-order${b.bid === at ? ' up' : ''}`}>
+          <small>{i + 1}</small><i>{b.num}</i><strong style={fit(b.name, 2.6, 22)}>{b.name}</strong><small>{b.pos}</small>{b.avg && <b>{b.avg}</b>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Where each fielder stands, on a diamond.
+const SPOT: Record<string, [number, number]> = { P: [50, 62], C: [50, 92], '1B': [78, 60], '2B': [64, 40], '3B': [22, 60], SS: [36, 40], LF: [16, 16], CF: [50, 6], RF: [84, 16] };
+function Defense({ list, brand, on }: { list: AirView['defense']; brand: Brand; on: boolean }) {
+  return (
+    <div className={`ov-card ov-panel${on && list.length ? ' on' : ''}`} aria-hidden={!on}>
+      <div className="ov-phead" style={vars(brand)}><b>Defense · {brand.display}</b></div>
+      <div className="ov-field">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 96 L4 44 Q50 -14 96 44 Z" /><path d="M50 90 L30 68 L50 46 L70 68 Z" /></svg>
+        {list.map((d) => (
+          <span key={d.pos} style={{ left: `${SPOT[d.pos][0]}%`, top: `${SPOT[d.pos][1]}%` }}><small>{d.pos}</small><b>{d.name.trim().split(/\s+/).pop()}</b></span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Matchup({ b, p, bat, field, on }: { b: BatterView | null; p: PitcherView | null; bat: Brand; field: Brand; on: boolean }) {
+  return (
+    <div className={`ov-card ov-panel${on && b && p ? ' on' : ''}`} aria-hidden={!on}>
+      {b && p && <>
+        <div className="ov-phead" style={vars(bat)}><b>At bat · {bat.display}</b></div>
+        <div className="ov-prow"><i>{b.num}</i><strong style={fit(b.name, 3.4, 34)}>{b.name}</strong></div>
+        <div className="ov-pseason">{b.avg ? <><Stat v={b.avg} k="AVG" gold />{b.cells.slice(1, 3).map((c) => <Stat key={c.k} {...c} />)}</> : <small>{b.today ? `Today ${b.today}` : 'First time up'}</small>}</div>
+        <div className="ov-phead" style={vars(field)}><b>Pitching · {field.display}</b></div>
+        <div className="ov-prow"><i>{p.num}</i><strong style={fit(p.name, 3.4, 34)}>{p.name}</strong></div>
+        <div className="ov-pseason">{p.today.slice(0, 1).concat(p.today.slice(2)).map((c) => <Stat key={c.k} {...c} />)}{p.season && <Stat {...p.season[0]} gold />}</div>
+      </>}
+    </div>
+  );
+}
+
+function Sponsor({ sp, on }: { sp: Feed['sponsor']; on: boolean }) {
+  return (
+    <div className={`ov-card ov-panel ov-sponsor${on && sp ? ' on' : ''}`} aria-hidden={!on}>
+      {sp && <>
+        <small>Brought to you by</small>
+        {sp.logo && <img src={sp.logo} alt="" />}
+        <strong style={fit(sp.name, 4.4, 38)}>{sp.name}</strong>
+        {sp.line && <span>{sp.line}</span>}
+      </>}
+    </div>
+  );
+}
+
+export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string } | null }) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
   const { g, air } = v;
@@ -142,9 +213,15 @@ export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null
   const top = g.half === 'top';
   const b = L.safeBases(g.bases) as { first: boolean; second: boolean; third: boolean };
   const batUs = brandFor(air.batSide) === us;
-  // The box score stands after the last out; the rest are for a game in play.
-  const shown = live || (card === 'box' && status === 'final') ? card : null;
-  const look = feed.look && feed.look !== 'pressbox' ? feed.look : null;
+  const sport = feed.game!.sport ?? 'baseball';
+  const ball = sport === 'baseball';
+  // A card held by hand comes first; else the mid-inning board between halves, when that is on.
+  const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
+  // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
+  const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
+  // Only Prime Time draws the other sports.
+  const look = feed.look && feed.look !== 'pressbox' && (ball || feed.look === 'primetime') ? feed.look : null;
+  const box = boxScore(g, feed.season?.game_innings ?? 7);
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
@@ -157,15 +234,21 @@ export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null
         <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
         <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
         <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
-        <Box box={boxScore(g, feed.season?.game_innings ?? 7)} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
+        <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
+        <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} on={shown === 'mid'} />
+        <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
+        <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
+        <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
+        <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
       </div>
       <div className="ov-dock">
         <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
+        {!look && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
         {!look && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
-            <Team brand={away} score={g.away_score | 0} bat={live && top} />
-            <Team brand={home} score={g.home_score | 0} bat={live && !top} />
-            {live ? (
+            <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
+            <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />
+            {live && !ball ? <div className="ov-sit word"><b>{periodText(sport, feed.game!.live as SportLive)}</b></div> : live ? (
               <div className="ov-sit">
                 <div className="ov-inn"><i className={top ? 'on' : undefined} /><b>{g.inning}</b><i className={top ? 'dn' : 'dn on'} /></div>
                 <svg width="62" height="52" viewBox="0 0 62 52" aria-hidden="true">
@@ -178,7 +261,7 @@ export function Stage({ feed, card }: { feed: Feed | null; card: CardKind | null
               </div>
             ) : <div className="ov-sit word"><b>{status === 'final' ? 'Final' : 'Pregame'}</b></div>}
           </div>
-          {live && (air.batter || air.pitcher) && (
+          {ball && live && (air.batter || air.pitcher) && (
             <div className="ov-strip">
               {air.batter && (
                 <span key={air.batter.bid} className="ov-ab">

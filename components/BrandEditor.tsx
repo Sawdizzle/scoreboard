@@ -65,7 +65,7 @@ export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: b
   const shownLogo = logo?.url ?? (removed ? null : team.logo_url);
   const brand: Brand = { name: `${name}${age ? ` ${age}` : ''}`, display: display || name || 'Team', color, color2, logo: shownLogo };
   const sample: Game = {
-    id: 'preview', team_id: team.id, season_id: null, counts_for_stats: true, opponent_team_id: null,
+    sport: 'baseball', id: 'preview', team_id: team.id, season_id: null, counts_for_stats: true, opponent_team_id: null,
     opponent_name: 'Visitors', opponent_abbr: 'VIS', opponent_color: '#4b5563', is_home: true, starts_at: null,
     venue: null, status: 'scheduled', live: {},
   };

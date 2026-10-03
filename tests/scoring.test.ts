@@ -140,3 +140,33 @@ test('our side and theirs: our batters are "us" at home, the visitors are "them"
   assert.deepEqual(rows.find((x) => x.bid === 'h9')?.side, 'them');
   g = start();
 });
+
+test('earned runs: a batter who reached on an error never scores an earned run', () => {
+  // Error puts h1 on; h2 homers. Two runs, one earned.
+  const { rows } = run(start(), play('E', 'SS', { batter: 1 }), homer);
+  assert.equal(line(rows, 'a9').p_r, 2);
+  assert.equal(line(rows, 'a9').p_er, 1);
+});
+
+test('earned runs: every run on the error play itself is unearned', () => {
+  const { rows } = run(start(), walk, walk, walk, play('E', 'SS', { batter: 1, first: 2, second: 3, third: 4 }));
+  assert.equal(line(rows, 'a9').p_r, 1);
+  assert.equal(line(rows, 'a9').p_er ?? 0, 0);
+});
+
+test('earned runs: after an error that should have been the third out, nothing is earned', () => {
+  // Two out, error extends the half, then a clean home run with a clean runner on.
+  const { rows, g } = run(start(), L.onOut, L.onOut, play('E', '3B', { batter: 1 }), walk, homer);
+  assert.equal(line(rows, 'a9').p_r, 3);
+  assert.equal(line(rows, 'a9').p_er ?? 0, 0);
+  // The next half starts clean.
+  const after = run(g, L.onOut);
+  assert.equal(after.g.half, 'bottom');
+  assert.equal((after.g.state as { errOuts: number }).errOuts, 0);
+  assert.equal(line(run(after.g, homer).rows, 'h9').p_er, 1);
+});
+
+test('earned runs: with no error in the half, every run is earned', () => {
+  const { rows } = run(start(), walk, walk, homer);
+  assert.equal(line(rows, 'a9').p_er, 3);
+});

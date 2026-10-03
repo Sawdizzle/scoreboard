@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { DateTimeField } from '@/components/LocalTime';
 import { TeamMark, brandOf } from '@/components/TeamBrand';
+import { SPORTS, SPORT_LABEL } from '@/lib/sports';
 import type { Game, Season, Team } from '@/lib/types';
 
 // Who, where, when, and whether it counts. `opponent` is a team picked from
@@ -34,6 +35,13 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
           {saved && <input type="hidden" name="opponent_abbr" value={saved.abbr} />}
           {saved && <p className="hint" style={{ gridColumn: '1 / -1', margin: 0 }}>{saved.players ? `Played before: their last lineup (${saved.players} players) loads with the game.` : 'Played before. No lineup saved for them yet.'}</p>}
         </div>
+      )}
+      {!game && (
+        <label className="field"><span>Sport</span>
+          <select className="select" name="sport" defaultValue="baseball">
+            {SPORTS.map((sp) => <option key={sp} value={sp}>{SPORT_LABEL[sp]}{sp === 'baseball' ? '' : ' (score only)'}</option>)}
+          </select>
+        </label>
       )}
       <fieldset>
         <legend className="legend">We are</legend>
