@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Pad } from '@/components/pad/Pad';
 import { getGame, getLineups, listSeasons, loadTeam, seasonStats } from '@/lib/data';
-import { batting, rate3 } from '@/lib/stats';
+import type { Channel } from '@/components/pad/OnAir';
 import type { StatRow } from '@/lib/scoring';
 import { canRunGames, type Game } from '@/lib/types';
 
@@ -23,10 +23,11 @@ export default async function PadPage({ params }: { params: Promise<{ slug: stri
   ]);
   const season = seasons.find((s) => s.id === game.season_id) ?? seasons.find((s) => s.is_current);
   const lines = season ? await seasonStats(supabase, team.id, season.id) : [];
-  const seasonAvg = Object.fromEntries(lines.filter((l) => l.b_pa > 0).map((l) => [l.player_id, rate3(batting(l).avg)]));
+  // Before the Stage 3 migration there is no channel; the pad then has no On Air.
+  const { data: channel } = await supabase.from('channels').select('token, game_id, show_line, auto_card, card').eq('team_id', team.id).maybeSingle<Channel>();
   return (
     <Pad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
-      lineups={lineups} seasonAvg={seasonAvg} tonightRows={(stats.data ?? []) as StatRow[]}
-      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} />
+      lineups={lineups} season={lines} tonightRows={(stats.data ?? []) as StatRow[]}
+      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} channel={channel ?? null} />
   );
 }

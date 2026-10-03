@@ -72,9 +72,13 @@ Each stage ends with a checklist to run before the next one starts.
    Original scope — New Game picks two teams and their rosters load; lineup and field
    screen; the pad on the ported rules; every play writes a plate appearance; player
    and season screens show real numbers.
-3. **On stream** — the Browser Source page, the eleven bugs, the batter's season line
-   on the bug, and the stat cards (batter, pitcher, due up) raised from On Air or
-   popped automatically for each new batter.
+3. **On stream**, in two parts:
+   - **3a, built:** one secret Browser Source link per team (Team look screen); the scorebug page
+     (/overlay/<token>) with the batter's season average and tonight's line; batter, pitcher and due-up
+     cards; On Air in the pad to raise them, and to pop the batter card for each new batter. The stream
+     follows whichever game the pad is scoring.
+   - **3b, next:** Scoreboard's eleven animated bugs as looks to pick from, and the rest of the canvas's
+     On Air (team leaders, box score, lineup, defense, sponsor, mid-inning).
 4. **Public** — team page, live game page, box score.
 5. **Bring it over** — the nine saved teams from Scoreboard. (The GameChanger CSV
    import moved up into 2a.)

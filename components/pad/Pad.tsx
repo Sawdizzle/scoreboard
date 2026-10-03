@@ -1,19 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { OnAir, type Channel } from '@/components/pad/OnAir';
+import { airTopic } from '@/components/overlay/Overlay';
 import { InPlay, More, Runner, Situation, StrikeThree } from '@/components/pad/PadSheets';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
 import { engineGame, lastPlayText, onPlay, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
+import { airView } from '@/lib/onair';
+import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Game, Lineup, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
 type Item = { kind: 'play'; type: string; patch: object; payload: object; rows: StatRow[]; status: Status | null } | { kind: 'undo' };
-type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | { runner: 'first' | 'second' | 'third' };
+type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | { runner: 'first' | 'second' | 'third' };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
   const out = { ...t };
@@ -34,9 +38,9 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulation, canScore }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, channel }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
-  seasonAvg: Record<string, string>; tonightRows: StatRow[]; regulation: number; canScore: boolean;
+  season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; channel: Channel | null;
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -52,6 +56,18 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
   const [sync, setSync] = useState<'ok' | 'sending' | 'retry'>('ok');
   const [sheet, setSheet] = useState<Sheet>(null);
   const [toast, setToast] = useState('');
+  const [chan, setChan] = useState(channel);
+  // The stream's page listens here: a nudge after each save, so the scorebug
+  // moves with the tap instead of at its next poll.
+  const wire = useRef<ReturnType<typeof sb.channel> | null>(null);
+  const nudge = useCallback(() => { void wire.current?.send({ type: 'broadcast', event: 'tick', payload: {} }); }, []);
+  const token = channel?.token;
+  useEffect(() => {
+    if (!token) return;
+    const c = sb.channel(airTopic(token)).subscribe();
+    wire.current = c;
+    return () => { wire.current = null; void sb.removeChannel(c); };
+  }, [sb, token]);
 
   const show = (v: typeof view) => { cur.current = v; setView(v); };
   const say = (t: string) => { setToast(t); window.setTimeout(() => setToast((x) => (x === t ? '' : x)), 3500); };
@@ -94,10 +110,11 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
       seq.current = (data as { seq: number }).seq;
       queue.current.shift();
       wait = 800;
+      nudge();
     }
     sending.current = false;
     setSync('ok');
-  }, [sb, game.id, reload]);
+  }, [sb, game.id, reload, nudge]);
 
   // Record a play: here at once, then to the database in order.
   function commit(res: unknown, status: Status | null = null) {
@@ -131,6 +148,16 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
     void pump();
   }
 
+  // What the stream shows: here at once, then saved. Any seat can run it.
+  async function air(patch: Partial<Channel>) {
+    const before = chan;
+    if (!before) return;
+    setChan({ ...before, ...patch });
+    const { error } = await sb.from('channels').update(patch).eq('team_id', team.id);
+    if (error) { setChan(before); say('That did not reach the stream. Try again.'); return; }
+    nudge();
+  }
+
   // A pitching change made on the lineup screen moves the pitch count over.
   useEffect(() => {
     const res = pitcherChange(cur.current.g);
@@ -160,6 +187,8 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
   const runners = runnersOf(g);
   const b = L.safeBases(g.bases);
   const numOf = (bid: string | null, side: EngineSide) => (bid ? g.lineups[side]?.batters?.find((x) => x.bid === bid)?.num ?? '' : '');
+  const seasonBy = useMemo(() => Object.fromEntries(season.map((l) => [l.player_id, l])), [season]);
+  const onAir = airView(g, { tonight: view.tonight, season: seasonBy, pas: [], gameInnings: regulation });
   const dots = (n: number, of: number, color: string) => Array.from({ length: of }, (_, i) => <i key={i} style={{ background: i < n ? color : undefined }} />);
 
   const press = {
@@ -200,7 +229,7 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
           <span className="row-title">{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap to set it')}
             {batter && <small>{positionOf(batLineup, bIdx) || ''}</small>}</span>
           <span className="pad-line">
-            {batter && seasonAvg[batter.bid] && <b>{seasonAvg[batter.bid]}</b>}
+            {onAir.batter?.avg && <b>{onAir.batter.avg}</b>}
             {batter && <span>{tonight(view.tonight[batter.bid]) || 'First time up'}</span>}
           </span>
         </span>
@@ -232,6 +261,7 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !view.last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, fieldSide)}`}>Field</Link>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
+        {chan && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
       </nav>
 
       {sheet === 'k3' && <StrikeThree g={g} onClose={() => setSheet(null)} onPick={(k) => {
@@ -247,6 +277,8 @@ export function Pad({ slug, team, game, lineups, seasonAvg, tonightRows, regulat
       }} />}
       {sheet && typeof sheet === 'object' && <Runner g={g} from={sheet.runner} who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
+      {sheet === 'air' && chan && <OnAir channel={chan} gameId={game.id} view={onAir} brand={batSide === 'home' ? homeB : awayB}
+        when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} onSet={air} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
         onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} />}
     </div>
