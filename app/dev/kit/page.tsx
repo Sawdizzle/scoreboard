@@ -3,6 +3,8 @@ import { TabBar, TeamTabs } from '@/components/TabBar';
 import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
+import { Stage } from '@/components/overlay/Stage';
+import type { CardKind, Feed } from '@/lib/onair';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { TeamHeader } from '@/components/TeamHeader';
@@ -56,9 +58,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -72,7 +74,24 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
     const live = { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: true, second: true, third: false }, home_score: 2, away_score: 4,
       state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
     return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
-      seasonAvg={{ p2: '.273' }} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore />;
+      season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
+      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, card: null }} />;
+  }
+  if (v === 'overlay') {
+    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup), &line=0, &status=final.
+    const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
+    const feed: Feed = {
+      v: 'kit', show_line: line !== '0', auto_card: false, card: null,
+      team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
+      game: { id: 'g1', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
+        live: { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: false, second: true, third: false }, home_score: 2, away_score: 4,
+          state: { batIdx: { home: 1 }, pitches: { away: 58 } } } },
+      lineups: { us: lineup, them },
+      tonight: [{ side: 'us', bid: 'p1', b_pa: 2, b_ab: 1, b_bb: 1 }, { side: 'us', bid: 'p3', b_pa: 2, b_ab: 2, b_h: 1 }, { side: 'them', bid: 'o0', p_outs: 13, p_r: 2, p_so: 4, p_pitches: 58 }],
+      pas: [{ side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8' }],
+      season_stats: stats,
+    };
+    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} /></div>;
   }
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
@@ -91,7 +110,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} />}
       {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)} /></div>}
       {v === 'season-empty' && <SeasonView team={team} role={role} seasons={seasons} />}
-      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} /></>}
+      {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000" /></>}
       <TabBar slug={team.slug} at={at} />
     </div>
   );

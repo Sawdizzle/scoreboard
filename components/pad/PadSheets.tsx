@@ -9,13 +9,13 @@ import type { G } from '@/lib/scoring';
 // rules only to grey out what cannot have happened (with the reason), and hand
 // the choice back to the pad, which records it.
 
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Sheet({ title, onClose, children, close = 'Cancel' }: { title: string; onClose: () => void; children: React.ReactNode; close?: string }) {
   return (
     <div className="psheet-wrap" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="psheet">
         <div className="psheet-head">
           <h2>{title}</h2>
-          <button type="button" className="link" onClick={onClose}>Cancel</button>
+          <button type="button" className="link" onClick={onClose}>{close}</button>
         </div>
         {children}
       </div>

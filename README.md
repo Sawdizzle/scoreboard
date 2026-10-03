@@ -14,8 +14,10 @@ npm run dev                  # http://localhost:3000
 
 `/dev/kit?v=today` (also `today-empty`, `roster`, `empty`, `player`, `pitcher`,
 `staff`, `staff-link`, `season`, `season-empty`, `settings`, `import`, `game`,
-`lineup`, `lineup-them`; add `&role=coach` for a seat that cannot edit) draws every
-team screen from made-up data with no database. It is for checking layout at
+`lineup`, `lineup-them`, `pad`; add `&role=coach` for a seat that cannot edit) draws every
+team screen from made-up data with no database. `?v=overlay` draws the stream's
+scorebug over a stand-in camera (`&card=batter`, `pitcher` or `dueup`; `&line=0`;
+`&status=final`). It is for checking layout at
 phone width, and returns 404 in a production build.
 
 ## Check it
@@ -44,6 +46,8 @@ one current season, and the public roster's name masking.
 | `lib/rules/` | Scoreboard's rules engine (`logic.js`, `roster.js`), copied unchanged; not linted here |
 | `lib/lineup.ts` | Lineups built from a roster or last game, and checked before they are stored |
 | `lib/gamechanger.ts`, `lib/stats.ts` | GameChanger export parsing, and every rate (AVG, ERA ...) from counts |
+| `lib/onair.ts` | What the stream says about the batter, the pitcher and who is due up; shared by the pad's On Air and the scorebug page |
+| `components/overlay/` | The Browser Source page (`/overlay/<token>`): `Stage` draws a feed, `Overlay` fetches it |
 | `components/views/` | The team screens, data in, markup out, so `/dev/kit` can draw them |
 | `proxy.ts` | Refreshes the session cookie and sends signed-out visitors to sign in |
 
@@ -54,6 +58,7 @@ organization as Scoreboard's project. Tables live in `public`, so no schema has
 to be exposed by hand.
 
 Security advisors flag the `SECURITY DEFINER` functions as callable. That is
-intended: `invite_preview` and `public_roster` are the public's only way in,
+intended: `invite_preview`, `public_roster` and `overlay_feed` (the stream page,
+by its secret token) are the public's only way in,
 `create_team` and `accept_invite` are the only way to make a team or fill a
 seat, and `has_team_role` / `is_team_staff` only answer "am I on this team".
