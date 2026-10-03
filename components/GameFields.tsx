@@ -5,8 +5,10 @@ import type { Game, Season, Team } from '@/lib/types';
 
 // Who, where, when, and whether it counts. `opponent` is a team picked from
 // Pressbox; without one, the name is typed.
-export function GameFields({ seasons, game, opponent, changeHref }: {
-  seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string;
+// `saved` is an opponent this team has played before: its name, short code
+// and colour fill the fields, and its last lineup comes with the game.
+export function GameFields({ seasons, game, opponent, changeHref, saved }: {
+  seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string; saved?: { name: string; abbr: string; color: string; players: number } | null;
 }) {
   const current = seasons.find((s) => s.is_current);
   return (
@@ -24,11 +26,13 @@ export function GameFields({ seasons, game, opponent, changeHref }: {
       ) : (
         <div className="field-row" style={{ gridTemplateColumns: '1fr 84px' }}>
           <label className="field"><span>Opponent</span>
-            <input className="input" name="opponent_name" defaultValue={game?.opponent_team_id ? '' : game?.opponent_name} maxLength={60} required autoComplete="off" />
+            <input className="input" name="opponent_name" defaultValue={saved?.name ?? (game?.opponent_team_id ? '' : game?.opponent_name)} maxLength={60} required autoComplete="off" />
           </label>
           <label className="field"><span>Colour</span>
-            <input className="input" type="color" name="opponent_color" defaultValue={game?.opponent_color ?? '#7a8794'} />
+            <input className="input" type="color" name="opponent_color" defaultValue={saved?.color ?? game?.opponent_color ?? '#7a8794'} />
           </label>
+          {saved && <input type="hidden" name="opponent_abbr" value={saved.abbr} />}
+          {saved && <p className="hint" style={{ gridColumn: '1 / -1', margin: 0 }}>{saved.players ? `Played before: their last lineup (${saved.players} players) loads with the game.` : 'Played before. No lineup saved for them yet.'}</p>}
         </div>
       )}
       <fieldset>

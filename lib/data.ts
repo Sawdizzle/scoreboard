@@ -130,3 +130,11 @@ export async function findTeams(db: Db, q: string, notTeam: string) {
   const { data } = await db.from('teams').select(TEAM_COLS).ilike('name', `%${term}%`).neq('id', notTeam).order('name').limit(8);
   return (data ?? []) as Team[];
 }
+
+// Opponents this team has played that are not teams on Pressbox, most
+// recently used first. Staff only (the policy returns none to anyone else).
+export type SavedOpponent = { id: string; name: string; abbr: string; color: string; roster: Lineup };
+export async function listOpponents(db: Db, teamId: string) {
+  const { data } = await db.from('opponents').select('id, name, abbr, color, roster').eq('team_id', teamId).order('updated_at', { ascending: false });
+  return (data ?? []) as SavedOpponent[];
+}

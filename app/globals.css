@@ -477,3 +477,4 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pub-inn { flex: 0 0 44px; padding-left: 8px; border-left: 4px solid var(--c); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--body); }
 .pub-foot { text-align: center; font-size: 13px; color: var(--muted); }
 .stat-table .who > span { display: flex; align-items: center; gap: 8px; }
+.seat-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
