@@ -24,7 +24,7 @@ export function LookPicker({ teamId, brand, initial }: { teamId: string; brand: 
       <div className="looks" role="radiogroup" aria-label="Scorebug look">
         {LOOKS.map(([slug, name]) => (
           <button key={slug} type="button" role="radio" aria-checked={look === slug} className={`look${look === slug ? ' on' : ''}`} onClick={() => pick(slug)}>
-            <span className="look-thumb">{slug === 'pressbox' ? <BugPreview brand={brand} /> : <img src={`/bugs/thumbs/${slug}.png`} alt="" loading="lazy" />}</span>
+            <span className="look-thumb">{slug === 'pressbox' || slug === 'classic' ? <BugPreview brand={brand} /> : <img src={`/bugs/thumbs/${slug}.png`} alt="" loading="lazy" />}</span>
             <b>{name}</b>
           </button>
         ))}

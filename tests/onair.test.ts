@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, boxScore, breakText, qrLayer, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, boxScore, breakText, layoutOf, qrLayer, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -150,7 +150,10 @@ test('moments and the break between halves', () => {
 });
 
 test('the QR layer: stored values are clamped, and anything odd falls back', () => {
-  assert.deepEqual(qrLayer(null), { on: false, size: 18, pos: 'tr', opacity: 1 });
+  assert.deepEqual(qrLayer(null), { on: false, size: 10, pos: 'tr', opacity: 1 });
   assert.deepEqual(qrLayer({ on: true, size: 500, pos: 'br', opacity: 0 }), { on: true, size: 40, pos: 'br', opacity: 0.2 });
-  assert.deepEqual(qrLayer({ on: 'yes', size: 'big', pos: 'middle' } as never), { on: false, size: 18, pos: 'tr', opacity: 1 });
+  assert.deepEqual(qrLayer({ on: 'yes', size: 'big', pos: 'middle' } as never), { on: false, size: 10, pos: 'tr', opacity: 1 });
+  assert.deepEqual(layoutOf(null), { bug: { scale: 0.6, pos: 'bl' }, cards: { scale: 0.75 } });
+  assert.deepEqual(layoutOf({ bug: { scale: 9, pos: 'tr' }, cards: { scale: 0 } }), { bug: { scale: 1.2, pos: 'tr' }, cards: { scale: 0.4 } });
+  assert.deepEqual(layoutOf({ bug: { pos: 'mm' as never } }).bug, { scale: 0.6, pos: 'bl' });
 });

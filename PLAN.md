@@ -100,7 +100,10 @@ Each stage ends with a checklist to run before the next one starts.
    - Football, soccer, basketball and volleyball, score only: points, the period, volleyball sets.
    - Scoreboard's on-air spots for our own apps (Run the Play, Baseball Time; Two-Way Lab stays off),
      played from On Air one tap at a time: a quick banner or a full-screen spot.
-   - A channel bug: one line that stays in the corner of the stream, and its link as a QR card.
+   - A channel bug: one line that stays in the corner of the stream; its link as a QR code with its own
+     size, position and opacity.
+   - Stream layout: the scorebug's size and corner, the stat cards' size (Team look screen).
+   - The Classic look: a compact broadcast scorebug where every part animates with the game.
 
 ## Open questions
 
