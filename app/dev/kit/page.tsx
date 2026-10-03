@@ -63,9 +63,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -105,11 +105,12 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
     return <LiveGame initial={pub} />;
   }
   if (v === 'overlay') {
-    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final, &moment=1, &sport=football, &spot=pitch (or inning: plays one spot six seconds in), &qr=br&qsize=12&qop=0.6.
+    // The stream over a stand-in camera: /dev/kit?v=overlay&card=batter (pitcher, dueup, leaders, box), &look=primetime, &line=0, &status=final, &moment=1, &sport=football, &spot=pitch (or inning: plays one spot six seconds in), &qr=br&qsize=12&qop=0.6, &bs=0.6&bpos=tr&cs=0.7 (scorebug size and corner, card size).
     // Cards: batter, pitcher, dueup, leaders, box, lineup, defense, matchup, sponsor, mid.
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(11 + i), name: ['Dane Kell', 'Eli Shaw', 'Rob Pine'][i % 3] })), positions: { P: 'o0' } };
     const feed: Feed = {
       v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null, sponsor: { name: 'Dairy Barn', line: 'Cold treats on Elm Street', logo: null }, bug: { text: 'Streamed by example.test', url: 'https://example.test/watch' },
+      layout: { bug: { scale: Number(bs) || undefined, pos: bpos as never }, cards: { scale: Number(cs) || undefined } },
       qr: qr ? { on: true, size: Number(qsize) || 18, pos: (qr as QrPos), opacity: Number(qop) || 1 } : null,
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },

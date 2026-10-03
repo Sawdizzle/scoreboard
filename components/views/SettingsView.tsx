@@ -4,14 +4,15 @@ import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
 import { LookPicker } from '@/components/LookPicker';
 import { brandOf } from '@/components/TeamBrand';
-import type { Look } from '@/lib/onair';
+import { LayoutControls } from '@/components/LayoutControls';
+import type { Feed, Look } from '@/lib/onair';
 import { canEditTeam, canManageSeats, type Role, type Team } from '@/lib/types';
 
 // streamUrl is the team's Browser Source link, for any seat: whoever runs the
 // broadcast sets up OBS, and that is often not the organizer.
 export type SponsorInfo = { name: string | null; line: string | null; logo: string | null; bugText?: string | null; bugUrl?: string | null };
-export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, sponsor }: {
-  team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string; sponsor?: SponsorInfo;
+export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, sponsor, layout }: {
+  team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string; sponsor?: SponsorInfo; layout?: Feed['layout'];
 }) {
   return (
     <div className="page">
@@ -30,8 +31,11 @@ export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, 
           <CopyLink url={streamUrl} label="Browser Source link" />
           <p className="hint">Anyone with the link can watch the scorebug. Share it only with whoever runs the stream.</p>
           <h3>Look</h3>
-          <p className="hint">Pressbox shows the batter&rsquo;s season line on the scorebug. The others are Scoreboard&rsquo;s animated bugs: they play each hit, strikeout and home run, and show the batter by name. Stat cards work with every look.</p>
+          <p className="hint">Pressbox and Classic show the batter&rsquo;s season line on the scorebug; Classic is the compact broadcast bug, and everything on it moves with the game. The others are Scoreboard&rsquo;s animated bugs: they play each hit, strikeout and home run, and show the batter by name. Stat cards work with every look.</p>
           <LookPicker teamId={team.id} brand={brandOf(team)} initial={look ?? 'pressbox'} />
+          <h3>Size and position</h3>
+          <p className="hint">The scorebug and the stat cards each have their own size. Move a slider with the stream in view; it follows in a few seconds. The QR code has its own controls in On Air.</p>
+          <LayoutControls teamId={team.id} initial={layout ?? null} />
           {canEditTeam(role) && (
             <details className="fold">
               <summary>Sponsor</summary>

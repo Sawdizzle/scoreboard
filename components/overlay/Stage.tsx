@@ -1,10 +1,11 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import { AnimBug } from '@/components/overlay/AnimBug';
+import { ClassicBug } from '@/components/overlay/ClassicBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
 import { periodText, type SportLive } from '@/lib/sports';
 
@@ -237,17 +238,22 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
   const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
-  // Only Prime Time draws the other sports.
-  const look = feed.look && feed.look !== 'pressbox' && (ball || feed.look === 'primetime') ? feed.look : null;
+  // Pressbox and Classic are drawn here; the rest are Scoreboard's pages in a frame.
+  // Only Prime Time of those draws the other sports.
+  const classic = feed.look === 'classic';
+  const look = feed.look && feed.look !== 'pressbox' && !classic && (ball || feed.look === 'primetime') ? feed.look : null;
+  const lay = layoutOf(feed.layout);
+  const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
   const box = boxScore(g, feed.season?.game_innings ?? 7);
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
 
   return (
-    <div className={`ov${look ? ' framed' : ''}`}>
+    <div className={`ov bug-${lay.bug.pos}${look ? ' framed' : ''}`} style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale } as React.CSSProperties}>
       <style>{ROOT}</style>
-      {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} />}
+      {/* The framed bugs are drawn small on a 1920 stage: 1.4 of theirs is 1 of ours. */}
+      {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} pos={lay.bug.pos} scale={lay.bug.scale * 1.4} />}
       <div className="ov-right">
         <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
         <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
@@ -263,8 +269,10 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
       <Qr bug={feed.bug} qr={feed.qr} />
       <div className="ov-dock">
         <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
-        {!look && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
-        {!look && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
+        {classic && <ClassicBug g={g} air={air} away={away} home={home} abbrs={{ away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) }}
+          status={status} period={ball ? null : periodText(sport, feed.game!.live as SportLive)} showLine={feed.show_line} moment={moment} />}
+        {!look && !classic && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
+        {!look && !classic && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
             <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />

@@ -14,25 +14,39 @@ export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lin
 // How the scorebug looks: Pressbox's own, or one of Scoreboard's animated
 // bugs (public/bugs/<slug>.html), which draw the game themselves.
 export const LOOKS = [
-  ['pressbox', 'Pressbox'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
+  ['pressbox', 'Pressbox'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
   ['classic-green', 'Classic Green'], ['pinball-dmd', 'Pinball'], ['chalkboard', 'Chalkboard'], ['comic', 'Comic'],
   ['split-flap', 'Split Flap'], ['receipt', 'Receipt'], ['pixel-rpg', 'Pixel RPG'],
 ] as const;
 export type Look = (typeof LOOKS)[number][0];
 export type Line = Partial<Record<StatKey, number>>;
 
+// The stream's layout. A scale of 1 is the size a thing was drawn at, which
+// fills a lot of a picture; the default is well under it.
+export const BUG_POS = ['tl', 'tc', 'tr', 'bl', 'bc', 'br'] as const;
+export type BugPos = (typeof BUG_POS)[number];
+export type Layout = { bug: { scale: number; pos: BugPos }; cards: { scale: number } };
+export const BUG_SCALE = { min: 0.3, max: 1.2 }, CARD_SCALE = { min: 0.4, max: 1.2 };
+export function layoutOf(l: Feed['layout']): Layout {
+  const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  return {
+    bug: { scale: num(l?.bug?.scale, BUG_SCALE.min, BUG_SCALE.max, 0.6), pos: (BUG_POS as readonly string[]).includes(l?.bug?.pos as string) ? (l!.bug!.pos as BugPos) : 'bl' },
+    cards: { scale: num(l?.cards?.scale, CARD_SCALE.min, CARD_SCALE.max, 0.75) },
+  };
+}
+
 // The QR code's layer. size is the code's side in the stream's units (128 is
 // the picture's full width); pos is a corner, an edge or a side.
 export const QR_POS = ['tl', 'tc', 'tr', 'ml', 'mr', 'bl', 'bc', 'br'] as const;
 export type QrPos = (typeof QR_POS)[number];
 export type QrLayer = { on: boolean; size: number; pos: QrPos; opacity: number };
-export const QR_SIZE = { min: 8, max: 40 }, QR_OPACITY = { min: 0.2, max: 1 };
+export const QR_SIZE = { min: 3, max: 40 }, QR_OPACITY = { min: 0.2, max: 1 };
 // Whatever is stored, as something safe to draw.
 export function qrLayer(q: Partial<QrLayer> | null | undefined): QrLayer {
   const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
   return {
     on: q?.on === true,
-    size: num(q?.size, QR_SIZE.min, QR_SIZE.max, 18),
+    size: num(q?.size, QR_SIZE.min, QR_SIZE.max, 10),
     pos: (QR_POS as readonly string[]).includes(q?.pos as string) ? (q!.pos as QrPos) : 'tr',
     opacity: num(q?.opacity, QR_OPACITY.min, QR_OPACITY.max, 1),
   };
@@ -54,6 +68,8 @@ export type Feed = {
   bug?: { text: string | null; url: string | null } | null;
   // The link as a QR code, on its own layer: shown or not, and how it sits.
   qr?: Partial<QrLayer> | null;
+  // How the stream is laid out: the scorebug's size and corner, the cards' size.
+  layout?: { bug?: Partial<Layout['bug']>; cards?: Partial<Layout['cards']> } | null;
   // The last spot tapped in On Air: a new stamp plays one.
   spot?: { n: number; cut: 'pitch' | 'inning' } | null;
   roster?: { id: string; num: string; name: string }[];
@@ -248,7 +264,7 @@ export function bugAnim(last: Feed['last']) {
 }
 
 // The words for a play worth a moment on Pressbox's own bug, or null.
-const MOMENTS: Record<string, string> = { H1: 'Single', H2: 'Double', H3: 'Triple', DP: 'Double play', SB: 'Stolen base', SF: 'Sac fly' };
+const MOMENTS: Record<string, string> = { H1: 'Single', H2: 'Double', H3: 'Triple', DP: 'Double play', SB: 'Stolen base', SF: 'Sac fly', BB: 'Walk', HBP: 'Hit by pitch' };
 export function momentText(last: Feed['last']) {
   if (!last) return null;
   if (last.type === 'homerun') return 'Home run';
