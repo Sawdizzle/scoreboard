@@ -103,6 +103,7 @@ Each stage ends with a checklist to run before the next one starts.
    - A channel bug: one line that stays in the corner of the stream; its link as a QR code with its own
      size, position and opacity.
    - Stream layout: the scorebug's size and corner, the stat cards' size.
+   - Stat cards are extensions of the scorebug: each slides out from behind it, wherever the bug sits.
    - One home for how the stream looks: the Stream screen (Team tab), with a live preview. On Air in the
      pad is only what is showing now; Team look is only the team.
    - The Classic look: a compact broadcast scorebug where every part animates with the game.

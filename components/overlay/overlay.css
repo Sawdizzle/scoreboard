@@ -15,8 +15,6 @@
 
 .ov-dock { position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;
   filter: drop-shadow(0 1.2rem 2.6rem rgba(0, 0, 0, 0.5)); animation: ov-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.ov-right { position: absolute; right: 4.8rem; top: 4.8rem; width: 44rem; zoom: var(--cs); filter: drop-shadow(0 1.2rem 2.6rem rgba(0, 0, 0, 0.5)); }
-.ov-right > .ov-card { position: absolute; top: 0; right: 0; width: 100%; }
 
 /* An animated look draws its own bug, bottom left: the batter card moves to the top. */
 .ov-anim { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; color-scheme: normal; }
@@ -28,9 +26,19 @@
 .ov.bug-bc .ov-dock, .ov.bug-tc .ov-dock { left: 0; right: 0; align-items: center; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
 .ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .cb { zoom: var(--bs); }
-.ov-dock > .ov-card { zoom: var(--cs); }
-/* The cards take the top right, unless the scorebug is there. */
-.ov.bug-tr .ov-right { right: auto; left: 4.8rem; }
+/* The cards' slot: against the scorebug, on the side away from the picture's edge. One card at a time; the
+   rest wait behind the bug. The slot clips them, so a card is seen only once it has slid clear of the plate. */
+.ov-ext { zoom: var(--cs); display: grid; overflow: hidden; pointer-events: none; }
+.ov-ext > .ov-card { grid-area: 1 / 1; align-self: end; justify-self: start; }
+.ov.bug-br .ov-ext > .ov-card, .ov.bug-tr .ov-ext > .ov-card { justify-self: end; }
+.ov.bug-bc .ov-ext > .ov-card, .ov.bug-tc .ov-ext > .ov-card { justify-self: center; }
+.ov.bug-tl .ov-ext > .ov-card, .ov.bug-tc .ov-ext > .ov-card, .ov.bug-tr .ov-ext > .ov-card { align-self: start; }
+.ov-ext > .ov-panel { width: 44rem; }
+.ov-ext > .ov-box { width: auto; min-width: 44rem; }
+/* The bug sits over the slot's edge, so a card comes out from behind it. */
+.ov-dock { gap: 0; }
+.ov-dock > .ov-bug, .ov-dock > .cb, .ov-dock > .ov-moment { position: relative; z-index: 2; }
+.ov-dock > .ov-moment.on { margin: 0.6rem 0; }
 /* The channel bug's line gives up the bottom right to a scorebug put there. */
 .ov.bug-br .ov-chan { right: auto; left: 4.8rem; }
 /* A framed look draws its own bug: the dock holds only the batter card, at the other end of the picture. */
@@ -77,15 +85,22 @@
 .ov-p b { font-size: 2.4rem; color: #fff; }
 
 /* ---- Cards ---- */
-.ov-card { border-radius: 0.7rem; overflow: hidden; background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14);
-  opacity: 0; transform: translateY(1.6rem); transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.ov-card.on { opacity: 1; transform: none; }
-.ov-right > .ov-card { transform: translateX(3rem); }
-.ov-right > .ov-card.on { transform: none; }
+.ov-card { border-radius: 0.7rem 0.7rem 0 0; overflow: hidden; background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14);
+  transform: translateY(104%); visibility: hidden; transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s linear 0.55s; }
+.ov-card.on { transform: none; visibility: visible; transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s; }
+/* Along the top the bug is above the slot: a card drops out from under it. */
+.ov.bug-tl .ov-card, .ov.bug-tc .ov-card, .ov.bug-tr .ov-card { border-radius: 0 0 0.7rem 0.7rem; transform: translateY(-104%); }
+.ov.bug-tl .ov-card.on, .ov.bug-tc .ov-card.on, .ov.bug-tr .ov-card.on { transform: none; }
+/* A framed look draws its own bug in its frame, where nothing here can sit behind it. The card stands alone at
+   the other end of the picture and comes in from that edge. */
+.ov.framed .ov-card { border-radius: 0.7rem; }
+.ov.framed.bug-bl .ov-ext > .ov-card, .ov.framed.bug-bc .ov-ext > .ov-card, .ov.framed.bug-br .ov-ext > .ov-card { align-self: start; justify-self: start; }
+.ov.framed.bug-tl .ov-ext > .ov-card, .ov.framed.bug-tc .ov-ext > .ov-card, .ov.framed.bug-tr .ov-ext > .ov-card { align-self: end; justify-self: start; }
+.ov.framed.bug-bl .ov-card, .ov.framed.bug-bc .ov-card, .ov.framed.bug-br .ov-card { transform: translateY(-104%); }
+.ov.framed.bug-tl .ov-card, .ov.framed.bug-tc .ov-card, .ov.framed.bug-tr .ov-card { transform: translateY(104%); }
+.ov.framed .ov-card.on { transform: none; }
 
-/* The batter card sits above the bug; off air it takes no room. */
-.ov-batter { display: flex; align-items: stretch; height: 0; }
-.ov-batter.on { height: 21.4rem; }
+.ov-batter { display: flex; align-items: stretch; height: 21.4rem; }
 .ov-tile { position: relative; flex: 0 0 auto; width: 15rem; display: flex; align-items: center; justify-content: center; }
 .ov-tile b { line-height: 0.8; text-shadow: 0 0.4rem 0.6rem rgba(0, 0, 0, 0.4); }
 .ov-tile small { position: absolute; left: 0; right: 0; bottom: 1.2rem; text-align: center; font-weight: 700; font-size: 2rem; letter-spacing: 0.14em; color: inherit; }
@@ -130,7 +145,6 @@
 .ov-pseason > small { font-size: 1.8rem; letter-spacing: 0.14em; }
 
 .ov-lead > small { flex: 0 0 5.6rem; font-size: 2.2rem; letter-spacing: 0.12em; }
-.ov-right > .ov-box { width: auto; min-width: 100%; }
 .ov-box table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 .ov-box th { padding: 0 2rem 0 1.8rem; text-align: left; font-size: 2.6rem; letter-spacing: 0.04em; }
 .ov-box thead th { font-size: 1.9rem; font-weight: 600; letter-spacing: 0.14em; color: #ffcf3a; }
