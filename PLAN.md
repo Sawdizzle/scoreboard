@@ -102,7 +102,9 @@ Each stage ends with a checklist to run before the next one starts.
      played from On Air one tap at a time: a quick banner or a full-screen spot.
    - A channel bug: one line that stays in the corner of the stream; its link as a QR code with its own
      size, position and opacity.
-   - Stream layout: the scorebug's size and corner, the stat cards' size (Team look screen).
+   - Stream layout: the scorebug's size and corner, the stat cards' size.
+   - One home for how the stream looks: the Stream screen (Team tab), with a live preview. On Air in the
+     pad is only what is showing now; Team look is only the team.
    - The Classic look: a compact broadcast scorebug where every part animates with the game.
 
 ## Open questions
