@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { createGame } from '@/app/actions';
+import { createGame, deleteOpponent } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
 import { ChevronLeft } from '@/components/icons';
-import { TEAM_COLS, findTeams, listSeasons, loadTeam } from '@/lib/data';
+import { TEAM_COLS, findTeams, listOpponents, listSeasons, loadTeam, type SavedOpponent } from '@/lib/data';
 import { TeamMark, brandOf } from '@/components/TeamBrand';
 import { canRunGames, type Team } from '@/lib/types';
 
@@ -13,10 +13,10 @@ export const metadata: Metadata = { title: 'New game' };
 // Find the other team on Pressbox (its roster comes along), or just type its
 // name. Searching is a plain GET, so the page works before any script loads.
 export default async function NewGame({ params, searchParams }: {
-  params: Promise<{ slug: string }>; searchParams: Promise<{ q?: string; opp?: string; typed?: string }>;
+  params: Promise<{ slug: string }>; searchParams: Promise<{ q?: string; opp?: string; typed?: string; saved?: string }>;
 }) {
   const { slug } = await params;
-  const { q = '', opp, typed } = await searchParams;
+  const { q = '', opp, typed, saved: savedId } = await searchParams;
   const { supabase, team, role } = await loadTeam(slug);
   const seasons = await listSeasons(supabase, team.id);
   const results = q ? await findTeams(supabase, q, team.id) : [];
@@ -25,8 +25,11 @@ export default async function NewGame({ params, searchParams }: {
     const { data } = await supabase.from('teams').select(TEAM_COLS).eq('id', opp).maybeSingle<Team>();
     opponent = data;
   }
+  const opponents = canRunGames(role) ? await listOpponents(supabase, team.id) : [];
+  const saved = opponents.find((o) => o.id === savedId) ?? null;
+  const filled = (o: SavedOpponent) => (o.roster?.batters ?? []).filter((b) => b.num || b.name).length;
   const base = `/t/${slug}/games/new`;
-  const picking = !opponent && !typed;
+  const picking = !opponent && !typed && !saved;
   return (
     <div className="page" style={{ paddingTop: 6 }}>
       <div className="h-row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 2 }}>
@@ -58,10 +61,29 @@ export default async function NewGame({ params, searchParams }: {
             </div>
           )}
           <Link href={`${base}?typed=1${q ? `&q=${encodeURIComponent(q)}` : ''}`} className="btn btn-ghost">Not on Pressbox · type the name</Link>
+          {opponents.length > 0 && (
+            <section className="stack" style={{ gap: 8 }}>
+              <h2 className="h-sec" style={{ padding: '0 4px' }}>Teams you have played</h2>
+              {opponents.map((o) => (
+                <div key={o.id} className="card seat">
+                  <Link href={`${base}?saved=${o.id}`} className="seat-link">
+                    <TeamMark brand={{ name: o.name, display: o.name, color: o.color, color2: '#f2f6fc', logo: null }} />
+                    <span className="row-main">
+                      <span className="row-title">{o.name}</span>
+                      <span className="row-meta">{filled(o) ? `${filled(o)} players from last time` : 'No lineup saved yet'}</span>
+                    </span>
+                  </Link>
+                  <ActionForm action={deleteOpponent.bind(null, slug, o.id)}>
+                    <Submit className="link" busy="…">Remove</Submit>
+                  </ActionForm>
+                </div>
+              ))}
+            </section>
+          )}
         </>
       ) : (
         <ActionForm action={createGame.bind(null, slug)} className="form">
-          <GameFields seasons={seasons} opponent={opponent} changeHref={base} />
+          <GameFields seasons={seasons} opponent={opponent} changeHref={base} saved={saved && { name: saved.name, abbr: saved.abbr, color: saved.color, players: filled(saved) }} />
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create game · set lineups</Submit>
         </ActionForm>
       )}

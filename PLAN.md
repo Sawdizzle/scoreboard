@@ -4,7 +4,7 @@ Scoreboard grows from a scorebug into the whole thing: build a team once, score 
 game once, and the roster, the season stats and the broadcast all read from the same
 plays. Design canvas: https://claude.ai/artifact/NcTdvruT6Qs1SdQNvyXs8v
 
-Status: **Stage 1 (Team HQ) is built and on its database, awaiting Shawn's checklist run.**
+Status: **Stages 1 to 5 are built and live; Shawn's checklists for 3a onward are still to run.**
 Stage 0 design approved 2026-10-02 ("your proposals are fine"), including the open
 questions below as proposed.
 
@@ -83,8 +83,11 @@ Each stage ends with a checklist to run before the next one starts.
 4. **Public, built** — /team/<slug> (schedule and results, season stats, roster) and
    /team/<slug>/game/<id> (live score, line score, both box scores, each time up). No account.
    Players typed in at the field show by number only.
-5. **Bring it over** — the nine saved teams from Scoreboard. (The GameChanger CSV
-   import moved up into 2a.)
+5. **Bring it over, built** — Scoreboard's saved teams are other clubs, so they came over as
+   *opponents*: a private list per team (name, short code, colour, last lineup) offered in New Game
+   as "Teams you have played". Picking one loads its lineup; saving the other side's lineup in a game
+   updates it. Six came over on 2026-10-03; the two Blue Steel copies and Krum (both already teams
+   here) did not, and logos did not (they were links to other sites' images).
 
 ## Open questions
 

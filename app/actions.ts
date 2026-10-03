@@ -7,7 +7,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
-import { loadTeam, safeNext } from '@/lib/data';
+import { listOpponents, loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
 import { abbrFor } from '@/lib/format';
@@ -431,6 +431,14 @@ export async function createGame(slug: string, _: FormState, fd: FormData): Prom
   if ('error' in f) return f;
   const { data, error } = await supabase.from('games').insert({ team_id: team.id, ...f }).select('id').single();
   if (error) return { error: error.code === '42501' ? 'Your seat cannot make games.' : say(error) };
+  // An opponent that is not a team here is remembered: a new one is added to
+  // the list, and one already on it brings the lineup last typed for it.
+  if (!f.opponent_team_id) {
+    const known = (await listOpponents(supabase, team.id)).find((o) => o.name.toLowerCase() === f.opponent_name.toLowerCase());
+    if (!known) await supabase.from('opponents').insert({ team_id: team.id, name: f.opponent_name, abbr: f.opponent_abbr, color: f.opponent_color });
+    const lineup = known ? cleanLineup(known.roster) : null;
+    if (lineup?.batters.length) await supabase.from('game_lineups').insert({ game_id: data.id, side: 'them', data: lineup });
+  }
   revalidatePath(`/t/${slug}`, 'layout');
   redirect(`/t/${slug}/games/${data.id}/lineup`);
 }
@@ -458,6 +466,16 @@ export async function deleteGame(slug: string, gameId: string, _: FormState): Pr
 // A whole side's lineup at once. The browser holds the lineup while it is
 // edited and sends it back on Save; it is rebuilt here from what a lineup may
 // contain before it is stored.
+// Forget an opponent: its name and saved lineup. Games already played keep theirs.
+export async function deleteOpponent(slug: string, id: string, _: FormState): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const { data, error } = await supabase.from('opponents').delete().eq('team_id', team.id).eq('id', id).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}/games/new`);
+  return { ok: 'Removed.' };
+}
+
 export async function saveLineup(slug: string, gameId: string, side: 'us' | 'them', _: FormState, fd: FormData): Promise<FormState> {
   if (side !== 'us' && side !== 'them') return { error: 'Pick a side.' };
   let raw: unknown;
@@ -465,7 +483,8 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   const lineup = cleanLineup(raw);
   if (!lineup) return { error: 'Something in that lineup is not valid. Reload and try again.' };
   const { supabase, team } = await loadTeam(slug);
-  const { data: game } = await supabase.from('games').select('id').eq('team_id', team.id).eq('id', gameId).maybeSingle();
+  const { data: game } = await supabase.from('games').select('id, opponent_team_id, opponent_name, opponent_abbr, opponent_color')
+    .eq('team_id', team.id).eq('id', gameId).maybeSingle<{ id: string; opponent_team_id: string | null; opponent_name: string; opponent_abbr: string; opponent_color: string }>();
   if (!game) return { error: 'That game is gone.' };
   // Update, else insert: an upsert would also rewrite game_id and side, which
   // the grants keep fixed once a lineup exists.
@@ -473,6 +492,12 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   let error = up.error;
   if (!error && !up.data?.length) error = (await supabase.from('game_lineups').insert({ game_id: gameId, side, data: lineup })).error;
   if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
+  // The other side's lineup is kept for the next time we play them.
+  if (side === 'them' && !game.opponent_team_id) {
+    const known = (await listOpponents(supabase, team.id)).find((o) => o.name.toLowerCase() === game.opponent_name.toLowerCase());
+    if (known) await supabase.from('opponents').update({ roster: lineup }).eq('id', known.id);
+    else await supabase.from('opponents').insert({ team_id: team.id, name: game.opponent_name, abbr: game.opponent_abbr, color: game.opponent_color, roster: lineup });
+  }
   revalidatePath(`/t/${slug}`, 'layout');
   return { ok: 'Lineup saved.' };
 }
