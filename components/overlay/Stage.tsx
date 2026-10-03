@@ -4,7 +4,7 @@ import { AnimBug } from '@/components/overlay/AnimBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
 import { periodText, type SportLive } from '@/lib/sports';
 
@@ -202,15 +202,18 @@ function Sponsor({ sp, on }: { sp: Feed['sponsor']; on: boolean }) {
   );
 }
 
-// The channel's link as a code a phone can read off the screen.
-function Qr({ bug, on }: { bug: Feed['bug']; on: boolean }) {
+// The channel's link as a code a phone can read off the screen: its own
+// layer, sized, placed and faded from On Air.
+function Qr({ bug, qr }: { bug: Feed['bug']; qr: Feed['qr'] }) {
+  const q = qrLayer(qr);
   const url = bug?.url;
-  const qr = on && url ? qrPath(url) : null;
+  const code = q.on && url ? qrPath(url) : null;
   return (
-    <div className={`ov-card ov-panel ov-qr${qr ? ' on' : ''}`} aria-hidden={!on}>
-      {qr && url && <>
-        <svg viewBox={`-2 -2 ${qr.size + 4} ${qr.size + 4}`} shapeRendering="crispEdges" aria-hidden="true"><rect x="-2" y="-2" width={qr.size + 4} height={qr.size + 4} fill="#fff" /><path d={qr.d} fill="#000" /></svg>
-        <div><small>Scan</small>{bug?.text && <strong style={fit(bug.text, 3, 20)}>{bug.text}</strong>}<span>{url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '')}</span></div>
+    <div className={`ov-qr ${q.pos}${code ? ' on' : ''}${bug?.text ? ' above' : ''}`} aria-hidden={!code}
+      style={{ '--q': `${q.size}rem`, '--o': q.opacity } as React.CSSProperties}>
+      {code && url && <>
+        <svg viewBox={`-2 -2 ${code.size + 4} ${code.size + 4}`} shapeRendering="crispEdges" aria-hidden="true"><rect x="-2" y="-2" width={code.size + 4} height={code.size + 4} fill="#fff" /><path d={code.d} fill="#000" /></svg>
+        <span>{url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>
       </>}
     </div>
   );
@@ -233,7 +236,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   // A card held by hand comes first; else the mid-inning board between halves, when that is on.
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
-  const shown = want === 'sponsor' || want === 'qr' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
+  const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
   // Only Prime Time draws the other sports.
   const look = feed.look && feed.look !== 'pressbox' && (ball || feed.look === 'primetime') ? feed.look : null;
   const box = boxScore(g, feed.season?.game_innings ?? 7);
@@ -255,9 +258,9 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
         <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
         <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
         <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
-        <Qr bug={feed.bug} on={shown === 'qr'} />
       </div>
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
+      <Qr bug={feed.bug} qr={feed.qr} />
       <div className="ov-dock">
         <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
         {!look && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}

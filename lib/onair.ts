@@ -20,6 +20,23 @@ export const LOOKS = [
 ] as const;
 export type Look = (typeof LOOKS)[number][0];
 export type Line = Partial<Record<StatKey, number>>;
+
+// The QR code's layer. size is the code's side in the stream's units (128 is
+// the picture's full width); pos is a corner, an edge or a side.
+export const QR_POS = ['tl', 'tc', 'tr', 'ml', 'mr', 'bl', 'bc', 'br'] as const;
+export type QrPos = (typeof QR_POS)[number];
+export type QrLayer = { on: boolean; size: number; pos: QrPos; opacity: number };
+export const QR_SIZE = { min: 8, max: 40 }, QR_OPACITY = { min: 0.2, max: 1 };
+// Whatever is stored, as something safe to draw.
+export function qrLayer(q: Partial<QrLayer> | null | undefined): QrLayer {
+  const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  return {
+    on: q?.on === true,
+    size: num(q?.size, QR_SIZE.min, QR_SIZE.max, 18),
+    pos: (QR_POS as readonly string[]).includes(q?.pos as string) ? (q!.pos as QrPos) : 'tr',
+    opacity: num(q?.opacity, QR_OPACITY.min, QR_OPACITY.max, 1),
+  };
+}
 export type Pa = { side: Side; bid: string; inning: number | null; kind: string; code: string | null };
 export type FeedTeam = { name: string; display_name: string; abbr?: string; color: string; color2: string; logo_url: string | null; age_group: string | null };
 
@@ -35,6 +52,8 @@ export type Feed = {
   sponsor?: { name: string; line: string | null; logo: string | null } | null;
   // The corner line that stays up, and the link On Air can raise as a QR code.
   bug?: { text: string | null; url: string | null } | null;
+  // The link as a QR code, on its own layer: shown or not, and how it sits.
+  qr?: Partial<QrLayer> | null;
   // The last spot tapped in On Air: a new stamp plays one.
   spot?: { n: number; cut: 'pitch' | 'inning' } | null;
   roster?: { id: string; num: string; name: string }[];

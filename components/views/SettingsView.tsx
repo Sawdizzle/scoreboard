@@ -58,7 +58,7 @@ export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, 
               <summary>Channel bug</summary>
               <div className="fold-body">
                 <ActionForm action={saveStreamBug.bind(null, team.slug)} className="form">
-                  <p className="hint">A small line that stays in the bottom right corner of the stream all game, like a TV channel&rsquo;s. Add a link and On Air gets a QR code button that puts the link up large enough to scan. Clear both to remove it.</p>
+                  <p className="hint">A small line that stays in the bottom right corner of the stream all game, like a TV channel&rsquo;s. Add a link and On Air gets a QR code you can turn on, size, place and fade. Clear both to remove it.</p>
                   <label className="field"><span>Line in the corner</span>
                     <input className="input" name="bug_text" defaultValue={sponsor?.bugText ?? ''} maxLength={40} autoComplete="off" placeholder="Streamed by sawman.app" />
                   </label>
