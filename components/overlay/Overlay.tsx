@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
 import { feedView, momentText, type Feed } from '@/lib/onair';
 import { browserClient } from '@/lib/supabase/browser';
@@ -73,5 +74,5 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     };
   }, [token]);
 
-  return <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} />;
+  return <><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} /><Spots spot={feed?.spot ?? null} /></>;
 }

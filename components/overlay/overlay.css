@@ -155,6 +155,19 @@
 .ov-sponsor strong { letter-spacing: 0.03em; white-space: nowrap; }
 .ov-sponsor span { font-weight: 600; font-size: 2.2rem; letter-spacing: 0.06em; color: #b6c0d2; }
 
+/* The channel bug: one quiet line in the corner, all game. */
+.ov-chan { position: absolute; right: 4.8rem; bottom: 4.4rem; padding: 0.7rem 1.3rem 0.6rem; border-radius: 0.5rem; background: rgba(7, 11, 19, 0.62);
+  font-weight: 600; font-size: 1.8rem; letter-spacing: 0.12em; color: rgba(255, 255, 255, 0.86); white-space: nowrap; }
+.ov-qr { display: flex; align-items: center; gap: 2rem; padding: 2rem; }
+.ov-qr svg { flex: 0 0 18rem; width: 18rem; height: 18rem; border-radius: 0.6rem; }
+.ov-qr > div { min-width: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+.ov-qr small { font-size: 1.9rem; letter-spacing: 0.18em; color: #ffcf3a; }
+.ov-qr strong { letter-spacing: 0.03em; white-space: nowrap; }
+.ov-qr span { font-weight: 600; font-size: 2rem; letter-spacing: 0.04em; color: #b6c0d2; text-transform: none; overflow-wrap: anywhere; }
+/* Our apps' spots: over everything, and only while one plays. */
+.ov-spot { position: fixed; left: 0; top: 0; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; z-index: 25; visibility: hidden; color-scheme: normal; }
+.ov-spot.on { visibility: visible; }
+
 /* A moment: the play, called out above the bug for a few seconds. */
 .ov-moment { display: flex; align-items: baseline; gap: 1.4rem; height: 0; padding: 0 1.8rem; overflow: hidden; border-radius: 0.7rem; white-space: nowrap;
   background: linear-gradient(180deg, #ffd95a, #f0b41c); color: #1a1300; opacity: 0; transform: translateX(-2rem);

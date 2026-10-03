@@ -49,6 +49,7 @@ one current season, and the public roster's name masking.
 | `lib/onair.ts` | What the stream says about the batter, the pitcher and who is due up; shared by the pad's On Air and the scorebug page |
 | `components/overlay/` | The Browser Source page (`/overlay/<token>`): `Stage` draws a feed, `Overlay` fetches it |
 | `public/bugs/`, `public/fonts/` | Scoreboard's eleven animated scorebugs and their fonts, copied unchanged; `components/overlay/AnimBug.tsx` frames one and feeds it |
+| `public/ads/` | Scoreboard's on-air spots for our own apps, copied unchanged; `components/overlay/Spots.tsx` plays one per tap |
 | `lib/sports.ts`, `components/pad/ScorePad.tsx` | The score-only sports: points, periods, volleyball sets |
 | `lib/public.ts`, `components/public/` | The public side: `/team/<slug>` and its game pages, read through `public_game()` |
 | `components/views/` | The team screens, data in, markup out, so `/dev/kit` can draw them |

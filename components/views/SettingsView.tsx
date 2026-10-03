@@ -1,4 +1,4 @@
-import { deleteTeam, resetStreamLink, saveSponsor } from '@/app/actions';
+import { deleteTeam, resetStreamLink, saveSponsor, saveStreamBug } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
@@ -9,7 +9,7 @@ import { canEditTeam, canManageSeats, type Role, type Team } from '@/lib/types';
 
 // streamUrl is the team's Browser Source link, for any seat: whoever runs the
 // broadcast sets up OBS, and that is often not the organizer.
-export type SponsorInfo = { name: string | null; line: string | null; logo: string | null };
+export type SponsorInfo = { name: string | null; line: string | null; logo: string | null; bugText?: string | null; bugUrl?: string | null };
 export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, sponsor }: {
   team: Team; role: Role; welcome?: boolean; streamUrl?: string; look?: Look; publicUrl?: string; sponsor?: SponsorInfo;
 }) {
@@ -49,6 +49,23 @@ export function SettingsView({ team, role, welcome, streamUrl, look, publicUrl, 
                   </label>
                   {sponsor?.logo && <label className="switch"><span className="switch-text"><b>Remove the current logo</b></span><input type="checkbox" name="remove_sponsor_logo" /></label>}
                   <Submit busy="Saving…">Save sponsor</Submit>
+                </ActionForm>
+              </div>
+            </details>
+          )}
+          {canEditTeam(role) && (
+            <details className="fold">
+              <summary>Channel bug</summary>
+              <div className="fold-body">
+                <ActionForm action={saveStreamBug.bind(null, team.slug)} className="form">
+                  <p className="hint">A small line that stays in the bottom right corner of the stream all game, like a TV channel&rsquo;s. Add a link and On Air gets a QR code button that puts the link up large enough to scan. Clear both to remove it.</p>
+                  <label className="field"><span>Line in the corner</span>
+                    <input className="input" name="bug_text" defaultValue={sponsor?.bugText ?? ''} maxLength={40} autoComplete="off" placeholder="Streamed by sawman.app" />
+                  </label>
+                  <label className="field"><span>Link for the QR code</span>
+                    <input className="input" name="bug_url" defaultValue={sponsor?.bugUrl ?? ''} maxLength={200} autoComplete="off" inputMode="url" placeholder="sawman.app" />
+                  </label>
+                  <Submit busy="Saving…">Save channel bug</Submit>
                 </ActionForm>
               </div>
             </details>
