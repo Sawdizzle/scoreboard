@@ -122,7 +122,7 @@ export function ClassicGreenBug({ g, air, away, home, abbrs, status, period, sho
                 : <div key={i} className={c === 'M' ? 'lp wide' : 'lp'} style={{ '--i': i } as React.CSSProperties}><span>{c}</span></div>))}
             </div>
             <div className="hr-who">{hr.who}</div>
-            <div className="hr-sub">{tabName(batBrand, top ? abbrs.away : abbrs.home)}</div>
+            <div className="hr-sub">{hr.runs === 1 ? 'Solo shot' : hr.runs >= 4 ? 'Grand slam' : hr.runs > 1 ? `${hr.runs} runs score` : tabName(batBrand, top ? abbrs.away : abbrs.home)}</div>
           </div>
         )}
         {k && (

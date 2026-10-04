@@ -1,6 +1,6 @@
 import './pinball-dmd.css';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Backglass, drawn here: Scoreboard's pinball bug (public/bugs/pinball-dmd.html),
 // rebuilt as part of the page so the stat cards can sit behind it. A chrome and
@@ -32,7 +32,7 @@ const chars = (s: string) => [...s].map((c, i) => (c === ' ' ? <span key={i} cla
 const STREAKS = [[2, 30, 0], [5, 18, 90], [9, 40, 30], [12, 14, 150], [15, 26, 60], [18, 36, 120], [21, 12, 10], [24, 30, 100], [27, 20, 160], [30, 34, 50]];
 const HIT: Record<string, string> = { Single: 'SINGLE', Double: 'DOUBLE', Triple: 'TRIPLE', 'Sac fly': 'SAC FLY', 'Stolen base': 'STOLEN' };
 
-function Moment({ text, who }: { text: string; who: string }) {
+function Moment({ text, who, runs }: { text: string; who: string; runs: number }) {
   const sur = surname(who);
   const full = clean(who).length <= 15 ? clean(who) : sur;
   if (text === 'Home run') return (
@@ -46,7 +46,7 @@ function Moment({ text, who }: { text: string; who: string }) {
       </div>
       <div className="ph p4">
         <i className="strobe" /><i className="bord" />
-        <T x={64} y={3} w={2} cls="xdrop">{chars('HOME RUN')}</T>
+        <T x={64} y={3} w={2} cls="xdrop">{chars(homerText(runs, 'plus') || 'HOME RUN')}</T>
         {full && <T x={64} y={21} cls="who">{full}</T>}
         <i className="tw" />
       </div>
@@ -208,7 +208,7 @@ export function PinballBug({ g, air, away, home, abbrs, status, period, showLine
                   <i className="wipe" />
                 </div>
               )}
-              {play && moment && <Moment key={`${moment.text}|${moment.who}`} text={moment.text} who={moment.who} />}
+              {play && moment && <Moment key={`${moment.text}|${moment.who}`} text={moment.text} who={moment.who} runs={moment.runs} />}
             </div></div>
             <i className="unlit" /><i className="hot" />
           </div>

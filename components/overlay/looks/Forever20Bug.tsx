@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- the memorial ribbon, a small fixed file from /public */
 import './forever20.css';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Forever 20, drawn here: Scoreboard's memorial bug (public/bugs/forever20.html),
 // in memory of Julian, #20, Sanger TX, rebuilt as part of the page so the stat
@@ -158,7 +158,7 @@ export function Forever20Bug({ g, air, away, home, abbrs, status, period, showLi
               <div className="hrib" />
               <div className="hbody">
                 <div className="t1"><span>Home run</span></div>
-                <div className="t2"><i style={{ '--tc': batBrand.color } as React.CSSProperties} /><b>{hr.who || batAbbr}</b>{hr.who && <span>{batAbbr}</span>}</div>
+                <div className="t2"><i style={{ '--tc': batBrand.color } as React.CSSProperties} /><b>{hr.who || batAbbr}</b>{(hr.who || hr.runs > 0) && <span>{homerText(hr.runs) || batAbbr}</span>}</div>
               </div>
               <div className="gleam" />
             </div>

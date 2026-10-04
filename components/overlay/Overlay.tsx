@@ -18,7 +18,7 @@ export const airTopic = (token: string) => `overlay:${token}`;
 export function Overlay({ token, initial }: { token: string; initial: Feed | null }) {
   const [feed, setFeed] = useState<Feed | null>(initial);
   const [auto, setAuto] = useState(false);
-  const [moment, setMoment] = useState<{ text: string; who: string } | null>(null);
+  const [moment, setMoment] = useState<{ text: string; who: string; runs: number } | null>(null);
   const first = useRef(initial);
 
   useEffect(() => {
@@ -26,6 +26,9 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     let stopped = false, busy = false, again = false, timer = 0, momentTimer = 0;
     // The newest play already called out, and who was batting before it: the play is his.
     let seenPlay = first.current?.last?.seq ?? (first.current ? 0 : undefined);
+    // The score before the newest play: the difference is what that play brought home.
+    const total = (f: Feed | null) => { const l = (f?.game?.live ?? {}) as { home_score?: number; away_score?: number }; return (Number(l.home_score) || 0) + (Number(l.away_score) || 0); };
+    let runsBefore = total(first.current);
     let batterName = first.current ? feedView(first.current)?.air.batter?.name ?? '' : '';
     let have = first.current?.v ?? null;
     // undefined until the first feed: a card never pops just because the page loaded.
@@ -43,11 +46,12 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
         const now = view?.air.batter?.bid ?? null;
         const text = momentText(f.last);
         if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && text && f.game?.status === 'live') {
-          setMoment({ text, who: f.last.kind === 'SB' ? '' : batterName });
+          setMoment({ text, who: f.last.kind === 'SB' ? '' : batterName, runs: Math.max(0, Math.min(4, total(f) - runsBefore)) });
           window.clearTimeout(momentTimer);
           momentTimer = window.setTimeout(() => setMoment(null), MOMENT_MS);
         }
         seenPlay = f.last?.seq ?? seenPlay ?? 0;
+        runsBefore = total(f);
         batterName = view?.air.batter?.name ?? '';
         if (batter !== undefined && now && now !== batter && f.auto_card && f.game?.status === 'live') {
           setAuto(true);

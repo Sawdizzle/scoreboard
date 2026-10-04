@@ -1,7 +1,7 @@
 import './chalkboard.css';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Chalk Talk, drawn here: the dugout chalkboard (public/bugs/chalkboard.html)
 // rebuilt as part of the page. Dark slate in a worn wooden frame with a chalk
@@ -332,7 +332,7 @@ export function ChalkboardBug({ g, air, away, home, abbrs, status, period, showL
                   </svg>
                   <Cell x={70} y={150} w={820} h={180} cls="n hrw-t" text="HOME RUN!" at={820} dur={950} pen big />
                   <Cell x={70} y={380} w={820} h={72} cls="h hrn" text={hr.who} at={2450} dur={520} pen big />
-                  <Cell x={70} y={456} w={820} h={46} cls="h hrs" text={tabName(batBrand, top ? abbrs.away : abbrs.home)} at={2950} dur={400} pen big />
+                  <Cell x={70} y={456} w={820} h={46} cls="h hrs" text={homerText(hr.runs, 'shot').toLowerCase() || tabName(batBrand, top ? abbrs.away : abbrs.home)} at={2950} dur={400} pen big />
                 </div>
                 <div className="fx">
                   <Puff x={120} y={452} s={0.8} at={620} /><Puff x={1010} y={270} s={1.1} at={1450} />
