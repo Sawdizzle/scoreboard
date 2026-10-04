@@ -56,11 +56,3 @@ export function periodText(sport: Sport, live: SportLive) {
   const s = setsOf(live);
   return `${p} · sets ${s.away}-${s.home}`;
 }
-// The same for Scoreboard's Prime Time bug, in its own shape (bugs/kit.js "sit").
-export function sitFor(sport: Sport, live: SportLive) {
-  const n = periodOf(live), d = sportDef(sport), s = setsOf(live);
-  return {
-    period: d.short(n).toUpperCase().replace(/^Q(\d)$/, (_, q) => `${ORD[+q].toUpperCase()} QTR`), periodNo: n, line: '', poss: null,
-    markLabel: sport === 'volleyball' ? 'SETS' : '', marks: sport === 'volleyball' ? { away: String(s.away), home: String(s.home) } : { away: '', home: '' },
-  };
-}

@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, boxScore, breakText, halfRecap, layoutOf, qrLayer, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -114,23 +114,6 @@ test('the box score: runs by inning, blank for halves not yet played', () => {
     awayTot: ['4', '6', '1'], homeTot: ['2', '4', '0'] });
   const top = engineGame({ is_home: true, status: 'live', live: { ...live, half: 'top', line_score: [] } }, {}, 7);
   assert.deepEqual([boxScore(top, 7).away[4], boxScore(top, 7).home[4]], ['0', '']);
-});
-
-test('an animated bug gets the game in its own shape, and a stinger for the big plays', () => {
-  const feed = {
-    team: { name: 'Blue Steel Baseball', display_name: 'Blue Steel', abbr: 'STEEL', color: '#111111', color2: '#222222', logo_url: null, age_group: null },
-    opponent: { name: 'Hawks', display_name: 'Hawks', color: '#333333', color2: '#444444', logo_url: null, age_group: null },
-    game: { id: 'g', is_home: true, status: 'live', seq: 3, live },
-  } as unknown as Feed;
-  const s = bugState(feed, g(), airView(g(), ctx));
-  assert.deepEqual([s.away.abbr, s.away.r, s.home.abbr, s.home.r, s.home.name], ['HAWKS', 4, 'STEEL', 2, 'Blue Steel']);
-  assert.deepEqual([s.inning, s.half, s.balls, s.strikes, s.outs, s.batter, s.pitcher, s.pitchCount], [5, 'bot', 2, 1, 1, 'A Player2', 'H Player9', 58]);
-  assert.equal(bugState({ ...feed, show_line: true } as Feed, g(), airView(g(), ctx)).batter, 'A Player2 · .273');
-  assert.deepEqual(bugAnim({ seq: 1, type: 'homerun', kind: 'HR' }), { type: 'homerun', meta: {} });
-  assert.deepEqual(bugAnim({ seq: 1, type: 'strikeout', kind: 'KL' }), { type: 'strikeoutlooking', meta: {} });
-  assert.deepEqual(bugAnim({ seq: 1, type: 'play', kind: 'H2' }), { type: 'play', meta: { text: 'Double' } });
-  assert.equal(bugAnim({ seq: 1, type: 'ball', kind: null }), null);
-  assert.equal(bugAnim(null), null);
 });
 
 test('the whole order and the defense, for the lineup and defense cards', () => {

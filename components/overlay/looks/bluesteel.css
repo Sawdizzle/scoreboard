@@ -33,7 +33,7 @@
 .bsx .pkg{display:flex;align-items:center;zoom:.933}
 .bsx .crest{position:relative;z-index:2;width:12.6rem;height:13.1rem;margin-right:-2.4rem;flex:0 0 auto}
 .bsx .main{position:relative}
-.bsx .stack{display:flex;flex-direction:column;align-items:stretch;filter:drop-shadow(0 1.2rem 2.2rem rgba(0,0,0,.5))}
+.bsx .xstack{display:flex;flex-direction:column;align-items:stretch;filter:drop-shadow(0 1.2rem 2.2rem rgba(0,0,0,.5))}
 .bsx .plate{position:relative;height:7.4rem;padding:0.2rem;background:var(--bevel);
   clip-path:polygon(1.5rem 0,100% 0,100% calc(100% - 1.5rem),calc(100% - 1.5rem) 100%,0 100%,0 1.5rem)}
 .bsx .rail{position:relative;display:flex;align-items:stretch;height:100%;padding:0.4rem 0.6rem 0.4rem 3rem;overflow:hidden;
@@ -104,10 +104,10 @@
   box-shadow:inset 0 0.1rem 0 rgba(127,192,239,.18),inset 0 0 0 0.1rem rgba(127,192,239,.14);
   clip-path:polygon(0 0,100% 0,100% calc(100% - 1rem),calc(100% - 1rem) 100%,1rem 100%,0 calc(100% - 1rem))}
 .bsx .line{position:absolute;inset:0;display:flex;align-items:center;gap:1.1rem;padding:0 1.6rem;white-space:nowrap}
-.bsx .line .tag{flex:0 0 auto;padding:0.4rem 0.7rem 0.3rem;border-radius:0.2rem;font-family:var(--mono);font-weight:800;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase;
+.bsx .line .xtag{flex:0 0 auto;padding:0.4rem 0.7rem 0.3rem;border-radius:0.2rem;font-family:var(--mono);font-weight:800;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase;
   background:rgba(127,192,239,.14);color:var(--steel-hi)}
-.bsx .line .tag.hot{background:var(--clay);color:#1a0b04} .bsx .line .tag.ice{background:var(--steel);color:var(--navy)}
-.bsx .line .tag.red{background:var(--red);color:#fff} .bsx .line .tag.green{background:var(--green);color:#06210f}
+.bsx .line .xtag.hot{background:var(--clay);color:#1a0b04} .bsx .line .xtag.ice{background:var(--steel);color:var(--navy)}
+.bsx .line .xtag.red{background:var(--red);color:#fff} .bsx .line .xtag.green{background:var(--green);color:#06210f}
 .bsx .line .txt{font-size:2rem;letter-spacing:.05em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 .bsx .line .side{margin-left:auto;font-family:var(--mono);font-weight:600;font-size:1.2rem;letter-spacing:.06em;color:var(--dim);text-transform:uppercase}
 .bsx .line .side b{color:var(--ink);font-weight:800;margin-left:0.6rem}
@@ -167,7 +167,7 @@
 .ov.bug-br .bsx .crest,.ov.bug-tr .bsx .crest{margin:0 0 0 -2.4rem}
 .ov.bug-br .bsx .rail,.ov.bug-tr .bsx .rail{padding:0.4rem 3rem 0.4rem 0.6rem}
 .ov.bug-br .bsx .strip,.ov.bug-tr .bsx .strip{margin:0 3.2rem 0 1.2rem}
-.ov.bug-bl .bsx .stack,.ov.bug-bc .bsx .stack,.ov.bug-br .bsx .stack{flex-direction:column-reverse}
+.ov.bug-bl .bsx .xstack,.ov.bug-bc .bsx .xstack,.ov.bug-br .bsx .xstack{flex-direction:column-reverse}
 .ov.bug-bl .bsx .strip,.ov.bug-bc .bsx .strip,.ov.bug-br .bsx .strip{clip-path:polygon(1rem 0,calc(100% - 1rem) 0,100% 1rem,100% 100%,0 100%,0 1rem)}
 .ov.bug-bl .bsx .kw,.ov.bug-bc .bsx .kw,.ov.bug-br .bsx .kw{top:auto;bottom:0}
 .ov.bug-br .bsx .kw,.ov.bug-tr .bsx .kw{left:auto;right:calc(100% + 1.2rem)}

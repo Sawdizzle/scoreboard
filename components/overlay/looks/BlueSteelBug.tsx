@@ -60,7 +60,7 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
       <div className="pkg">
         <div className="crest"><Crest fire={`${runs}${hr ? 'h' : ''}`} /></div>
         <div className="main">
-          <div className="stack">
+          <div className="xstack">
             <div className="plate"><div className="rail">
               <i key={`${runs}${half}`} className="spec" />
               <Side brand={away} abbr={abbrs.away} score={g.away_score | 0} bat={ball && live && top} />
@@ -90,12 +90,12 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
               <div className="strip">
                 {tag ? (
                   <div key={`t${tag.text}${tag.who}`} className="line in">
-                    <span className={`tag ${HIT[tag.text] ?? 'hot'}`}>{tag.text}</span><span className="txt">{tag.who}</span>
+                    <span className={`xtag ${HIT[tag.text] ?? 'hot'}`}>{tag.text}</span><span className="txt">{tag.who}</span>
                   </div>
                 ) : (
                   <div key={bat?.bid ?? 'none'} className="line in">
-                    {bat && <><span className="tag">AB</span><span className="txt">{bat.name}</span></>}
-                    {bat && showLine && bat.avg && <span className="tag hot">{bat.avg}</span>}
+                    {bat && <><span className="xtag">AB</span><span className="txt">{bat.name}</span></>}
+                    {bat && showLine && bat.avg && <span className="xtag hot">{bat.avg}</span>}
                     {bat && showLine && bat.today && <span className="side" style={{ marginLeft: 0 }}>{bat.today}</span>}
                     {pit && <span className="side">P · {pit.last}<b>{pit.pitches}</b></span>}
                   </div>

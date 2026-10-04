@@ -1,0 +1,196 @@
+/* Battle Mode, native (see PixelRpgBug.tsx). Written in the original page's pixels (public/bugs/pixel-rpg.html), which were
+   drawn for a 1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame. */
+@font-face{font-family:'Press Start 2P';font-weight:400;font-display:swap;src:url('/fonts/bugs/press-start-2p-400.woff2') format('woff2')}
+.lk-rpg{--ink:#05061a;--white:#f4f4ff;--silver:#b8bde8;--gold:#ffd23a;--green:#5cf07c;--orange:#ff9a2a;--red:#ff3b5c;--ice:#8ee8ff;
+  /* 9-slice window frame: outline, white, silver, dark gap, blue rule, notched corners (11px, drawn at 2x). */
+  --frame:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' shape-rendering='crispEdges'%3E%3Cpath fill='%2305061a' d='M2 0h7v11h-7zM0 2h11v7h-11zM1 1h9v9h-9z'/%3E%3Cpath fill='%23f4f4ff' d='M1 2h9v7h-9zM2 1h7v9h-7z'/%3E%3Cpath fill='%23b8bde8' d='M2 3h7v5h-7zM3 2h5v7h-5z'/%3E%3Cpath fill='%2305061a' d='M3 3h5v5h-5z'/%3E%3Cpath fill='%236f7be6' d='M4 4h3v3h-3z'/%3E%3C/svg%3E");
+  position:relative;width:max-content;font-family:"Press Start 2P",ui-monospace,monospace;font-weight:400;color:var(--white);line-height:1;
+  text-transform:none;letter-spacing:0;-webkit-font-smoothing:none;font-smooth:never}
+.lk-rpg,.lk-rpg *{box-sizing:border-box}
+.lk-rpg svg{display:block;shape-rendering:crispEdges}
+.lk-rpg i{font-style:normal}
+.lk-rpg b,.lk-rpg small{font-weight:400;color:inherit}
+.lk-rpg em{font-style:normal;font-weight:400;color:var(--gold);font-size:1.6rem;line-height:1}
+.lk-rpg .pkg{zoom:.933}
+
+/* ---------- Pixel window ---------- */
+.lk-rpg .win{position:relative;border:1rem solid transparent;border-image:var(--frame) 5 stretch;
+  background:
+    repeating-linear-gradient(0deg,rgba(0,0,10,.10) 0 0.2rem,transparent 0.2rem 0.4rem),
+    linear-gradient(180deg,#3747d2 0 13%,#2e3ec3 13% 29%,#2635b0 29% 46%,#1e2b9b 46% 64%,#172285 64% 82%,#111a6c 82%);
+  background-clip:padding-box;padding:0.8rem 1.4rem;text-shadow:0.3rem 0.3rem 0 var(--ink);
+  filter:drop-shadow(0.6rem 0.6rem 0 rgba(0,0,8,.45))}
+.lk-rpg .fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:2;animation:lkrpgFlash .6s steps(1)}
+@keyframes lkrpgFlash{0%{opacity:.95}17%{opacity:0}33%{opacity:.85}50%{opacity:0}67%{opacity:.7}83%,100%{opacity:0}}
+@keyframes lkrpgBlink{0%,25%,50%,75%{opacity:0}12.5%,37.5%,62.5%,87.5%,100%{opacity:1}}
+@keyframes lkrpgEnter{0%{opacity:0}34%{opacity:1}67%{opacity:.35}100%{opacity:1}}
+@keyframes lkrpgGone{to{visibility:hidden}}
+@keyframes lkrpgShow{to{visibility:visible}}
+@keyframes lkrpgOn{to{opacity:1}}
+
+/* ---------- Cluster layout ---------- */
+.lk-rpg .cluster{position:relative;display:grid;grid-template-columns:48.8rem 21.6rem;gap:0.8rem;width:71.2rem}
+.lk-rpg .duo{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:0.8rem}
+
+/* party (score) window */
+.lk-rpg .party{display:flex;flex-direction:column;justify-content:center;gap:1.2rem;padding:0.8rem 1.4rem 0.8rem 1rem}
+.lk-rpg .xrow{display:grid;grid-template-columns:2.2rem 3rem 1fr 8.4rem 7rem 7rem;column-gap:0.8rem;align-items:center;height:4.4rem}
+.lk-rpg .cur{opacity:0}
+.lk-rpg .xrow.bat .cur{opacity:1;animation:lkrpgCur 1.1s steps(1) infinite}
+@keyframes lkrpgCur{70%{opacity:0}}
+.lk-rpg .ab{font-size:2.4rem;line-height:1;white-space:nowrap;overflow:hidden;padding:0.4rem 0}
+.lk-rpg .ab.m{font-size:1.6rem}
+.lk-rpg .ab.s{font-size:1.2rem}
+.lk-rpg .st{position:relative;display:flex;align-items:baseline;justify-content:flex-start;gap:0.8rem}
+.lk-rpg .st .v{font-size:2.4rem;line-height:1;display:inline-block}
+.lk-rpg .st.r .v{font-size:3.2rem}
+.lk-rpg .v.bump{animation:lkrpgBump .36s steps(3) both}
+@keyframes lkrpgBump{0%{transform:translateY(-1rem) scale(1.35);color:var(--gold)}100%{transform:none}}
+.lk-rpg .v.err{animation:lkrpgErr .8s steps(4) both}
+@keyframes lkrpgErr{0%{color:var(--red);transform:scale(1.4)}100%{color:inherit;transform:none}}
+.lk-rpg .sps{position:absolute;left:0;top:0;width:0;height:0;z-index:3}
+
+/* field window: inning, diamond, hearts */
+.lk-rpg .xfield{display:grid;grid-template-columns:5.2rem 11.2rem;column-gap:0.8rem;row-gap:0.6rem;padding:0.8rem 1.2rem;align-content:center}
+.lk-rpg .xfield.word{display:flex;align-items:center;justify-content:center;padding:0.8rem 0.6rem}
+.lk-rpg .xfield.word b{font-size:1.6rem;line-height:1.6;text-align:center;text-transform:uppercase;color:var(--gold)}
+.lk-rpg .xfield.word b.long{font-size:1.2rem;color:var(--white)}
+.lk-rpg .inn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.6rem}
+.lk-rpg .inn .v{font-size:3.2rem;line-height:1}
+.lk-rpg .inn .ar{order:0}
+.lk-rpg .inn.bot .ar{order:2}
+.lk-rpg .dia{position:relative;width:11.2rem;height:8.2rem}
+.lk-rpg .base,.lk-rpg .hplate{position:absolute}
+.lk-rpg .base.b2{left:3.8rem;top:0}
+.lk-rpg .base.b3{left:0.4rem;top:3rem}
+.lk-rpg .base.b1{left:7.2rem;top:3rem}
+.lk-rpg .hplate{left:4.6rem;top:6.4rem}
+.lk-rpg .base.pop{animation:lkrpgPop .4s steps(3) both}
+@keyframes lkrpgPop{0%{transform:scale(1.7)}100%{transform:none}}
+.lk-rpg .hearts{grid-column:1/-1;display:flex;justify-content:center;gap:0.8rem;height:2.4rem}
+.lk-rpg .heart{position:relative;display:grid}
+.lk-rpg .heart > svg{grid-area:1/1}
+.lk-rpg .heart .off{visibility:hidden}
+/* an out: the heart blinks, breaks, and scatters */
+.lk-rpg .heart.lost .on{animation:lkrpgBlink .7s steps(1),lkrpgGone .01s .7s steps(1) forwards}
+.lk-rpg .heart.lost .off{animation:lkrpgShow .01s .7s steps(1) forwards}
+
+/* runner sprite hops from home around the bases */
+.lk-rpg .runner{position:absolute;left:0;top:0;z-index:2}
+.lk-rpg .runner.hop1{animation:lkrpgHop1 .36s steps(3) forwards,lkrpgGone .01s .62s steps(1) forwards}
+.lk-rpg .runner.hopw{animation:lkrpgHopW .52s steps(3) forwards,lkrpgGone .01s .78s steps(1) forwards}
+.lk-rpg .runner.hop2{animation:lkrpgHop2 .72s steps(3) forwards,lkrpgGone .01s .98s steps(1) forwards}
+.lk-rpg .runner.hop3{animation:lkrpgHop3 1.08s steps(3) forwards,lkrpgGone .01s 1.34s steps(1) forwards}
+@keyframes lkrpgHop1{0%{transform:translate(4.6rem,4.4rem)}50%{transform:translate(6.3rem,1.7rem)}100%{transform:translate(8rem,2.2rem)}}
+@keyframes lkrpgHopW{0%{transform:translate(4.6rem,4.4rem)}50%{transform:translate(6.3rem,3.1rem)}100%{transform:translate(8rem,2.2rem)}}
+@keyframes lkrpgHop2{0%{transform:translate(4.6rem,4.4rem)}25%{transform:translate(6.3rem,1.7rem)}50%{transform:translate(8rem,2.2rem)}
+  75%{transform:translate(6.3rem,-0.9rem)}100%{transform:translate(4.6rem,-0.8rem)}}
+@keyframes lkrpgHop3{0%{transform:translate(4.6rem,4.4rem)}16.7%{transform:translate(6.3rem,1.7rem)}33.3%{transform:translate(8rem,2.2rem)}
+  50%{transform:translate(6.3rem,-0.9rem)}66.7%{transform:translate(4.6rem,-0.8rem)}83.3%{transform:translate(2.9rem,-0.9rem)}100%{transform:translate(1.2rem,2.2rem)}}
+
+/* pitcher + batter windows */
+.lk-rpg .xslot{position:relative;display:flex;min-width:0}
+.lk-rpg .xslot.top{z-index:5}
+.lk-rpg .xslot.bats{animation:lkrpgEnter .28s steps(1) both}
+.lk-rpg .xslot.pits{order:2}
+.lk-rpg .cluster.bot .xslot.pits{order:0}
+.lk-rpg .duo .win{flex:1;min-width:0;display:flex;flex-direction:column;gap:1.2rem;padding:1rem 1.4rem}
+.lk-rpg .nm{display:flex;align-items:center;gap:1rem;height:3rem}
+.lk-rpg .nm b{font-size:2.4rem;line-height:1;white-space:nowrap}
+.lk-rpg .ty{display:inline-block;animation-name:lkrpgType;animation-fill-mode:backwards}
+@keyframes lkrpgType{from{clip-path:inset(-0.5rem 100% -0.5rem 0)}to{clip-path:inset(-0.5rem 0 -0.5rem 0)}}
+.lk-rpg .stat{display:flex;align-items:center;gap:0.8rem;height:2.8rem}
+.lk-rpg .stat .v{font-size:2.4rem;line-height:1}
+.lk-rpg .stat .tico{margin-left:auto}
+.lk-rpg .stat.line{height:2rem;white-space:nowrap}
+.lk-rpg .stat.line .v{font-size:1.6rem}
+.lk-rpg .stat.line small{margin-left:auto;font-size:1.2rem;line-height:1;color:var(--silver)}
+.lk-rpg .pips{display:flex;gap:0.4rem;margin-right:1.2rem}
+.lk-rpg .pip.pop{animation:lkrpgPop .36s steps(3) both}
+.lk-rpg .sl{position:absolute;inset:0;pointer-events:none;z-index:3}
+.lk-rpg .xslash{position:absolute;left:-8%;width:116%;height:1.4rem;background:var(--white);box-shadow:0 0 0 0.3rem var(--ink);
+  transform:rotate(-18deg);pointer-events:none;z-index:3;animation:lkrpgSlash .32s steps(3) both}
+@keyframes lkrpgSlash{0%{clip-path:inset(0 100% 0 0)}45%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+
+/* the hit lands: shakes and wobbles, in hard steps */
+@keyframes lkrpgShake{0%,100%{transform:none}14%{transform:translate(var(--a),calc(var(--a) * -.5))}29%{transform:translate(calc(var(--a) * -1),calc(var(--a) * .5))}
+  43%{transform:translate(calc(var(--a) * .7),calc(var(--a) * .33))}57%{transform:translate(calc(var(--a) * -.7),calc(var(--a) * -.33))}
+  71%{transform:translate(calc(var(--a) * .4),0)}86%{transform:translate(calc(var(--a) * -.3),calc(var(--a) * .2))}}
+@keyframes lkrpgShake2{0%,100%{transform:none}14%{transform:translate(0.8rem,-0.4rem)}29%{transform:translate(-0.8rem,0.4rem)}43%{transform:translate(0.6rem,0.3rem)}
+  57%{transform:translate(-0.6rem,-0.3rem)}71%{transform:translate(0.3rem,0)}86%{transform:translate(-0.2rem,0.2rem)}}
+@keyframes lkrpgWobble{0%,100%{transform:none}14%{transform:translateX(0.5rem) rotate(.6deg)}29%{transform:translateX(-0.5rem) rotate(-.6deg)}43%{transform:translateX(0.4rem) rotate(.6deg)}
+  57%{transform:translateX(-0.4rem) rotate(-.6deg)}71%{transform:translateX(0.25rem) rotate(.6deg)}86%{transform:translateX(-0.25rem) rotate(-.6deg)}}
+.lk-rpg .cluster.m-hr{--a:1.2rem;animation:lkrpgShake .64s steps(1),lkrpgShake2 .36s 1.2s steps(1)}
+.lk-rpg .batw.m-k{--a:0.8rem;animation:lkrpgBlink .9s .3s steps(1),lkrpgShake .42s .3s steps(1)}
+.lk-rpg .batw.m-out{--a:0.6rem;animation:lkrpgShake .32s steps(1)}
+.lk-rpg .pitw.m-walk{animation:lkrpgWobble .9s steps(1)}
+
+/* dialog window: opens, types line by line, closes */
+.lk-rpg .dlg{position:absolute;left:0;bottom:calc(100% + 0.8rem);width:71.2rem;min-height:7.6rem;padding:1.4rem 2.2rem 1.4rem 2rem;visibility:hidden;z-index:4;transform-origin:50% 100%;
+  animation:lkrpgDlgOpen .16s steps(1) var(--d,0ms) forwards,lkrpgDlgClose .16s steps(1) var(--e,4s) forwards}
+.lk-rpg .dlg ~ .dlg{z-index:5}
+@keyframes lkrpgDlgOpen{0%{visibility:visible;transform:scaleY(.12)}34%{visibility:visible;transform:scaleY(.45)}67%{visibility:visible;transform:scaleY(.8)}100%{visibility:visible;transform:none}}
+@keyframes lkrpgDlgClose{0%{visibility:visible;transform:scaleY(.8)}34%{visibility:visible;transform:scaleY(.45)}67%{visibility:visible;transform:scaleY(.12)}100%{visibility:hidden;transform:scaleY(0)}}
+.lk-rpg .txt{display:grid;font-size:2.4rem;line-height:4rem;padding-right:2.2rem}
+.lk-rpg .ln{grid-area:1/1}
+.lk-rpg .ln.hide{animation:lkrpgGone .01s var(--h) steps(1) forwards}
+.lk-rpg .ln.gold{color:var(--gold);font-size:3.2rem}
+.lk-rpg .ln.ice{color:var(--ice)}
+.lk-rpg .ln.red{color:#ff8a9c}
+.lk-rpg .c{opacity:0;animation:lkrpgOn .01s steps(1) forwards}
+.lk-rpg .c.ic{display:inline-block;vertical-align:-0.2rem}
+.lk-rpg .more{position:absolute;right:1.6rem;bottom:1rem;opacity:0;animation:lkrpgOn .01s var(--w) steps(1) forwards,lkrpgMore .5s var(--w) steps(1) infinite}
+@keyframes lkrpgMore{50%{transform:translateY(0.4rem)}}
+
+/* half-inning battle transition */
+.lk-rpg .wipe{position:absolute;inset:-0.6rem;display:grid;grid-template-columns:repeat(28,1fr);grid-template-rows:repeat(11,1fr);overflow:hidden;pointer-events:none;z-index:6}
+.lk-rpg .wipe i{background:var(--ink);transform:scale(0);animation:lkrpgWipeIn .09s steps(2) var(--a) forwards,lkrpgWipeOut .09s steps(2) var(--b) forwards}
+.lk-rpg .wipe i.w{background:#0d1250}
+@keyframes lkrpgWipeIn{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes lkrpgWipeOut{from{transform:scale(1)}to{transform:scale(0)}}
+
+/* ---------- One-shot effects ---------- */
+.lk-rpg .fw{position:absolute;width:0;height:0;pointer-events:none;z-index:3}
+.lk-rpg .pxl{position:absolute;left:0;top:0;width:1rem;height:1rem;margin:-0.5rem 0 0 -0.5rem;box-shadow:0 0 0 0.2rem var(--ink);opacity:0;animation:lkrpgFw 1.3s steps(5) forwards}
+.lk-rpg .pxl.lg{width:1.4rem;height:1.4rem}
+@keyframes lkrpgFw{0%{transform:translate(0,0) scale(.5);opacity:1}35%{transform:translate(calc(var(--x) * .8),calc(var(--y) * .8));opacity:1}
+  70%{transform:translate(var(--x),calc(var(--y) + 2.4rem));opacity:1}100%{transform:translate(var(--x),calc(var(--y) + 6rem));opacity:0}}
+.lk-rpg .spk{position:absolute;left:0;top:0;pointer-events:none;animation:lkrpgSpk .5s steps(2) both}
+.lk-rpg .spk.big{animation-duration:.7s}
+@keyframes lkrpgSpk{0%{transform:translate(-50%,-50%) scale(0)}50%{transform:translate(-50%,-50%) scale(1.3)}100%{transform:translate(-50%,-50%) scale(0)}}
+
+/* strikeout: the big K beside the bug */
+.lk-rpg .kz{position:absolute;left:calc(100% + 4.4rem);bottom:0;width:15rem;height:21rem;pointer-events:none;z-index:7}
+.lk-rpg .ksp{position:absolute;left:0;top:0;width:15rem;display:flex;flex-direction:column;align-items:center;gap:1.4rem;animation:lkrpgK 3s both}
+.lk-rpg .ksp .lbl{font-size:2.4rem;color:var(--white);text-shadow:0.3rem 0.3rem 0 var(--ink);white-space:nowrap}
+.lk-rpg .ksp.xlook .lbl{color:var(--ice)}
+.lk-rpg .ksp.xlook .spr{transform:scaleX(-1)}
+@keyframes lkrpgK{
+  0%{transform:scale(2.4);opacity:0}4%{transform:scale(2.4);opacity:1}8%{transform:scale(1.6)}12%{transform:scale(.9)}16%,82%{transform:scale(1);opacity:1}
+  84%,88%,92%,96%{opacity:0}86%,90%,94%{opacity:1}100%{transform:scale(1);opacity:0}}
+.lk-rpg .frost{position:absolute;width:0.6rem;height:0.6rem;background:var(--ice);box-shadow:0 0 0 0.2rem var(--ink);animation:lkrpgFrost 1.6s steps(10) both}
+@keyframes lkrpgFrost{from{transform:translateY(0);opacity:1}to{transform:translateY(var(--f));opacity:0}}
+
+/* home run: the ball leaves the batter's window, the impact lands, fireworks beside the bug */
+.lk-rpg .hrb{position:absolute;left:4rem;top:3rem;width:0;height:0;pointer-events:none;--bx:90rem;--by:-56rem}
+.lk-rpg .lball{position:absolute;left:0;top:0;animation:lkrpgBall .95s steps(8) both,lkrpgGone .01s 1.1s steps(1) forwards}
+@keyframes lkrpgBall{0%{transform:translate(-50%,-50%) scale(1.6)}
+  45%{transform:translate(calc(-50% + var(--bx) * .45),calc(-50% + var(--by) * .75 - 6rem)) scale(.9)}
+  100%{transform:translate(calc(-50% + var(--bx)),calc(-50% + var(--by))) scale(.25)}}
+.lk-rpg .hrb .spk.big{left:13.6rem;top:2.5rem;animation-delay:1.2s}
+.lk-rpg .hrfx{position:absolute;left:100%;top:0;width:0;height:0;pointer-events:none;z-index:7}
+
+/* Where the bug sits. Bottom (the default here): the dialog opens above the bug and the K stands on its bottom edge.
+   Top: the dialog opens below and the K hangs from the top edge. Right side: the K, the ball and the fireworks go left. */
+.ov.bug-tl .lk-rpg .dlg,.ov.bug-tc .lk-rpg .dlg,.ov.bug-tr .lk-rpg .dlg{bottom:auto;top:calc(100% + 0.8rem);transform-origin:50% 0}
+.ov.bug-tl .lk-rpg .kz,.ov.bug-tc .lk-rpg .kz,.ov.bug-tr .lk-rpg .kz{bottom:auto;top:0}
+.ov.bug-br .lk-rpg .kz,.ov.bug-tr .lk-rpg .kz{left:auto;right:calc(100% + 4.4rem)}
+.ov.bug-tl .lk-rpg .hrb,.ov.bug-tc .lk-rpg .hrb,.ov.bug-tr .lk-rpg .hrb{--by:-33rem}
+.ov.bug-br .lk-rpg .hrb,.ov.bug-tr .lk-rpg .hrb{--bx:-90rem}
+.ov.bug-br .lk-rpg .hrfx,.ov.bug-tr .lk-rpg .hrfx{left:auto;right:100%;transform:scaleX(-1)}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-rpg .xrow.bat .cur,.lk-rpg .more{animation-iteration-count:1}
+  .lk-rpg .wipe,.lk-rpg .fw,.lk-rpg .lball,.lk-rpg .xslash,.lk-rpg .frost{display:none}
+  .lk-rpg .cluster.m-hr,.lk-rpg .batw.m-k,.lk-rpg .batw.m-out,.lk-rpg .pitw.m-walk{animation:none}
+}
