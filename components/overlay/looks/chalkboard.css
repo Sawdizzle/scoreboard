@@ -1,0 +1,193 @@
+/* Chalk Talk, native (see ChalkboardBug.tsx). Written in the original page's pixels, which were drawn for a
+   1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame. Lengths inside the
+   chalk <svg>s stay in their viewBox units. */
+@font-face{font-family:'Kalam';font-weight:700;font-display:swap;src:url('/fonts/bugs/kalam-700.woff2') format('woff2')}
+@font-face{font-family:'Cabin Sketch';font-weight:700;font-display:swap;src:url('/fonts/bugs/cabin-sketch-700.woff2') format('woff2')}
+.lk-chalk{--slate:#1b2420;--slate-2:#141b18;--chalk:#F4F2E8;--dim:#CFCBBE;--yellow:#FFE36E;--pink:#FF9FC0;--blue:#A9DCFF;
+  --wood:#7a5231;--wood-d:#4f321b;--wood-l:#9a6c43;--hand:"Kalam","Comic Sans MS",cursive;--num:"Cabin Sketch","Kalam",cursive;
+  font-family:var(--hand);font-weight:700;color:var(--chalk);line-height:1;text-transform:none;letter-spacing:0}
+.lk-chalk .defs{position:absolute}
+.lk-chalk .pkg{position:relative;width:74.4rem;zoom:.933}
+.lk-chalk i{font-style:normal}
+
+/* ---------- the board ---------- */
+.lk-chalk .frame{position:relative;padding:1.2rem;border-radius:0.6rem;
+  background:
+    repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 0.1rem,transparent 0.1rem 0.5rem,rgba(255,220,170,.05) 0.5rem 0.6rem,transparent 0.6rem 1.3rem),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 0.3rem,transparent 0.3rem 4.1rem),
+    linear-gradient(180deg,var(--wood-l),var(--wood) 40%,var(--wood-d));
+  box-shadow:0 1.6rem 3.2rem rgba(0,0,0,.5),0 0.2rem 0 rgba(255,255,255,.12) inset,0 -0.2rem 0 rgba(0,0,0,.35) inset}
+.lk-chalk .frame::before{content:"";position:absolute;inset:0;border-radius:0.6rem;pointer-events:none;
+  background:radial-gradient(circle at 3% 8%,rgba(255,230,190,.18),transparent 7%),radial-gradient(circle at 97% 90%,rgba(0,0,0,.25),transparent 9%)}
+.lk-chalk .slate{position:relative;width:72rem;height:21.4rem;overflow:hidden;border-radius:0.2rem}
+.lk-chalk .slate,.lk-chalk .wipe .cover{
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='214'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006 .03' numOctaves='3' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 .86 0 0 0 0 .9 0 0 0 0 .88 .6 0 0 0 -.26'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='1' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .35 0 0 0 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 40% 30%,#222d28,var(--slate) 55%,var(--slate-2));
+  background-size:100% 100%,20rem 20rem,auto;
+  box-shadow:inset 0 0.3rem 0.8rem rgba(0,0,0,.7),inset 0 0 0 0.1rem rgba(0,0,0,.6)}
+.lk-chalk .ghost{position:absolute;inset:0;pointer-events:none;color:rgba(230,235,230,.05);filter:blur(0.06rem)}
+.lk-chalk .ghost span{position:absolute;white-space:pre}
+.lk-chalk .ledge{position:relative;height:1.6rem;margin:-0.3rem -1rem 0;border-radius:0.2rem 0.2rem 0.5rem 0.5rem;
+  background:linear-gradient(180deg,var(--wood-l) 0,var(--wood) 35%,var(--wood-d));
+  box-shadow:0 0.8rem 1.4rem rgba(0,0,0,.45),0 -0.1rem 0 rgba(0,0,0,.4) inset}
+.lk-chalk .ledge::before{content:"";position:absolute;left:1.2rem;right:1.2rem;top:0;height:0.4rem;background:linear-gradient(90deg,transparent,rgba(240,240,230,.18) 20%,rgba(240,240,230,.1) 60%,transparent)}
+.lk-chalk .ledge .stick{position:absolute;top:-0.5rem;width:4.4rem;height:0.9rem;border-radius:0.4rem;background:linear-gradient(180deg,#fff,#dcd8cc);box-shadow:0 0.2rem 0.2rem rgba(0,0,0,.4)}
+.lk-chalk .ledge .stick.s1{left:9rem;transform:rotate(-3deg)}
+.lk-chalk .ledge .stick.s2{left:15rem;width:2.2rem;background:linear-gradient(180deg,#fff3b0,#e0c65a)}
+.lk-chalk .ledge .felt{left:auto;right:7rem;top:-1.5rem;width:7rem;height:1.8rem;rotate:-2deg}
+
+/* ---------- chalk: lettering and strokes ---------- */
+.lk-chalk .ink{position:absolute;inset:0}
+/* When the bug first comes up the board is bare until the eraser has crossed it. */
+.lk-chalk .main .ink,.lk-chalk .props{animation:lkchalkHold 1s steps(1,end) both}
+@keyframes lkchalkHold{from{opacity:0}to{opacity:1}}
+.lk-chalk .sv{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
+.lk-chalk .c{position:absolute;display:block;white-space:nowrap;line-height:1}
+.lk-chalk .c .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.lk-chalk .c.left .v{justify-content:flex-start}
+.lk-chalk .c.fl{position:relative;flex:0 0 auto}
+.lk-chalk .c.fl .v{position:relative;inset:auto;justify-content:flex-start}
+.lk-chalk .c.shr{flex:0 1 auto;min-width:0}
+.lk-chalk .c.shr .w{flex:0 1 auto;min-width:0}
+.lk-chalk .c.shr .t{display:block;overflow-x:clip}
+.lk-chalk .w{position:relative;display:inline-block}
+.lk-chalk .t{position:relative;display:inline-block;animation:lkchalkWrite var(--t,300ms) var(--d,0ms) linear both}
+@keyframes lkchalkWrite{0%{clip-path:inset(-30% 100% -30% -8%);transform:rotate(-1.4deg) translateY(0.1rem)}
+  50%{clip-path:inset(-30% 50% -30% -8%);transform:rotate(.8deg) translateY(-0.1rem)}
+  100%{clip-path:inset(-30% -10% -30% -8%);transform:none}}
+.lk-chalk .n{font-family:var(--num);font-weight:700}
+.lk-chalk .h{font-family:var(--hand);font-weight:700}
+.lk-chalk .big{font-size:5.4rem}
+.lk-chalk .mid{font-size:4.4rem;color:var(--dim)}
+.lk-chalk .lbl{font-size:2.4rem;color:var(--yellow)}
+.lk-chalk .nm{font-size:3.6rem}
+.lk-chalk .bn{font-size:2.9rem}
+.lk-chalk .pc{font-size:2.6rem;color:var(--dim);margin-left:auto}
+.lk-chalk .xnote{font-size:4.2rem}
+.lk-chalk .xnote.sm{font-family:var(--hand);font-size:2.6rem}
+.lk-chalk .avg{font-size:2.8rem}
+.lk-chalk .today{font-size:2.2rem;color:var(--dim)}
+.lk-chalk .word{font-size:3.4rem;color:var(--yellow)}
+.lk-chalk .yel{color:var(--yellow)} .lk-chalk .pnk{color:var(--pink)} .lk-chalk .blu{color:var(--blue)}
+.lk-chalk .line{position:absolute;left:29.6rem;top:16.4rem;width:41.4rem;height:4.6rem;display:flex;align-items:center;gap:0.9rem;white-space:nowrap}
+/* a play's strike-through, drawn across the batter's name */
+.lk-chalk .t.struck::after{content:"";position:absolute;left:-0.6rem;right:-0.8rem;top:52%;height:0.4rem;border-radius:0.2rem;background:var(--pink);
+  transform-origin:0 50%;rotate:-1.6deg;animation:lkchalkStrike .38s calc(var(--d,0ms) + var(--t,300ms) + 150ms) cubic-bezier(.45,.05,.35,1) both}
+@keyframes lkchalkStrike{from{transform:scaleX(0)}to{transform:none}}
+
+.lk-chalk .st{fill:none;stroke:var(--chalk);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 2;opacity:var(--o,1);
+  animation:lkchalkDraw var(--t,260ms) var(--d,0ms) cubic-bezier(.45,.05,.35,1) both}
+@keyframes lkchalkDraw{0%{stroke-dashoffset:1;opacity:0}3%{stroke-dashoffset:.985;opacity:var(--o,1)}100%{stroke-dashoffset:0;opacity:var(--o,1)}}
+.lk-chalk .st.thin{stroke-width:2.4;--o:.55}
+.lk-chalk .st.y{stroke:var(--yellow)} .lk-chalk .st.p{stroke:var(--pink)} .lk-chalk .st.b{stroke:var(--blue)}
+.lk-chalk .st.ghostmark{--o:.22}
+.lk-chalk .st.fat{stroke-width:9} .lk-chalk .st.fat2{stroke-width:5;--o:.7}
+/* a mark rubbed out; a flourish or a note that is rubbed out after its moment */
+.lk-chalk .gone{animation:lkchalkFade .24s linear both}
+.lk-chalk .gone .st{animation:none;stroke-dashoffset:0}
+.lk-chalk .flo{animation:lkchalkFade .4s 2.9s linear both}
+.lk-chalk .fade{animation:lkchalkFade .4s 3.8s linear both}
+@keyframes lkchalkFade{from{opacity:1}to{opacity:0}}
+.lk-chalk .dust{fill:var(--chalk);opacity:0;animation:lkchalkDust .9s var(--d,0ms) cubic-bezier(.4,0,.9,.55) both}
+@keyframes lkchalkDust{0%{opacity:0;transform:none}6%{opacity:.95;transform:none}100%{opacity:0;transform:translate(var(--dx,4px),30px)}}
+
+/* smudges left behind where something was erased */
+.lk-chalk .smudge{position:absolute;left:-0.6rem;right:-0.6rem;top:0.2rem;bottom:0.2rem;pointer-events:none;border-radius:40%;opacity:.45;
+  background:radial-gradient(ellipse at 50% 55%,rgba(225,232,226,.16),rgba(225,232,226,.06) 55%,transparent 72%),
+    repeating-linear-gradient(8deg,rgba(230,236,230,.05) 0 0.3rem,transparent 0.3rem 0.7rem);filter:blur(0.15rem);
+  animation:lkchalkSmudge 2.6s var(--e,0ms) ease-out both}
+.lk-chalk .smudge.all{left:1.4rem;right:1.4rem;top:1.6rem;bottom:1rem}
+@keyframes lkchalkSmudge{from{opacity:1}to{opacity:.45}}
+
+/* ---------- physical props (no chalk filter) ---------- */
+.lk-chalk .fx,.lk-chalk .props{position:absolute;inset:0;pointer-events:none}
+.lk-chalk .none{display:none}
+.lk-chalk .magnet{position:absolute;width:2.2rem;height:3.4rem;border-radius:0.5rem;background:
+  linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,0) 40%),linear-gradient(180deg,var(--team,#888),color-mix(in srgb,var(--team,#888) 70%,#000));
+  box-shadow:0.1rem 0.4rem 0.5rem rgba(0,0,0,.6),inset 0 -0.2rem 0 rgba(0,0,0,.25)}
+.lk-chalk .eraser{position:absolute;left:0;top:0;width:6.4rem;height:2.6rem;border-radius:0.4rem;z-index:5;
+  background:linear-gradient(180deg,#b38552 0,#8b6036 58%,#3f3b39 58%,#57524d 100%);
+  box-shadow:0 0.6rem 1rem rgba(0,0,0,.55),inset 0 0.1rem 0 rgba(255,255,255,.3)}
+.lk-chalk .eraser::after{content:"";position:absolute;left:0;right:0;bottom:0;height:0.5rem;border-radius:0 0 0.4rem 0.4rem;background:rgba(235,235,225,.55);filter:blur(0.05rem)}
+/* the felt eraser scrubbing left to right across a box: --x/--y where it starts, --w how far, --a how hard, --n passes */
+.lk-chalk .eraser.scrub{left:var(--x);top:var(--y);opacity:0;
+  animation:lkchalkTravel var(--t,260ms) var(--d,0ms) linear both,lkchalkZig calc(var(--t,260ms) / var(--n,6)) var(--d,0ms) linear var(--n,6) alternate both}
+.lk-chalk .eraser.rub{--x:-2.6rem;--y:calc(50% - 1.3rem);--w:calc(100% - 1.2rem);--a:0.8rem;--t:260ms;--d:var(--e,0ms)}
+.lk-chalk .eraser.lg{width:14.7rem;height:6rem}
+@keyframes lkchalkTravel{0%{left:var(--x);opacity:0}8%{opacity:1}92%{opacity:1}100%{left:calc(var(--x) + var(--w));opacity:0}}
+@keyframes lkchalkZig{from{transform:translateY(var(--a)) rotate(4deg)}to{transform:translateY(calc(var(--a) * -1)) rotate(-5deg)}}
+/* the chalk stick riding the leading edge of a line of writing */
+.lk-chalk .tip{position:absolute;left:0;bottom:8%;margin-left:-0.4rem;width:0.9rem;height:3rem;border-radius:0.3rem 0.3rem 0.2rem 0.2rem;z-index:6;opacity:0;
+  background:linear-gradient(90deg,#fff,#e2ded2);box-shadow:0.3rem 0.4rem 0.5rem rgba(0,0,0,.45);transform-origin:50% 100%;transform:rotate(22deg);
+  animation:lkchalkPen var(--t,300ms) var(--d,0ms) linear both,lkchalkBob .16s var(--d,0ms) ease-in-out 7 alternate}
+@keyframes lkchalkPen{0%{left:0;opacity:0}2%{opacity:1}92%{opacity:1}100%{left:100%;opacity:0}}
+@keyframes lkchalkBob{from{transform:translateY(0.3rem) rotate(22deg)}to{transform:translateY(-0.5rem) rotate(28deg)}}
+.lk-chalk .puff{position:absolute;width:6rem;height:6rem;margin:-3rem 0 0 -3rem;border-radius:50%;z-index:7;opacity:0;
+  background:radial-gradient(circle,rgba(244,242,232,.5),rgba(244,242,232,.18) 45%,transparent 70%);filter:blur(0.2rem);
+  animation:lkchalkPuff .9s var(--d,0ms) cubic-bezier(.2,.7,.3,1) both}
+@keyframes lkchalkPuff{0%{opacity:0;transform:scale(calc(.25 * var(--s,1)))}3%{opacity:.9;transform:scale(calc(.25 * var(--s,1)))}
+  100%{opacity:0;transform:scale(calc(1.5 * var(--s,1))) translateY(-0.6rem)}}
+
+/* ---------- the whole-board wipe when the half turns ---------- */
+.lk-chalk .wipe{position:absolute;inset:0;pointer-events:none}
+.lk-chalk .wipe .cover{position:absolute;inset:0;border-radius:0.2rem;animation:lkchalkCover 1.7s linear both}
+@keyframes lkchalkCover{0%{clip-path:inset(0 100% 0 0)}56%{clip-path:inset(0 0 0 0)}60%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+.lk-chalk .wipe .smudge{animation:lkchalkWipeHaze 3.6s ease-out both}
+@keyframes lkchalkWipeHaze{0%{opacity:0}26%{opacity:1}100%{opacity:.3}}
+
+/* ---------- moment boards: a second slate that comes on for a home run and a strikeout ---------- */
+.lk-chalk .hrw,.lk-chalk .kw{position:absolute;width:0;height:0;z-index:20;pointer-events:none}
+.lk-chalk .mboard{position:absolute;left:0;bottom:0;transform:translateY(var(--ty)) rotate(var(--rot))}
+.lk-chalk .mboard .frame{padding:1.6rem}
+.lk-chalk .mboard .ledge{margin:-0.3rem -1.2rem 0;height:2rem}
+.lk-chalk .hrb .slate{width:110rem;height:52rem}
+.lk-chalk .kb .slate{width:34rem;height:38rem}
+.lk-chalk .hrw{left:0;bottom:calc(100% + 2.4rem)}
+.lk-chalk .hrb{zoom:.62;--ty:-110rem;--rot:-2deg;animation:lkchalkBoard 4.4s linear both}
+.lk-chalk .kw{left:calc(100% + 3.4rem);bottom:0}
+.lk-chalk .kb{--ty:56rem;--rot:-3deg;animation:lkchalkBoardK 4s linear both}
+@keyframes lkchalkBoard{0%{transform:translateY(var(--ty)) rotate(var(--rot));animation-timing-function:cubic-bezier(.2,.8,.3,1)}
+  9.5%{transform:translateY(0) rotate(.6deg)}12.7%{transform:none}91%{transform:none;animation-timing-function:cubic-bezier(.5,0,.8,.4)}
+  100%{transform:translateY(var(--ty)) rotate(var(--rot))}}
+@keyframes lkchalkBoardK{0%{transform:translateY(var(--ty)) rotate(var(--rot));animation-timing-function:cubic-bezier(.2,.8,.3,1)}
+  7.9%{transform:translateY(0) rotate(.6deg)}10.5%{transform:none}90.5%{transform:none;animation-timing-function:cubic-bezier(.5,0,.8,.4)}
+  100%{transform:translateY(var(--ty)) rotate(var(--rot))}}
+/* the board is rubbed clean before it leaves */
+.lk-chalk .hrb .ink{animation:lkchalkRubOut .58s 3.4s linear both}
+.lk-chalk .kb .ink{animation:lkchalkRubOut .52s 3.05s linear both}
+@keyframes lkchalkRubOut{from{clip-path:inset(-5% -5% -5% -5%)}to{clip-path:inset(-5% -5% -5% 104%)}}
+.lk-chalk .hrb .smudge{animation:lkchalkWipeHaze 1s 3.4s ease-out both}
+.lk-chalk .kb .smudge{animation:lkchalkWipeHaze 1s 3.05s ease-out both}
+.lk-chalk .hrw-t{font-size:17.6rem}
+.lk-chalk .hrn{font-size:6.4rem}
+.lk-chalk .hrs{font-size:4rem;color:var(--yellow)}
+.lk-chalk .kwho{font-size:4.2rem}
+.lk-chalk .khow{font-size:3.2rem;color:var(--yellow)}
+.lk-chalk .hrw-t .tip{scale:2.2} .lk-chalk .hrn .tip{scale:1.4}
+.lk-chalk .ball{fill:var(--chalk);stroke:rgba(244,242,232,.3);stroke-width:4;opacity:0;offset-path:path("M110 462 Q560 -300 1150 380");offset-rotate:0deg;
+  animation:lkchalkBall 1.05s .62s cubic-bezier(.35,.15,.55,1) forwards}
+@keyframes lkchalkBall{from{offset-distance:0%;opacity:1}to{offset-distance:100%;opacity:1}}
+
+/* Where the bug sits. Top: the boards hang below / drop from above. Right side: the K board stands on the bug's left
+   and the home run board lines up with its right edge. Centre: both boards go above (or below) the bug. */
+.ov.bug-tl .lk-chalk .hrw,.ov.bug-tc .lk-chalk .hrw,.ov.bug-tr .lk-chalk .hrw{bottom:auto;top:calc(100% + 2.4rem)}
+.ov.bug-tl .lk-chalk .mboard,.ov.bug-tc .lk-chalk .mboard,.ov.bug-tr .lk-chalk .mboard{bottom:auto;top:0}
+.ov.bug-tl .lk-chalk .hrb,.ov.bug-tc .lk-chalk .hrb,.ov.bug-tr .lk-chalk .hrb{--ty:110rem}
+.ov.bug-br .lk-chalk .hrw,.ov.bug-tr .lk-chalk .hrw{left:auto;right:0}
+.ov.bug-br .lk-chalk .mboard,.ov.bug-tr .lk-chalk .mboard{left:auto;right:0}
+.ov.bug-bc .lk-chalk .hrw,.ov.bug-tc .lk-chalk .hrw{left:50%}
+.ov.bug-bc .lk-chalk .hrb,.ov.bug-tc .lk-chalk .hrb{left:-56.6rem}
+.ov.bug-tl .lk-chalk .kw,.ov.bug-tr .lk-chalk .kw{bottom:auto;top:0}
+.ov.bug-tl .lk-chalk .kb,.ov.bug-tr .lk-chalk .kb{--ty:-56rem}
+.ov.bug-br .lk-chalk .kw,.ov.bug-tr .lk-chalk .kw{left:auto;right:calc(100% + 3.4rem)}
+.ov.bug-br .lk-chalk .kb,.ov.bug-tr .lk-chalk .kb{--rot:3deg}
+.ov.bug-bc .lk-chalk .kw{left:0;bottom:calc(100% + 2.4rem)}
+.ov.bug-bc .lk-chalk .kb{--ty:-80rem}
+.ov.bug-tc .lk-chalk .kw{left:0;bottom:auto;top:calc(100% + 2.4rem)}
+.ov.bug-tc .lk-chalk .kb{--ty:80rem}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-chalk .dust,.lk-chalk .puff,.lk-chalk .tip,.lk-chalk .eraser.scrub{display:none}
+}

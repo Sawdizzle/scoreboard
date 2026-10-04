@@ -16,8 +16,6 @@
 .ov-dock { position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;
   filter: drop-shadow(0 1.2rem 2.6rem rgba(0, 0, 0, 0.5)); animation: ov-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
-/* An animated look draws its own bug, bottom left: the batter card moves to the top. */
-.ov-anim { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; color-scheme: normal; }
 /* Where the scorebug sits (the layout's bug.pos). Along the top the dock stacks downwards, so the bug stays on the edge. */
 .ov.bug-bl .ov-dock, .ov.bug-bc .ov-dock, .ov.bug-br .ov-dock { bottom: 4.4rem; }
 .ov.bug-tl .ov-dock, .ov.bug-tc .ov-dock, .ov.bug-tr .ov-dock { top: 4.8rem; flex-direction: column-reverse; }
@@ -25,7 +23,10 @@
 .ov.bug-br .ov-dock, .ov.bug-tr .ov-dock { right: 4.8rem; align-items: flex-end; }
 .ov.bug-bc .ov-dock, .ov.bug-tc .ov-dock { left: 0; right: 0; align-items: center; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
-.ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .cb, .ov-dock > .bsx { zoom: var(--bs); }
+.ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .ov-look { zoom: var(--bs); }
+/* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Pressbox's own bug and cards. */
+.ov-look > :not(.cb) em, .ov-look > :not(.cb) small { color: inherit; font-weight: inherit; }
+
 /* The cards' slot: against the scorebug, on the side away from the picture's edge. One card at a time; the
    rest wait behind the bug. The slot clips them, so a card is seen only once it has slid clear of the plate. */
 .ov-ext { zoom: var(--cs); display: grid; overflow: hidden; pointer-events: none; }
@@ -37,14 +38,10 @@
 .ov-ext > .ov-box { width: auto; min-width: 44rem; }
 /* The bug sits over the slot's edge, so a card comes out from behind it. */
 .ov-dock { gap: 0; }
-.ov-dock > .ov-bug, .ov-dock > .cb, .ov-dock > .bsx, .ov-dock > .ov-moment { position: relative; z-index: 2; }
+.ov-dock > .ov-bug, .ov-dock > .ov-look, .ov-dock > .ov-moment { position: relative; z-index: 2; }
 .ov-dock > .ov-moment.on { margin: 0.6rem 0; }
 /* The channel bug's line gives up the bottom right to a scorebug put there. */
 .ov.bug-br .ov-chan { right: auto; left: 4.8rem; }
-/* A framed look draws its own bug: the dock holds only the batter card, at the other end of the picture. */
-.ov.framed .ov-dock { animation: none; left: 4.8rem; right: auto; align-items: flex-start; }
-.ov.framed.bug-bl .ov-dock, .ov.framed.bug-bc .ov-dock, .ov.framed.bug-br .ov-dock { bottom: auto; top: 4.8rem; }
-.ov.framed.bug-tl .ov-dock, .ov.framed.bug-tc .ov-dock, .ov.framed.bug-tr .ov-dock { top: auto; bottom: 4.4rem; }
 
 /* ---- The scorebug ---- */
 .ov-bug { display: flex; flex-direction: column; border-radius: 0.7rem; overflow: hidden; }
@@ -91,14 +88,6 @@
 /* Along the top the bug is above the slot: a card drops out from under it. */
 .ov.bug-tl .ov-card, .ov.bug-tc .ov-card, .ov.bug-tr .ov-card { border-radius: 0 0 0.7rem 0.7rem; transform: translateY(-104%); }
 .ov.bug-tl .ov-card.on, .ov.bug-tc .ov-card.on, .ov.bug-tr .ov-card.on { transform: none; }
-/* A framed look draws its own bug in its frame, where nothing here can sit behind it. The card stands alone at
-   the other end of the picture and comes in from that edge. */
-.ov.framed .ov-card { border-radius: 0.7rem; }
-.ov.framed.bug-bl .ov-ext > .ov-card, .ov.framed.bug-bc .ov-ext > .ov-card, .ov.framed.bug-br .ov-ext > .ov-card { align-self: start; justify-self: start; }
-.ov.framed.bug-tl .ov-ext > .ov-card, .ov.framed.bug-tc .ov-ext > .ov-card, .ov.framed.bug-tr .ov-ext > .ov-card { align-self: end; justify-self: start; }
-.ov.framed.bug-bl .ov-card, .ov.framed.bug-bc .ov-card, .ov.framed.bug-br .ov-card { transform: translateY(-104%); }
-.ov.framed.bug-tl .ov-card, .ov.framed.bug-tc .ov-card, .ov.framed.bug-tr .ov-card { transform: translateY(104%); }
-.ov.framed .ov-card.on { transform: none; }
 
 .ov-batter { display: flex; align-items: stretch; height: 21.4rem; }
 .ov-tile { position: relative; flex: 0 0 auto; width: 15rem; display: flex; align-items: center; justify-content: center; }

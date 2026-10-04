@@ -48,7 +48,8 @@ one current season, and the public roster's name masking.
 | `lib/gamechanger.ts`, `lib/stats.ts` | GameChanger export parsing, and every rate (AVG, ERA ...) from counts |
 | `lib/onair.ts` | What the stream says about the batter, the pitcher and who is due up; shared by the pad's On Air and the scorebug page |
 | `components/overlay/` | The Browser Source page (`/overlay/<token>`): `Stage` draws a feed, `Overlay` fetches it |
-| `public/bugs/`, `public/fonts/` | Scoreboard's eleven animated scorebugs and their fonts, copied unchanged; `components/overlay/AnimBug.tsx` frames one and feeds it. Blue Steel is also rebuilt natively (`BlueSteelBug.tsx`, `bluesteel.css`) so cards can attach to it |
+| `components/overlay/looks/` | The scorebug looks, one component and one stylesheet each, all on the `BugProps` contract in `types.ts`. Eleven are native rebuilds of Scoreboard's animated bugs. Scope every selector under the look's root class and avoid generic class names: `app/globals.css` styles bare names like `.row`, `.tag`, `.card`, `.slot` and they leak in |
+| `public/bugs/`, `public/fonts/` | Scoreboard's original bug pages (reference, and the look picker's thumbnails) and the fonts the looks use |
 | `components/stream/StreamSetup.tsx`, `lib/demo-feed.ts` | The Stream screen: every look-and-layout control in one place, over a live preview (`/overlay/demo`) fed a made-up game |
 | `public/ads/` | Scoreboard's on-air spots for our own apps, copied unchanged; `components/overlay/Spots.tsx` plays one per tap |
 | `lib/sports.ts`, `components/pad/ScorePad.tsx` | The score-only sports: points, periods, volleyball sets |

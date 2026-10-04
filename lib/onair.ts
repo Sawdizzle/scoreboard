@@ -6,13 +6,13 @@ import * as L from './rules/logic.js';
 import { positionOf } from './rules/roster.js';
 import { engineGame, tonight, type EngineSide, type G, type StatKey } from './scoring.ts';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
-import { sitFor, type Sport, type SportLive } from './sports.ts';
+import type { Sport } from './sports.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
 export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid' | 'qr';
 
-// How the scorebug looks: Pressbox's own, or one of Scoreboard's animated
-// bugs (public/bugs/<slug>.html), which draw the game themselves.
+// How the scorebug looks: Pressbox's own, Classic, or one of the eleven looks
+// first drawn for Scoreboard (components/overlay/looks).
 export const LOOKS = [
   ['pressbox', 'Pressbox'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
   ['classic-green', 'Classic Green'], ['pinball-dmd', 'Pinball'], ['chalkboard', 'Chalkboard'], ['comic', 'Comic'],
@@ -224,43 +224,6 @@ export function boxScore(g: G, innings: number) {
   });
   const tot = (side: EngineSide) => [g[`${side}_score`], g[`${side}_hits`], g[`${side}_errors`]].map((x) => String(Number(x) || 0));
   return { innings: Array.from({ length: n - from }, (_, j) => from + j + 1), away: row('top'), home: row('bottom'), awayTot: tot('away'), homeTot: tot('home') };
-}
-
-// ---- Scoreboard's animated bugs ---------------------------------------------
-// The game in the shape bugs/kit.js takes ("scoreboard:live").
-export function bugState(feed: Feed, g: G, air: AirView) {
-  const us = feed.team, them = feed.opponent;
-  const of = (side: EngineSide) => ((side === 'home') === feed.game!.is_home ? us : them);
-  const team = (side: EngineSide) => {
-    const t = of(side);
-    return {
-      name: t.display_name || t.name, abbr: (t.abbr || t.display_name || t.name).toUpperCase(), color: t.color,
-      r: Number(g[`${side}_score`]) || 0, h: Number(g[`${side}_hits`]) || 0, e: Number(g[`${side}_errors`]) || 0, line: [],
-      k: L.strikeoutsFor(g, side),
-    };
-  };
-  const b = L.safeBases(g.bases);
-  const sport = feed.game!.sport ?? 'baseball';
-  return {
-    away: team('away'), home: team('home'),
-    inning: g.inning | 0 || 1, half: g.half === 'bottom' ? 'bot' : 'top',
-    balls: g.balls | 0, strikes: g.strikes | 0, outs: g.outs | 0,
-    bases: [b.first, b.second, b.third],
-    // These bugs have one line for the batter: his average rides on it when the season line is on.
-    batter: air.batter ? air.batter.name + (feed.show_line && air.batter.avg ? ` · ${air.batter.avg}` : '') : '',
-    pitcher: air.pitcher?.name ?? '', pitchCount: air.pitcher ? air.pitcher.pitches : 0,
-    sport, sit: sport === 'baseball' ? null : sitFor(sport, feed.game!.live as SportLive),
-  };
-}
-// The stinger a play earns on an animated bug, in the kit's terms. Anything
-// not listed is read off the game row by the kit itself.
-export function bugAnim(last: Feed['last']) {
-  if (!last) return null;
-  if (last.type === 'homerun') return { type: 'homerun', meta: {} };
-  if (last.type === 'strikeout') return { type: last.kind === 'KL' ? 'strikeoutlooking' : 'strikeout', meta: {} };
-  if (last.kind === 'DP') return { type: 'doubleplay', meta: {} };
-  const text = last.kind ? (L.PLAY_LABEL as Record<string, string>)[last.kind] : '';
-  return last.type === 'play' && text ? { type: 'play', meta: { text } } : null;
 }
 
 // The words for a play worth a moment on Pressbox's own bug, or null.

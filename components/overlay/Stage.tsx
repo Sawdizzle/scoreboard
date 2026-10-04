@@ -1,12 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
-import { AnimBug } from '@/components/overlay/AnimBug';
-import { BlueSteelBug } from '@/components/overlay/BlueSteelBug';
-import { ClassicBug } from '@/components/overlay/ClassicBug';
+import { LOOK_BUGS } from '@/components/overlay/looks';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, breakText, halfRecap, bugAnim, bugState, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { boxScore, breakText, halfRecap, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
 import { periodText, type SportLive } from '@/lib/sports';
 
@@ -263,28 +261,23 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
   const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
-  // Pressbox and Classic are drawn here; the rest are Scoreboard's pages in a frame.
-  // Only Prime Time of those draws the other sports.
+  // Pressbox's own bug is drawn below; every other look is a component of its own.
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
-  const classic = feed.look === 'classic', blue = feed.look === 'bluesteel';
-  const native = !feed.look || feed.look === 'pressbox' || classic || blue;
-  const look = !native && (ball || feed.look === 'primetime') ? feed.look! : null;
-  const own = { g, air, away, home, status, showLine: feed.show_line, moment, period: ball ? null : periodText(sport, feed.game!.live as SportLive),
+  const lay = layoutOf(feed.layout);
+  const Bug = feed.look ? LOOK_BUGS[feed.look] : undefined;
+  const own = { g, air, away, home, status, showLine: feed.show_line, moment, topEdge: lay.bug.pos.startsWith('t'), period: ball ? null : periodText(sport, feed.game!.live as SportLive),
     abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
   // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
   const recap = halfRecap(feed, g);
   const fresh = g.half === 'bottom' ? { side: 'away' as const, inning: g.inning | 0 } : { side: 'home' as const, inning: (g.inning | 0) - 1 };
-  const lay = layoutOf(feed.layout);
   const box = boxScore(g, feed.season?.game_innings ?? 7);
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
 
   return (
-    <div className={`ov bug-${lay.bug.pos}${look ? ' framed' : ''}`} style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale } as React.CSSProperties}>
+    <div className={`ov bug-${lay.bug.pos}`} style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale } as React.CSSProperties}>
       <style>{ROOT}</style>
-      {/* The framed bugs are drawn small on a 1920 stage: 1.4 of theirs is 1 of ours. */}
-      {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} pos={lay.bug.pos} scale={lay.bug.scale * 1.4} />}
       <MidScene box={box} away={away} home={home} title={breakText(g)} tag={g.half === 'bottom' ? `Mid ${g.inning}` : `End ${Math.max(1, (g.inning | 0) - 1)}`}
         list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} recap={recap} scores={{ away: g.away_score | 0, home: g.home_score | 0 }} on={shown === 'mid'} />
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
@@ -302,10 +295,9 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
           <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
         </div>
-        {classic && <ClassicBug {...own} />}
-        {blue && <BlueSteelBug {...own} topEdge={lay.bug.pos.startsWith('t')} />}
-        {!look && !classic && !blue && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
-        {!look && !classic && !blue && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
+        {Bug && <div className="ov-look"><Bug {...own} /></div>}
+        {!Bug && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
+        {!Bug && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
             <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />

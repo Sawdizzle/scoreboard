@@ -2,8 +2,7 @@
 import './bluesteel.css';
 import { Sparks } from '@/components/overlay/Sparks';
 import type { Brand } from '@/components/TeamBrand';
-import type { AirView } from '@/lib/onair';
-import type { G } from '@/lib/scoring';
+import { tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Blue Steel, drawn here: Scoreboard's bug for the club (public/bugs/bluesteel.html),
 // rebuilt as part of the page so the stat cards can sit behind its plate. The
@@ -18,7 +17,7 @@ import type { G } from '@/lib/scoring';
 // own (Sparks.tsx). The original's full-frame intro is not carried over.
 const IMG = '/bugs/img/bluesteel';
 const HIT: Record<string, string> = { Single: 'ice', Double: 'ice', Triple: 'ice', 'Sac fly': 'ice', Walk: '', 'Hit by pitch': '', 'Double play': 'red', 'Stolen base': 'green' };
-const tab = (b: Brand, abbr: string) => (b.display.length <= 10 ? b.display : abbr || b.display.slice(0, 6));
+const tab = tabName;
 
 function Crest({ fire }: { fire: string | number }) {
   // Remounted when a run scores (or a big play lands): the feathers gust and the eye flares, once.
@@ -39,12 +38,7 @@ function Side({ brand, abbr, score, bat }: { brand: Brand; abbr: string; score: 
   );
 }
 
-export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLine, moment, topEdge }: {
-  g: G; air: AirView; away: Brand; home: Brand; abbrs: { away: string; home: string };
-  status: 'scheduled' | 'live' | 'final'; period: string | null; showLine: boolean; moment: { text: string; who: string } | null;
-  // The bug is along the top of the picture: sparks fall away from it, downwards.
-  topEdge: boolean;
-}) {
+export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLine, moment, topEdge }: BugProps) {
   const live = status === 'live', top = g.half === 'top', ball = period === null;
   const bases = g.bases as { first?: boolean; second?: boolean; third?: boolean };
   const balls = g.balls | 0, strikes = g.strikes | 0, outs = g.outs | 0;
@@ -66,7 +60,7 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
       <div className="pkg">
         <div className="crest"><Crest fire={`${runs}${hr ? 'h' : ''}`} /></div>
         <div className="main">
-          <div className="stack">
+          <div className="xstack">
             <div className="plate"><div className="rail">
               <i key={`${runs}${half}`} className="spec" />
               <Side brand={away} abbr={abbrs.away} score={g.away_score | 0} bat={ball && live && top} />
@@ -96,12 +90,12 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
               <div className="strip">
                 {tag ? (
                   <div key={`t${tag.text}${tag.who}`} className="line in">
-                    <span className={`tag ${HIT[tag.text] ?? 'hot'}`}>{tag.text}</span><span className="txt">{tag.who}</span>
+                    <span className={`xtag ${HIT[tag.text] ?? 'hot'}`}>{tag.text}</span><span className="txt">{tag.who}</span>
                   </div>
                 ) : (
                   <div key={bat?.bid ?? 'none'} className="line in">
-                    {bat && <><span className="tag">AB</span><span className="txt">{bat.name}</span></>}
-                    {bat && showLine && bat.avg && <span className="tag hot">{bat.avg}</span>}
+                    {bat && <><span className="xtag">AB</span><span className="txt">{bat.name}</span></>}
+                    {bat && showLine && bat.avg && <span className="xtag hot">{bat.avg}</span>}
                     {bat && showLine && bat.today && <span className="side" style={{ marginLeft: 0 }}>{bat.today}</span>}
                     {pit && <span className="side">P · {pit.last}<b>{pit.pitches}</b></span>}
                   </div>

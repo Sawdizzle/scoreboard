@@ -1,0 +1,112 @@
+/* Departures, native (see SplitFlapBug.tsx). Written in the original page's pixels (public/bugs/split-flap.html),
+   which were drawn for a 1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame.
+   Barlow Condensed is the page's own var(--font-cond). */
+.lk-flap{--housing:#1d1e20;--housing-hi:#2a2b2e;--housing-lo:#141416;--label:#9c968a;--ink:#EDE6D3;--yellow:#FFC933;--red:#FF4D3D;--amber:#FF9A1F;--green:#5BE08C;
+  --flap:var(--font-cond),"Barlow Condensed","Arial Narrow",sans-serif;--gap:0.3rem;
+  font-family:var(--flap);color:var(--ink);text-transform:none;line-height:1}
+.lk-flap .pkg{display:flex;zoom:.933}
+
+/* ---------- Housing ---------- */
+.lk-flap .board{position:relative;padding:1rem 1.4rem 1.2rem;border-radius:0.7rem;
+  background:
+    radial-gradient(ellipse at 20% -10%,rgba(255,255,255,.06),transparent 55%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 0.1rem,transparent 0.1rem 0.3rem),
+    linear-gradient(180deg,var(--housing-hi) 0%,var(--housing) 18%,var(--housing-lo) 100%);
+  box-shadow:0 0 0 0.2rem #0a0a0b,inset 0 0.1rem 0 rgba(255,255,255,.10),inset 0 -0.2rem 0 rgba(0,0,0,.45),0 1.6rem 3.4rem rgba(0,0,0,.5),0 0.3rem 0.6rem rgba(0,0,0,.4)}
+/* four screws */
+.lk-flap .board::before,.lk-flap .board::after,.lk-flap .screws::before,.lk-flap .screws::after{content:"";position:absolute;width:0.7rem;height:0.7rem;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#6d6e72,#2c2d30 60%,#0d0d0e);box-shadow:0 0.1rem 0 rgba(255,255,255,.06)}
+.lk-flap .board::before{left:0.4rem;top:0.4rem}.lk-flap .board::after{right:0.4rem;top:0.4rem}
+.lk-flap .screws{position:absolute;inset:0;pointer-events:none}
+.lk-flap .screws::before{left:0.4rem;bottom:0.4rem}.lk-flap .screws::after{right:0.4rem;bottom:0.4rem}
+/* alert glow around the housing for a home run or a strikeout */
+.lk-flap .glow{position:absolute;inset:-0.2rem;border-radius:0.8rem;pointer-events:none;opacity:0;box-shadow:0 0 0 0.2rem var(--gc),0 0 2.6rem 0.4rem var(--gc);
+  animation:lkflapGlow .52s steps(1) 6}
+@keyframes lkflapGlow{0%{opacity:.85}50%{opacity:0}}
+
+/* ---------- Rows ---------- */
+.lk-flap .fr{display:flex;align-items:center;gap:1rem}
+.lk-flap .sg{display:flex;gap:var(--gap)}
+.lk-flap .frT{--w:2.9rem;--h:4.8rem;--fs:4.1rem;gap:0.5rem}
+.lk-flap .frT .sg-st,.lk-flap .hdr .lab.dep{margin-left:0.9rem}
+.lk-flap .frT .sg-sw{margin-right:0.4rem}
+.lk-flap .hdr .lab.sw{margin-right:0.4rem}
+.lk-flap .frC{--w:2.3rem;--h:3.4rem;--fs:2.9rem}
+.lk-flap .trs{position:relative}
+.lk-flap .trs .frT + .frT{margin-top:0.5rem}
+.lk-flap .hdr{height:2rem;margin-bottom:0.3rem;align-items:flex-end}
+.lk-flap .hdr .lab{font-weight:600;font-size:1.4rem;letter-spacing:.2em;text-transform:uppercase;color:var(--label);line-height:1;white-space:nowrap}
+.lk-flap .hdr .lab.sw{width:2.9rem}.lk-flap .hdr .lab.nm{width:18.9rem}.lk-flap .hdr .lab.c{width:6.1rem}.lk-flap .hdr .lab.st{width:31.7rem}
+.lk-flap .hdr .lab.c{text-align:center;letter-spacing:.06em;padding-left:0}
+.lk-flap .hdr .lab.dep{color:var(--yellow)}
+.lk-flap .hdr .lab i{display:inline-block;width:0;height:0;border-left:0.8rem solid var(--yellow);border-top:0.5rem solid transparent;border-bottom:0.5rem solid transparent;margin-right:0.7rem;vertical-align:0.1rem}
+.lk-flap .rule{position:relative;overflow:hidden;height:0.2rem;margin:1rem -0.2rem 0.9rem;background:linear-gradient(90deg,transparent,#0b0b0c 6%,#0b0b0c 94%,transparent);box-shadow:0 0.1rem 0 rgba(255,255,255,.06)}
+.lk-flap .frC{justify-content:space-between;gap:0}
+.lk-flap .frC .grp{display:flex;align-items:center;gap:0.7rem}
+.lk-flap .frC .lab{font-weight:600;font-size:1.4rem;letter-spacing:.14em;text-transform:uppercase;color:var(--label);line-height:1.05;white-space:nowrap}
+.lk-flap .frC .lab.two{font-size:1.2rem;letter-spacing:.16em}
+/* Pregame, Final, or a score-only sport's period, spelled on the small flaps. */
+.lk-flap .frC.word{justify-content:center}
+/* The line under it: the batter's average and day, the pitcher and his count. */
+.lk-flap .frD{justify-content:flex-start;gap:1.2rem;margin-top:0.6rem}
+
+/* ---------- Flap cell ---------- */
+.lk-flap .fc{position:relative;flex:none;width:var(--w);height:var(--h);perspective:calc(var(--h) * 3.2);border-radius:0.3rem;
+  background:#070708;box-shadow:0 0.1rem 0 rgba(255,255,255,.05),0 0 0 0.1rem rgba(0,0,0,.55)}
+.lk-flap .fc>div{position:absolute;left:0;right:0;height:calc(50% - .075rem);overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.lk-flap .fc>.t{top:0;border-radius:0.3rem 0.3rem 0.1rem 0.1rem;transform-origin:50% calc(100% + .075rem);
+  background:linear-gradient(180deg,#2b2b2e 0%,#212124 100%);box-shadow:inset 0 0.1rem 0 rgba(255,255,255,.07)}
+.lk-flap .fc>.b{bottom:0;border-radius:0.1rem 0.1rem 0.3rem 0.3rem;transform-origin:50% -.075rem;
+  background:linear-gradient(180deg,#171719 0%,#1d1d20 100%);box-shadow:inset 0 -0.1rem 0 rgba(0,0,0,.4)}
+/* The flip, once, when the cell mounts: a blank leaf falls over the hinge twice (the drum stepping),
+   then the bottom leaf carrying the new half lands with a bounce and stays. --i staggers left to right, --o by row. */
+.lk-flap .fc>.flap.t{transform:rotateX(-90deg);
+  animation:lkflapFall 70ms calc(var(--o,0ms) + var(--i,0) * 26ms) cubic-bezier(.55,0,1,.6) 2 both}
+.lk-flap .fc>.flap.b{transform:rotateX(0deg);
+  animation:lkflapLand 130ms calc(var(--o,0ms) + var(--i,0) * 26ms + 140ms) cubic-bezier(.2,.7,.4,1) both}
+@keyframes lkflapFall{from{transform:rotateX(0deg);filter:brightness(1)}to{transform:rotateX(-90deg);filter:brightness(.42)}}
+@keyframes lkflapLand{0%{transform:rotateX(90deg);filter:brightness(.35)}62%{transform:rotateX(0deg);filter:brightness(1.08)}80%{transform:rotateX(16deg);filter:brightness(.9)}100%{transform:rotateX(0deg);filter:brightness(1)}}
+.lk-flap .fc span{position:absolute;left:0;right:0;height:var(--h);text-align:center;
+  font:700 var(--fs)/var(--h) var(--flap);color:var(--c,var(--ink));letter-spacing:0}
+.lk-flap .fc>.t span{top:0}
+.lk-flap .fc>.b span{bottom:0}
+/* hinge axle pins */
+.lk-flap .fc::after{content:"";position:absolute;left:-0.1rem;right:-0.1rem;top:calc(50% - .15rem);height:0.3rem;z-index:3;pointer-events:none;
+  background:linear-gradient(90deg,#3b3b3f 0 0.2rem,transparent 0.2rem calc(100% - 0.2rem),#3b3b3f calc(100% - 0.2rem))}
+/* special faces */
+.lk-flap .fc .sw{position:absolute;left:0.4rem;right:0.4rem;top:0.5rem;bottom:0.5rem;border-radius:0.2rem;box-shadow:inset 0 0 0 0.1rem rgba(0,0,0,.35)}
+.lk-flap .fc .dot{position:absolute;left:50%;top:50%;width:calc(var(--w) * .56);height:calc(var(--w) * .56);border-radius:50%;
+  transform:translate(-50%,-50%);border:0.2rem solid #5d5d63}
+.lk-flap .fc .dot.on{border-color:currentColor;background:currentColor}
+.lk-flap .fc .tri{position:absolute;left:50%;top:50%;width:0;height:0;border-left:calc(var(--w) * .3) solid transparent;border-right:calc(var(--w) * .3) solid transparent}
+.lk-flap .fc .tri.up{border-bottom:calc(var(--w) * .5) solid currentColor;transform:translate(-50%,-55%)}
+.lk-flap .fc .tri.dn{border-top:calc(var(--w) * .5) solid currentColor;transform:translate(-50%,-45%)}
+.lk-flap .fc .rev{display:inline-block;transform:scaleX(-1);font-weight:700}
+/* flashing cells (steady blink) + score light */
+.lk-flap .fc.fl span{animation:lkflapBlink .46s .5s steps(1) infinite}
+@keyframes lkflapBlink{50%{opacity:.18}}
+.lk-flap .fc.lit{animation:lkflapLit 1.6s .38s ease-out both}
+@keyframes lkflapLit{0%{box-shadow:0 0 0 0.2rem var(--yellow),0 0 1.8rem 0.3rem rgba(255,201,51,.75)}100%{box-shadow:0 0.1rem 0 rgba(255,255,255,.05),0 0 0 0.1rem rgba(0,0,0,.55)}}
+
+/* ---------- New half: cells laid over the two team rows, which flip in, hold, and flip away ---------- */
+.lk-flap .over{position:absolute;inset:0;pointer-events:none;z-index:4;animation:lkflapOver 3.2s steps(1) forwards}
+@keyframes lkflapOver{to{visibility:hidden}}
+.lk-flap .over .fc{animation:lkflapGone 150ms calc(2.3s + var(--o,0ms) + var(--i,0) * 18ms) cubic-bezier(.55,0,1,.6) forwards}
+@keyframes lkflapGone{from{transform:none;opacity:1}99%{opacity:1}to{transform:scaleY(.04);opacity:0}}
+
+/* ---------- Base lamps ---------- */
+.lk-flap .bases{position:relative;width:5rem;height:3.6rem}
+.lk-flap .bases i{position:absolute;width:1.5rem;height:1.5rem;transform:rotate(45deg);border-radius:0.2rem;background:#0b0b0c;
+  box-shadow:inset 0 0 0 0.2rem #45454a;transition:background .2s,box-shadow .2s}
+.lk-flap .bases .b2{left:1.75rem;top:0.1rem}.lk-flap .bases .b1{left:3.2rem;top:1.6rem}.lk-flap .bases .b3{left:0.3rem;top:1.6rem}
+.lk-flap .bases i.on{background:radial-gradient(circle at 40% 35%,#fff4c8,var(--yellow) 55%,#b98200);box-shadow:0 0 1rem 0.2rem rgba(255,201,51,.65)}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-flap .fc>.flap.t,.lk-flap .fc>.flap.b,.lk-flap .glow{animation:none}
+  .lk-flap .fc.fl span{animation-duration:1s}
+  .lk-flap .over{display:none}
+}
+
+/* Where the bug sits (.ov.bug-bl / -bc / -br / -tl / -tc / -tr). The original has no rule of its own for any
+   position: the board is one housing, drawn the same in every corner, and nothing flies off it. */
+.ov.bug-br .lk-flap .pkg,.ov.bug-tr .lk-flap .pkg{justify-content:flex-end}

@@ -1,8 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
-import type { AirView } from '@/lib/onair';
-import type { G } from '@/lib/scoring';
+import { tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // The Classic look: a broadcast scorebug in one tight row, and everything on
 // it moves when the game does.
@@ -20,7 +19,7 @@ const STING: Record<string, string> = {
 };
 const vars = (b: Brand) => ({ '--c': b.color, '--c2': b.color2, '--ink': inkOn(b.color) }) as React.CSSProperties;
 // A team's name in its tab: its display name when short, else as few letters as say it.
-const tab = (b: Brand, abbr: string) => (b.display.length <= 10 ? b.display : abbr || b.display.slice(0, 6));
+const tab = tabName;
 
 function Side({ brand, abbr, score, bat }: { brand: Brand; abbr: string; score: number; bat: boolean }) {
   return (
@@ -35,12 +34,7 @@ function Side({ brand, abbr, score, bat }: { brand: Brand; abbr: string; score: 
   );
 }
 
-export function ClassicBug({ g, air, away, home, abbrs, status, period, showLine, moment }: {
-  g: G; air: AirView; away: Brand; home: Brand; abbrs: { away: string; home: string };
-  status: 'scheduled' | 'live' | 'final';
-  // For the sports that are score only: the period, in place of the inning and count.
-  period: string | null; showLine: boolean; moment: { text: string; who: string } | null;
-}) {
+export function ClassicBug({ g, air, away, home, abbrs, status, period, showLine, moment }: BugProps) {
   const live = status === 'live', top = g.half === 'top';
   const ball = period === null;
   const bases = g.bases as { first?: boolean; second?: boolean; third?: boolean };

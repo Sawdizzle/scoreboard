@@ -1,0 +1,252 @@
+/* Midnight, native (see MidnightBug.tsx). Written in the original page's pixels (public/bugs/midnight.html), which were
+   drawn for a 1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame. */
+.lk-mn{--night:#101621;--night-hi:#1b2742;--night-lo:#090e19;--well:#050810;
+  --chalk:#f4f7fb;--steel:#8fb6de;--steel-hi:#c9def2;--steel-lo:#4a6f96;
+  --gold:#e8b23a;--gold-hi:#ffd98a;--gold-lo:#a87a1c;--dim:#8595ab;--line:rgba(244,247,251,.13);--red:#ff5d55;--green:#5fcf8a;
+  --disp:var(--font-cond),"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in:cubic-bezier(.7,0,.84,0);--ease-io:cubic-bezier(.65,0,.35,1);
+  font-family:var(--disp);font-weight:700;color:var(--chalk);text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;font-synthesis:none}
+.lk-mn em,.lk-mn small{color:inherit;font-weight:inherit}
+.lk-mn .defs{position:absolute;width:0;height:0}
+
+/* ---------- The sky: two star layers that drift, stars that twinkle ---------- */
+.lk-mn .sky{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.lk-mn .sky .l1,.lk-mn .sky .l2{position:absolute;top:0;bottom:0;left:0;width:calc(100% + 60rem);background-repeat:repeat;background-size:60rem 24rem}
+.lk-mn .sky .l1{background-image:var(--stars1);opacity:.75;animation:lkmnDrift 150s linear infinite}
+.lk-mn .sky .l2{background-image:var(--stars2);opacity:.9;animation:lkmnDrift 70s linear infinite}
+@keyframes lkmnDrift{to{transform:translateX(-60rem)}}
+.lk-mn .sky .tw{position:absolute;width:0.3rem;height:0.3rem;margin:-0.15rem;border-radius:50%;background:#fff;
+  box-shadow:0 0 0.4rem 0.1rem rgba(220,236,255,.8);opacity:.15;animation:lkmnTw var(--d,3s) var(--dl,0s) ease-in-out infinite}
+.lk-mn .sky .tw.g{background:#fff4d6;box-shadow:0 0 0.4rem 0.1rem rgba(255,217,138,.8)}
+@keyframes lkmnTw{0%,100%{opacity:.12;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+/* a shooting star: one crosses the plate now and then, and one is thrown when a run scores */
+.lk-mn .sky .shoot{position:absolute;left:0;top:0;width:13rem;height:0.2rem;border-radius:0.2rem;opacity:0;transform-origin:100% 50%;
+  background:linear-gradient(90deg,transparent,rgba(201,222,242,.35) 55%,#fff)}
+.lk-mn .sky .shoot::after{content:"";position:absolute;right:-0.3rem;top:-0.3rem;width:0.8rem;height:0.8rem;border-radius:50%;background:#fff;box-shadow:0 0 0.8rem 0.3rem rgba(255,236,190,.8)}
+.lk-mn .sky .shoot.idle{animation:lkmnShootIdle 23s 9s cubic-bezier(.3,0,.7,1) infinite}
+.lk-mn .sky .shoot.run{animation:lkmnShoot .8s cubic-bezier(.3,0,.7,1)}
+@keyframes lkmnShootIdle{0%{transform:translate(34rem,0.6rem) rotate(166deg);opacity:0}.9%{opacity:1}3.6%,100%{transform:translate(2rem,8.6rem) rotate(166deg);opacity:0}}
+@keyframes lkmnShoot{0%{transform:translate(44rem,-0.4rem) rotate(168deg);opacity:0}25%{opacity:1}100%{transform:translate(8rem,7.2rem) rotate(168deg);opacity:0}}
+
+/* ---------- The moon ---------- */
+.lk-mn .mn{position:relative}
+.lk-mn .mn svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lk-mn .mn .halo{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,244,214,.34) 0%,rgba(246,226,170,.14) 32%,rgba(143,182,222,.06) 50%,transparent 68%);
+  animation:lkmnHaloFlare 1.6s var(--ease-out),lkmnHalo 7s 1.6s ease-in-out infinite}
+@keyframes lkmnHalo{0%,100%{opacity:.65;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes lkmnHaloFlare{0%{opacity:.7;transform:scale(1)}16%{opacity:1;transform:scale(1.5);filter:brightness(1.6)}100%{opacity:.7;transform:scale(1)}}
+/* a second flare for a big play, gone when it is done */
+.lk-mn .mn .halo.x{opacity:0;animation:lkmnHaloX 1.6s .3s var(--ease-out)}
+@keyframes lkmnHaloX{0%{opacity:0;transform:scale(1)}16%{opacity:1;transform:scale(1.5);filter:brightness(1.6)}100%{opacity:0;transform:scale(1)}}
+.lk-mn .mn .cl{position:absolute;left:0;top:44%;width:74%;height:22%;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(96,114,148,.9) 0%,rgba(70,86,118,.55) 45%,transparent 72%);animation:lkmnCloud 60s 38s linear infinite}
+.lk-mn .mn .cl + .cl{top:60%;width:52%;height:15%;animation-duration:71s;animation-delay:38.8s}
+@keyframes lkmnCloud{0%{opacity:0;transform:translateX(-90%)}2.7%{opacity:.85}15.6%{opacity:.85}18.3%,100%{opacity:0;transform:translateX(150%)}}
+
+/* ---------- Bug: the moon, then the plate with its strip ---------- */
+.lk-mn .pkg{display:flex;align-items:center;zoom:.933}
+.lk-mn .pkg > .mn{z-index:3;width:10.4rem;height:10.4rem;margin-right:-3.6rem;flex:0 0 auto;animation:lkmnMoonPop .7s var(--ease-out) both}
+.lk-mn .main{position:relative}
+.lk-mn .xstack{display:flex;flex-direction:column;align-items:stretch}
+
+/* the plate: a navy window on the night, rimmed cool on top and warm below */
+.lk-mn .plate{position:relative;z-index:2;height:7.2rem;padding:0.1rem;border-radius:1.3rem;
+  background:linear-gradient(180deg,rgba(201,222,242,.42),rgba(143,182,222,.12) 38%,rgba(232,178,58,.14) 70%,rgba(255,217,138,.5));
+  box-shadow:0 1.4rem 3.2rem rgba(0,0,0,.5),0 0 0 0.1rem rgba(0,0,0,.35);animation:lkmnBuild .75s .15s var(--ease-out) both}
+.lk-mn .rail{position:relative;display:flex;align-items:stretch;height:100%;padding:0.5rem 1rem 0.5rem 4.6rem;border-radius:1.2rem;overflow:hidden;
+  background:radial-gradient(ellipse 65% 110% at 50% 160%,rgba(232,178,58,.2),transparent 62%),
+    linear-gradient(180deg,var(--night-hi) 0%,#111a2e 52%,var(--night-lo) 100%);
+  box-shadow:inset 0 0.1rem 0 rgba(201,222,242,.16)}
+.lk-mn .rail > :not(.sky):not(.sweep){position:relative;z-index:1}
+/* a searchlight that sweeps the plate on big moments and between halves */
+.lk-mn .rail .sweep{position:absolute;inset:-20% 0;pointer-events:none;z-index:2;transform:translateX(-120%);animation:lkmnSweep 1.5s var(--ease-io);
+  background:linear-gradient(100deg,transparent 36%,rgba(255,246,220,.07) 44%,rgba(255,246,220,.22) 50%,rgba(255,246,220,.07) 56%,transparent 64%)}
+@keyframes lkmnSweep{to{transform:translateX(120%)}}
+
+/* team block: a team-colour light, the abbreviation, the score in its well */
+.lk-mn .team{display:flex;align-items:center}
+.lk-mn .team + .team{margin-left:1.4rem}
+.lk-mn .pip{width:0.6rem;height:3.8rem;border-radius:0.3rem;background:var(--tc);margin-right:1.2rem;flex:0 0 auto;
+  box-shadow:0 0 1.2rem -0.1rem var(--tc),inset 0 0 0 0.1rem rgba(255,255,255,.28)}
+.lk-mn .ab{font-weight:700;font-size:3.3rem;letter-spacing:.035em;line-height:1;text-transform:uppercase;white-space:nowrap;text-shadow:0 0.2rem 0 rgba(0,0,0,.45)}
+.lk-mn .score{position:relative;display:flex;align-items:center;justify-content:center;align-self:stretch;width:6.2rem;margin-left:1.2rem;border-radius:0.9rem;
+  background:rgba(5,8,16,.62);box-shadow:inset 0 0.2rem 0.8rem rgba(0,0,0,.72),inset 0 0 0 0.1rem rgba(143,182,222,.16);animation:lkmnWellLit 2.3s ease-out}
+.lk-mn .score .roll{position:relative;display:inline-grid;overflow:hidden;vertical-align:bottom;font-weight:700;font-size:4.4rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--chalk);
+  animation:lkmnNumLit 2.3s ease-out}
+.lk-mn .score .roll > b{grid-area:1/1;font-weight:inherit;text-align:center;animation:lkmnRoll .42s .09s var(--ease-out) both}
+@keyframes lkmnRoll{from{transform:translateY(90%);opacity:0}}
+/* batting: a strip of the park's light under the team */
+.lk-mn .team::after{content:"";position:absolute;left:0;right:0;bottom:-0.5rem;height:0.3rem;border-radius:0.2rem;
+  background:linear-gradient(90deg,transparent,var(--gold) 20%,var(--gold-hi) 50%,var(--gold) 80%,transparent);
+  box-shadow:0 0 1rem rgba(232,178,58,.9);transform:scaleX(0);transition:transform .5s var(--ease-out)}
+.lk-mn .team.bat::after{transform:scaleX(1)}
+/* a run: the score is struck with starlight and settles back to chalk */
+@keyframes lkmnWellLit{0%{background:rgba(255,226,150,.55);box-shadow:inset 0 0 1.8rem rgba(255,240,200,.95),0 0 2.8rem rgba(232,178,58,.9)}
+  38%{background:rgba(232,178,58,.18);box-shadow:inset 0 0 1.2rem rgba(232,178,58,.5),0 0 1.4rem rgba(232,178,58,.4)}100%{}}
+@keyframes lkmnNumLit{0%{color:#fff;text-shadow:0 0 0.6rem #fff,0 0 1.8rem #ffd98a,0 0 3.4rem #e8b23a;scale:1.4}
+  14%{scale:1}40%{color:#ffe6a8;text-shadow:0 0 1.2rem rgba(232,178,58,.7)}100%{}}
+
+/* ---------- Situation: inning, diamond, count, outs ---------- */
+.lk-mn .sit{display:flex;align-items:center;gap:1.5rem;margin-left:1.6rem;padding-left:1.5rem;border-left:0.1rem solid var(--line)}
+.lk-mn .sit.word{padding-right:1.4rem;font-weight:700;font-size:2.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--steel-hi);white-space:nowrap;text-shadow:0 0.2rem 0 rgba(0,0,0,.45)}
+.lk-mn .inn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:4.4rem;height:6.2rem;overflow:hidden}
+.lk-mn .inn .arr{width:0;height:0;border-left:0.7rem solid transparent;border-right:0.7rem solid transparent;opacity:.2}
+.lk-mn .inn .up{border-bottom:0.8rem solid var(--gold)} .lk-mn .inn .dn{border-top:0.8rem solid var(--gold)}
+.lk-mn .inn .arr.on{opacity:1;filter:drop-shadow(0 0 0.4rem rgba(232,178,58,.85))}
+.lk-mn .inn .n{font-weight:700;font-size:2.9rem;line-height:1.02;margin:0.3rem 0}
+/* between halves a small moon rises in the inning box */
+.lk-mn .inn .rise{position:absolute;left:0;top:0.9rem;width:4.4rem;height:4.4rem;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:translateY(160%);color:#18223a;
+  background:radial-gradient(circle at 30% 64%,rgba(150,132,90,.35) 0 0.4rem,transparent 0.5rem),radial-gradient(circle at 64% 30%,rgba(150,132,90,.28) 0 0.3rem,transparent 0.4rem),
+    radial-gradient(circle at 36% 34%,#fffdf4,#f3e6c2 48%,#d6c392 82%,#bba878);
+  box-shadow:0 0 1.4rem rgba(255,236,190,.55);animation:lkmnMoonRise 3.1s linear forwards}
+.lk-mn .inn .rise small{font-weight:700;font-size:1rem;letter-spacing:.14em;line-height:1;margin-right:-.14em}
+.lk-mn .inn .rise b{font-weight:700;font-size:2.1rem;line-height:1}
+@keyframes lkmnMoonRise{0%{transform:translateY(160%);animation-timing-function:cubic-bezier(.16,1,.3,1)}20%{transform:none}
+  84%{transform:none;animation-timing-function:cubic-bezier(.7,0,.84,0)}100%{transform:translateY(160%)}}
+.lk-mn .inn > .arr,.lk-mn .inn > .n{animation:lkmnInnHide 3.1s linear}
+@keyframes lkmnInnHide{0%,100%{opacity:1}10%,90%{opacity:0}}
+
+.lk-mn .dia{width:6.2rem;height:5.4rem;overflow:visible}
+.lk-mn .dia .path{fill:none;stroke:rgba(143,182,222,.18);stroke-width:1.4}
+/* a hit: a line of light runs the bases it was worth */
+.lk-mn .dia .trace{fill:none;stroke:var(--gold-hi);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;
+  stroke-dasharray:var(--k) 8;animation:lkmnTrace calc(.7s + var(--k) * .28s) cubic-bezier(.45,0,.2,1)}
+.lk-mn .dia .trace.ice{stroke:var(--steel-hi)}
+@keyframes lkmnTrace{0%{stroke-dashoffset:var(--k);opacity:.9}55%{stroke-dashoffset:0;opacity:.9}100%{stroke-dashoffset:0;opacity:0}}
+.lk-mn .dia .plateH{fill:rgba(244,247,251,.35)}
+.lk-mn .dia .b{fill:rgba(5,8,16,.7);stroke:rgba(143,182,222,.5);stroke-width:1.8;transform-box:fill-box;transform-origin:50% 50%}
+.lk-mn .dia .b.on{fill:var(--gold);stroke:#fff1c8;filter:drop-shadow(0 0 0.5rem rgba(232,178,58,.9))}
+.lk-mn .dia .b.pop{animation:lkmnBasePop .55s var(--ease-out)}
+@keyframes lkmnBasePop{0%{transform:scale(.3)}60%{transform:scale(1.35)}100%{transform:scale(1)}}
+
+.lk-mn .bso{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:0.7rem;row-gap:0.5rem}
+.lk-mn .bso em{font-style:normal;font-weight:700;font-size:1.3rem;letter-spacing:.06em;color:var(--dim);line-height:1}
+.lk-mn .bso .dots{display:flex;gap:0.5rem}
+.lk-mn .bso i{position:relative;width:1.2rem;height:1.2rem;border-radius:50%;background:#161d2c;box-shadow:inset 0 0 0 0.15rem rgba(244,247,251,.2)}
+.lk-mn .bso .b i.on{background:var(--steel);box-shadow:0 0 0.8rem rgba(143,182,222,.85)}
+.lk-mn .bso .s i.on,.lk-mn .bso .o i.on{background:var(--gold);box-shadow:0 0 0.8rem rgba(232,178,58,.85)}
+.lk-mn .bso i.pop{animation:lkmnDotPop .45s var(--ease-out)}
+@keyframes lkmnDotPop{0%{transform:scale(1.9)}100%{transform:scale(1)}}
+.lk-mn .bso i::after{content:"";position:absolute;inset:-0.2rem;border-radius:50%;border:0.2rem solid var(--gold-hi);opacity:0}
+.lk-mn .bso .b i::after{border-color:var(--steel-hi)}
+.lk-mn .bso i.pop::after{animation:lkmnRing .6s var(--ease-out)}
+@keyframes lkmnRing{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(2.6)}}
+
+/* ---------- Strip: the at-bat and play tags ---------- */
+.lk-mn .strip{position:relative;z-index:1;height:3.4rem;margin:0 1.6rem 0 5rem;overflow:hidden;border-radius:0 0 1.1rem 1.1rem;
+  background:linear-gradient(180deg,rgba(12,18,32,.95),rgba(6,9,17,.95));
+  box-shadow:inset 0 0 0 0.1rem rgba(143,182,222,.14),0 1rem 2.2rem rgba(0,0,0,.4);animation:lkmnLineIn .5s .55s var(--ease-out) both}
+.lk-mn .line{position:absolute;inset:0;display:flex;align-items:center;gap:1.1rem;padding:0 1.6rem;white-space:nowrap}
+.lk-mn .line .xtag{flex:0 0 auto;padding:0.4rem 0.8rem 0.3rem;border-radius:0.4rem;font-weight:700;font-size:1.4rem;letter-spacing:.08em;line-height:1;text-transform:uppercase;
+  background:rgba(143,182,222,.15);color:var(--steel-hi)}
+.lk-mn .line .xtag.hot{background:var(--gold);color:#1c1405}
+.lk-mn .line .xtag.ice{background:var(--steel);color:#0c1322}
+.lk-mn .line .xtag.red{background:var(--red);color:#fff}
+.lk-mn .line .xtag.green{background:var(--green);color:#06210f}
+.lk-mn .line .txt{min-width:0;font-weight:700;font-size:2.1rem;letter-spacing:.045em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.lk-mn .line .side{flex:0 0 auto;margin-left:auto;font-weight:600;font-size:1.5rem;letter-spacing:.07em;color:var(--dim);text-transform:uppercase}
+.lk-mn .line .side.today{margin-left:0}
+.lk-mn .line .side.today + .side{padding-left:1.1rem}
+.lk-mn .line .side b{color:var(--chalk);font-weight:700;margin-left:0.6rem}
+.lk-mn .line.in{animation:lkmnLineIn .42s .14s var(--ease-out) both}
+@keyframes lkmnLineIn{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Strikeout: a bank of stadium bulbs punches a K ---------- */
+.lk-mn .kw{position:absolute;top:0;left:calc(100% + 1.2rem);height:7.2rem;white-space:nowrap}
+.lk-mn .kflag{display:flex;align-items:center;gap:1.6rem;height:100%;padding:0.1rem;border-radius:1.3rem;
+  background:linear-gradient(180deg,rgba(201,222,242,.42),rgba(143,182,222,.12) 40%,rgba(255,217,138,.5));box-shadow:0 1.4rem 3rem rgba(0,0,0,.5);
+  animation:lkmnKLife 3.9s linear forwards}
+.lk-mn .kin{display:flex;align-items:center;gap:1.6rem;height:100%;padding:0 2.6rem 0 0.7rem;border-radius:1.2rem;
+  background:radial-gradient(ellipse 60% 120% at 12% 50%,rgba(232,178,58,.16),transparent 70%),linear-gradient(180deg,var(--night-hi),var(--night-lo))}
+.lk-mn .bank{display:grid;grid-template-columns:repeat(5,0.8rem);grid-auto-rows:0.8rem;gap:0.12rem;padding:0.3rem 0.5rem;border-radius:0.6rem;
+  background:#04070d;box-shadow:inset 0 0 0 0.1rem rgba(143,182,222,.2),inset 0 0.2rem 0.6rem rgba(0,0,0,.8)}
+.lk-mn .bank i{position:relative;border-radius:50%;background:#161d2b;box-shadow:inset 0 -0.1rem 0.1rem rgba(0,0,0,.6)}
+/* each bulb of the K strikes in its turn (--on), and they go dark in reverse (--off) */
+.lk-mn .bank i.on::after{content:"";position:absolute;inset:0;border-radius:50%;opacity:0;
+  background:radial-gradient(circle at 40% 35%,#fff 0,#fff1c8 40%,#e8b23a 90%);box-shadow:0 0 0.6rem 0.1rem rgba(255,214,120,.85);
+  animation:lkmnBulbOn .32s var(--on) linear forwards,lkmnBulbOff .55s var(--off) ease-out forwards}
+@keyframes lkmnBulbOn{0%{opacity:.2;transform:scale(.7)}25%{opacity:1;transform:scale(1.3);filter:brightness(1.8)}40%{opacity:.45}55%{opacity:1;transform:scale(1)}100%{opacity:1}}
+@keyframes lkmnBulbOff{0%{opacity:1;background:#fff1c8;box-shadow:0 0 0.6rem 0.1rem rgba(255,214,120,.85)}30%{opacity:1;background:#e8963a;box-shadow:0 0 0.4rem rgba(232,150,58,.6)}
+  100%{opacity:1;background:#161d2b;box-shadow:inset 0 -0.1rem 0.1rem rgba(0,0,0,.6)}}
+.lk-mn .kt{display:flex;flex-direction:column;justify-content:center;gap:0.6rem}
+.lk-mn .kt b{font-weight:700;font-size:3rem;line-height:1;letter-spacing:.035em;text-transform:uppercase;animation:lkmnRise .5s .5s var(--ease-out) both}
+.lk-mn .kt small{font-weight:600;font-size:1.6rem;line-height:1;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;animation:lkmnRise .5s .62s var(--ease-out) both}
+@keyframes lkmnKLife{0%{clip-path:inset(0 100% 0 0 round 1.3rem);animation-timing-function:cubic-bezier(.16,1,.3,1)}9%{clip-path:inset(0 0 0 0 round 1.3rem)}
+  88%{clip-path:inset(0 0 0 0 round 1.3rem);opacity:1;animation-timing-function:cubic-bezier(.7,0,.84,0)}100%{clip-path:inset(0 0 0 100% round 1.3rem);opacity:0}}
+@keyframes lkmnKLifeR{0%{clip-path:inset(0 0 0 100% round 1.3rem);animation-timing-function:cubic-bezier(.16,1,.3,1)}9%{clip-path:inset(0 0 0 0 round 1.3rem)}
+  88%{clip-path:inset(0 0 0 0 round 1.3rem);opacity:1;animation-timing-function:cubic-bezier(.7,0,.84,0)}100%{clip-path:inset(0 100% 0 0 round 1.3rem);opacity:0}}
+@keyframes lkmnRise{from{transform:translateY(3rem);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Home run: a moonshot ---------- */
+.lk-mn .hrw{position:absolute;left:-5.4rem;bottom:calc(100% + 2.6rem);width:94rem;height:19.6rem;pointer-events:none;z-index:4}
+.lk-mn .hr{position:absolute;inset:0;padding:0.1rem;border-radius:1.7rem;
+  background:linear-gradient(180deg,rgba(201,222,242,.5),rgba(143,182,222,.12) 40%,rgba(255,217,138,.6));box-shadow:0 2rem 4.4rem rgba(0,0,0,.55);
+  animation:lkmnHrLife 4.4s linear forwards}
+.lk-mn .hin{position:relative;height:100%;border-radius:1.6rem;overflow:hidden;
+  background:radial-gradient(ellipse 70% 90% at 50% 150%,rgba(232,178,58,.24),transparent 62%),
+    linear-gradient(180deg,#16223d 0%,#0f172a 55%,#080c16 100%)}
+.lk-mn .hin .beam{position:absolute;bottom:-1rem;width:22rem;height:46rem;margin-left:-11rem;transform-origin:50% 100%;opacity:.55;
+  background:linear-gradient(0deg,rgba(255,246,220,.3),rgba(255,246,220,.06) 70%,transparent);clip-path:polygon(46% 100%,54% 100%,100% 0,0 0)}
+.lk-mn .hin .beam.b1{left:22%;animation:lkmnBeam 3.4s ease-in-out infinite alternate}
+.lk-mn .hin .beam.b2{left:74%;animation:lkmnBeam 2.9s ease-in-out infinite alternate-reverse}
+@keyframes lkmnBeam{from{transform:rotate(-28deg)}to{transform:rotate(24deg)}}
+.lk-mn .hin .bigmoon{position:absolute;right:4.6rem;top:-2.6rem;width:19rem;height:19rem;opacity:0;animation:lkmnBigMoon 1.6s .15s var(--ease-out) forwards}
+@keyframes lkmnBigMoon{from{opacity:0;transform:translateY(9rem) scale(.9)}to{opacity:1;transform:none}}
+/* the ball climbs off the bat, hangs, and bursts where the words will be */
+.lk-mn .hin .ball{position:absolute;left:0;top:0;width:1rem;height:1rem;margin:-0.5rem;border-radius:50%;background:#fff;opacity:0;
+  box-shadow:0 0 1rem 0.4rem rgba(255,236,190,.9),0 0 2.6rem 1rem rgba(232,178,58,.5);animation:lkmnBall .62s .1s linear forwards}
+@keyframes lkmnBall{0%{opacity:1;transform:translate(6rem,21rem);animation-timing-function:cubic-bezier(.2,.7,.5,1)}
+  60%{opacity:1;transform:translate(17rem,4rem);animation-timing-function:cubic-bezier(.5,0,.8,.5)}
+  99%{opacity:1;transform:translate(26rem,8.4rem)}100%{opacity:0;transform:translate(26rem,8.4rem)}}
+.lk-mn .hin .pop{position:absolute;left:26rem;top:8.4rem;width:8rem;height:8rem;margin:-4rem;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,rgba(255,255,255,.95) 0,rgba(255,236,190,.6) 26%,rgba(232,178,58,.2) 50%,transparent 70%);animation:lkmnPop .7s .7s var(--ease-out)}
+.lk-mn .hin .pop.r{background:none;border:0.3rem solid rgba(255,236,190,.9);animation-duration:.9s}
+@keyframes lkmnPop{0%{opacity:1;transform:scale(.2)}100%{opacity:0;transform:scale(7)}}
+.lk-mn .hbody{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:0.4rem;padding:0 6rem 0 4.8rem}
+.lk-mn .hbody .t1{white-space:nowrap;line-height:1;height:10.8rem}
+.lk-mn .hbody .t1 .tx{display:inline-block;font-weight:700;font-size:11.2rem;letter-spacing:.035em;color:#fff8ea;opacity:0;line-height:1;text-transform:uppercase;
+  animation:lkmnSolid .8s calc(.78s + var(--i) * 55ms) var(--ease-out) forwards,lkmnGone .55s 3.45s var(--ease-in) forwards}
+.lk-mn .hbody .t1 .sp{display:inline-block;width:.24em;font-size:11.2rem}
+@keyframes lkmnSolid{0%{opacity:0;transform:scale(1.25);text-shadow:0 0 3rem rgba(255,236,190,1)}100%{opacity:1;transform:none;text-shadow:0 0 2.2rem rgba(232,178,58,.5),0 0.4rem 0 rgba(0,0,0,.4)}}
+.lk-mn .hbody .t2{display:flex;align-items:center;gap:1.4rem;white-space:nowrap;overflow:hidden;opacity:0;
+  animation:lkmnT2In .6s 1.5s var(--ease-out) forwards,lkmnGone .55s 3.45s var(--ease-in) forwards}
+.lk-mn .hbody .t2 i{width:0.6rem;height:2.8rem;border-radius:0.3rem;background:var(--tc);box-shadow:0 0 1rem var(--tc);flex:0 0 auto}
+.lk-mn .hbody .t2 b{font-weight:700;font-size:3.1rem;letter-spacing:.045em;text-transform:uppercase}
+.lk-mn .hbody .t2 span{font-weight:700;font-size:2rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-hi)}
+@keyframes lkmnT2In{from{opacity:0;transform:translateY(2.4rem)}to{opacity:1;transform:none}}
+@keyframes lkmnGone{from{opacity:1}to{opacity:0;transform:translateY(-0.8rem)}}
+@keyframes lkmnHrLife{0%{clip-path:inset(0 50% 0 50% round 1.7rem);animation-timing-function:cubic-bezier(.16,1,.3,1)}8%{clip-path:inset(0 0 0 0 round 1.7rem)}
+  90%{clip-path:inset(0 0 0 0 round 1.7rem);opacity:1;animation-timing-function:cubic-bezier(.7,0,.84,0)}100%{clip-path:inset(49% 0 49% 0 round 1.7rem);opacity:0}}
+
+/* ---------- First paint: the plate opens out of the moon ---------- */
+@keyframes lkmnMoonPop{from{transform:scale(.3) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes lkmnBuild{from{clip-path:inset(0 100% 0 0 round 1.3rem)}to{clip-path:inset(0 0 0 0 round 1.3rem)}}
+@keyframes lkmnBuildR{from{clip-path:inset(0 0 0 100% round 1.3rem)}to{clip-path:inset(0 0 0 0 round 1.3rem)}}
+
+/* Where the bug sits. Right side: the moon leads from the right. Bottom: the strip rides above the plate, as in the original. */
+.ov.bug-br .lk-mn .pkg,.ov.bug-tr .lk-mn .pkg{flex-direction:row-reverse}
+.ov.bug-br .lk-mn .pkg > .mn,.ov.bug-tr .lk-mn .pkg > .mn{margin:0 0 0 -3.6rem}
+.ov.bug-br .lk-mn .rail,.ov.bug-tr .lk-mn .rail{padding:0.5rem 4.6rem 0.5rem 1rem}
+.ov.bug-br .lk-mn .plate,.ov.bug-tr .lk-mn .plate{animation-name:lkmnBuildR}
+.ov.bug-bl .lk-mn .xstack,.ov.bug-bc .lk-mn .xstack,.ov.bug-br .lk-mn .xstack{flex-direction:column-reverse}
+.ov.bug-bl .lk-mn .strip,.ov.bug-bc .lk-mn .strip,.ov.bug-br .lk-mn .strip{border-radius:1.1rem 1.1rem 0 0}
+.ov.bug-br .lk-mn .strip,.ov.bug-tr .lk-mn .strip{margin:0 5rem 0 1.6rem}
+.ov.bug-bl .lk-mn .kw,.ov.bug-bc .lk-mn .kw,.ov.bug-br .lk-mn .kw{top:auto;bottom:0}
+.ov.bug-br .lk-mn .kw,.ov.bug-tr .lk-mn .kw{left:auto;right:calc(100% + 1.2rem)}
+.ov.bug-br .lk-mn .kin,.ov.bug-tr .lk-mn .kin{flex-direction:row-reverse;padding:0 0.7rem 0 2.6rem}
+.ov.bug-br .lk-mn .kt,.ov.bug-tr .lk-mn .kt{align-items:flex-end}
+.ov.bug-br .lk-mn .kflag,.ov.bug-tr .lk-mn .kflag{animation-name:lkmnKLifeR}
+.ov.bug-tl .lk-mn .hrw,.ov.bug-tc .lk-mn .hrw,.ov.bug-tr .lk-mn .hrw{bottom:auto;top:calc(100% + 2.6rem)}
+.ov.bug-br .lk-mn .hrw,.ov.bug-tr .lk-mn .hrw{left:auto;right:-5.4rem}
+.ov.bug-br .lk-mn .hbody,.ov.bug-tr .lk-mn .hbody{padding:0 25rem 0 4.8rem}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-mn .sky .l1,.lk-mn .sky .l2,.lk-mn .sky .tw,.lk-mn .sky .shoot,.lk-mn .mn .halo,.lk-mn .mn .cl,.lk-mn .hin .beam{animation:none!important}
+  .lk-mn .dia .b.pop,.lk-mn .bso i.pop,.lk-mn .pkg > .mn,.lk-mn .plate,.lk-mn .strip{animation:none!important}
+}
+
+/* The two star tiles (the original draws them on a canvas from the same seeds). */
+.lk-mn{--stars1:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27600%27 height=%27240%27 viewBox=%270 0 600 240%27%3E%3Ccircle cx=%277%27 cy=%2715%27 r=%270.89%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.56%27/%3E%3Ccircle cx=%27243%27 cy=%27112%27 r=%270.48%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.50%27/%3E%3Ccircle cx=%27155%27 cy=%2737%27 r=%270.77%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.48%27/%3E%3Ccircle cx=%27221%27 cy=%2770%27 r=%270.64%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.38%27/%3E%3Ccircle cx=%27149%27 cy=%27211%27 r=%270.45%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.31%27/%3E%3Ccircle cx=%27175%27 cy=%27131%27 r=%270.77%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.28%27/%3E%3Ccircle cx=%27332%27 cy=%27149%27 r=%270.72%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.68%27/%3E%3Ccircle cx=%27553%27 cy=%27199%27 r=%270.37%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%27255%27 cy=%275%27 r=%270.40%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27256%27 cy=%27112%27 r=%270.87%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.57%27/%3E%3Ccircle cx=%27198%27 cy=%2786%27 r=%270.43%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.31%27/%3E%3Ccircle cx=%27193%27 cy=%2746%27 r=%270.70%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.40%27/%3E%3Ccircle cx=%27411%27 cy=%27221%27 r=%270.65%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.62%27/%3E%3Ccircle cx=%27552%27 cy=%2728%27 r=%270.64%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.54%27/%3E%3Ccircle cx=%27576%27 cy=%27201%27 r=%270.68%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.68%27/%3E%3Ccircle cx=%27329%27 cy=%27196%27 r=%270.35%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.48%27/%3E%3Ccircle cx=%27435%27 cy=%27132%27 r=%270.77%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.69%27/%3E%3Ccircle cx=%27494%27 cy=%27103%27 r=%270.70%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.58%27/%3E%3Ccircle cx=%27187%27 cy=%2757%27 r=%270.36%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.26%27/%3E%3Ccircle cx=%27500%27 cy=%27151%27 r=%270.36%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.53%27/%3E%3Ccircle cx=%27430%27 cy=%27239%27 r=%270.50%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.69%27/%3E%3Ccircle cx=%27483%27 cy=%27150%27 r=%270.81%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.31%27/%3E%3Ccircle cx=%27304%27 cy=%27136%27 r=%270.44%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.43%27/%3E%3Ccircle cx=%27488%27 cy=%27207%27 r=%270.75%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27366%27 cy=%27177%27 r=%270.88%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.47%27/%3E%3Ccircle cx=%27350%27 cy=%27191%27 r=%270.82%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.34%27/%3E%3Ccircle cx=%27287%27 cy=%27126%27 r=%270.45%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.36%27/%3E%3Ccircle cx=%27287%27 cy=%2741%27 r=%270.35%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%2764%27 cy=%27210%27 r=%270.89%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.28%27/%3E%3Ccircle cx=%27243%27 cy=%27120%27 r=%270.75%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.42%27/%3E%3Ccircle cx=%27475%27 cy=%27171%27 r=%270.79%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.49%27/%3E%3Ccircle cx=%27247%27 cy=%27135%27 r=%270.51%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.49%27/%3E%3Ccircle cx=%2748%27 cy=%2761%27 r=%270.80%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.62%27/%3E%3Ccircle cx=%27258%27 cy=%2786%27 r=%270.86%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.36%27/%3E%3Ccircle cx=%27286%27 cy=%27199%27 r=%270.57%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.69%27/%3E%3Ccircle cx=%27262%27 cy=%2781%27 r=%270.65%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.38%27/%3E%3Ccircle cx=%27343%27 cy=%27237%27 r=%270.81%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.47%27/%3E%3Ccircle cx=%27419%27 cy=%27223%27 r=%270.65%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27416%27 cy=%2794%27 r=%270.69%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.64%27/%3E%3Ccircle cx=%27177%27 cy=%2722%27 r=%270.73%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.58%27/%3E%3Ccircle cx=%27190%27 cy=%2762%27 r=%270.39%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.57%27/%3E%3Ccircle cx=%27471%27 cy=%27199%27 r=%270.88%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.35%27/%3E%3Ccircle cx=%27170%27 cy=%27129%27 r=%270.57%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.57%27/%3E%3Ccircle cx=%27374%27 cy=%27174%27 r=%270.69%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.52%27/%3E%3Ccircle cx=%27499%27 cy=%27116%27 r=%270.43%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.58%27/%3E%3Ccircle cx=%27336%27 cy=%27132%27 r=%270.84%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.68%27/%3E%3Ccircle cx=%2761%27 cy=%2769%27 r=%270.64%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.43%27/%3E%3Ccircle cx=%27514%27 cy=%27127%27 r=%270.85%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.38%27/%3E%3Ccircle cx=%27556%27 cy=%27162%27 r=%270.79%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.40%27/%3E%3Ccircle cx=%27582%27 cy=%27202%27 r=%270.35%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%2763%27 cy=%2720%27 r=%270.85%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.37%27/%3E%3Ccircle cx=%27157%27 cy=%27191%27 r=%270.75%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.28%27/%3E%3Ccircle cx=%27588%27 cy=%2720%27 r=%270.40%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.42%27/%3E%3Ccircle cx=%27415%27 cy=%2765%27 r=%270.62%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.30%27/%3E%3Ccircle cx=%27262%27 cy=%27131%27 r=%270.44%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27415%27 cy=%27200%27 r=%270.37%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%27536%27 cy=%2768%27 r=%270.81%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.54%27/%3E%3Ccircle cx=%2757%27 cy=%2726%27 r=%270.89%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.56%27/%3E%3Ccircle cx=%27311%27 cy=%2717%27 r=%270.63%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.44%27/%3E%3Ccircle cx=%2797%27 cy=%27178%27 r=%270.44%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.36%27/%3E%3Ccircle cx=%27528%27 cy=%277%27 r=%270.37%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27290%27 cy=%27138%27 r=%270.74%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%2745%27 cy=%27143%27 r=%270.75%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%27342%27 cy=%2789%27 r=%270.38%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.66%27/%3E%3Ccircle cx=%2793%27 cy=%2768%27 r=%270.54%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27520%27 cy=%27186%27 r=%270.74%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.64%27/%3E%3Ccircle cx=%27421%27 cy=%27165%27 r=%270.52%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.43%27/%3E%3Ccircle cx=%27196%27 cy=%2758%27 r=%270.62%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.52%27/%3E%3Ccircle cx=%27256%27 cy=%27171%27 r=%270.48%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.58%27/%3E%3Ccircle cx=%27264%27 cy=%2794%27 r=%270.80%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.31%27/%3E%3Ccircle cx=%27324%27 cy=%27158%27 r=%270.69%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.28%27/%3E%3Ccircle cx=%27567%27 cy=%27171%27 r=%270.63%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.56%27/%3E%3Ccircle cx=%27585%27 cy=%2715%27 r=%270.77%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.45%27/%3E%3Ccircle cx=%27295%27 cy=%2754%27 r=%270.82%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.70%27/%3E%3Ccircle cx=%27567%27 cy=%2740%27 r=%270.61%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.33%27/%3E%3Ccircle cx=%27421%27 cy=%27183%27 r=%270.47%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.25%27/%3E%3Ccircle cx=%27399%27 cy=%2775%27 r=%270.64%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27331%27 cy=%27167%27 r=%270.52%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.30%27/%3E%3Ccircle cx=%2771%27 cy=%27131%27 r=%270.60%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27445%27 cy=%27138%27 r=%270.78%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.49%27/%3E%3Ccircle cx=%27368%27 cy=%27148%27 r=%270.68%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27433%27 cy=%27210%27 r=%270.82%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%2790%27 cy=%2761%27 r=%270.90%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.34%27/%3E%3Ccircle cx=%2723%27 cy=%27179%27 r=%270.64%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.62%27/%3E%3Ccircle cx=%27110%27 cy=%2779%27 r=%270.74%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.54%27/%3E%3Ccircle cx=%2765%27 cy=%2775%27 r=%270.87%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.29%27/%3E%3Ccircle cx=%27152%27 cy=%27176%27 r=%270.35%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.57%27/%3E%3Ccircle cx=%27586%27 cy=%27122%27 r=%270.88%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.52%27/%3E%3Ccircle cx=%27462%27 cy=%2766%27 r=%270.55%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27324%27 cy=%27177%27 r=%270.56%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.53%27/%3E%3Ccircle cx=%2738%27 cy=%2796%27 r=%270.47%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.59%27/%3E%3Ccircle cx=%27194%27 cy=%2723%27 r=%270.53%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27350%27 cy=%27175%27 r=%270.82%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.26%27/%3E%3Ccircle cx=%27124%27 cy=%2799%27 r=%270.60%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.32%27/%3E%3Ccircle cx=%27222%27 cy=%272%27 r=%270.35%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.54%27/%3E%3Ccircle cx=%27181%27 cy=%2710%27 r=%270.59%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27325%27 cy=%27173%27 r=%270.89%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.68%27/%3E%3Ccircle cx=%27519%27 cy=%27196%27 r=%270.79%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27423%27 cy=%2777%27 r=%270.52%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27457%27 cy=%2715%27 r=%270.67%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.51%27/%3E%3Ccircle cx=%27275%27 cy=%27159%27 r=%270.85%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.38%27/%3E%3Ccircle cx=%27345%27 cy=%27115%27 r=%270.37%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.27%27/%3E%3Ccircle cx=%27110%27 cy=%27163%27 r=%270.75%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27469%27 cy=%27121%27 r=%270.86%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.66%27/%3E%3Ccircle cx=%27567%27 cy=%27222%27 r=%270.54%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.66%27/%3E%3Ccircle cx=%27297%27 cy=%2796%27 r=%270.50%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.47%27/%3E%3Ccircle cx=%27440%27 cy=%2783%27 r=%270.77%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.59%27/%3E%3Ccircle cx=%27433%27 cy=%27149%27 r=%270.80%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.29%27/%3E%3Ccircle cx=%27551%27 cy=%2743%27 r=%270.57%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.58%27/%3E%3Ccircle cx=%27307%27 cy=%27102%27 r=%270.87%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.70%27/%3E%3Ccircle cx=%27395%27 cy=%2756%27 r=%270.66%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.46%27/%3E%3Ccircle cx=%27245%27 cy=%27163%27 r=%270.68%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%27116%27 cy=%27207%27 r=%270.39%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.62%27/%3E%3Ccircle cx=%27385%27 cy=%2783%27 r=%270.80%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.35%27/%3E%3Ccircle cx=%27281%27 cy=%27146%27 r=%270.41%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.69%27/%3E%3Ccircle cx=%27375%27 cy=%27123%27 r=%270.44%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27403%27 cy=%278%27 r=%270.45%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.51%27/%3E%3Ccircle cx=%27183%27 cy=%27104%27 r=%270.44%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.30%27/%3E%3Ccircle cx=%27413%27 cy=%27227%27 r=%270.71%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27212%27 cy=%2721%27 r=%270.53%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.51%27/%3E%3Ccircle cx=%27537%27 cy=%2718%27 r=%270.49%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.28%27/%3E%3Ccircle cx=%27426%27 cy=%27224%27 r=%270.40%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27270%27 cy=%27212%27 r=%270.81%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.46%27/%3E%3Ccircle cx=%27145%27 cy=%27194%27 r=%270.43%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.42%27/%3E%3Ccircle cx=%27407%27 cy=%2799%27 r=%270.63%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27399%27 cy=%2769%27 r=%270.45%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.68%27/%3E%3Ccircle cx=%27222%27 cy=%27119%27 r=%270.69%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%2733%27 cy=%2763%27 r=%270.84%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.62%27/%3E%3Ccircle cx=%27473%27 cy=%27109%27 r=%270.53%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.42%27/%3E%3Ccircle cx=%27285%27 cy=%2747%27 r=%270.41%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.40%27/%3E%3Ccircle cx=%27156%27 cy=%27152%27 r=%270.87%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.70%27/%3E%3Ccircle cx=%27556%27 cy=%27201%27 r=%270.74%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.64%27/%3E%3Ccircle cx=%27472%27 cy=%27220%27 r=%270.81%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.40%27/%3E%3Ccircle cx=%27244%27 cy=%2714%27 r=%270.36%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%27129%27 cy=%27103%27 r=%270.48%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27212%27 cy=%27236%27 r=%270.53%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.36%27/%3E%3Ccircle cx=%27301%27 cy=%27229%27 r=%270.80%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.27%27/%3E%3Ccircle cx=%27572%27 cy=%27191%27 r=%270.36%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.46%27/%3E%3Ccircle cx=%27306%27 cy=%2714%27 r=%270.44%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%2787%27 cy=%27134%27 r=%270.84%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.45%27/%3E%3Ccircle cx=%27556%27 cy=%2783%27 r=%270.35%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.27%27/%3E%3Ccircle cx=%27573%27 cy=%27208%27 r=%270.61%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.48%27/%3E%3Ccircle cx=%27460%27 cy=%2795%27 r=%270.39%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%2785%27 cy=%27118%27 r=%270.66%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.25%27/%3E%3Ccircle cx=%27592%27 cy=%27138%27 r=%270.78%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.65%27/%3E%3Ccircle cx=%27255%27 cy=%27204%27 r=%270.60%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.60%27/%3E%3Ccircle cx=%2752%27 cy=%27198%27 r=%270.43%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.31%27/%3E%3Ccircle cx=%27139%27 cy=%27194%27 r=%270.36%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.49%27/%3E%3Ccircle cx=%27336%27 cy=%2727%27 r=%270.39%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.27%27/%3E%3Ccircle cx=%27160%27 cy=%2766%27 r=%270.72%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.51%27/%3E%3C/svg%3E");
+  --stars2:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27600%27 height=%27240%27 viewBox=%270 0 600 240%27%3E%3Ccircle cx=%27259%27 cy=%27107%27 r=%270.85%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.64%27/%3E%3Ccircle cx=%27522%27 cy=%2783%27 r=%271.00%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.84%27/%3E%3Ccircle cx=%27368%27 cy=%2782%27 r=%270.69%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.91%27/%3E%3Ccircle cx=%27494%27 cy=%2712%27 r=%271.04%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.57%27/%3E%3Ccircle cx=%2759%27 cy=%27161%27 r=%271.32%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.90%27/%3E%3Ccircle cx=%27110%27 cy=%2780%27 r=%270.94%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27233%27 cy=%27223%27 r=%271.12%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.83%27/%3E%3Ccircle cx=%27553%27 cy=%27191%27 r=%273.5%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.09%27/%3E%3Ccircle cx=%27553%27 cy=%27191%27 r=%271.18%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.51%27/%3E%3Ccircle cx=%2761%27 cy=%27174%27 r=%272.9%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.15%27/%3E%3Ccircle cx=%2761%27 cy=%27174%27 r=%270.95%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.84%27/%3E%3Ccircle cx=%27395%27 cy=%27202%27 r=%271.9%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.08%27/%3E%3Ccircle cx=%27395%27 cy=%27202%27 r=%270.63%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.46%27/%3E%3Ccircle cx=%27361%27 cy=%27180%27 r=%270.85%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.94%27/%3E%3Ccircle cx=%27583%27 cy=%2761%27 r=%270.82%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.45%27/%3E%3Ccircle cx=%27493%27 cy=%27173%27 r=%270.97%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.61%27/%3E%3Ccircle cx=%27472%27 cy=%2760%27 r=%270.94%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.53%27/%3E%3Ccircle cx=%2732%27 cy=%27134%27 r=%271.42%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%27202%27 cy=%2747%27 r=%271.23%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.87%27/%3E%3Ccircle cx=%27277%27 cy=%2712%27 r=%273.6%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.08%27/%3E%3Ccircle cx=%27277%27 cy=%2712%27 r=%271.22%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.45%27/%3E%3Ccircle cx=%27424%27 cy=%27155%27 r=%272.5%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.13%27/%3E%3Ccircle cx=%27424%27 cy=%27155%27 r=%270.84%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.71%27/%3E%3Ccircle cx=%27355%27 cy=%27107%27 r=%273.1%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.14%27/%3E%3Ccircle cx=%27355%27 cy=%27107%27 r=%271.02%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.76%27/%3E%3Ccircle cx=%27443%27 cy=%2798%27 r=%271.27%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.75%27/%3E%3Ccircle cx=%27393%27 cy=%27200%27 r=%273.1%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.16%27/%3E%3Ccircle cx=%27393%27 cy=%27200%27 r=%271.02%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.88%27/%3E%3Ccircle cx=%27118%27 cy=%2758%27 r=%271.19%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.49%27/%3E%3Ccircle cx=%27578%27 cy=%2771%27 r=%271.15%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.66%27/%3E%3Ccircle cx=%27341%27 cy=%2753%27 r=%270.99%27 fill=%27rgb(200,222,248)%27 fill-opacity=%270.48%27/%3E%3Ccircle cx=%27587%27 cy=%27148%27 r=%271.41%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.67%27/%3E%3Ccircle cx=%27237%27 cy=%2735%27 r=%270.86%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.78%27/%3E%3Ccircle cx=%2725%27 cy=%27196%27 r=%271.23%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.66%27/%3E%3Ccircle cx=%27463%27 cy=%27193%27 r=%270.84%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.63%27/%3E%3Ccircle cx=%27529%27 cy=%2752%27 r=%271.12%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.81%27/%3E%3Ccircle cx=%27176%27 cy=%27174%27 r=%271.29%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.55%27/%3E%3Ccircle cx=%27420%27 cy=%27183%27 r=%273.2%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.17%27/%3E%3Ccircle cx=%27420%27 cy=%27183%27 r=%271.05%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.93%27/%3E%3Ccircle cx=%27454%27 cy=%27207%27 r=%270.76%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.92%27/%3E%3Ccircle cx=%27340%27 cy=%27202%27 r=%271.11%27 fill=%27rgb(255,232,180)%27 fill-opacity=%270.74%27/%3E%3Ccircle cx=%27204%27 cy=%27124%27 r=%271.42%27 fill=%27rgb(255,255,255)%27 fill-opacity=%270.85%27/%3E%3C/svg%3E")}
