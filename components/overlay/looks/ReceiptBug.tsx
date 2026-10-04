@@ -197,7 +197,7 @@ export function ReceiptBug({ g, air, away, home, abbrs, status, period, showLine
                   <div className="ln big"><div className="ink">RUN!</div></div>
                   <div className="ln stars"><div className="ink">{STARS}</div></div>
                   <div className="ln who"><div className="ink">{last(hr.who) || (top ? codeA : codeH)}</div></div>
-                  <div className="ln ctr"><div className="ink">{top ? `${codeA} ${as}-${hs}` : `${codeH} ${hs}-${as}`}</div></div>
+                  <div className="ln ctr"><div className="ink">{hr.runs > 0 ? `RUNS: ${hr.runs}` : top ? `${codeA} ${as}-${hs}` : `${codeH} ${hs}-${as}`}</div></div>
                   {ART.map((a, i) => <div key={i} className="ln asc"><div className="ink">{a}</div></div>)}
                   <div className="ln stars"><div className="ink">{STARS}</div></div>
                 </div>

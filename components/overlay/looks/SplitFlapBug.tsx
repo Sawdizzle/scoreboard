@@ -1,6 +1,6 @@
 import './split-flap.css';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Departures, drawn here: Scoreboard's split-flap station board
 // (public/bugs/split-flap.html), rebuilt as part of the page so the stat cards
@@ -116,7 +116,7 @@ export function SplitFlapBug({ g, air, away, home, abbrs, status, period, showLi
     ...cells(padR(Math.min(Number(e) || 0, 99), 2), 'D'),
     ...st(batting),
   ];
-  const rowA = hr ? msgRow(batBrand.color, 'HOME RUN', 'Y', 'GONE', 'Y', true)
+  const rowA = hr ? msgRow(batBrand.color, 'HOME RUN', 'Y', homerText(hr.runs, 'plus') || 'GONE', 'Y', true)
     : teamRow(away, abbrs.away, g.away_score | 0, g.away_hits, g.away_errors, top);
   const rowB = hr ? msgRow(batBrand.color, fitName(hr.who || bat?.name || '', 12), 'W', 'DEPARTED', 'Y')
     : teamRow(home, abbrs.home, g.home_score | 0, g.home_hits, g.home_errors, !top);

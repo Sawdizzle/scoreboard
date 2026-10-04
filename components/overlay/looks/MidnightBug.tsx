@@ -1,5 +1,5 @@
 import './midnight.css';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Midnight, drawn here: Scoreboard's night-game bug (public/bugs/midnight.html),
 // rebuilt as part of the page so the stat cards can sit behind its plate. The
@@ -187,7 +187,7 @@ export function MidnightBug({ g, air, away, home, abbrs, status, period, showLin
                 <div className="hbody">
                   <div className="t1">{[...'Home run'].map((c, i) => (c === ' ' ? <span key={i} className="sp" /> : <span key={i} className="tx" style={{ '--i': i } as V}>{c}</span>))}</div>
                   <div className="t2" style={{ '--tc': batBrand.color } as V}>
-                    <i /><b>{[hr.who, tabName(batBrand, top ? abbrs.away : abbrs.home)].filter(Boolean).join(' · ')}</b><span>Moonshot</span>
+                    <i /><b>{[hr.who, tabName(batBrand, top ? abbrs.away : abbrs.home)].filter(Boolean).join(' · ')}</b><span>{homerText(hr.runs, 'shot') || 'Moonshot'}</span>
                   </div>
                 </div>
               </div></div>

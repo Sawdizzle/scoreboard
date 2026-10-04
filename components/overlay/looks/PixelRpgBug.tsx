@@ -208,7 +208,7 @@ export function PixelRpgBug({ g, air, away, home, abbrs, status, period, showLin
   const outPlay = m?.text === 'Double play' || m?.text === 'Sac fly';
   let lines: Line[] = [], hold = 1300;
   if (m) {
-    if (hr) { lines = [{ t: `${who} used HOME RUN!`, hold: 520 }, { t: 'CRITICAL HIT!', cls: 'gold', flash: true }]; hold = 2400; }
+    if (hr) { lines = [{ t: `${who} used HOME RUN!`, hold: 520 }, { t: m!.runs >= 4 ? 'GRAND SLAM!' : m!.runs > 1 ? `CRITICAL HIT! +${m!.runs} RUNS` : 'CRITICAL HIT!', cls: 'gold', flash: true }]; hold = 2400; }
     else if (k) lines = [{ t: `${pitN} used STRIKEOUT!`, hold: 700 }, look ? { t: `${who} was frozen!`, cls: 'ice' } : { t: `${who} is out!` }];
     else if (hit) lines = [{ t: `${who} used ${hit[0]}!` }];
     else if (walk) { lines = [{ t: `${pitN}'s control wavers...`, hold: 600 }, { t: `${who} takes 1st.` }]; hold = 1200; }

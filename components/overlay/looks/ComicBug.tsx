@@ -1,6 +1,6 @@
 import './comic.css';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Ka-Pow, drawn here: the scorebug as a comic-book panel strip
 // (public/bugs/comic.html), rebuilt as part of the page so the stat cards can
@@ -142,7 +142,7 @@ export function ComicBug({ g, air, away, home, abbrs, status, period, showLine, 
     <>
       <div className="bigpanel sp"><div className="fill"><div className="speed" /><div className="dotburst" /></div></div>
       <div className="burst kb"><Burst n={17} seed={42} back="var(--red)" front="#fff" ri={0.7} /><div className="w"><div className="sfxw">KA-BLAMM!</div></div></div>
-      <div className="caps"><div className="c1">It&rsquo;s going&hellip; going&hellip;<b>HOME RUN!</b>{who && <span>{who}</span>}</div><div className="xtag">GONE!</div></div>
+      <div className="caps"><div className="c1">It&rsquo;s going&hellip; going&hellip;<b>HOME RUN!</b>{who && <span>{who}</span>}</div><div className="xtag">{moment && moment.runs > 0 ? `${homerText(moment.runs, 'plus').replace('+', '')}!` : 'GONE!'}</div></div>
     </>
   );
 

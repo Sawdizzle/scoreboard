@@ -124,7 +124,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       pas: [{ side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8' }],
       season_stats: stats,
     };
-    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park' } : null} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
+    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park', runs: Number(moment) || 0 } : null} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
   }
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>

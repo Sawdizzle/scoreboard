@@ -2,7 +2,7 @@
 import './bluesteel.css';
 import { Sparks } from '@/components/overlay/Sparks';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Blue Steel, drawn here: Scoreboard's bug for the club (public/bugs/bluesteel.html),
 // rebuilt as part of the page so the stat cards can sit behind its plate. The
@@ -118,7 +118,7 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
                 <div className="hcrest"><Crest fire="hr" /></div>
                 <div className="hbody">
                   <div className="t1">{[...'Home run'].map((c, i) => (c === ' ' ? <span key={i} className="sp" /> : <span key={i} className="ch" style={{ '--i': i } as React.CSSProperties}>{c}</span>))}</div>
-                  <div className="t2"><i style={{ '--tc': batBrand.color } as React.CSSProperties} /><b>{hr.who}</b><span>{tab(batBrand, top ? abbrs.away : abbrs.home)}</span></div>
+                  <div className="t2"><i style={{ '--tc': batBrand.color } as React.CSSProperties} /><b>{hr.who}</b><span>{homerText(hr.runs) || tab(batBrand, top ? abbrs.away : abbrs.home)}</span></div>
                 </div>
                 <div className="gleam" />
               </div></div>

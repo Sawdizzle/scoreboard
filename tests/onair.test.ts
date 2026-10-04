@@ -5,6 +5,7 @@ import { airView, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, l
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
+import { homerText } from '../components/overlay/looks/types.ts';
 
 const team = (p: string): Lineup => ({
   batters: Array.from({ length: 9 }, (_, i) => ({ bid: `${p}${i + 1}`, num: String(i + 1), name: `${p.toUpperCase()} Player${i + 1}` })),
@@ -150,4 +151,11 @@ test('the half that just ended, a name and a play at a time', () => {
   // Top of the 5th now: our bottom of the 4th just ended.
   const top = engineGame({ is_home: true, live: { ...live, half: 'top' }, status: 'live' }, {}, 7);
   assert.deepEqual(halfRecap(feed, top), ['Player1 double']);
+});
+
+test('a home run is called by how many it scored, in each look\'s voice', () => {
+  assert.deepEqual([1, 2, 3, 4].map((n) => homerText(n)), ['Solo homer', '2-run homer', '3-run homer', 'Grand slam']);
+  assert.deepEqual([1, 2, 4].map((n) => homerText(n, 'shot')), ['Solo shot', '2-run shot', 'Grand slam']);
+  assert.deepEqual([1, 3, 4].map((n) => homerText(n, 'plus')), ['SOLO SHOT', '+3 RUNS', 'GRAND SLAM']);
+  assert.equal(homerText(0), '');
 });

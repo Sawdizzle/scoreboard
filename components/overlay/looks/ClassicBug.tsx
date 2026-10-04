@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // The Classic look: a broadcast scorebug in one tight row, and everything on
 // it moves when the game does.
@@ -70,7 +70,7 @@ export function ClassicBug({ g, air, away, home, abbrs, status, period, showLine
             </>
           )}
         <div className={`cb-sting ${sting}${moment ? ' on' : ''}`} aria-hidden={!moment}>
-          {moment && <><i /><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}
+          {moment && <><i /><b>{moment.text === 'Home run' && moment.runs >= 4 ? 'Grand slam' : moment.text}</b><span>{[moment.who, moment.text === 'Home run' && moment.runs < 4 ? homerText(moment.runs) : ''].filter(Boolean).join(' · ')}</span></>}
         </div>
       </div>
       {ball && live && (air.batter || air.pitcher) && (

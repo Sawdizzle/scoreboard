@@ -1,6 +1,6 @@
 import './primetime.css';
 import type { Brand } from '@/components/TeamBrand';
-import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Prime Time, drawn here: Scoreboard's network-television bug
 // (public/bugs/primetime.html), rebuilt as part of the page so the stat cards
@@ -130,7 +130,7 @@ export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, showLi
             <div className="hslab"><span className="hab">{batName}</span><span className="hsc">{top ? 'TOP' : 'BOT'} {ordinal(inning)}</span></div>
             <div className="hbody">
               <div className="t1"><span>Home run</span></div>
-              <div className="t2">{hr.who && <b>{hr.who}</b>}<span>{awayName} {aw} · {homeName} {hm}</span></div>
+              <div className="t2">{hr.who && <b>{hr.who}</b>}<span>{homerText(hr.runs) || `${awayName} ${aw} · ${homeName} ${hm}`}</span></div>
             </div>
             <i className="bar" /><i className="gleam" />
           </div>

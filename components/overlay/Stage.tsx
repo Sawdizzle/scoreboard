@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import { LOOK_BUGS } from '@/components/overlay/looks';
+import { homerText } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
@@ -243,7 +244,7 @@ function Qr({ bug, qr }: { bug: Feed['bug']; qr: Feed['qr'] }) {
   );
 }
 
-export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string } | null }) {
+export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string; runs: number } | null }) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
   const { g, air } = v;
@@ -296,7 +297,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
         </div>
         {Bug && <div className="ov-look"><Bug {...own} /></div>}
-        {!Bug && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
+        {!Bug && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text === 'Home run' && moment.runs >= 4 ? 'Grand slam' : moment.text}</b><span>{[moment.who, moment.text === 'Home run' && moment.runs < 4 ? homerText(moment.runs) : ''].filter(Boolean).join(' · ')}</span></>}</div>}
         {!Bug && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />

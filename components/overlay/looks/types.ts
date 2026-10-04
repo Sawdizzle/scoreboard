@@ -23,13 +23,25 @@ export type BugProps = {
   // Whether to show the batter's season average and tonight's line.
   showLine: boolean;
   // A play to call out for a few seconds, or null. `text` is one of MOMENTS;
-  // `who` is the batter's name (may be empty).
-  moment: { text: string; who: string } | null;
+  // `who` is the batter's name (may be empty); `runs` is how many scored on
+  // the play (0 when it is not known).
+  moment: { text: string; who: string; runs: number } | null;
   // The bug sits along the top of the picture (anything that flies off it should go downwards).
   topEdge: boolean;
 };
 
 export const MOMENTS = ['Home run', 'Strikeout', 'Strikeout looking', 'Single', 'Double', 'Triple', 'Double play', 'Stolen base', 'Sac fly', 'Walk', 'Hit by pitch'] as const;
+
+// How a home run is called by how many it scored. Three voices, as the looks
+// had them: 'homer' (Solo homer, 2-run homer, Grand slam), 'shot' (Solo shot,
+// 2-run shot, Grand slam) and 'plus' (SOLO SHOT, +2 RUNS, GRAND SLAM). Empty
+// when the count is not known, for the look to fall back on its own words.
+export function homerText(runs: number, voice: 'homer' | 'shot' | 'plus' = 'homer') {
+  if (runs < 1) return '';
+  if (runs >= 4) return voice === 'plus' ? 'GRAND SLAM' : 'Grand slam';
+  if (voice === 'plus') return runs === 1 ? 'SOLO SHOT' : `+${runs} RUNS`;
+  return runs === 1 ? `Solo ${voice}` : `${runs}-run ${voice}`;
+}
 
 // A team's name where a look has room for a short one: its display name when
 // that is short, else its short code.
