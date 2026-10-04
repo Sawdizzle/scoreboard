@@ -104,6 +104,9 @@ Each stage ends with a checklist to run before the next one starts.
      size, position and opacity.
    - Stream layout: the scorebug's size and corner, the stat cards' size.
    - Stat cards are extensions of the scorebug: each slides out from behind it, wherever the bug sits.
+   - Blue Steel rebuilt natively (crest, steel plate, forge animations, K flag, stamped home run), so its
+     cards attach too. The other ten animated looks are still Scoreboard's pages in a frame.
+   - The mid-inning board comes up by itself at the third out (on by default), with the finished half lit.
    - One home for how the stream looks: the Stream screen (Team tab), with a live preview. On Air in the
      pad is only what is showing now; Team look is only the team.
    - The Classic look: a compact broadcast scorebug where every part animates with the game.
