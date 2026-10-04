@@ -97,7 +97,7 @@ export function OnAir({ channel, gameId, setupHref, view, brand, when, live, fin
           <input type="checkbox" checked={channel.auto_card} onChange={(e) => onSet({ auto_card: e.target.checked })} />
         </label>
         <label className="switch">
-          <span className="switch-text"><b>Mid-inning board between halves</b><small>Line score and who is due up, until the next pitch</small></span>
+          <span className="switch-text"><b>Mid-inning between halves</b><small>Full screen at the third out, until the next pitch</small></span>
           <input type="checkbox" checked={channel.auto_mid} onChange={(e) => onSet({ auto_mid: e.target.checked })} />
         </label>
       </div>

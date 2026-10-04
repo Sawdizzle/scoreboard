@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, boxScore, breakText, layoutOf, qrLayer, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, boxScore, breakText, halfRecap, layoutOf, qrLayer, bugAnim, bugState, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -156,4 +156,15 @@ test('the QR layer: stored values are clamped, and anything odd falls back', () 
   assert.deepEqual(layoutOf(null), { bug: { scale: 0.6, pos: 'bl' }, cards: { scale: 0.75 } });
   assert.deepEqual(layoutOf({ bug: { scale: 9, pos: 'tr' }, cards: { scale: 0 } }), { bug: { scale: 1.2, pos: 'tr' }, cards: { scale: 0.4 } });
   assert.deepEqual(layoutOf({ bug: { pos: 'mm' as never } }).bug, { scale: 0.6, pos: 'bl' });
+});
+
+test('the half that just ended, a name and a play at a time', () => {
+  const feed = { game: { is_home: true }, lineups: { us: team('a'), them: team('h') },
+    pas: [{ side: 'them', bid: 'h1', inning: 5, kind: 'BB', code: null }, { side: 'them', bid: 'h2', inning: 5, kind: 'K', code: null },
+      { side: 'us', bid: 'a1', inning: 4, kind: 'H2', code: '' }, { side: 'them', bid: 'h3', inning: 4, kind: 'GB', code: '6-3' }] } as unknown as Feed;
+  // Bottom of the 5th now: the visitors' top of the 5th just ended.
+  assert.deepEqual(halfRecap(feed, g()), ['Player1 walk', 'Player2 strikeout']);
+  // Top of the 5th now: our bottom of the 4th just ended.
+  const top = engineGame({ is_home: true, live: { ...live, half: 'top' }, status: 'live' }, {}, 7);
+  assert.deepEqual(halfRecap(feed, top), ['Player1 double']);
 });

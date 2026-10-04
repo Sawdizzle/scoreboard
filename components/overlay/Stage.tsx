@@ -6,7 +6,7 @@ import { ClassicBug } from '@/components/overlay/ClassicBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, breakText, bugAnim, bugState, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { boxScore, breakText, halfRecap, bugAnim, bugState, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
 import { periodText, type SportLive } from '@/lib/sports';
 
@@ -138,19 +138,35 @@ function Box({ final, on, ...t }: BoxProps & { final: boolean; on: boolean }) {
   return <div className={`ov-card ov-panel ov-box${on ? ' on' : ''}`} aria-hidden={!on}><LineTable {...t} title={final ? 'Final' : 'Box score'} /></div>;
 }
 
-// Between halves: where the game stands and who comes up next.
-function Mid({ title, list, up, fresh, on, ...t }: BoxProps & { title: string; list: BatterView[]; up: Brand; fresh: Fresh; on: boolean }) {
+// Between halves the whole picture is the board: where the game stands, the
+// half that just ended, and who comes up next. It takes over by itself at the
+// third out (auto_mid) and gives the picture back on the next pitch.
+function MidScene({ title, tag, list, up, fresh, recap, scores, on, ...t }: BoxProps & {
+  title: string; tag: string; list: BatterView[]; up: Brand; fresh: Fresh; recap: string[]; scores: { away: number; home: number }; on: boolean;
+}) {
+  const side = (b: Brand, score: number, lead: boolean) => (
+    <div className={`md-team${lead ? ' lead' : ''}`} style={vars(b)}>
+      <div className="md-slab">{b.logo && <img src={b.logo} alt="" />}<span style={fit(b.display, 6.4, 46)}>{b.display}</span></div>
+      <b>{score}</b>
+    </div>
+  );
   return (
-    <div className={`ov-card ov-panel ov-box ov-mid${on ? ' on' : ''}`} aria-hidden={!on}>
-      <div className="ov-phead" style={vars(up)}><b>{title}</b><span>Due up · {up.display}</span></div>
-      <LineTable {...t} title="" fresh={fresh} />
-      {list.map((b) => (
-        <div key={b.bid} className="ov-due">
-          <i>{b.num}</i>
-          <div><strong style={fit(b.name, 3, 26)}>{b.name}</strong><small>{[b.pos, b.today && `Today ${b.today}`].filter(Boolean).join(' · ') || 'First time up'}</small></div>
-          {b.avg && <b>{b.avg}</b>}
+    <div className={`ov-mid${on ? ' on' : ''}`} aria-hidden={!on}>
+      {on && <>
+        <div className="md-veil" />
+        <div className="md-body">
+          <div className="md-head"><em>{tag}</em><strong>{title}</strong></div>
+          <div className="md-board">{side(t.away, scores.away, scores.away > scores.home)}{side(t.home, scores.home, scores.home > scores.away)}</div>
+          <div className="md-line ov-box"><LineTable {...t} title="" fresh={fresh} /></div>
+          {recap.length > 0 && <div className="md-recap"><small>That half</small>{recap.map((r, i) => <span key={i}>{r}</span>)}</div>}
+          {list.length > 0 && (
+            <div className="md-due">
+              <small style={vars(up)}>Due up · {up.display}</small>
+              {list.map((b) => <div key={b.bid}><i>{b.num}</i><strong>{b.name}</strong><span>{b.pos}</span>{b.avg && <b>{b.avg}</b>}</div>)}
+            </div>
+          )}
         </div>
-      ))}
+      </>}
     </div>
   );
 }
@@ -256,6 +272,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const own = { g, air, away, home, status, showLine: feed.show_line, moment, period: ball ? null : periodText(sport, feed.game!.live as SportLive),
     abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
   // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
+  const recap = halfRecap(feed, g);
   const fresh = g.half === 'bottom' ? { side: 'away' as const, inning: g.inning | 0 } : { side: 'home' as const, inning: (g.inning | 0) - 1 };
   const lay = layoutOf(feed.layout);
   const box = boxScore(g, feed.season?.game_innings ?? 7);
@@ -268,6 +285,8 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
       <style>{ROOT}</style>
       {/* The framed bugs are drawn small on a 1920 stage: 1.4 of theirs is 1 of ours. */}
       {look && <AnimBug key={look} slug={look} state={bugState(feed, g, air)} anim={bugAnim(feed.last)} seq={feed.last?.seq ?? null} pos={lay.bug.pos} scale={lay.bug.scale * 1.4} />}
+      <MidScene box={box} away={away} home={home} title={breakText(g)} tag={g.half === 'bottom' ? `Mid ${g.inning}` : `End ${Math.max(1, (g.inning | 0) - 1)}`}
+        list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} recap={recap} scores={{ away: g.away_score | 0, home: g.home_score | 0 }} on={shown === 'mid'} />
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
       <Qr bug={feed.bug} qr={feed.qr} />
       <div className="ov-dock">
@@ -278,14 +297,13 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
           <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
           <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
-          <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} on={shown === 'mid'} />
-          <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
+            <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
           <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
           <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
           <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
         </div>
         {classic && <ClassicBug {...own} />}
-        {blue && <BlueSteelBug {...own} />}
+        {blue && <BlueSteelBug {...own} topEdge={lay.bug.pos.startsWith('t')} />}
         {!look && !classic && !blue && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
         {!look && !classic && !blue && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
