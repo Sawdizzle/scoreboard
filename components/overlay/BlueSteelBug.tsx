@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- the club's crest layers, small fixed files from /public */
 import './bluesteel.css';
+import { Sparks } from '@/components/overlay/Sparks';
 import type { Brand } from '@/components/TeamBrand';
 import type { AirView } from '@/lib/onair';
 import type { G } from '@/lib/scoring';
@@ -13,8 +14,8 @@ import type { G } from '@/lib/scoring';
 // and a home run is a plate stamped letter by letter.
 //
 // As in ClassicBug, the motion is CSS started by a `key`: a new value mounts
-// a new element and its animation plays once. The original's spark canvas and
-// its full-frame intro are not carried over.
+// a new element and its animation plays once. The sparks are a canvas of their
+// own (Sparks.tsx). The original's full-frame intro is not carried over.
 const IMG = '/bugs/img/bluesteel';
 const HIT: Record<string, string> = { Single: 'ice', Double: 'ice', Triple: 'ice', 'Sac fly': 'ice', Walk: '', 'Hit by pitch': '', 'Double play': 'red', 'Stolen base': 'green' };
 const tab = (b: Brand, abbr: string) => (b.display.length <= 10 ? b.display : abbr || b.display.slice(0, 6));
@@ -38,9 +39,11 @@ function Side({ brand, abbr, score, bat }: { brand: Brand; abbr: string; score: 
   );
 }
 
-export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLine, moment }: {
+export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLine, moment, topEdge }: {
   g: G; air: AirView; away: Brand; home: Brand; abbrs: { away: string; home: string };
   status: 'scheduled' | 'live' | 'final'; period: string | null; showLine: boolean; moment: { text: string; who: string } | null;
+  // The bug is along the top of the picture: sparks fall away from it, downwards.
+  topEdge: boolean;
 }) {
   const live = status === 'live', top = g.half === 'top', ball = period === null;
   const bases = g.bases as { first?: boolean; second?: boolean; third?: boolean };
@@ -59,6 +62,7 @@ export function BlueSteelBug({ g, air, away, home, abbrs, status, period, showLi
 
   return (
     <div className="bsx">
+      <Sparks away={g.away_score | 0} home={g.home_score | 0} moment={moment?.text ?? null} top={topEdge} />
       <div className="pkg">
         <div className="crest"><Crest fire={`${runs}${hr ? 'h' : ''}`} /></div>
         <div className="main">

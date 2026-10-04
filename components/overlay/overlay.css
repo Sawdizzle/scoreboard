@@ -223,9 +223,43 @@
 .ov-card.on > :nth-child(6) { animation-delay: 0.65s; } .ov-card.on > :nth-child(7) { animation-delay: 0.73s; }
 .ov-card.on > :nth-child(8) { animation-delay: 0.81s; } .ov-card.on > :nth-child(n + 9) { animation-delay: 0.89s; }
 @keyframes ov-rise { from { opacity: 0; transform: translateY(1.2rem); } }
-/* The mid-inning board: the half that just ended glows in the line score. */
-.ov-mid thead th { height: 0; padding: 0; }
-.ov-mid td.fresh { color: #1a1300; background: #ffcf3a; animation: ov-fresh 1.6s ease-in-out 0.9s 3 both; }
+/* ---- Mid-inning: the whole picture ---- */
+.ov-mid { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 15; visibility: hidden; pointer-events: none; }
+.ov-mid.on { visibility: visible; }
+.md-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; animation: md-veil 0.5s ease-out both;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 0.2rem, transparent 0.2rem 1.4rem),
+    radial-gradient(ellipse 70% 80% at 50% 40%, rgba(23, 34, 58, 0.94) 0%, rgba(9, 14, 25, 0.96) 60%, rgba(3, 6, 11, 0.98) 100%); }
+.md-body { position: absolute; left: 50%; top: 50%; width: 92rem; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 1.6rem; }
+.md-body > * { animation: md-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.md-body > :nth-child(1) { animation-delay: 0.2s; } .md-body > :nth-child(2) { animation-delay: 0.35s; } .md-body > :nth-child(3) { animation-delay: 0.55s; }
+.md-body > :nth-child(4) { animation-delay: 0.75s; } .md-body > :nth-child(5) { animation-delay: 0.9s; }
+.md-head { display: flex; align-items: center; gap: 1.6rem; }
+.md-head em { padding: 0.6rem 1.4rem 0.4rem; border-radius: 0.4rem; background: #ffcf3a; color: #1a1300; font-weight: 700; font-size: 2.4rem; letter-spacing: 0.12em; }
+.md-head strong { font-size: 3.4rem; letter-spacing: 0.1em; }
+.md-board { display: flex; flex-direction: column; gap: 0.8rem; }
+.md-team { display: flex; align-items: stretch; height: 9.6rem; border-radius: 0.7rem; overflow: hidden; background: #070b13; box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.12); }
+.md-slab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 1.8rem; padding: 0 2.4rem; white-space: nowrap; letter-spacing: 0.04em; color: var(--ink);
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 0.2rem, transparent 0.2rem 0.9rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.28)), var(--c); }
+.md-slab img { width: 7rem; height: 7rem; object-fit: contain; filter: drop-shadow(0 0.3rem 0.5rem rgba(0, 0, 0, 0.5)); }
+.md-team > b { flex: 0 0 13rem; display: flex; align-items: center; justify-content: center; font-size: 7.6rem; animation: md-score 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) 0.6s both; }
+.md-team.lead > b { color: #ffcf3a; text-shadow: 0 0 2rem rgba(255, 207, 58, 0.5); }
+.md-line { border-radius: 0.7rem; overflow: hidden; background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14); }
+.md-line td { height: 5rem; font-size: 3rem; }
+.md-line td.fresh { color: #1a1300; background: #ffcf3a; animation: ov-fresh 1.6s ease-in-out 1.2s 3 both; }
+.md-recap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem 1.8rem; font-weight: 600; font-size: 2.2rem; letter-spacing: 0.04em; color: #c8d4e8; text-transform: none; }
+.md-recap small, .md-due small { font-size: 1.9rem; letter-spacing: 0.16em; color: #ffcf3a; text-transform: uppercase; }
+.md-recap span + span::before { content: '·'; margin-right: 1.8rem; color: #56627c; }
+.md-due { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+.md-due small { grid-column: 1 / -1; }
+.md-due > div { display: flex; align-items: center; gap: 1.2rem; height: 6.4rem; padding: 0 1.6rem; border-radius: 0.6rem; background: linear-gradient(180deg, #1d2638, #0b111c); white-space: nowrap; overflow: hidden; }
+.md-due i { font-style: normal; font-size: 3.6rem; color: #9fc3f7; }
+.md-due strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 2.6rem; letter-spacing: 0.03em; }
+.md-due span { font-weight: 600; font-size: 1.8rem; letter-spacing: 0.1em; color: #b6c0d2; }
+.md-due b { font-size: 3rem; color: #ffcf3a; }
+@keyframes md-veil { from { opacity: 0; } }
+@keyframes md-in { from { opacity: 0; transform: translateY(2.4rem); } }
+@keyframes md-score { from { transform: scale(0.4); opacity: 0; } }
 @keyframes ov-fresh { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 207, 58, 0); } 50% { box-shadow: 0 0 1.6rem 0.3rem rgba(255, 207, 58, 0.75); } }
 
 @keyframes ov-up { from { opacity: 0; } }

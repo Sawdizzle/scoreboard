@@ -276,3 +276,18 @@ export function momentText(last: Feed['last']) {
 export function breakText(g: G) {
   return g.half === 'bottom' ? `Middle of the ${ordinal(g.inning | 0)}` : `End of the ${ordinal(Math.max(1, (g.inning | 0) - 1))}`;
 }
+
+// What happened in the half that just ended, a name and a play at a time
+// ("Vance walk"), for the mid-inning board. From the plate appearances the
+// feed carries, so it needs nothing the stream does not already have.
+export function halfRecap(feed: Feed, g: G): string[] {
+  const inning = g.half === 'bottom' ? g.inning | 0 : (g.inning | 0) - 1;
+  // After the top, the visitors just batted; after the bottom, the home side.
+  const batted: Side = (g.half === 'bottom') === !!feed.game?.is_home ? 'them' : 'us';
+  const lineup = feed.lineups?.[batted];
+  return (feed.pas ?? []).filter((p) => p.side === batted && p.inning === inning).map((p) => {
+    const b = lineup?.batters?.find((x) => x.bid === p.bid);
+    const who = b ? (b.name ? b.name.trim().split(/\s+/).pop()! : `#${b.num}`) : '';
+    return `${who} ${paText(p).toLowerCase()}`.trim();
+  });
+}

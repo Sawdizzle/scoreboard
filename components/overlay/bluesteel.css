@@ -174,3 +174,4 @@
 .ov.bug-tl .bsx .hrw,.ov.bug-tc .bsx .hrw,.ov.bug-tr .bsx .hrw{bottom:auto;top:calc(100% + 2.2rem)}
 .ov.bug-br .bsx .hrw,.ov.bug-tr .bsx .hrw{left:auto;right:-6rem}
 .ov.bug-br .bsx .hr,.ov.bug-tr .bsx .hr{left:auto;right:0}
+.bsx-fx{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:20;zoom:1}
