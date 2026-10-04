@@ -39,6 +39,7 @@ test('every team has a channel; only its staff can read the link', async () => {
   const rows = await t.as<{ token: string; show_line: boolean; auto_card: boolean; card: string | null }>('media', `select token, show_line, auto_card, card from channels where team_id = $1`, [team]);
   assert.equal(rows.length, 1);
   assert.deepEqual({ ...rows[0], token: '' }, { token: '', show_line: true, auto_card: false, card: null });
+  assert.equal((await t.as('media', `select auto_mid from channels where team_id = $1`, [team]))[0].auto_mid, true);
   token = rows[0].token;
   assert.equal((await t.as('stranger', `select 1 from channels`)).length, 0);
   await fails(t.as(null, `select 1 from channels`), /permission denied/);

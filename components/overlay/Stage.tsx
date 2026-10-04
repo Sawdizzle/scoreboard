@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import { AnimBug } from '@/components/overlay/AnimBug';
+import { BlueSteelBug } from '@/components/overlay/BlueSteelBug';
 import { ClassicBug } from '@/components/overlay/ClassicBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
@@ -115,18 +116,19 @@ function Leaders({ list, brand, season, on }: { list: Leader[]; brand: Brand; se
   );
 }
 
-function LineTable({ box, away, home, title }: { box: ReturnType<typeof boxScore>; away: Brand; home: Brand; title: string }) {
-  const row = (b: Brand, cells: string[], tot: string[]) => (
+type Fresh = { side: 'away' | 'home'; inning: number };
+function LineTable({ box, away, home, title, fresh }: { box: ReturnType<typeof boxScore>; away: Brand; home: Brand; title: string; fresh?: Fresh }) {
+  const row = (b: Brand, cells: string[], tot: string[], side: 'away' | 'home') => (
     <tr>
       <th style={vars(b)}><i />{b.display}</th>
-      {cells.map((c, i) => <td key={i}>{c}</td>)}
+      {cells.map((c, i) => <td key={i} className={fresh && fresh.side === side && box.innings[i] === fresh.inning ? 'fresh' : undefined}>{c}</td>)}
       {tot.map((c, i) => <td key={`t${i}`} className={i === 0 ? 'r' : 't'}>{c}</td>)}
     </tr>
   );
   return (
     <table>
       <thead><tr><th>{title}</th>{box.innings.map((n) => <td key={n}>{n}</td>)}<td className="r">R</td><td className="t">H</td><td className="t">E</td></tr></thead>
-      <tbody>{row(away, box.away, box.awayTot)}{row(home, box.home, box.homeTot)}</tbody>
+      <tbody>{row(away, box.away, box.awayTot, 'away')}{row(home, box.home, box.homeTot, 'home')}</tbody>
     </table>
   );
 }
@@ -137,11 +139,18 @@ function Box({ final, on, ...t }: BoxProps & { final: boolean; on: boolean }) {
 }
 
 // Between halves: where the game stands and who comes up next.
-function Mid({ title, list, on, ...t }: BoxProps & { title: string; list: BatterView[]; on: boolean }) {
+function Mid({ title, list, up, fresh, on, ...t }: BoxProps & { title: string; list: BatterView[]; up: Brand; fresh: Fresh; on: boolean }) {
   return (
-    <div className={`ov-card ov-panel ov-box${on ? ' on' : ''}`} aria-hidden={!on}>
-      <LineTable {...t} title={title} />
-      {list.length > 0 && <div className="ov-next"><small>Due up</small>{list.map((b) => <span key={b.bid}><i>{b.num}</i>{b.name}{b.avg && <b>{b.avg}</b>}</span>)}</div>}
+    <div className={`ov-card ov-panel ov-box ov-mid${on ? ' on' : ''}`} aria-hidden={!on}>
+      <div className="ov-phead" style={vars(up)}><b>{title}</b><span>Due up · {up.display}</span></div>
+      <LineTable {...t} title="" fresh={fresh} />
+      {list.map((b) => (
+        <div key={b.bid} className="ov-due">
+          <i>{b.num}</i>
+          <div><strong style={fit(b.name, 3, 26)}>{b.name}</strong><small>{[b.pos, b.today && `Today ${b.today}`].filter(Boolean).join(' · ') || 'First time up'}</small></div>
+          {b.avg && <b>{b.avg}</b>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -240,10 +249,15 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
   // Pressbox and Classic are drawn here; the rest are Scoreboard's pages in a frame.
   // Only Prime Time of those draws the other sports.
-  const classic = feed.look === 'classic';
-  const look = feed.look && feed.look !== 'pressbox' && !classic && (ball || feed.look === 'primetime') ? feed.look : null;
-  const lay = layoutOf(feed.layout);
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
+  const classic = feed.look === 'classic', blue = feed.look === 'bluesteel';
+  const native = !feed.look || feed.look === 'pressbox' || classic || blue;
+  const look = !native && (ball || feed.look === 'primetime') ? feed.look! : null;
+  const own = { g, air, away, home, status, showLine: feed.show_line, moment, period: ball ? null : periodText(sport, feed.game!.live as SportLive),
+    abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
+  // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
+  const fresh = g.half === 'bottom' ? { side: 'away' as const, inning: g.inning | 0 } : { side: 'home' as const, inning: (g.inning | 0) - 1 };
+  const lay = layoutOf(feed.layout);
   const box = boxScore(g, feed.season?.game_innings ?? 7);
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
@@ -264,16 +278,16 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
           <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
           <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
-          <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} on={shown === 'mid'} />
+          <Mid box={box} away={away} home={home} title={breakText(g)} list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} on={shown === 'mid'} />
           <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
           <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
           <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
           <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
         </div>
-        {classic && <ClassicBug g={g} air={air} away={away} home={home} abbrs={{ away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) }}
-          status={status} period={ball ? null : periodText(sport, feed.game!.live as SportLive)} showLine={feed.show_line} moment={moment} />}
-        {!look && !classic && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
-        {!look && !classic && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
+        {classic && <ClassicBug {...own} />}
+        {blue && <BlueSteelBug {...own} />}
+        {!look && !classic && !blue && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
+        {!look && !classic && !blue && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
             <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />

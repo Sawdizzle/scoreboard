@@ -25,7 +25,7 @@
 .ov.bug-br .ov-dock, .ov.bug-tr .ov-dock { right: 4.8rem; align-items: flex-end; }
 .ov.bug-bc .ov-dock, .ov.bug-tc .ov-dock { left: 0; right: 0; align-items: center; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
-.ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .cb { zoom: var(--bs); }
+.ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .cb, .ov-dock > .bsx { zoom: var(--bs); }
 /* The cards' slot: against the scorebug, on the side away from the picture's edge. One card at a time; the
    rest wait behind the bug. The slot clips them, so a card is seen only once it has slid clear of the plate. */
 .ov-ext { zoom: var(--cs); display: grid; overflow: hidden; pointer-events: none; }
@@ -37,7 +37,7 @@
 .ov-ext > .ov-box { width: auto; min-width: 44rem; }
 /* The bug sits over the slot's edge, so a card comes out from behind it. */
 .ov-dock { gap: 0; }
-.ov-dock > .ov-bug, .ov-dock > .cb, .ov-dock > .ov-moment { position: relative; z-index: 2; }
+.ov-dock > .ov-bug, .ov-dock > .cb, .ov-dock > .bsx, .ov-dock > .ov-moment { position: relative; z-index: 2; }
 .ov-dock > .ov-moment.on { margin: 0.6rem 0; }
 /* The channel bug's line gives up the bottom right to a scorebug put there. */
 .ov.bug-br .ov-chan { right: auto; left: 4.8rem; }
@@ -215,6 +215,18 @@
 .ov-moment.on { height: 5.6rem; opacity: 1; transform: none; }
 .ov-moment b { font-size: 3.6rem; line-height: 5.6rem; letter-spacing: 0.06em; }
 .ov-moment span { font-weight: 600; font-size: 2.4rem; letter-spacing: 0.06em; }
+
+/* A card's rows arrive one after another once it is out from behind the bug. */
+.ov-card.on > * { animation: ov-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: 0.25s; }
+.ov-card.on > :nth-child(2) { animation-delay: 0.33s; } .ov-card.on > :nth-child(3) { animation-delay: 0.41s; }
+.ov-card.on > :nth-child(4) { animation-delay: 0.49s; } .ov-card.on > :nth-child(5) { animation-delay: 0.57s; }
+.ov-card.on > :nth-child(6) { animation-delay: 0.65s; } .ov-card.on > :nth-child(7) { animation-delay: 0.73s; }
+.ov-card.on > :nth-child(8) { animation-delay: 0.81s; } .ov-card.on > :nth-child(n + 9) { animation-delay: 0.89s; }
+@keyframes ov-rise { from { opacity: 0; transform: translateY(1.2rem); } }
+/* The mid-inning board: the half that just ended glows in the line score. */
+.ov-mid thead th { height: 0; padding: 0; }
+.ov-mid td.fresh { color: #1a1300; background: #ffcf3a; animation: ov-fresh 1.6s ease-in-out 0.9s 3 both; }
+@keyframes ov-fresh { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 207, 58, 0); } 50% { box-shadow: 0 0 1.6rem 0.3rem rgba(255, 207, 58, 0.75); } }
 
 @keyframes ov-up { from { opacity: 0; } }
 @keyframes ov-in { from { opacity: 0; transform: translateX(-1.2rem); } }
