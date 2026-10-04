@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import { AnimBug } from '@/components/overlay/AnimBug';
-import { BlueSteelBug } from '@/components/overlay/BlueSteelBug';
-import { ClassicBug } from '@/components/overlay/ClassicBug';
+import { BlueSteelBug } from '@/components/overlay/looks/BlueSteelBug';
+import { ClassicBug } from '@/components/overlay/looks/ClassicBug';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
@@ -266,15 +266,15 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   // Pressbox and Classic are drawn here; the rest are Scoreboard's pages in a frame.
   // Only Prime Time of those draws the other sports.
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
+  const lay = layoutOf(feed.layout);
   const classic = feed.look === 'classic', blue = feed.look === 'bluesteel';
   const native = !feed.look || feed.look === 'pressbox' || classic || blue;
   const look = !native && (ball || feed.look === 'primetime') ? feed.look! : null;
-  const own = { g, air, away, home, status, showLine: feed.show_line, moment, period: ball ? null : periodText(sport, feed.game!.live as SportLive),
+  const own = { g, air, away, home, status, showLine: feed.show_line, moment, topEdge: lay.bug.pos.startsWith('t'), period: ball ? null : periodText(sport, feed.game!.live as SportLive),
     abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
   // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
   const recap = halfRecap(feed, g);
   const fresh = g.half === 'bottom' ? { side: 'away' as const, inning: g.inning | 0 } : { side: 'home' as const, inning: (g.inning | 0) - 1 };
-  const lay = layoutOf(feed.layout);
   const box = boxScore(g, feed.season?.game_innings ?? 7);
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
@@ -303,7 +303,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
         </div>
         {classic && <ClassicBug {...own} />}
-        {blue && <BlueSteelBug {...own} topEdge={lay.bug.pos.startsWith('t')} />}
+        {blue && <BlueSteelBug {...own} />}
         {!look && !classic && !blue && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text}</b>{moment.who && <span>{moment.who}</span>}</>}</div>}
         {!look && !classic && !blue && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
