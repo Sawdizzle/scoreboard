@@ -488,11 +488,19 @@ async function reloadGame(id) {
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
   if (!error && data) { queue.setBaseline(data); game = withRoster(data); renderGame(); }
 }
+// Removing a channel reports CLOSED to that channel's own callback. Taken as a
+// lost connection, that scheduled a reconnect, whose teardown closed the new
+// channel, which scheduled another: after the first real drop the pad rejoined
+// every 2.5 s for the rest of the game. Only the channel in use may speak.
+let subGen = 0;
 async function subscribe(id) {
+  const mine = ++subGen;
   await teardownChannel();
+  if (mine !== subGen) return;   // a newer subscribe took over while this one waited
   setConn('connecting');
-  channel = supabase.channel(`ctrl:${id}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${id}` },
+  const c = supabase.channel(`ctrl:${id}`);
+  channel = c;
+  c.on('postgres_changes', { event: 'UPDATE', schema: 'scoreboard', table: 'games', filter: `id=eq.${id}` },
       // While writes are queued the server row is behind us; taking it would
       // roll the pad back to a score we've already moved past.
       // The row no longer carries the roster (that table is private), so keep ours.
@@ -506,6 +514,7 @@ async function subscribe(id) {
         renderGame();
       })
     .subscribe((status) => {
+      if (c !== channel) return;   // a channel we removed, saying it closed
       if (status === 'SUBSCRIBED') { setConn('live'); queue.drain(); reloadGame(id); }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         setConn('down');
