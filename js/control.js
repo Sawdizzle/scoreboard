@@ -249,7 +249,9 @@ let overlayToken = null;
 async function loadRoster(id) {
   const { data: token } = await db.rpc('overlay_token', { p_game: id }); // creates the row if new
   overlayToken = token || null;
-  const { data } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
+  const { data, error } = await db.from('rosters').select('data').eq('game_id', id).maybeSingle();
+  // A read that failed is not an empty roster: null tells openGame to ask again.
+  if (error) return null;
   // Normalize on the way in: a roster written by an older pad points its defense
   // at batting-order slots, and everything above this line works in player ids.
   return L.normalizeRoster((data && data.data) || {});
@@ -440,8 +442,9 @@ async function openGame(id) {
   const [, lineups] = await Promise.all([syncClock(), loadRoster(id), loadChannel()]);
   overlayCopied = linkCopied();
   putOnLink(id);
-  game.lineups = lineups;
-  rosterHave = game.roster_rev | 0;
+  game.lineups = lineups || {};
+  // -1 when the read failed, so the first paint sends syncRoster back for it.
+  rosterHave = lineups ? game.roster_rev | 0 : -1;
   // The saved-team pickers are a one-shot action, not a label. Left showing the
   // last game's pick, they said a team was loaded here when it wasn't, and
   // choosing that same team again fired no change, so nothing would load.
@@ -483,7 +486,7 @@ function setConn(state) {
 async function reloadGame(id) {
   if (queue.pendingFor(id)) return; // our queue is ahead of the server; don't rewind
   const { data, error } = await db.from('games').select('*').eq('id', id).maybeSingle();
-  if (!error && data) { queue.setBaseline(data); game = { ...adopted(data), lineups: (game && game.lineups) || {} }; renderGame(); }
+  if (!error && data) { queue.setBaseline(data); game = withRoster(data); renderGame(); }
 }
 async function subscribe(id) {
   await teardownChannel();
@@ -499,7 +502,7 @@ async function subscribe(id) {
         // updates arrives after the queue empties, oldest first.
         if (L.rowIsStale(payload.new, lastRowAt)) return;
         queue.setBaseline(payload.new);
-        game = { ...adopted(payload.new), lineups: (game && game.lineups) || {} };
+        game = withRoster(payload.new);
         renderGame();
       })
     .subscribe((status) => {
@@ -545,6 +548,10 @@ const stopRetryDrain = () => clearTimeout(drainTimer);
 // itself is L.rowIsStale, which is unit-tested.
 let lastRowAt = 0;
 const adopted = (row) => { lastRowAt = Math.max(lastRowAt, L.rowStamp(row)); return row; };
+// A server row never carries the roster (that table is private), so every row
+// the pad takes keeps the roster it already holds. One door for all of them:
+// undo used to take its row bare, and the lineups left the pad with it.
+const withRoster = (row) => ({ ...adopted(row), lineups: (game && game.lineups) || {} });
 const queue = createQueue({
   applyEvent: (gameId, type, patch, payload) =>
     db.rpc('apply_event', { p_game: gameId, p_type: type, p_new: patch, p_payload: payload }),
@@ -564,7 +571,7 @@ const queue = createQueue({
   // everything we sent FOR THIS GAME, and it carries no roster — keep ours.
   onAccepted: (row, gameId, settled) => {
     if (!settled || !game || game.id !== gameId) return;
-    game = { ...adopted(row), lineups: game.lineups };
+    game = withRoster(row);
     renderGame();
   },
   onToast: showToast,
@@ -714,11 +721,13 @@ async function fireAnim(type, meta = {}) {
 async function doUndo() {
   if (!game) return;
   if (queue.pendingFor(game.id)) return undoQueued();
-  const { data, error } = await db.rpc('undo', { p_game: game.id });
+  const id = game.id;
+  const { data, error } = await db.rpc('undo', { p_game: id });
   if (error) return showToast(`⚠️ ${error.message}`, 3000);
+  if (!game || game.id !== id) return false;   // backed out while it was in the air
   // Returns whether a play was actually reversed, for callers that go on to
   // re-record it differently (a strikeout turned into a dropped third strike).
-  if (data) { game = adopted(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); markUndone(); return true; }
+  if (data) { game = withRoster(data); queue.setBaseline(data); renderGame(); showToast('↶ Undone'); markUndone(); return true; }
   showToast('Nothing to undo');
   return false;
 }
