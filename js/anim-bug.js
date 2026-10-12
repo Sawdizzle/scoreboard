@@ -6,7 +6,7 @@
 // doesn't cover keeps the regular bug.
 import { safeBases, currentBatter, currentPitcher, pitchCount, strikeoutsFor } from './logic.js';
 
-export const ANIM_BUGS = ['primetime', 'bluesteel', 'forever20', 'midnight', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
+export const ANIM_BUGS = ['primetime', 'bluesteel', 'forever20', 'midnight', 'mlbfox', 'classic-green', 'pinball-dmd', 'chalkboard', 'comic', 'split-flap', 'receipt', 'pixel-rpg'];
 
 // Stingers the animated bug plays itself. The overlay's own version of these
 // slides out from behind a bug that is no longer on screen. A walk-off, a rally
