@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard Theme: MLBFox</title>
+<link rel="preload" href="../fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-condensed-600.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts, so nothing reaches a font CDN on air. Licenses: /fonts/OFL.txt */
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-display:swap;src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-display:swap;src:url('../fonts/barlow-condensed-700.woff2') format('woff2')}
+</style>
+<style>
+/* ============================================================
+   MLBFOX — the national-TV playoff bug, kept simple.
+   A navy pitcher bar, a blue batter bar, two team-colour score
+   blocks either side of a black count box, and three bevelled
+   bases hung underneath. Nothing moves unless the game does.
+   ============================================================ */
+:root{
+  --navy:#0a1838;
+  --navy-2:#13285a;
+  --blue:#1c4d94;
+  --blue-2:#163f7c;
+  --ink:#fff;
+  --rule:#d9dde6;          /* the light seams between the blocks */
+  --gold:#ffcc1a;
+  --red:#d81e2c;
+  --green:#1d9a52;
+  --amber:#f28c00;
+  --f:"Barlow Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+}
+#stage{font-family:var(--f);color:var(--ink)}
+body{--demo-accent:var(--gold)}
+
+/* ---------- The bug ---------- */
+#bug{padding-bottom:50px}            /* room for the bases that hang below */
+.mf{position:relative;width:640px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+.bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 20px;
+  font-weight:700;line-height:1;text-transform:uppercase;letter-spacing:.015em;white-space:nowrap;overflow:hidden}
+.bar .l{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bar .r{flex:none}
+.r1{height:48px;font-size:34px;background:linear-gradient(180deg,var(--navy-2),var(--navy))}
+.r2{height:50px;font-size:34px;background:linear-gradient(180deg,var(--blue),var(--blue-2));border-top:2px solid rgba(255,255,255,.14)}
+.r1 .r b,.r1 .r i{font-style:normal;display:inline-block}
+.r1 .r i{margin-right:16px;color:#ffd75a}
+.r1 .r i.pop{animation:kpop .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes kpop{0%{transform:scale(1.7);color:#fff}100%{transform:none}}
+
+/* the batter bar's callout: wipes across, then wipes away */
+.say{position:absolute;inset:0;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--sb,var(--gold));color:var(--sc,#111);
+  clip-path:inset(0 100% 0 0);transition:clip-path .32s cubic-bezier(.6,0,.2,1)}
+.say.show{clip-path:inset(0 0 0 0)}
+.say .tag{font-size:36px}
+.say .txt{margin-left:auto;font-size:30px;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* score row */
+.main{position:relative;display:grid;grid-template-columns:1fr 172px 1fr;height:132px;margin-top:6px}
+.tm{position:relative;display:flex;color:var(--ink);align-items:center;overflow:hidden;
+  background:
+    repeating-linear-gradient(118deg,rgba(255,255,255,.07) 0 2px,transparent 2px 7px),
+    radial-gradient(ellipse at 30% 0%,rgba(255,255,255,.22),transparent 65%),
+    linear-gradient(180deg,var(--tb,#2a5ab0),color-mix(in srgb,var(--tb,#2a5ab0) 72%,#000))}
+.tm.home{flex-direction:row-reverse}
+.tm .ab{flex:none;width:104px;text-align:center;font-weight:700;font-size:var(--abs,46px);line-height:1;letter-spacing:.01em;
+  text-shadow:0 2px 0 rgba(0,0,0,.35);white-space:nowrap}
+.tm .sc{flex:1;display:flex;justify-content:center;font-weight:700;font-size:124px;line-height:1;text-shadow:0 3px 0 rgba(0,0,0,.28)}
+.tm::after{content:"";position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.tm.flash::after{animation:flash .9s ease-out}
+@keyframes flash{0%{opacity:.75}100%{opacity:0}}
+.tm.win::after{animation:win .5s ease-in-out 12 alternate}
+@keyframes win{from{opacity:0}to{opacity:.32}}
+/* light sweep across the blocks */
+.main::before{content:"";position:absolute;z-index:2;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-100%);opacity:0}
+.mf.sheen .main::before{animation:sheen 1s ease-in-out}
+@keyframes sheen{0%{opacity:1;transform:translateX(-100%)}100%{opacity:1;transform:translateX(100%)}}
+
+.mid{position:relative;background:#000;border-left:3px solid var(--rule);border-right:3px solid var(--rule);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;line-height:1;font-weight:700;overflow:hidden}
+.l1{display:flex;align-items:center;gap:16px;font-size:54px}
+.inn{display:flex;align-items:center;gap:3px}
+.arr{width:18px;height:15px;background:#fff;clip-path:polygon(50% 0,100% 100%,0 100%);margin-top:-14px;transition:transform .3s}
+.arr.dn{transform:rotate(180deg);margin-top:14px}
+.cnt{display:flex}
+.l2{display:flex;align-items:baseline;gap:6px;font-size:48px;padding-bottom:6px}
+.l2 .ow{display:inline-block;font-size:42px;transform:scaleX(.82);transform-origin:0 50%;letter-spacing:.02em}
+/* between halves: MID / END over the inning, then back to the count */
+.mid .ms{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.6,0,.2,1)}
+.mid .ms small{font-size:30px;color:var(--gold);letter-spacing:.08em}
+.mid .ms b{font-size:62px}
+.mid.flip .ms{transform:none}
+
+/* rolling numerals */
+.roll{display:inline-grid;overflow:hidden}
+.roll .v{grid-area:1/1}
+.roll .v.in{animation:rin .4s cubic-bezier(.2,.9,.3,1)}
+.roll .v.out{animation:rout .32s ease-in forwards}
+@keyframes rin{from{transform:translateY(90%);opacity:0}to{transform:none;opacity:1}}
+@keyframes rout{to{transform:translateY(-90%);opacity:0}}
+
+/* the light strip under each team */
+.feet{display:grid;grid-template-columns:1fr 172px 1fr;height:12px}
+.feet i{background:linear-gradient(180deg,var(--ft,#ccc),color-mix(in srgb,var(--ft,#ccc) 75%,#000))}
+.feet span{background:#000;border-left:3px solid var(--rule);border-right:3px solid var(--rule)}
+body.rally .feet i{animation:rally 1.2s ease-in-out infinite alternate}
+body.rally .feet i:last-child{animation-delay:-.6s}
+@keyframes rally{to{filter:brightness(1.4) saturate(1.3);box-shadow:0 0 14px 2px var(--gold)}}
+
+/* bases: bevelled plates in perspective, hung under the count box */
+.bases{position:absolute;left:50%;top:112px;width:280px;height:84px;margin-left:-140px;overflow:visible;z-index:3}
+.bases .top{fill:url(#mf-silver);transition:fill .2s}
+.bases .sl{fill:#8d929b}.bases .sr{fill:#5d626b}
+.bases .on .top{fill:url(#mf-gold)}
+.bases .on .sl{fill:#c98a00}.bases .on .sr{fill:#9a6400}
+.bases g{transform-box:fill-box;transform-origin:50% 60%}
+.bases g.pop{animation:bpop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes bpop{0%{transform:translateY(-14px) scale(1.15)}100%{transform:none}}
+
+/* ---------- Home run / walk-off: a banner that opens on top of the bug ---------- */
+.hrb{position:relative;height:0;overflow:hidden;display:flex;margin-bottom:0;
+  background:linear-gradient(180deg,#123376,#0a1838)}
+.hrb.play{animation:hrOpen 5.2s cubic-bezier(.6,0,.2,1) forwards}
+.hrb.play.wo{animation-name:hrOpenWo;animation-duration:7.4s}
+@keyframes hrOpen{0%{height:0;margin-bottom:0}9%,88%{height:116px;margin-bottom:6px}100%{height:0;margin-bottom:0}}
+@keyframes hrOpenWo{0%{height:0;margin-bottom:0}7%,91%{height:116px;margin-bottom:6px}100%{height:0;margin-bottom:0}}
+.hrb .chip{flex:none;width:118px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--abs,46px);color:var(--ci,#fff);
+  background:repeating-linear-gradient(118deg,rgba(255,255,255,.07) 0 2px,transparent 2px 7px),var(--tb,#2a5ab0);border-right:3px solid var(--rule)}
+.hrb .words{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 22px;min-width:0;line-height:1;text-transform:uppercase}
+.hrb .t1{font-weight:700;font-size:70px;letter-spacing:.01em;white-space:nowrap}
+.hrb .t2{display:flex;justify-content:space-between;gap:16px;margin-top:4px;font-weight:600;font-size:30px;color:#cfdaf0;white-space:nowrap}
+.hrb .t2 b{color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hrb.play .t1{animation:slam .55s cubic-bezier(.2,1.4,.4,1) .35s backwards}
+.hrb.play .t2{animation:rise .45s ease-out .7s backwards}
+.hrb.wo .t1{color:var(--gold)}
+@keyframes slam{from{transform:translateX(-40px);opacity:0}}
+@keyframes rise{from{transform:translateY(16px);opacity:0}}
+.hrb::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 40%,rgba(255,255,255,.4) 50%,transparent 60%);transform:translateX(-100%)}
+.hrb.play::after{animation:hsweep 1.1s ease-in-out .5s}
+.hrb.play.wo::after{animation:hsweep 1.1s ease-in-out .5s 3}
+@keyframes hsweep{to{transform:translateX(100%)}}
+
+/* ---------- On the way in ---------- */
+.mf.intro{animation:introIn .6s cubic-bezier(.2,.9,.3,1)}
+@keyframes introIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 -20px -80px 0)}}
+
+@media (prefers-reduced-motion:reduce){
+  .mf.intro,.tm.flash::after,.mf.sheen .main::before,.hrb.play::after,.bases g.pop,.r1 .r i.pop,body.rally .feet i{animation:none}
+  .tm.win::after{animation:none;opacity:.2}
+  .roll .v.in,.roll .v.out{animation-duration:.01s}
+  .say{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="mf">
+      <div class="hrb">
+        <div class="chip"></div>
+        <div class="words"><div class="t1"></div><div class="t2"><b></b><span></span></div></div>
+      </div>
+      <div class="bar r1"><span class="l pit"></span><span class="r"><i class="ks"></i><b class="pc"></b></span></div>
+      <div class="bar r2"><span class="l bat"></span><span class="r stat"></span>
+        <div class="say"><b class="tag"></b><span class="txt"></span></div>
+      </div>
+      <div class="main">
+        <div class="tm away"><span class="ab"></span><div class="sc"><span class="roll" data-k="away"></span></div></div>
+        <div class="mid">
+          <div class="l1">
+            <span class="inn"><span class="roll" data-k="inning"></span><i class="arr"></i></span>
+            <span class="cnt"><span class="roll" data-k="balls"></span>-<span class="roll" data-k="strikes"></span></span>
+          </div>
+          <div class="l2"><span class="roll" data-k="outs"></span><span class="ow">OUTS</span></div>
+          <div class="ms"><small></small><b></b></div>
+        </div>
+        <div class="tm home"><span class="ab"></span><div class="sc"><span class="roll" data-k="home"></span></div></div>
+        <svg class="bases" viewBox="0 0 280 84" aria-hidden="true">
+          <defs>
+            <linearGradient id="mf-silver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#d9dce2"/><stop offset="1" stop-color="#a9aeb7"/></linearGradient>
+            <linearGradient id="mf-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff58a"/><stop offset=".5" stop-color="#ffd21a"/><stop offset="1" stop-color="#f0a000"/></linearGradient>
+          </defs>
+          <g data-b="2"></g><g data-b="3"></g><g data-b="1"></g>
+        </svg>
+      </div>
+      <div class="feet"><i data-ft="away"></i><span></span><i data-ft="home"></i></div>
+    </div>
+  </div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+(() => {
+  const { $, $$, restart, battingTeam } = BugKit;
+  const mf = $(".mf"), hrb = $(".hrb"), say = $(".say"), mid = $(".mid");
+  const fielding = (S) => (S.half === "top" ? "home" : "away");
+  const up = (s) => String(s || "").toUpperCase();
+  const words = (n) => String(n || "").trim().split(/\s+/).filter(Boolean);
+  const surname = (n) => words(n).slice(-1)[0] || "";
+  // "Carter Hayes" → "C. HAYES", the way the network lists a hitter
+  const short = (n) => { const w = words(n); return up(w.length > 1 ? `${w[0][0]}. ${w[w.length - 1]}` : w[0] || ""); };
+  const abbrOf = (S, t) => up(S[t].abbr || S[t].name || (t === "home" ? "HOME" : "AWAY"));
+  const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "TH" : ["TH", "ST", "ND", "RD"][n % 10] || "TH");
+
+  /* Bases: a flattened diamond for the top, two darker faces for the bevel. */
+  (function buildBases(){
+    const at = { 3: [66, 40], 2: [140, 20], 1: [214, 40] }, w = 56, h = 22, t = 12;
+    for (const g of $$(".bases g")) {
+      const [x, y] = at[g.dataset.b];
+      g.innerHTML =
+        `<polygon class="sl" points="${x - w},${y} ${x},${y + h} ${x},${y + h + t} ${x - w},${y + t}"/>` +
+        `<polygon class="sr" points="${x},${y + h} ${x + w},${y} ${x + w},${y + t} ${x},${y + h + t}"/>` +
+        `<polygon class="top" points="${x},${y - h} ${x + w},${y} ${x},${y + h} ${x - w},${y}"/>`;
+    }
+  })();
+
+  /* A numeral that rolls up to its new value. */
+  function roll(el, val, instant){
+    const next = String(val), cur = el.querySelector(".v:not(.out)");
+    if (cur && cur.textContent === next) return;
+    if (instant || !cur) { el.innerHTML = `<span class="v">${next}</span>`; return; }
+    const nu = document.createElement("span");
+    nu.className = "v in"; nu.textContent = next;
+    cur.classList.add("out");
+    el.appendChild(nu);
+    setTimeout(() => cur.remove(), 340);
+  }
+
+  /* A team colour as a block: mid tones darken a touch so white reads; pale ones keep
+     their colour and take dark numerals instead (mixing yellow toward navy goes olive). */
+  function shade(hex){
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || "").trim());
+    if (!m) return { block: "#2a5ab0", foot: "#c9d3e6", ink: "#fff" };
+    let h = m[1]; if (h.length === 3) h = [...h].map((c) => c + c).join("");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const pale = L > 0.42;
+    return { block: !pale && L > 0.2 ? `color-mix(in srgb, #${h} 80%, #000)` : `#${h}`,
+             foot: pale ? `color-mix(in srgb, #${h} 60%, #000)` : `color-mix(in srgb, #${h} 45%, #fff)`,
+             ink: pale ? "#0a1838" : "#fff" };
+  }
+  const abSize = (s) => `${[56, 56, 54, 46, 38, 32][s.length] || 26}px`;
+
+  /* The batter bar's callout. A run in the same breath as a hit rides along. */
+  let sayTimer, holdUntil = 0, lastSay = { at: 0 }, cur = null;
+  const TONE = { gold: ["var(--gold)", "#111"], red: ["var(--red)", "#fff"], green: ["var(--green)", "#fff"],
+                 amber: ["var(--amber)", "#111"], navy: ["#2c3550", "#fff"] };
+  function callout(tag, tone, text, ms = 2600){
+    lastSay = { tag, tone, text, at: Date.now() };
+    const [bg, fg] = TONE[tone] || TONE.gold;
+    say.style.setProperty("--sb", bg); say.style.setProperty("--sc", fg);
+    $(".tag", say).textContent = tag;
+    $(".txt", say).textContent = up(text);
+    say.classList.add("show");
+    holdUntil = Date.now() + ms;
+    clearTimeout(sayTimer);
+    sayTimer = setTimeout(() => say.classList.remove("show"), ms);
+  }
+
+  /* The pitcher's strikeouts: the live row carries them (S[team].k); the demo counts here. */
+  const ks = new Map();
+  let kPop = false, flipTimer, woTimer;
+  const kFor = (S) => { const ft = fielding(S); return S[ft].k > 0 ? S[ft].k : ks.get(S.pitcher || ft) || 0; };
+
+  function banner(S, t, title, who, what, wo){
+    const ab = abbrOf(S, t);
+    $(".chip", hrb).textContent = ab;
+    hrb.style.setProperty("--abs", abSize(ab));
+    const sh = shade(S[t].color);
+    hrb.style.setProperty("--tb", sh.block);
+    hrb.style.setProperty("--ci", sh.ink);
+    $(".t1", hrb).textContent = title;
+    $(".t2 b", hrb).textContent = up(who);
+    $(".t2 span", hrb).textContent = up(what);
+    hrb.classList.toggle("wo", !!wo);
+    restart(hrb, "play");
+    restart(mf, "sheen");
+  }
+  function clearWalkoff(){ clearTimeout(woTimer); $$(".tm").forEach((el) => el.classList.remove("win")); }
+
+  BugKit.start({
+    name: "MLBFox",
+    hrDelay: 2000,
+    render(S, prev, first){
+      cur = S;
+      for (const t of ["away", "home"]) {
+        const el = $(".tm." + t), sh = shade(S[t].color), ab = abbrOf(S, t);
+        el.style.setProperty("--tb", sh.block);
+        el.style.setProperty("--ink", sh.ink);
+        $(`[data-ft="${t}"]`).style.setProperty("--ft", sh.foot);
+        $(".ab", el).textContent = ab;
+        el.style.setProperty("--abs", abSize(ab));
+        roll($(`.roll[data-k="${t}"]`), S[t].r, first);
+      }
+      // pitcher bar: surname, then his strikeouts and pitch count
+      const ft = fielding(S);
+      $(".pit").textContent = S.pitcher ? up(surname(S.pitcher)) : `${abbrOf(S, ft)} PITCHING`;
+      const k = kFor(S), kEl = $(".ks");
+      kEl.textContent = k ? `${k} K` : "";
+      if (kPop && k) restart(kEl, "pop");
+      kPop = false;
+      $(".pc").textContent = S.pitchCount ? `P: ${S.pitchCount}` : "";
+      // batter bar: the hitter, or who's up when the lineup isn't known
+      $(".bat").textContent = S.batter ? short(S.batter) : `${abbrOf(S, battingTeam(S))} BATTING`;
+      $(".stat").textContent = `${S.half === "top" ? "TOP" : "BOT"} ${ordinal(S.inning)}`;
+      // the box: inning and arrow, a TV count (never four balls or three strikes), outs
+      roll($('.roll[data-k="inning"]'), S.inning, first);
+      $(".arr").classList.toggle("dn", S.half !== "top");
+      roll($('.roll[data-k="balls"]'), Math.min(S.balls, 3), first);
+      roll($('.roll[data-k="strikes"]'), Math.min(S.strikes, 2), first);
+      roll($('.roll[data-k="outs"]'), S.outs, first);
+      $(".ow").textContent = S.outs === 1 ? "OUT" : "OUTS";
+      $$(".bases g").forEach((g) => {
+        const on = !!S.bases[+g.dataset.b - 1];
+        if (on && !g.classList.contains("on") && !first) restart(g, "pop");
+        g.classList.toggle("on", on);
+      });
+      if (first) restart(mf, "intro");
+    },
+    fx: {
+      run({ team: t, runs = 1, hr: homer }, S){
+        t ||= battingTeam(S);
+        restart($(".tm." + t), "flash");
+        restart(mf, "sheen");
+        if (homer) return;                         // the banner already said it
+        const scored = runs === 1 ? "Run scores" : `${runs} runs score`;
+        if (Date.now() - lastSay.at < 250) callout(lastSay.tag, lastSay.tone, `${lastSay.text} · ${scored}`);
+        else callout(runs === 1 ? "RUN" : `+${runs}`, "gold", `${scored} · ${abbrOf(S, t)} ${S[t].r}`);
+      },
+      hr({ runs = 1, batter, team: t }, S){
+        t ||= battingTeam(S);
+        clearWalkoff();
+        const what = runs === 4 ? "Grand slam" : runs === 1 ? "Solo shot" : `${runs}-run homer`;
+        banner(S, t, runs === 4 ? "Grand slam" : "Home run", batter || S.batter || S[t].name, what);
+      },
+      k({ looking, batter }, S){
+        const who = S.pitcher || fielding(S);
+        ks.set(who, (ks.get(who) || 0) + 1);
+        kPop = true;
+        const b = batter || S.batter;
+        callout(looking ? "CALLED STRIKE 3" : "STRIKEOUT", "red", b ? short(b) : "");
+      },
+      hit({ bases = 1, batter }){ callout(["SINGLE", "DOUBLE", "TRIPLE"][bases - 1] || "BASE HIT", "gold", batter ? short(batter) : ""); },
+      walk({ batter }){ callout("WALK", "green", batter ? short(batter) : "Ball four"); },
+      error({ team: t }, S){ callout("ERROR", "amber", abbrOf(S, t || fielding(S))); },
+      out({ batter }){ callout("OUT", "navy", batter ? short(batter) : "", 1600); },
+      half({ inning, half }){
+        const was = half === "bot" ? inning : inning - 1;     // the half that just ended
+        $(".ms small", mid).textContent = half === "bot" ? "MID" : "END";
+        $(".ms b", mid).textContent = ordinal(was);
+        mid.classList.add("flip");
+        clearTimeout(flipTimer);
+        flipTimer = setTimeout(() => mid.classList.remove("flip"), 2600);
+      },
+      walkoff({ team: t, batter }, S){
+        t ||= battingTeam(S);
+        const o = t === "away" ? "home" : "away";
+        clearWalkoff();
+        banner(S, t, "Walk-off", batter || S[t].name, `${abbrOf(S, t)} win ${S[t].r}-${S[o].r}`, true);
+        restart($(".tm." + t), "win");
+        woTimer = setTimeout(clearWalkoff, 7000);
+      },
+      reset(){
+        ks.clear(); clearWalkoff();
+        hrb.classList.remove("play", "wo");
+        say.classList.remove("show");
+        mid.classList.remove("flip");
+        restart(mf, "intro");
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
