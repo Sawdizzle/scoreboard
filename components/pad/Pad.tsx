@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OnAir, type Channel } from '@/components/pad/OnAir';
 import { airTopic } from '@/components/overlay/Overlay';
+import { GameClock } from '@/components/pad/GameClock';
 import { InPlay, More, Runner, Situation, StrikeThree } from '@/components/pad/PadSheets';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
@@ -382,6 +383,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
         score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
+        extra={game.settings?.time_limit ? <GameClock gameId={game.id} initial={game.clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={nudge} /> : null}
         onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} onStartOver={startOver} />}
     </div>
   );

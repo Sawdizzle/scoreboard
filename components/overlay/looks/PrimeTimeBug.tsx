@@ -46,7 +46,7 @@ function Side({ brand, abbr, score, bat, side }: { brand: Brand; abbr: string; s
   );
 }
 
-export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, showLine, moment }: BugProps) {
+export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, clock, detail, showLine, moment }: BugProps) {
   const live = status === 'live', top = g.half === 'top', ball = period === null;
   const play = live && ball;
   const bases = g.bases as { first?: boolean; second?: boolean; third?: boolean };
@@ -76,7 +76,7 @@ export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, showLi
           <Side brand={away} abbr={abbrs.away} score={aw} bat={play && top} side="away" />
           <Side brand={home} abbr={abbrs.home} score={hm} bat={play && !top} side="home" />
           {!live ? <div className="sit word">{status === 'final' ? 'Final' : 'Pregame'}</div>
-            : !ball ? <div className="sit word">{period}</div> : (
+            : !ball ? <div className="sit word">{period}{clock && <b className="clk">{clock}</b>}</div> : (
               <div className="sit">
                 {/* Between halves the inning flips over to MID / END, then flips back. */}
                 <div key={half} className="inn">
@@ -94,6 +94,7 @@ export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, showLi
                 </div>
               </div>
             )}
+          {ball && live && clock && <div className="sit word clk">{clock}</div>}
           {(aw + hm > 0 || hr) && <i key={`${aw}-${hm}${hr ? 'h' : ''}`} className="sheen" />}
         </div>
         {k && (
@@ -104,6 +105,9 @@ export function PrimeTimeBug({ g, air, away, home, abbrs, status, period, showLi
               <small>{[surname(k.who), pit?.last].filter(Boolean).join(' · ') || 'Strikeout'}</small>
             </div>
           </div>
+        )}
+        {live && !ball && detail && (
+          <div className="strip"><div className="line in"><span className="detail">{detail}</span></div></div>
         )}
         {play && (
           <div className="strip">

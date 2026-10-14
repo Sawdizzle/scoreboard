@@ -519,3 +519,12 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .keypad-typed span { color: var(--soft); font-size: 13px; }
 .keypad-key { min-height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--chalk); font: 700 24px/1 var(--disp); }
 .keypad-key.next { background: var(--steel); color: var(--on-steel); font-size: 18px; }
+
+/* The game clock on a pad. */
+.pclock { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.pclock b { font: 700 28px/1 var(--disp); font-variant-numeric: tabular-nums; margin-right: auto; }
+.pclock b.low { color: var(--gold); }
+.spad-body { display: flex; flex-direction: column; gap: 10px; }
+.spad .pkey { min-height: 60px; padding: 6px 4px; font-size: 18px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.spad .pkey small { font-size: 12px; font-weight: 600; opacity: 0.85; }
+.pkey.hit { background: #e0a92a; color: #1b1300; }

@@ -7,7 +7,8 @@ import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
 import { boxScore, breakText, halfRecap, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
-import { periodText, type SportLive } from '@/lib/sports';
+import { clockSeconds, clockText } from '@/lib/broadcast';
+import { periodText, situationText, soccerSeconds, type SportLive } from '@/lib/sports';
 
 // The stream, drawn. A transparent page laid out on a 1280 x 720 grid in rem,
 // with the root font size tied to the width of the source: it fills a 720p,
@@ -244,7 +245,23 @@ function Qr({ bug, qr }: { bug: Feed['bug']; qr: Feed['qr'] }) {
   );
 }
 
-export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string; runs: number } | null }) {
+// The game clock as the stream shows it: soccer counts up inside the play
+// state (plus stoppage), the rest run on games.clock. `now` comes from the page,
+// which ticks while a clock runs.
+export function clockOf(feed: Feed, now: number): string | null {
+  const game = feed.game;
+  if (!game || feed.broadcast?.show?.clock === false) return null;
+  const live = game.live as SportLive;
+  if (game.sport === 'soccer') {
+    const st = (live.state ?? {}) as { clock?: { running?: boolean; base?: number }; stoppage?: number };
+    if (!st.clock?.running && !st.clock?.base) return null;
+    return clockText(soccerSeconds(live, now)) + (st.stoppage ? ` +${st.stoppage}` : '');
+  }
+  const sec = clockSeconds(game.clock, now);
+  return sec === null ? null : clockText(sec);
+}
+
+export function Stage({ feed, card, moment = null, now = 0 }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string; runs: number } | null; now?: number }) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
   const { g, air } = v;
@@ -266,7 +283,10 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
   const lay = layoutOf(feed.layout);
   const Bug = feed.look ? LOOK_BUGS[feed.look] : undefined;
+  const clock = clockOf(feed, now);
+  const detail = ball ? null : situationText(sport, feed.game!.live as SportLive, { away: away.display, home: home.display }) || null;
   const own = { g, air, away, home, status, showLine: feed.show_line, moment, topEdge: lay.bug.pos.startsWith('t'), period: ball ? null : periodText(sport, feed.game!.live as SportLive),
+    clock, detail,
     abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
   // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
   const recap = halfRecap(feed, g);
@@ -302,7 +322,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
           <div className="ov-rail">
             <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
             <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />
-            {live && !ball ? <div className="ov-sit word"><b>{periodText(sport, feed.game!.live as SportLive)}</b></div> : live ? (
+            {live && !ball ? <div className="ov-sit word"><b>{periodText(sport, feed.game!.live as SportLive)}</b>{clock && <b className="ov-clk">{clock}</b>}</div> : live ? (
               <div className="ov-sit">
                 <div className="ov-inn"><i className={top ? 'on' : undefined} /><b>{g.inning}</b><i className={top ? 'dn' : 'dn on'} /></div>
                 <svg width="62" height="52" viewBox="0 0 62 52" aria-hidden="true">
@@ -314,7 +334,9 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
                 </div>
               </div>
             ) : <div className="ov-sit word"><b>{status === 'final' ? 'Final' : 'Pregame'}</b></div>}
+            {ball && live && clock && <div className="ov-sit word"><b className="ov-clk">{clock}</b></div>}
           </div>
+          {!ball && live && detail && <div className="ov-strip"><span className="ov-detail">{detail}</span></div>}
           {ball && live && (air.batter || air.pitcher) && (
             <div className="ov-strip">
               {air.batter && (

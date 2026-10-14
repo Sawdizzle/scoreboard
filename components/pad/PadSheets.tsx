@@ -155,8 +155,8 @@ export function Runner({ g, from, who, onPick, onClose }: {
 }
 
 // Corrections, and ending the game. Nothing here goes on anyone's stats.
-export function Situation({ g, final, labels, onFix, onEnd, onStartOver, onClose }: {
-  g: G; final: boolean; labels: { away: string; home: string };
+export function Situation({ g, final, labels, extra, onFix, onEnd, onStartOver, onClose }: {
+  g: G; final: boolean; labels: { away: string; home: string }; extra?: React.ReactNode;
   onFix: (res: unknown) => void; onEnd: (final: boolean) => void; onStartOver: () => void; onClose: () => void;
 }) {
   const b = L.safeBases(g.bases);
@@ -170,6 +170,7 @@ export function Situation({ g, final, labels, onFix, onEnd, onStartOver, onClose
   );
   return (
     <Sheet title="Fix the situation" onClose={onClose}>
+      {extra}
       <div className="stack" style={{ gap: 4 }}>
         {step(labels.away, g.away_score, () => L.adjustScore(g, 'away', -1), () => L.adjustScore(g, 'away', 1))}
         {step(labels.home, g.home_score, () => L.adjustScore(g, 'home', -1), () => L.adjustScore(g, 'home', 1))}

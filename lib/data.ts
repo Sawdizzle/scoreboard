@@ -89,7 +89,7 @@ export async function playerStats(db: Db, playerId: string) {
   return (data ?? []) as SeasonLine[];
 }
 
-const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS})`;
+const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, clock, settings, venue_geo, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS})`;
 
 // A team's games, soonest first; games with no time yet sort last.
 export async function listGames(db: Db, teamId: string, seasonId?: string) {

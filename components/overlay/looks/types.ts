@@ -20,6 +20,12 @@ export type BugProps = {
   // For the score-only sports: the period ("Q2", "Set 3 · sets 1-0") to show
   // where baseball has its inning, bases and count. null for baseball.
   period: string | null;
+  // The game clock as text ("8:42"), when one is running or set: a quarter, a
+  // soccer half counting up, baseball's time limit. null when there is none.
+  clock?: string | null;
+  // For the score-only sports, the line under the score: "Steel ball · 3rd & 4",
+  // "Fouls 6-7 · Steel bonus", "+2 · River 🟨". null for baseball.
+  detail?: string | null;
   // Whether to show the batter's season average and tonight's line.
   showLine: boolean;
   // A play to call out for a few seconds, or null. `text` is one of MOMENTS;

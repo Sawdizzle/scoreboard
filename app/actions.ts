@@ -450,7 +450,12 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
   const venue = str(fd, 'venue');
   if (venue.length > 80) return { error: 'Keep the place to 80 characters.' } as const;
   const seasonId = str(fd, 'season_id');
+  // The game's rules: whole numbers, blank for none.
+  const whole = (k: string, max: number) => { const v = Math.round(Number(str(fd, k))); return v > 0 && v <= max ? v : null; };
+  const limit = whole('time_limit_min', 300), runRule = whole('run_rule', 30), period = whole('period_minutes', 60);
+  const settings = { time_limit: limit ? limit * 60 : null, run_rule: runRule, period_minutes: period };
   return {
+    settings,
     opponent_team_id: oppId || null, opponent_name: name, opponent_abbr: abbr, opponent_color: color,
     is_home: str(fd, 'is_home') !== 'away',
     starts_at: startsAt ? new Date(startsAt).toISOString() : null,

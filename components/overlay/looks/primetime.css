@@ -167,3 +167,8 @@
 .ov.bug-tl .lk-pt .hr,.ov.bug-tc .lk-pt .hr,.ov.bug-tr .lk-pt .hr{bottom:auto;top:calc(100% + 1.6rem)}
 .ov.bug-br .lk-pt .hr,.ov.bug-tr .lk-pt .hr{left:auto;right:0;clip-path:inset(0 0 0 100%)}
 .ov.bug-br .lk-pt .hr.play,.ov.bug-tr .lk-pt .hr.play{animation-name:lkptWipeR}
+
+/* The clock, beside the period (or after the count in baseball), and the sport's situation line. */
+.lk-pt .sit.word .clk{margin-left:1.4rem;color:#fff;font-variant-numeric:tabular-nums}
+.lk-pt .sit.word.clk{color:#fff;font-variant-numeric:tabular-nums}
+.lk-pt .strip .detail{font-weight:600;font-size:1.9rem;letter-spacing:.02em;color:#fff;padding:0 1.2rem;white-space:nowrap}

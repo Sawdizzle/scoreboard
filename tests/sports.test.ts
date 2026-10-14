@@ -1,25 +1,36 @@
-// The other sports: score, period, sets.
+// What the pad and the stream say about the other sports, around v4's rules
+// (tests/rules/sports.test.mjs guards the rules themselves).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addPoints, endSet, periodText, sportDef, stepPeriod } from '../lib/sports.ts';
+import { Football as F, periodName, periodText, situationText, soccerSeconds, sportGame, timeoutsOf, Volleyball as V } from '../lib/sports.ts';
 
-test('points go on and come off, never below zero', () => {
-  assert.deepEqual(addPoints({ home_score: 7 }, 'home', 6, 'Touchdown'), { type: 'score', patch: { home_score: 13 }, text: 'Touchdown +6' });
-  assert.deepEqual(addPoints({ away_score: 1 }, 'away', -3)?.patch, { away_score: 0 });
-  assert.equal(addPoints({}, 'away', -1), null);
+const names = { away: 'River', home: 'Steel' };
+
+test('period text, per sport', () => {
+  assert.equal(periodText('football', { state: { quarter: 2 } }), 'Q2');
+  assert.equal(periodText('football', { state: { quarter: 5 } }), 'OT');
+  assert.equal(periodName('football', { state: { quarter: 3 } }), '3rd quarter');
+  assert.equal(periodText('basketball', { state: { period: 6 } }), 'OT2');
+  assert.equal(periodText('soccer', { state: { half: 2 } }), '2nd half');
+  assert.equal(periodText('volleyball', { state: { set: 3, sets: { away: 1, home: 1 } } }), 'Set 3 · sets 1-1');
+  // A v5 game made before the rules came over kept its period as `period`.
+  assert.equal(periodText('soccer', { state: { period: 2 } }), '2nd half');
 });
 
-test('periods step within the game, with overtime', () => {
-  assert.deepEqual(stepPeriod('football', {}, 1)?.patch, { state: { period: 2 } });
-  assert.equal(stepPeriod('football', {}, -1), null);
-  assert.equal(stepPeriod('basketball', { state: { period: 4 } }, 1)?.text, 'Overtime');
-  assert.equal(sportDef('soccer').name(2), '2nd half');
-  assert.equal(periodText('football', { state: { period: 3 } }), 'Q3');
+test('football: down and distance, and who has the ball', () => {
+  let g = sportGame({}, { period_minutes: 12 });
+  assert.equal(F.touchdown(g), null, 'no points before anyone has the ball');
+  g = { ...g, ...F.setPossession(g, 'home').patch };
+  g = { ...g, ...F.setDown(g, 3).patch };
+  assert.equal(situationText('football', g, names), 'Steel ball · 3rd & 10');
+  assert.deepEqual(timeoutsOf('football', g), { home: 3, away: 3 });
+  assert.equal(F.nextQuarter(g).patch.clock_remaining_seconds, 720, 'the period length reaches the rules');
 });
 
-test('volleyball: a set goes to the side ahead and the score starts over', () => {
-  const r = endSet({ home_score: 25, away_score: 21, state: { period: 1 } })!;
-  assert.deepEqual(r.patch, { home_score: 0, away_score: 0, state: { period: 2, sets: { home: 1, away: 0 }, setLog: [{ home: 25, away: 21 }] } });
-  assert.equal(endSet({ home_score: 10, away_score: 10 }), null);
-  assert.equal(periodText('volleyball', r.patch as never), 'Set 2 · sets 0-1');
+test('volleyball and soccer situations', () => {
+  const g = { ...sportGame({}), ...V.setServe(sportGame({}), 'away').patch };
+  assert.equal(situationText('volleyball', g, names), 'River serving · to 25');
+  assert.equal(situationText('soccer', { state: { stoppage: 3, cards: { home: { y: 1, r: 0 } } } }, names), '+3 · Steel 🟨');
+  const t0 = Date.parse('2026-10-14T18:00:00Z');
+  assert.equal(soccerSeconds({ state: { clock: { running: true, base: 60, since: new Date(t0).toISOString() } } }, t0 + 30_000), 90);
 });

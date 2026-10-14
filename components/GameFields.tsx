@@ -62,6 +62,25 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
           </select>
         </label>
       )}
+      <fieldset className="stack" style={{ gap: 8 }}>
+        <legend className="legend">Rules · leave blank for none</legend>
+        <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {(!game || game.sport === 'baseball') && <>
+            <label className="field"><span>Time limit, min</span>
+              <input className="input" name="time_limit_min" inputMode="numeric" defaultValue={game?.settings?.time_limit ? Math.round(game.settings.time_limit / 60) : ''} placeholder="90" />
+            </label>
+            <label className="field"><span>Run rule, runs</span>
+              <input className="input" name="run_rule" inputMode="numeric" defaultValue={game?.settings?.run_rule ?? ''} placeholder="10" />
+            </label>
+          </>}
+          {(!game || game.sport !== 'baseball') && (
+            <label className="field"><span>{game ? (game.sport === 'soccer' ? 'Half' : 'Quarter') : 'Period (other sports)'}, min</span>
+              <input className="input" name="period_minutes" inputMode="numeric" defaultValue={game?.settings?.period_minutes ?? ''} placeholder="12" />
+            </label>
+          )}
+        </div>
+        <p className="hint" style={{ margin: 0 }}>The time limit starts a clock you run from the pad; the run rule shows on the stream when it is in reach.</p>
+      </fieldset>
       <label className="switch">
         <span className="switch-text"><b>Counts for season stats</b><small>Turn off for a scrimmage. Still scored, never added.</small></span>
         <input type="checkbox" name="counts_for_stats" defaultChecked={game ? game.counts_for_stats : true} />

@@ -20,6 +20,15 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [auto, setAuto] = useState(false);
   const [moment, setMoment] = useState<{ text: string; who: string; runs: number } | null>(null);
   const first = useRef(initial);
+  // A running clock redraws each second; the rest of the page waits for the feed.
+  const [now, setNow] = useState(() => Date.now());
+  const st = (feed?.game?.live as { state?: { clock?: { running?: boolean } } } | undefined)?.state;
+  const ticking = !!(feed?.game?.clock?.running || st?.clock?.running);
+  useEffect(() => {
+    if (!ticking) return;
+    const t = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(t);
+  }, [ticking]);
 
   useEffect(() => {
     const sb = browserClient();
@@ -78,5 +87,5 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     };
   }, [token]);
 
-  return <><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} /><Spots spot={feed?.spot ?? null} /></>;
+  return <><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} /><Spots spot={feed?.spot ?? null} /></>;
 }
