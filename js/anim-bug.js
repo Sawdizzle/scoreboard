@@ -45,6 +45,7 @@ function team(s, side) {
   const name = s[side + '_name'] || (side === 'home' ? 'Home' : 'Visitor');
   return {
     name, abbr: s[side + '_abbr'] || name, color: s[side + '_color'] || '#888',
+    logo: s[side + '_logo_url'] || '',
     r: s[side + '_score'] | 0, h: s[side + '_hits'] | 0, e: s[side + '_errors'] | 0, line: [],
     k: strikeoutsFor(s, side),   // strikeouts by this side's pitcher on the mound
   };
