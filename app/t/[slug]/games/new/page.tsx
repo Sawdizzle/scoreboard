@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { createGame, deleteOpponent } from '@/app/actions';
+import { createGame } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
 import { ChevronLeft } from '@/components/icons';
@@ -63,19 +63,17 @@ export default async function NewGame({ params, searchParams }: {
           <Link href={`${base}?typed=1${q ? `&q=${encodeURIComponent(q)}` : ''}`} className="btn btn-ghost">Not on Scoreboard · type the name</Link>
           {opponents.length > 0 && (
             <section className="stack" style={{ gap: 8 }}>
-              <h2 className="h-sec" style={{ padding: '0 4px' }}>Teams you have played</h2>
+              <h2 className="h-sec" style={{ padding: '0 4px' }}>Your opponents</h2>
               {opponents.map((o) => (
                 <div key={o.id} className="card seat">
                   <Link href={`${base}?saved=${o.id}`} className="seat-link">
-                    <TeamMark brand={{ name: o.name, display: o.name, color: o.color, color2: '#f2f6fc', logo: null }} />
+                    <TeamMark brand={{ name: o.name, display: o.name, color: o.color, color2: o.color2, logo: o.logo_url }} />
                     <span className="row-main">
                       <span className="row-title">{o.name}</span>
-                      <span className="row-meta">{filled(o) ? `${filled(o)} players from last time` : 'No lineup saved yet'}</span>
+                      <span className="row-meta">{filled(o) ? `${filled(o)} on their roster` : 'No roster yet'}</span>
                     </span>
                   </Link>
-                  <ActionForm action={deleteOpponent.bind(null, slug, o.id)}>
-                    <Submit className="link" busy="…">Remove</Submit>
-                  </ActionForm>
+                  <Link href={`/t/${slug}/opponents/${o.id}`} className="link">Edit</Link>
                 </div>
               ))}
             </section>
@@ -83,7 +81,7 @@ export default async function NewGame({ params, searchParams }: {
         </>
       ) : (
         <ActionForm action={createGame.bind(null, slug)} className="form">
-          <GameFields seasons={seasons} opponent={opponent} changeHref={base} saved={saved && { name: saved.name, abbr: saved.abbr, color: saved.color, players: filled(saved) }} />
+          <GameFields seasons={seasons} opponent={opponent} changeHref={base} saved={saved && { id: saved.id, name: saved.name, abbr: saved.abbr, color: saved.color, players: filled(saved) }} />
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create game · set lineups</Submit>
         </ActionForm>
       )}

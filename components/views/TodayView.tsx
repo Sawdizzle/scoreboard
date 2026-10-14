@@ -6,12 +6,12 @@ import { Slab, brandOf } from '@/components/TeamBrand';
 import { LocalTime } from '@/components/LocalTime';
 import { fullName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
-import { SEATS, canEditTeam, canRunGames, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
+import { canEditTeam, canRunGames, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
-export function TodayView({ team, role, players, staff, season, stats = [], roster = [], game = null, lineups = {} }: {
-  team: Team; role: Role; players: number; staff: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
+export function TodayView({ team, role, players, opponents, season, stats = [], roster = [], game = null, lineups = {} }: {
+  team: Team; role: Role; players: number; opponents: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
   game?: Game | null; lineups?: Partial<Record<Side, Lineup>>;
 }) {
   const who = new Map(roster.map((p) => [p.id, p]));
@@ -20,8 +20,8 @@ export function TodayView({ team, role, players, staff, season, stats = [], rost
   const steps = [
     { href: `${base}/roster`, title: 'Roster', done: players >= 9,
       meta: players === 0 ? 'Add your players, or paste the list' : `${players} ${players === 1 ? 'player' : 'players'}${players < 9 ? ' · nine fills a lineup' : ''}` },
-    { href: `${base}/staff`, title: 'Staff', done: staff > 1,
-      meta: `${staff} of ${SEATS} seats${staff === 1 ? ' · invite a coach or scorer' : ''}` },
+    { href: `${base}/opponents`, title: 'Opponents', done: opponents > 0,
+      meta: opponents ? `${opponents} ${opponents === 1 ? 'team' : 'teams'} you play` : 'Add the teams you play: logo, colours, roster' },
     { href: `${base}/season`, title: 'Season', done: !!season,
       meta: season ? season.name : 'Name the season the stats will count for' },
   ];

@@ -89,7 +89,7 @@ export async function playerStats(db: Db, playerId: string) {
   return (data ?? []) as SeasonLine[];
 }
 
-const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, clock, settings, venue_geo, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS})`;
+const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, clock, settings, venue_geo, opponent_id, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS}), saved:opponents!games_opponent_id_fkey(name, abbr, color, color2, logo_url)`;
 
 // A team's games, soonest first; games with no time yet sort last.
 export async function listGames(db: Db, teamId: string, seasonId?: string) {
@@ -133,8 +133,8 @@ export async function findTeams(db: Db, q: string, notTeam: string) {
 
 // Opponents this team has played that are not teams on Scoreboard, most
 // recently used first. Staff only (the policy returns none to anyone else).
-export type SavedOpponent = { id: string; name: string; abbr: string; color: string; roster: Lineup };
+export type SavedOpponent = { id: string; name: string; abbr: string; color: string; color2: string; logo_url: string | null; roster: Lineup };
 export async function listOpponents(db: Db, teamId: string) {
-  const { data } = await db.from('opponents').select('id, name, abbr, color, roster').eq('team_id', teamId).order('updated_at', { ascending: false });
+  const { data } = await db.from('opponents').select('id, name, abbr, color, color2, logo_url, roster').eq('team_id', teamId).order('name');
   return (data ?? []) as SavedOpponent[];
 }

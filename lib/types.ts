@@ -101,6 +101,9 @@ export type Game = {
   venue_geo?: { lat: number; lon: number; tz?: string; label?: string } | null;
   // The opponent's own team row, when they are on Scoreboard.
   opponent?: Team | null;
+  // The opponent from the team's own list (Opponents screen), when the game is against one.
+  opponent_id?: string | null;
+  saved?: { name: string; abbr: string; color: string; color2: string; logo_url: string | null } | null;
 };
 
 // A lineup, in the shape Scoreboard's rules engine (lib/rules) works on. `bid`

@@ -9,7 +9,7 @@ import type { Game, Season, Team } from '@/lib/types';
 // `saved` is an opponent this team has played before: its name, short code
 // and colour fill the fields, and its last lineup comes with the game.
 export function GameFields({ seasons, game, opponent, changeHref, saved }: {
-  seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string; saved?: { name: string; abbr: string; color: string; players: number } | null;
+  seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string; saved?: { id?: string; name: string; abbr: string; color: string; players: number } | null;
 }) {
   const current = seasons.find((s) => s.is_current);
   return (
@@ -33,7 +33,8 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
             <input className="input" type="color" name="opponent_color" defaultValue={saved?.color ?? game?.opponent_color ?? '#7a8794'} />
           </label>
           {saved && <input type="hidden" name="opponent_abbr" value={saved.abbr} />}
-          {saved && <p className="hint" style={{ gridColumn: '1 / -1', margin: 0 }}>{saved.players ? `Played before: their last lineup (${saved.players} players) loads with the game.` : 'Played before. No lineup saved for them yet.'}</p>}
+          {saved?.id && <input type="hidden" name="opponent_id" value={saved.id} />}
+          {saved && <p className="hint" style={{ gridColumn: '1 / -1', margin: 0 }}>{saved.players ? `From your opponents: their roster (${saved.players} players) loads into their lineup.` : 'From your opponents. No roster for them yet.'}</p>}
         </div>
       )}
       {!game && (

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// Three places a team lives: today, the people, the season. Roster, Staff,
+// Three places a team lives: today, the people, the season. Roster, Opponents,
 // the team's own settings and its stream are all "Team".
 // `at` overrides the address, for the component sheet at /dev/kit.
 export function TabBar({ slug, at }: { slug: string; at?: string }) {
@@ -12,7 +12,7 @@ export function TabBar({ slug, at }: { slug: string; at?: string }) {
   const base = `/t/${slug}`;
   const tabs = [
     { href: base, label: 'Today', on: path === base },
-    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/staff', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)) },
+    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/opponents', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)) },
     { href: `${base}/season`, label: 'Season', on: path.startsWith(`${base}/season`) },
   ];
   return (
@@ -27,13 +27,13 @@ export function TabBar({ slug, at }: { slug: string; at?: string }) {
   );
 }
 
-export function TeamTabs({ slug, players, staff, at }: { slug: string; players: number; staff: number; at?: string }) {
+export function TeamTabs({ slug, players, opponents, at }: { slug: string; players: number; opponents: number; at?: string }) {
   const here = usePathname();
   const path = at ?? here;
   const base = `/t/${slug}`;
   const tabs = [
     { href: `${base}/roster`, label: `Roster · ${players}`, on: path.startsWith(`${base}/roster`) },
-    { href: `${base}/staff`, label: `Staff · ${staff}/5`, on: path.startsWith(`${base}/staff`) },
+    { href: `${base}/opponents`, label: `Opponents · ${opponents}`, on: path.startsWith(`${base}/opponents`) },
     { href: `${base}/settings`, label: 'Team', on: path.startsWith(`${base}/settings`) },
     { href: `${base}/stream`, label: 'Stream', on: path.startsWith(`${base}/stream`) },
   ];

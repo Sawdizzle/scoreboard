@@ -47,7 +47,7 @@ export default async function Teams() {
           <summary>Your name · {profile?.display_name ?? ''}</summary>
           <div className="fold-body">
             <ActionForm action={updateProfile} className="form">
-              <label className="field"><span>Shown on staff lists</span>
+              <label className="field"><span>Your name</span>
                 <input className="input" name="display_name" defaultValue={profile?.display_name ?? ''} maxLength={60} required autoComplete="name" />
               </label>
               <Submit busy="Saving…">Save name</Submit>

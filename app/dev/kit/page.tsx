@@ -20,6 +20,7 @@ import { SettingsView } from '@/components/views/SettingsView';
 import { StreamSetup } from '@/components/stream/StreamSetup';
 import { StaffView } from '@/components/views/StaffView';
 import { TodayView } from '@/components/views/TodayView';
+import { OpponentEditor } from '@/components/OpponentEditor';
 import type { SeasonLine } from '@/lib/stats';
 import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } from '@/lib/types';
 
@@ -72,7 +73,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   const role = (r ?? 'organizer') as Role;
   const base = `/t/${team.slug}`;
   const at = v === 'today' ? base : `${base}/${v}`;
-  const tabs = <div className="page-top" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} staff={4} at={at} /></div>;
+  const tabs = <div className="page-top" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} opponents={6} at={at} /></div>;
   if (v === 'pad') {
     // A game in the 5th: two on, 2-1, the made-up lineups on both sides. Taps
     // work on screen; they fail to save, since nothing is behind this page.
@@ -131,12 +132,14 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
       <TeamHeader team={team} role={role} season={season} />
-      {v === 'today' && <TodayView team={team} role={role} players={11} staff={4} season={season} stats={stats} roster={players} game={game} lineups={{ us: lineup }} />}
-      {v === 'today-empty' && <TodayView team={team} role={role} players={11} staff={4} season={season} />}
+      {v === 'today' && <TodayView team={team} role={role} players={11} opponents={6} season={season} stats={stats} roster={players} game={game} lineups={{ us: lineup }} />}
+      {v === 'today-empty' && <TodayView team={team} role={role} players={11} opponents={6} season={season} />}
       {v === 'game' && <GameView team={team} role={role} game={game} lineups={{ us: lineup }} seasons={seasons} />}
       {v === 'lineup' && <div className="page"><LineupEditor slug={team.slug} gameId="g1" side="us" initial={lineup} stored={false} pool={pool} presets={[{ label: 'Whole roster, by number', lineup }]} canEdit /></div>}
       {v === 'lineup-them' && <div className="page"><LineupEditor slug={team.slug} gameId="g1" side="them" initial={{ batters: [], positions: {} }} stored={false} pool={[]} presets={[]} canEdit /></div>}
       {v === 'roster' && <>{tabs}<RosterView team={team} role={role} players={players} stats={stats} /></>}
+      {v === 'opponent' && <>{tabs}<div className="page"><OpponentEditor slug={team.slug} opponent={{ id: 'o1', name: 'Sanger Wolf', abbr: 'SANGER', color: '#5d4ea6', color2: '#f2f6fc', logo_url: null,
+        roster: { batters: [{ bid: 'w1', num: '12', name: 'Bentley Jackway' }, { bid: 'w2', num: '10', name: 'Hayden Wetli' }, { bid: 'w3', num: '5', name: 'Maddox Wolf' }], positions: { P: 'w3', SS: 'w1' } } }} /></div></>}
       {v === 'empty' && <>{tabs}<RosterView team={team} role={role} players={[]} /></>}
       {v === 'player' && <PlayerView team={team} role={role} player={players[1]} lines={stats.filter((x) => x.player_id === 'p2')} seasons={seasons} />}
       {v === 'pitcher' && <PlayerView team={team} role={role} player={players[4]} lines={stats.filter((x) => x.player_id === 'p5')} seasons={seasons} />}

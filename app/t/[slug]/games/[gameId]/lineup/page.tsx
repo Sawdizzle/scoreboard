@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft } from '@/components/icons';
 import { LineupEditor, type PoolPlayer } from '@/components/LineupEditor';
-import { getGame, getLineups, lastLineup, listPlayers, listSeasons, loadTeam, publicRoster, seasonStats } from '@/lib/data';
+import { getGame, getLineups, lastLineup, listOpponents, listPlayers, listSeasons, loadTeam, publicRoster, seasonStats } from '@/lib/data';
 import { byJersey, fullName } from '@/lib/format';
 import { emptyLineup, lineupFromLast, lineupFromRoster } from '@/lib/lineup';
 import { normalizeTeam } from '@/lib/rules/roster.js';
@@ -42,6 +42,12 @@ export default async function LineupPage({ params, searchParams }: {
       const theirs = await publicRoster(supabase, game.opponent_team_id);
       pool = theirs.map((p) => ({ bid: p.id, num: p.number, name: p.display_name ?? '' }));
       if (pool.length) presets.push({ label: 'Their whole roster', lineup: normalizeTeam({ batters: pool.map(({ bid, num, name }) => ({ bid, num, name })), positions: {} }) });
+    } else if (game.opponent_id) {
+      // An opponent from your list: their roster is the bench, and the whole of it a start.
+      const opp = (await listOpponents(supabase, team.id)).find((o) => o.id === game.opponent_id);
+      const roster = opp?.roster?.batters?.filter((b) => b.num || b.name) ?? [];
+      pool = roster.map(({ bid, num, name }) => ({ bid, num, name }));
+      if (roster.length) presets.push({ label: 'Their whole roster', lineup: normalizeTeam({ batters: roster, positions: opp?.roster?.positions ?? {} }) });
     }
     initial = saved ?? emptyLineup();
   }
