@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
+import { Moments, type Channel } from '@/components/pad/OnAir';
+import { Sheet } from '@/components/pad/PadSheets';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
-import { clockSet, clockText } from '@/lib/broadcast';
+import { clockSet, clockText, mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { Basketball as B, Football as F, PERIOD_MINUTES, periodName, Soccer as S, soccerSeconds, sportGame, sportSaid, situationText, Volleyball as V,
   type SideKey, type SportLive, type SportRes } from '@/lib/sports';
 import { browserClient } from '@/lib/supabase/browser';
@@ -29,10 +31,13 @@ function matchClock(live: SportLive) {
 // through apply_play and undo_play, as a baseball play does. A rule that names
 // a moment (a touchdown, a three, a set won) sends it as the play's kind, so
 // the stream can play it.
-export function ScorePad({ slug, team, game, canScore, token }: {
-  slug: string; team: Team; game: Game & { seq: number }; canScore: boolean; token: string | null;
+export function ScorePad({ slug, team, game, canScore, channel }: {
+  slug: string; team: Team; game: Game & { seq: number }; canScore: boolean; channel: Channel | null;
 }) {
   const sb = browserClient();
+  const token = channel?.token ?? null;
+  const [bc, setBc] = useState<Broadcast>(channel?.broadcast ?? {});
+  const [air, setAir] = useState(false);
   const sport = game.sport as Sport;
   const [live, setLive] = useState<SportLive>(game.live as SportLive);
   const [status, setStatus] = useState<Status>(game.status);
@@ -139,6 +144,20 @@ export function ScorePad({ slug, team, game, canScore, token }: {
     void pump();
   }
   const toggleMatchClock = () => commit(matchClock(cur.current.live));
+  // Moments and the rally glow on the stream, as the baseball pad's On Air has them.
+  async function cmd(kind: string) {
+    const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: { type: 'moment', kind } });
+    setLast(error ? 'That did not reach the stream. Try again.' : 'On the stream');
+    if (!error) nudge();
+  }
+  async function bcast(patch: BroadcastPatch) {
+    const before = bc;
+    setBc(mergeBroadcast(bc, patch));
+    const { data, error } = await sb.rpc('set_broadcast', { p_team: team.id, p_patch: patch });
+    if (error) { setBc(before); setLast('That did not reach the stream. Try again.'); return; }
+    setBc(data as Broadcast);
+    nudge();
+  }
   function undo() {
     if (!canScore) return;
     setLast('Undone');
@@ -326,11 +345,18 @@ export function ScorePad({ slug, team, game, canScore, token }: {
       <nav className="pad-bar">
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
+        {channel && <button type="button" className={`pbar air${bc.rally || bc.scene ? ' on' : ''}`} onClick={() => setAir(true)}>On Air</button>}
         <button type="button" className="pbar" disabled={!canScore}
           onClick={() => commit({ type: final ? 'reopen_game' : 'end_game', patch: {} }, final ? 'live' : 'final')}>
           {final ? 'Reopen' : 'End game'}
         </button>
       </nav>
+      {air && channel && (
+        <Sheet title="On Air" onClose={() => setAir(false)} close="Done">
+          <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
+          <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
+        </Sheet>
+      )}
     </div>
   );
 }

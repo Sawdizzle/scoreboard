@@ -4,18 +4,49 @@ import { Sheet } from '@/components/pad/PadSheets';
 import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import Link from 'next/link';
+import type { Broadcast, BroadcastPatch } from '@/lib/broadcast';
 import { qrLayer, type AirView, type CardKind, type QrLayer } from '@/lib/onair';
 
 export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null;
-  bug_url: string | null; qr?: Partial<QrLayer> | null; spot?: { n: number; cut: 'pitch' | 'inning' } | null };
+  bug_url: string | null; qr?: Partial<QrLayer> | null; spot?: { n: number; cut: 'pitch' | 'inning' } | null; broadcast?: Broadcast | null };
+export const CHANNEL_COLS = 'token, game_id, show_line, auto_card, auto_mid, card, sponsor_name, bug_url, qr, broadcast';
+
+// The moments a tap plays on the stream, once each: v4's buttons.
+export const MOMENT_KEYS: Record<string, [string, string][]> = {
+  baseball: [['walkoff', 'Walk-off!'], ['homerun', 'Home run'], ['charge', 'Charge!'], ['doubleplay', 'Double play']],
+  football: [['touchdown', 'Touchdown'], ['bigplay', 'Big play'], ['turnover', 'Turnover'], ['charge', 'Charge!']],
+  soccer: [['goal', 'Goal!'], ['bigplay', 'Big play'], ['charge', 'Charge!']],
+  basketball: [['three', 'Three!'], ['bigplay', 'Big play'], ['charge', 'Charge!']],
+  volleyball: [['ace', 'Ace!'], ['bigplay', 'Big play'], ['charge', 'Charge!']],
+};
+
+// Moments and the rally glow: what any pad can fire at the stream.
+export function Moments({ sport, rally, onCmd, onBroadcast }: {
+  sport: string; rally: boolean; onCmd: (kind: string) => void; onBroadcast: (patch: BroadcastPatch) => void;
+}) {
+  return (
+    <>
+      <p className="eyebrow">Moments · one tap, once on the stream</p>
+      <div className="pgrid two">
+        {(MOMENT_KEYS[sport] ?? MOMENT_KEYS.baseball).map(([k, label]) => (
+          <button key={k} type="button" className="pchoice" onClick={() => onCmd(k)}><b>{label}</b></button>
+        ))}
+      </div>
+      <label className="switch">
+        <span className="switch-text"><b>Rally</b><small>A glow around the picture until you turn it off</small></span>
+        <input type="checkbox" checked={rally} onChange={(e) => onBroadcast({ rally: e.target.checked || null })} />
+      </label>
+    </>
+  );
+}
 
 // What the stream is showing right now, run from the field. How it looks (the
 // scorebug, sizes, positions) is the Stream screen, not here. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
 // the scorebug does by itself.
-export function OnAir({ channel, gameId, setupHref, view, brand, when, live, final, score, onSet, onClose }: {
+export function OnAir({ channel, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onBroadcast, onClose }: {
   channel: Channel; gameId: string; setupHref: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
-  onSet: (patch: Partial<Channel>) => void; onClose: () => void;
+  onSet: (patch: Partial<Channel>) => void; onCmd: (kind: string) => void; onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void;
 }) {
   const here = channel.game_id === gameId;
   const { batter, pitcher, dueUp } = view;
@@ -74,6 +105,8 @@ export function OnAir({ channel, gameId, setupHref, view, brand, when, live, fin
           <button type="button" className={`pchoice${up('sponsor') ? ' on' : ''}`} aria-pressed={up('sponsor')} onClick={() => flip('sponsor')}><b>Sponsor</b><small>{channel.sponsor_name}</small></button>
         )}
       </div>
+
+      <Moments sport="baseball" rally={!!channel.broadcast?.rally} onCmd={onCmd} onBroadcast={onBroadcast} />
 
       <p className="eyebrow">Spots · play once per tap</p>
       <div className="pgrid two">

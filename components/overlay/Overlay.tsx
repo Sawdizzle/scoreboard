@@ -1,14 +1,42 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Fx, type FxShot } from '@/components/overlay/Fx';
 import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
-import { feedView, momentText, type Feed } from '@/lib/onair';
+import * as A from '@/lib/fx/audio.js';
+import { feedView, layoutOf, momentText, type Feed } from '@/lib/onair';
+import * as L from '@/lib/rules/logic.js';
 import { browserClient } from '@/lib/supabase/browser';
 
 const POLL_MS = 2500;
 const AUTO_CARD_MS = 6000;
 const MOMENT_MS = 4500;
+const FX_MS = 5000;
+
+// What a play earns on the stream: a sound, and for the big ones a stinger.
+// The looks call out baseball's plays themselves (a home run, a strikeout), so
+// those are sound only; a walk-off and the other sports' moments get the frame.
+const SPORT_FX = new Set(['touchdown', 'fieldgoal', 'turnover', 'goal', 'three', 'ace', 'setwin', 'bigplay']);
+function earned(prev: Feed | null, f: Feed, runs: number): { sound: string | null; fx: string | null } {
+  const last = f.last;
+  if (!last) return { sound: null, fx: null };
+  if ((f.game?.sport ?? 'baseball') !== 'baseball') {
+    const k = last.kind ?? '';
+    return SPORT_FX.has(k) ? { sound: k, fx: k } : { sound: runs ? 'run' : null, fx: null };
+  }
+  const before = prev && feedView(prev)?.g, after = feedView(f)?.g;
+  if (before && after) {
+    const reg = f.game?.settings?.regulation || f.season?.game_innings || 7;
+    if (L.isWalkoff({ ...before, regulation_innings: reg }, { ...after, regulation_innings: reg })) return { sound: 'walkoff', fx: 'walkoff' };
+  }
+  const k = last.kind ?? '';
+  if (last.type === 'homerun' || k === 'HR') return { sound: 'homerun', fx: null };
+  if (last.type === 'strikeout' || k === 'K' || k === 'KL') return { sound: 'strikeout', fx: null };
+  if (k === 'DP') return { sound: 'doubleplay', fx: null };
+  if (k === 'SB') return { sound: 'stolenbase', fx: null };
+  return { sound: runs ? 'run' : null, fx: runs ? 'run' : null };
+}
 export const airTopic = (token: string) => `overlay:${token}`;
 
 // The page OBS loads. It has no account: it asks for the feed by the link's
@@ -19,6 +47,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [feed, setFeed] = useState<Feed | null>(initial);
   const [auto, setAuto] = useState(false);
   const [moment, setMoment] = useState<{ text: string; who: string; runs: number } | null>(null);
+  const [shot, setShot] = useState<FxShot | null>(null);
+  const [mute, setMute] = useState(false);
   const first = useRef(initial);
   // A running clock redraws each second; the rest of the page waits for the feed.
   const [now, setNow] = useState(() => Date.now());
@@ -32,7 +62,17 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
 
   useEffect(() => {
     const sb = browserClient();
-    let stopped = false, busy = false, again = false, timer = 0, momentTimer = 0;
+    let stopped = false, busy = false, again = false, timer = 0, momentTimer = 0, fxTimer = 0;
+    // The last command acted on: a page that loads does not replay the one before it.
+    let seenCmd: number | undefined = first.current ? Number(first.current.cmd?.n) || 0 : undefined;
+    let prev: Feed | null = first.current;
+    const fire = (kind: string, fx: string | null, meta: Record<string, unknown> = {}) => {
+      if (kind) { try { A.play(kind); } catch { /* no audio here: the picture still plays */ } }
+      if (!fx) return;
+      setShot({ kind: fx, n: Date.now(), meta });
+      window.clearTimeout(fxTimer);
+      fxTimer = window.setTimeout(() => setShot(null), FX_MS);
+    };
     // The newest play already called out, and who was batting before it: the play is his.
     let seenPlay = first.current?.last?.seq ?? (first.current ? 0 : undefined);
     // The score before the newest play: the difference is what that play brought home.
@@ -51,9 +91,30 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
         const f = data as Feed | { v: string } | null;
         if (stopped || !f || !('game' in f)) return;
         have = f.v;
+        // The sound settings ride on every feed; the engine keeps the last ones.
+        const snd = f.broadcast?.sound;
+        A.setPack(snd?.pack || 'bigleague');
+        A.setSettings({ muted: !!snd?.muted, master: snd?.master ?? 0.8 });
+        // A command from the pad (a moment tapped in On Air): once per stamp.
+        const n = Number(f.cmd?.n) || 0;
+        if (seenCmd !== undefined && n > seenCmd && f.cmd?.type === 'moment' && f.cmd.kind) {
+          const k = String(f.cmd.kind);
+          fire(k === 'charge' ? 'charge' : k, k === 'charge' ? 'charge' : k, f.cmd);
+        }
+        if (seenCmd === undefined || n > seenCmd) seenCmd = n;
         const view = feedView(f);
         const now = view?.air.batter?.bid ?? null;
         const text = momentText(f.last);
+        if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && f.game?.status !== 'scheduled') {
+          const runs = Math.max(0, total(f) - runsBefore);
+          const e = earned(prev, f, runs);
+          let meta: Record<string, unknown> = {};
+          if (e.fx === 'setwin') {
+            const hist = ((f.game?.live as { state?: { history?: { away: number; home: number }[] } }).state?.history) ?? [];
+            meta = hist[hist.length - 1] ?? {};
+          }
+          if (e.sound) fire(e.sound, e.fx, meta);
+        }
         if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && text && f.game?.status === 'live') {
           setMoment({ text, who: f.last.kind === 'SB' ? '' : batterName, runs: Math.max(0, Math.min(4, total(f) - runsBefore)) });
           window.clearTimeout(momentTimer);
@@ -68,6 +129,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
           timer = window.setTimeout(() => setAuto(false), AUTO_CARD_MS);
         }
         batter = now;
+        prev = f;
         setFeed(f);
       } catch { /* a dropped connection: the next poll tries again */ } finally {
         busy = false;
@@ -83,9 +145,22 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
       window.clearInterval(poll);
       window.clearTimeout(timer);
       window.clearTimeout(momentTimer);
+      window.clearTimeout(fxTimer);
       void sb.removeChannel(channel);
     };
   }, [token]);
 
-  return <><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} /><Spots spot={feed?.spot ?? null} /></>;
+  // In OBS the page may play sound at once; in a browser it waits for one tap.
+  useEffect(() => {
+    if ((window as Window & { obsstudio?: unknown }).obsstudio) return;
+    const t = window.setTimeout(() => setMute(A.isSuspended()), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+  const top = feed ? layoutOf(feed.layout).bug.pos.startsWith('t') : false;
+  return <>
+    <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} />
+    <Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} />
+    <Spots spot={feed?.spot ?? null} />
+    {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}
+  </>;
 }

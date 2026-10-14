@@ -8,11 +8,12 @@ import { CopyLink } from '@/components/CopyLink';
 import { BugPreview, brandOf } from '@/components/TeamBrand';
 import { demoFeed } from '@/lib/demo-feed';
 import { BUG_SCALE, CARD_SCALE, LOOKS, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
+import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Team } from '@/lib/types';
 
 export type StreamChannel = {
-  look: Look; layout: Feed['layout']; qr: Feed['qr']; show_line: boolean;
+  look: Look; layout: Feed['layout']; qr: Feed['qr']; show_line: boolean; broadcast?: Broadcast | null;
   bug_text: string | null; bug_url: string | null; sponsor_name: string | null; sponsor_line: string | null; sponsor_logo: string | null;
 };
 
@@ -22,6 +23,10 @@ const QR_LABEL: Record<QrPos, string> = { tl: 'Top left', tc: 'Top centre', tr: 
 const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batter'], ['pitcher', 'Pitcher'], ['dueup', 'Due up'], ['leaders', 'Leaders'], ['box', 'Box score'],
   ['lineup', 'Lineup'], ['defense', 'Defense'], ['matchup', 'Matchup'], ['mid', 'Mid-inning'], ['sponsor', 'Sponsor']];
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+// v4's five sound packs, every sound synthesized (lib/fx/audio.js).
+const PACKS: [string, string][] = [['bigleague', 'Big League organ'], ['modern', 'Modern'], ['sandlot', 'Sandlot 8-bit'], ['airhorn', 'Stadium air horns'], ['organ', 'Pipe organ']];
+// Every moment the stream can play, for a run-through from here.
+const ALL_FX = ['run', 'homerun', 'strikeout', 'doubleplay', 'stolenbase', 'walkoff', 'charge', 'touchdown', 'fieldgoal', 'turnover', 'goal', 'three', 'ace', 'bigplay'];
 
 // The one place the stream's look is set: which scorebug, how big and where,
 // the cards' size, the QR code, the corner line and the sponsor. The preview
@@ -34,6 +39,8 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
   const [bugText, setBugText] = useState(channel.bug_text ?? '');
   const [bugUrl, setBugUrl] = useState(channel.bug_url ?? '');
   const [card, setCard] = useState<CardKind | null>(null);
+  const [bc, setBc] = useState<Broadcast>(channel.broadcast ?? {});
+  const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const frame = useRef<HTMLIFrameElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -48,6 +55,29 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
       if (e) setError('That did not save. Check your signal and try again.');
     }, 300);
   };
+  // The broadcast settings (sound, and later the theme, scenes, ticker) merge
+  // key by key on the server, so two people changing different things do not
+  // undo each other.
+  const btimer = useRef(0);
+  const pending = useRef<BroadcastPatch>({});
+  const setB = (patch: BroadcastPatch) => {
+    setBc((b) => mergeBroadcast(b, patch));
+    pending.current = { ...pending.current, ...patch };
+    window.clearTimeout(btimer.current);
+    btimer.current = window.setTimeout(async () => {
+      const p = pending.current; pending.current = {};
+      const { error: e } = await browserClient().rpc('set_broadcast', { p_team: team.id, p_patch: p });
+      if (e) setError('That did not save. Check your signal and try again.');
+    }, 300);
+  };
+  const sound = bc.sound ?? {};
+  const setSound = (patch: NonNullable<Broadcast['sound']>) => setB({ sound: { ...sound, ...patch } });
+  const send = (kind: string) => browserClient().rpc('send_cmd', { p_team: team.id, p_cmd: { type: 'moment', kind } });
+  async function runThrough() {
+    setRunning(true);
+    for (const k of ALL_FX) { await send(k); await new Promise((r) => setTimeout(r, 5500)); }
+    setRunning(false);
+  }
   const pickLook = (l: Look) => { setLook(l); save({ look: l, layout: lay, qr }); };
   const moveLay = (l: Layout) => { setLay(l); save({ look, layout: l, qr }); };
   const moveQr = (q: QrLayer) => { setQr(q); save({ look, layout: lay, qr: q }); };
@@ -123,6 +153,29 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
           <label className="air-slide" style={{ borderTop: 0 }}><span>Size<b>{pct(lay.cards.scale)}</b></span>
             <input type="range" min={CARD_SCALE.min} max={CARD_SCALE.max} step={0.05} value={lay.cards.scale} onChange={(e) => moveLay({ ...lay, cards: { scale: Number(e.target.value) } })} />
           </label>
+        </div>
+      </section>
+
+      <section className="card pad">
+        <h2>Sound</h2>
+        <p className="hint">The stream plays a sound for runs, home runs, strikeouts and the other moments. OBS picks it up from the Browser Source: tick &ldquo;Control audio via OBS&rdquo; on the source to mix it.</p>
+        <label className="field"><span>Sound pack</span>
+          <select className="select" value={sound.pack ?? 'bigleague'} onChange={(e) => setSound({ pack: e.target.value })}>
+            {PACKS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          </select>
+        </label>
+        <div className="air-autos air-qr">
+          <label className="air-slide" style={{ borderTop: 0 }}><span>Volume<b>{pct(sound.master ?? 0.8)}</b></span>
+            <input type="range" min={0} max={1} step={0.05} value={sound.master ?? 0.8} onChange={(e) => setSound({ master: Number(e.target.value) })} />
+          </label>
+          <label className="switch">
+            <span className="switch-text"><b>Mute</b><small>Moments still play, silently</small></span>
+            <input type="checkbox" checked={!!sound.muted} onChange={(e) => setSound({ muted: e.target.checked })} />
+          </label>
+        </div>
+        <div className="pgrid two">
+          <button type="button" className="btn btn-quiet" onClick={() => void send('run')}>Test sound on the stream</button>
+          <button type="button" className="btn btn-quiet" disabled={running} onClick={() => void runThrough()}>{running ? 'Playing every moment…' : 'Play every moment on the stream'}</button>
         </div>
       </section>
 

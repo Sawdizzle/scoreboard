@@ -10,6 +10,7 @@ import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
 import { engineGame, lastPlayText, onPlay, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
+import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { airView } from '@/lib/onair';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
@@ -211,6 +212,24 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     say('That did not reach the stream. Try again.');
   }
 
+  // A moment on the stream, once (send_cmd stamps it), and the broadcast's
+  // standing settings (rally, scenes), merged key by key.
+  async function cmd(kind: string) {
+    const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: { type: 'moment', kind } });
+    if (error) { say('That did not reach the stream. Try again.'); return; }
+    nudge();
+    say(`On the stream: ${kind === 'walkoff' ? 'Walk-off' : kind}`);
+  }
+  async function bcast(patch: BroadcastPatch) {
+    const before = chan;
+    if (!before) return;
+    setChan({ ...before, broadcast: mergeBroadcast(before.broadcast, patch) });
+    const { data, error } = await sb.rpc('set_broadcast', { p_team: team.id, p_patch: patch });
+    if (error) { setChan(before); say('That did not reach the stream. Try again.'); return; }
+    setChan((c) => (c ? { ...c, broadcast: data as Broadcast } : c));
+    nudge();
+  }
+
   // Start over: every play and its stats go; the game is back before the first pitch.
   async function startOver() {
     if (!window.confirm('Start this game over? Every play and its stats are cleared. Lineups stay.')) return;
@@ -268,6 +287,32 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     strike: () => ((g.strikes | 0) >= 2 ? setSheet('k3') : commit(L.onStrike(g))),
     foul: () => commit(L.onFoul(g)),
   };
+
+  // Demo: the game plays itself, a pitch every 1.6 seconds, through the same
+  // rules and the same queue as a tap, to try the stream without a game on.
+  // The plays are real plays on this game: for a practice game.
+  const [demo, setDemo] = useState(false);
+  const demoStep = useRef<() => void>(() => {});
+  useEffect(() => { demoStep.current = () => {
+    if (cur.current.status === 'final') { setDemo(false); return; }
+    const gg = cur.current.g;
+    const r = Math.random();
+    if (r < 0.34) press.ball();
+    else if (r < 0.6) { if ((gg.strikes | 0) >= 2) commit(L.onStrike(gg, { looking: Math.random() < 0.3 })); else press.strike(); }
+    else if (r < 0.75) press.foul();
+    else {
+      const kinds = ['H1', 'H1', 'H2', 'GB', 'GB', 'FB', 'FB', 'H3', 'HR', 'E'];
+      const kind = kinds[Math.floor(Math.random() * kinds.length)];
+      if (kind === 'HR') { const runs = L.computeHomeRun(gg.bases).runs; commit({ type: 'homerun', patch: L.homeRunPatch(gg, runs), payload: { runs, play: L.playNote(gg, 'HR', { runs }) } }); return; }
+      const pos = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'][Math.floor(Math.random() * 9)];
+      commit(onPlay(gg, { kind, pos, dest: L.playDefaults(gg, kind) as unknown as Record<string, number | 'out'> }));
+    }
+  }; });
+  useEffect(() => {
+    if (!demo) return;
+    const t = window.setInterval(() => demoStep.current(), 1600);
+    return () => window.clearInterval(t);
+  }, [demo]);
 
   // Keys for a laptop at the table: the pad's own letters, ignored while a
   // sheet is open or a field has the cursor.
@@ -381,9 +426,15 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
       {sheet === 'air' && chan && <OnAir channel={chan} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
         when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
-        score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onClose={() => setSheet(null)} />}
+        score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onBroadcast={bcast} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
-        extra={game.settings?.time_limit ? <GameClock gameId={game.id} initial={game.clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={nudge} /> : null}
+        extra={<>
+          {game.settings?.time_limit ? <GameClock gameId={game.id} initial={game.clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={nudge} /> : null}
+          <label className="switch">
+            <span className="switch-text"><b>Demo: the game plays itself</b><small>A pitch every 1.6 s, to try the stream. Every play is real: use a practice game.</small></span>
+            <input type="checkbox" checked={demo} disabled={!canScore || final} onChange={(e) => setDemo(e.target.checked)} />
+          </label>
+        </>}
         onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} onStartOver={startOver} />}
     </div>
   );

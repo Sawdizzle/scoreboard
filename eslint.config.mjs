@@ -11,7 +11,7 @@ const config = [
     },
   },
   // lib/rules is Scoreboard's engine, copied unchanged; it is linted there.
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'lib/rules/**', 'public/**'] },
+  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'lib/rules/**', 'lib/fx/**', 'public/**'] },
 ];
 
 export default config;

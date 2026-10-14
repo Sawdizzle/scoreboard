@@ -85,7 +85,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   }
   if (v === 'scorepad') {
     // The score-only pad: /dev/kit?v=scorepad&sport=football (soccer, basketball, volleyball).
-    return <ScorePad slug={team.slug} team={team} canScore token={null}
+    return <ScorePad slug={team.slug} team={team} canScore channel={null}
       game={{ ...game, sport: (sport as Sport) ?? 'football', status: 'live', seq: 0, live: { home_score: 14, away_score: 7, state: { period: 2 } } }} />;
   }
   if (v === 'public-game') {

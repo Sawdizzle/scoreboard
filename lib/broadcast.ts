@@ -45,6 +45,12 @@ export type Broadcast = {
   obs?: { auto_clip?: boolean; replay_seconds?: number; cameras?: string[] };
 };
 
+// A change to the broadcast settings: keys merge in, a key set to null goes.
+export type BroadcastPatch = { [K in keyof Broadcast]?: Broadcast[K] | null };
+// The same merge set_broadcast does, for showing a change before it is saved.
+export const mergeBroadcast = (b: Broadcast | null | undefined, patch: BroadcastPatch): Broadcast =>
+  Object.fromEntries(Object.entries({ ...(b ?? {}), ...patch }).filter(([, v]) => v !== null && v !== undefined)) as Broadcast;
+
 // A one-shot command. `n` is the server's stamp: the stream acts once per n.
 export type Cmd = { type: string; kind?: string; n: number } & Record<string, unknown>;
 
