@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
-import { Moments, type Channel } from '@/components/pad/OnAir';
+import { Moments, ScenesControl, type Channel } from '@/components/pad/OnAir';
 import { Sheet } from '@/components/pad/PadSheets';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import { clockSet, clockText, mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
@@ -145,6 +145,11 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
   }
   const toggleMatchClock = () => commit(matchClock(cur.current.live));
   // Moments and the rally glow on the stream, as the baseball pad's On Air has them.
+  async function send(c: { type: string; kind?: string }) {
+    const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: c });
+    setLast(error ? 'That did not reach the stream. Try again.' : 'On the stream');
+    if (!error) nudge();
+  }
   async function cmd(kind: string) {
     const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: { type: 'moment', kind } });
     setLast(error ? 'That did not reach the stream. Try again.' : 'On the stream');
@@ -354,6 +359,7 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
       {air && channel && (
         <Sheet title="On Air" onClose={() => setAir(false)} close="Done">
           <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
+          <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} />
           <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
         </Sheet>
       )}

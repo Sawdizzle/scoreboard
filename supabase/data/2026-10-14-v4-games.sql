@@ -118,3 +118,9 @@ begin
    where t.id = 'f484fba5-e66c-42de-b72a-968d28775e1e' and o.team_id = bs and lower(o.name) = 'sanger wolf';
 end;
 $$;
+
+-- Afterwards (v5 stage 6): the venue's coordinates, for the weather, from v4's venue.
+update public.games g set venue_geo = jsonb_build_object('label', o.venue->>'label', 'query', o.venue->>'query',
+  'lat', (o.venue->>'lat')::numeric, 'lon', (o.venue->>'lon')::numeric, 'tz', o.venue->>'tz')
+from public.legacy_games l join scoreboard.games o on o.id = l.v4_id
+where l.game_id = g.id and o.venue ? 'lat';

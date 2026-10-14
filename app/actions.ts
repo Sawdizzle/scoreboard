@@ -10,6 +10,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { listOpponents, loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
+import { geocode } from '@/lib/fx/weather.js';
 import { abbrFor } from '@/lib/format';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
@@ -454,8 +455,20 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
   const whole = (k: string, max: number) => { const v = Math.round(Number(str(fd, k))); return v > 0 && v <= max ? v : null; };
   const limit = whole('time_limit_min', 300), runRule = whole('run_rule', 30), period = whole('period_minutes', 60);
   const settings = { time_limit: limit ? limit * 60 : null, run_rule: runRule, period_minutes: period };
+  // Where the weather comes from: a ZIP or a town, looked up once (Open-Meteo)
+  // and kept on the game as rounded coordinates. Unchanged, it is left alone.
+  const wq = str(fd, 'weather_q').slice(0, 60);
+  let venueGeo: Record<string, unknown> | null | undefined;
+  if (wq !== str(fd, 'weather_was')) {
+    if (!wq) venueGeo = null;
+    else {
+      try { venueGeo = (await geocode(wq)) as Record<string, unknown> | null; } catch { venueGeo = undefined; }
+      if (venueGeo === null) return { error: `Could not find "${wq}" for the weather. Try a ZIP code.` } as const;
+    }
+  }
   return {
     settings,
+    ...(venueGeo !== undefined ? { venue_geo: venueGeo } : {}),
     opponent_team_id: oppId || null, opponent_name: name, opponent_abbr: abbr, opponent_color: color,
     is_home: str(fd, 'is_home') !== 'away',
     starts_at: startsAt ? new Date(startsAt).toISOString() : null,

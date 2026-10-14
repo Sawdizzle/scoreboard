@@ -54,6 +54,10 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
       <label className="field"><span>Where</span>
         <input className="input" name="venue" defaultValue={game?.venue ?? ''} maxLength={80} placeholder="Railyard Park, Field 3" autoComplete="off" />
       </label>
+      <label className="field"><span>Weather from · ZIP or town, for Starting Soon and delays</span>
+        <input className="input" name="weather_q" defaultValue={game?.venue_geo ? String((game.venue_geo as { query?: string }).query ?? game.venue_geo.label ?? '') : ''} maxLength={60} placeholder="76266" autoComplete="off" />
+      </label>
+      <input type="hidden" name="weather_was" value={game?.venue_geo ? String((game.venue_geo as { query?: string }).query ?? game.venue_geo.label ?? '') : ''} />
       {seasons.length > 0 && (
         <label className="field"><span>Season</span>
           <select className="select" name="season_id" defaultValue={game ? game.season_id ?? '' : current?.id ?? ''}>

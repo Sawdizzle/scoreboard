@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Fx, type FxShot } from '@/components/overlay/Fx';
+import { Scenes, type Weather } from '@/components/overlay/Scenes';
+import * as WX from '@/lib/fx/weather.js';
 import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
 import * as A from '@/lib/fx/audio.js';
@@ -17,6 +19,9 @@ const FX_MS = 5000;
 // What a play earns on the stream: a sound, and for the big ones a stinger.
 // The looks call out baseball's plays themselves (a home run, a strikeout), so
 // those are sound only; a walk-off and the other sports' moments get the frame.
+// v4's weather module, typed here: it takes the venue and the first pitch.
+const fetchWeather = WX.fetchWeather as (venue: { lat: number; lon: number }, at?: string | null) => Promise<unknown>;
+
 const SPORT_FX = new Set(['touchdown', 'fieldgoal', 'turnover', 'goal', 'three', 'ace', 'setwin', 'bigplay']);
 function earned(prev: Feed | null, f: Feed, runs: number): { sound: string | null; fx: string | null } {
   const last = f.last;
@@ -49,12 +54,53 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [moment, setMoment] = useState<{ text: string; who: string; runs: number } | null>(null);
   const [shot, setShot] = useState<FxShot | null>(null);
   const [intro, setIntro] = useState<{ n: number; kind: 'intro' | 'tribute' } | null>(null);
+  const [strike, setStrike] = useState(0);
+  const [weather, setWeather] = useState<Weather | null>(null);
   const [mute, setMute] = useState(false);
   const first = useRef(initial);
+  // The venue's weather, for Starting Soon and the pause scene: from
+  // Open-Meteo every ten minutes while one of them is up (two after a miss).
+  const scene = feed?.broadcast?.scene?.kind;
+  const geo = feed?.game?.venue_geo;
+  const wxKey = scene === 'starting' || scene === 'paused' ? geo && geo.lat != null ? `${geo.lat},${geo.lon}|${feed?.game?.starts_at ?? ''}` : '' : '';
+  useEffect(() => {
+    if (!wxKey) return;
+    let stop = false, t = 0;
+    const [ll, at] = wxKey.split('|');
+    const [lat, lon] = ll.split(',').map(Number);
+    const pull = async () => {
+      let next = 10 * 60 * 1000;
+      try { const w = await fetchWeather({ lat, lon }, at || null); if (!stop && w) setWeather(w as Weather); } catch { next = 2 * 60 * 1000; }
+      if (!stop) t = window.setTimeout(pull, next);
+    };
+    void pull();
+    return () => { stop = true; window.clearTimeout(t); };
+  }, [wxKey]);
+
+  // A new release reloads the page, so a Browser Source left running all
+  // season does not keep last month's code. Checked every five minutes, and
+  // never while a full-frame scene is up.
+  const sceneUp = useRef(false);
+  useEffect(() => { sceneUp.current = !!scene; }, [scene]);
+  useEffect(() => {
+    let mine = '';
+    const check = async () => {
+      try {
+        const r = await fetch('/version', { cache: 'no-store' });
+        const v = (await r.text()).trim();
+        if (!mine) mine = v; else if (v && v !== mine && !sceneUp.current) window.location.reload();
+      } catch { /* offline: next time */ }
+    };
+    void check();
+    const t = window.setInterval(check, 5 * 60 * 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
   // A running clock redraws each second; the rest of the page waits for the feed.
   const [now, setNow] = useState(() => Date.now());
   const st = (feed?.game?.live as { state?: { clock?: { running?: boolean } } } | undefined)?.state;
-  const ticking = !!(feed?.game?.clock?.running || st?.clock?.running);
+  // Starting Soon and the pause scene count down too.
+  const ticking = !!(feed?.game?.clock?.running || st?.clock?.running || feed?.broadcast?.scene?.kind === 'starting' || feed?.broadcast?.scene?.at);
   useEffect(() => {
     if (!ticking) return;
     const t = window.setInterval(() => setNow(Date.now()), 250);
@@ -103,6 +149,11 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
           fire(k === 'charge' ? 'charge' : k, k === 'charge' ? 'charge' : k, f.cmd);
         }
         if (seenCmd !== undefined && n > seenCmd && f.cmd?.type === 'intro') setIntro({ n, kind: f.cmd.kind === 'tribute' ? 'tribute' : 'intro' });
+        // A new lightning strike, from the pad, on the pause scene: the flash and the thunder.
+        if (seenCmd !== undefined && n > seenCmd && f.cmd?.type === 'strike') {
+          setStrike(n);
+          window.setTimeout(() => { try { A.thunder(true); } catch { /* no audio */ } }, 400);
+        }
         if (seenCmd === undefined || n > seenCmd) seenCmd = n;
         const view = feedView(f);
         const now = view?.air.batter?.bid ?? null;
@@ -161,6 +212,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const top = feed ? layoutOf(feed.layout).bug.pos.startsWith('t') : false;
   return <>
     <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} />
+    <Scenes feed={feed} now={now} weather={weather} strike={strike} />
     <Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} />
     <Spots spot={feed?.spot ?? null} />
     {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}

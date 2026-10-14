@@ -25,10 +25,9 @@ export type GameSettings = {
 
 export type Scene = {
   kind: 'starting' | 'final' | 'paused';
-  title?: string;          // "First pitch 6:30", "Lightning delay"
-  note?: string;           // a line under it
-  storm?: 'rain' | 'lightning' | 'heat' | 'none';
-  at?: string | null;      // the countdown's target (starting soon)
+  title?: string;          // Starting Soon's line ("Game starting soon"), or the Final's
+  reason?: 'lightning' | 'rain' | 'weather' | 'suspended' | 'called'; // why play is paused
+  at?: string | null;      // what a countdown runs to: a restart time (paused)
 };
 
 export type Broadcast = {
@@ -40,7 +39,7 @@ export type Broadcast = {
   rally?: boolean;         // the ambient rally glow
   scene?: Scene | null;    // a full-screen scene up now
   scene_style?: 'standard' | 'elevated';
-  ticker?: { on?: boolean; items?: string[]; speed?: number };
+  ticker?: { on?: boolean; text?: string; tone?: 'notice' | 'alert' };
   sponsors?: { on?: boolean; items?: { name: string; logo?: string | null }[]; every?: number };
   obs?: { auto_clip?: boolean; replay_seconds?: number; cameras?: string[] };
 };

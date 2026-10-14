@@ -180,6 +180,16 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
       </section>
 
       <section className="card pad">
+        <h2>Scenes</h2>
+        <p className="hint">Starting Soon, Final and Game paused cover the whole picture; they are put up and taken down from On Air in the pad. Pick their style here.</p>
+        <div className="pills" role="radiogroup" aria-label="Scene style">
+          {([['standard', 'Standard'], ['elevated', 'Elevated · network TV']] as const).map(([k, label]) => (
+            <label key={k} className="pill wide"><input type="radio" name="scene_style" checked={(bc.scene_style ?? 'standard') === k} onChange={() => setB({ scene_style: k === 'standard' ? null : k })} /><span>{label}</span></label>
+          ))}
+        </div>
+      </section>
+
+      <section className="card pad">
         <h2>Channel bug and QR code</h2>
         <p className="hint">The line stays in a corner of the stream all game. The link becomes a QR code, switched on and off from On Air in the pad.</p>
         {canLead ? (
