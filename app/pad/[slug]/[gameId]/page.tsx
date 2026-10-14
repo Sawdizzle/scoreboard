@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { Pad } from '@/components/pad/Pad';
 import { ScorePad } from '@/components/pad/ScorePad';
 import { getGame, getLineups, listSeasons, loadTeam, seasonStats } from '@/lib/data';
-import { CHANNEL_COLS, type Channel } from '@/components/pad/OnAir';
+import type { Channel } from '@/components/pad/OnAir';
+import { CHANNEL_COLS } from '@/lib/broadcast';
 import type { StatRow } from '@/lib/scoring';
 import { canRunGames, type Game } from '@/lib/types';
 

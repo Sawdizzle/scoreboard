@@ -3,6 +3,11 @@
 // game (clock, settings); see supabase/migrations/*_v5_broadcast.sql. Every
 // reader takes these defensively: any key may be missing.
 
+// What the pad reads of the team's stream channel. Here, not beside the pad's
+// components: those are client modules, and a server page that imports a
+// value from one gets a reference to it, not the value.
+export const CHANNEL_COLS = 'token, game_id, show_line, auto_card, auto_mid, card, sponsor_name, bug_url, qr, broadcast, look';
+
 // The game clock. A countdown runs to ends_at while running and holds
 // `remaining` while stopped; a count-up (soccer) is base seconds plus the time
 // since `since` while running.

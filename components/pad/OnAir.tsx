@@ -11,7 +11,6 @@ import { qrLayer, type AirView, type CardKind, type QrLayer } from '@/lib/onair'
 
 export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null;
   bug_url: string | null; qr?: Partial<QrLayer> | null; spot?: { n: number; cut: 'pitch' | 'inning' } | null; broadcast?: Broadcast | null; look?: string | null };
-export const CHANNEL_COLS = 'token, game_id, show_line, auto_card, auto_mid, card, sponsor_name, bug_url, qr, broadcast, look';
 
 // The moments a tap plays on the stream, once each: v4's buttons.
 export const MOMENT_KEYS: Record<string, [string, string][]> = {
