@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
+import './themes.css';
 import { LOOK_BUGS } from '@/components/overlay/looks';
 import { homerText, type BugProps } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
@@ -22,7 +23,7 @@ const vars = (b: Brand) => ({ '--c': b.color, '--c2': b.color2, '--ink': inkOn(b
 // A team's name on its slab: full size for a short name, smaller until a long one fits.
 const fit = (s: string, max: number, room: number) => ({ fontSize: `${Math.min(max, Math.max(max * 0.5, room / (Math.max(s.length, 1) * 0.56))).toFixed(2)}rem` });
 
-function Team({ brand, score, bat }: { brand: Brand; score: number; bat: boolean }) {
+function Team({ brand, score, bat, he }: { brand: Brand; score: number; bat: boolean; he?: [number, number] | null }) {
   return (
     <div className={`ov-team${bat ? ' bat' : ''}`} style={vars(brand)}>
       <div className="ov-slab">
@@ -30,8 +31,28 @@ function Team({ brand, score, bat }: { brand: Brand; score: number; bat: boolean
         <span style={fit(brand.display, 3.4, 19)}>{brand.display}</span>
       </div>
       <div className="ov-score"><b key={score}>{score}</b></div>
+      {he && <div className="ov-he"><span>H {he[0]}</span><span>E {he[1]}</span></div>}
     </div>
   );
+}
+
+// v4's Custom theme: its colours and type, as the bug's variables.
+const FONTS: Record<string, string> = {
+  condensed: 'var(--font-cond), "Arial Narrow", system-ui, sans-serif', clean: '"Helvetica Neue", Arial, system-ui, sans-serif',
+  mono: 'ui-monospace, Menlo, Consolas, monospace', serif: '"Times New Roman", Georgia, serif',
+};
+function customVars(c: Record<string, string | number | boolean> | undefined): React.CSSProperties {
+  if (!c) return {};
+  const v: Record<string, string> = {};
+  const hex = (x: unknown) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : null);
+  if (hex(c.accent)) v['--sb-accent'] = c.accent as string;
+  if (hex(c.text)) v['--sb-chalk'] = c.text as string;
+  if (hex(c.panel1)) v['--sb-panel1'] = c.panel1 as string;
+  if (hex(c.panel2) || hex(c.panel1)) v['--sb-panel2'] = (hex(c.panel2) ?? c.panel1) as string;
+  if (hex(c.well)) v['--sb-well'] = c.well as string;
+  if (typeof c.font === 'string' && FONTS[c.font]) v['--sb-font'] = FONTS[c.font];
+  if (c.radius !== undefined && c.radius !== '' && Number.isFinite(Number(c.radius))) v['--sb-radius'] = `${Math.max(0, Math.min(24, Number(c.radius))) / 15}rem`;
+  return v as React.CSSProperties;
 }
 
 function Stat({ v, k, gold }: { v: string; k: string; gold?: boolean }) {
@@ -295,12 +316,21 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
   const recap = halfRecap(feed, g);
   const fresh = g.half === 'bottom' ? { side: 'away' as const, inning: g.inning | 0 } : { side: 'home' as const, inning: (g.inning | 0) - 1 };
   const box = boxScore(g, feed.season?.game_innings ?? 7);
+  // How Scoreboard's own bug is painted and what it shows (Stream screen).
+  const bc = feed.broadcast ?? {};
+  const show = bc.show ?? {};
+  const theme = bc.theme || 'nightgame', style = bc.style || 'bar';
+  const he = (side: 'away' | 'home'): [number, number] | null => (ball && show.rhe ? [Number(g[`${side}_hits`]) | 0, Number(g[`${side}_errors`]) | 0] : null);
+  const rr = Number(feed.game!.settings?.run_rule) || 0;
+  const runRule = ball && live && show.runrule !== false && rr > 0 && Math.abs((g.away_score | 0) - (g.home_score | 0)) >= rr;
   const base = (on: boolean, x: number, y: number) => (
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
 
   return (
-    <div className={`ov bug-${lay.bug.pos}`} style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale } as React.CSSProperties}>
+    <div className={`ov bug-${lay.bug.pos}${show.batter === false ? ' no-batter' : ''}${show.pitcher === false ? ' no-pitcher' : ''}${theme === 'custom' && bc.custom?.teamFill ? ' team-fill' : ''}`}
+      data-theme={theme} data-style={style}
+      style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale, ...(theme === 'custom' ? customVars(bc.custom) : {}) } as React.CSSProperties}>
       <style>{ROOT}</style>
       <MidScene box={box} away={away} home={home} title={breakText(g)} tag={g.half === 'bottom' ? `Mid ${g.inning}` : `End ${Math.max(1, (g.inning | 0) - 1)}`}
         list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} recap={recap} scores={{ away: g.away_score | 0, home: g.home_score | 0 }} on={shown === 'mid'} />
@@ -323,8 +353,8 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
         {!Bug && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text === 'Home run' && moment.runs >= 4 ? 'Grand slam' : moment.text}</b><span>{[moment.who, moment.text === 'Home run' && moment.runs < 4 ? homerText(moment.runs) : ''].filter(Boolean).join(' · ')}</span></>}</div>}
         {!Bug && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
           <div className="ov-rail">
-            <Team brand={away} score={g.away_score | 0} bat={ball && live && top} />
-            <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} />
+            <Team brand={away} score={g.away_score | 0} bat={ball && live && top} he={he('away')} />
+            <Team brand={home} score={g.home_score | 0} bat={ball && live && !top} he={he('home')} />
             {live && !ball ? <div className="ov-sit word"><b>{periodText(sport, feed.game!.live as SportLive)}</b>{clock && <b className="ov-clk">{clock}</b>}</div> : live ? (
               <div className="ov-sit">
                 <div className="ov-inn"><i className={top ? 'on' : undefined} /><b>{g.inning}</b><i className={top ? 'dn' : 'dn on'} /></div>
@@ -335,9 +365,15 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
                   <b>{g.balls | 0}-{g.strikes | 0}</b>
                   <span>{[0, 1, 2].map((i) => <i key={i} className={i < (g.outs | 0) ? 'on' : undefined} />)}</span>
                 </div>
+                <div className="ov-bso" aria-hidden="true">
+                  {([['B', g.balls | 0, 3], ['S', g.strikes | 0, 2], ['O', g.outs | 0, 2]] as const).map(([k, n, of]) => (
+                    <span key={k}><em>{k}</em>{Array.from({ length: of }, (_, i) => <i key={i} className={i < n ? 'on' : undefined} />)}</span>
+                  ))}
+                </div>
               </div>
             ) : <div className="ov-sit word"><b>{status === 'final' ? 'Final' : 'Pregame'}</b></div>}
             {ball && live && clock && <div className="ov-sit word"><b className="ov-clk">{clock}</b></div>}
+            {runRule && <span className="ov-rr">Run rule</span>}
           </div>
           {!ball && live && detail && <div className="ov-strip"><span className="ov-detail">{detail}</span></div>}
           {ball && live && (air.batter || air.pitcher) && (
@@ -349,7 +385,7 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
                   {feed.show_line && air.batter.today && <Stat v={air.batter.today} k="Today" />}
                 </span>
               )}
-              {air.pitcher && <span className="ov-p">P · {air.pitcher.last} <b>{air.pitcher.pitches}</b></span>}
+              {air.pitcher && <span className="ov-p">P · {air.pitcher.last}{show.pitchcount !== false && <> <b>{air.pitcher.pitches}</b></>}</span>}
             </div>
           )}
         </div>}

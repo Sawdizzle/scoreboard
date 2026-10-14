@@ -2,6 +2,9 @@
    size here is "pixels at 1280 wide, divided by ten". Plain properties only:
    OBS ships its own, older, browser. */
 .ov { position: fixed; inset: 0; overflow: hidden; color: #fff; font-family: var(--font-cond), 'Arial Narrow', system-ui, sans-serif;
+  /* Scoreboard's own bug, by variable, so v4's themes (themes.css) can paint it. */
+  --sb-panel1: #1d2638; --sb-panel2: #0b111c; --sb-well: #070b13; --sb-chalk: #fff; --sb-accent: #ffcf3a;
+  --sb-line: rgba(255, 255, 255, 0.1); --sb-radius: 0.7rem; --sb-font: var(--font-cond), 'Arial Narrow', system-ui, sans-serif;
   font-weight: 700; text-transform: uppercase; line-height: 1; font-variant-numeric: tabular-nums; }
 .ov small, .ov em { font-style: normal; font-weight: 600; color: #b6c0d2; }
 .ov .gold { color: #ffcf3a; }
@@ -22,6 +25,14 @@
 .ov.bug-bl .ov-dock, .ov.bug-tl .ov-dock { left: 4.8rem; }
 .ov.bug-br .ov-dock, .ov.bug-tr .ov-dock { right: 4.8rem; align-items: flex-end; }
 .ov.bug-bc .ov-dock, .ov.bug-tc .ov-dock { left: 0; right: 0; align-items: center; }
+/* The middle row: the bug at mid height, its cards stacking below it. */
+.ov.bug-ml .ov-dock, .ov.bug-mc .ov-dock, .ov.bug-mr .ov-dock { top: 50%; transform: translateY(-50%); flex-direction: column-reverse; }
+.ov.bug-ml .ov-dock { left: 4.8rem; }
+.ov.bug-mr .ov-dock { right: 4.8rem; align-items: flex-end; }
+.ov.bug-mc .ov-dock { left: 0; right: 0; align-items: center; }
+.ov.bug-mr .ov-ext > .ov-card { justify-self: end; }
+.ov.bug-mc .ov-ext > .ov-card { justify-self: center; }
+.ov.bug-ml .ov-ext > .ov-card, .ov.bug-mc .ov-ext > .ov-card, .ov.bug-mr .ov-ext > .ov-card { align-self: start; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
 .ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .ov-look { zoom: var(--bs); }
 /* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Scoreboard's own bug and cards. */
@@ -44,34 +55,34 @@
 .ov.bug-br .ov-chan { right: auto; left: 4.8rem; }
 
 /* ---- The scorebug ---- */
-.ov-bug { display: flex; flex-direction: column; border-radius: 0.7rem; overflow: hidden; }
-.ov-rail { display: flex; align-items: stretch; height: 6.8rem; background: linear-gradient(180deg, #1d2638, #0b111c); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14); }
+.ov-bug { display: flex; flex-direction: column; border-radius: var(--sb-radius); overflow: hidden; color: var(--sb-chalk); font-family: var(--sb-font); }
+.ov-rail { display: flex; align-items: stretch; height: 6.8rem; background: linear-gradient(180deg, var(--sb-panel1), var(--sb-panel2)); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14); }
 .ov-team { position: relative; display: flex; align-items: stretch; }
 .ov-team.bat::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 0.5rem; background: #fff; box-shadow: 0 0 1.2rem rgba(255, 255, 255, 0.8); }
 .ov-slab { display: flex; align-items: center; justify-content: center; gap: 1rem; min-width: 11.8rem; max-width: 24rem; padding: 0 1.6rem;
   letter-spacing: 0.045em; white-space: nowrap; }
 .ov-slab img { width: 4.6rem; height: 4.6rem; object-fit: contain; filter: drop-shadow(0 0.2rem 0.3rem rgba(0, 0, 0, 0.45)); }
-.ov-score { display: flex; align-items: center; justify-content: center; width: 7rem; background: #070b13; font-size: 4.6rem; }
+.ov-score { display: flex; align-items: center; justify-content: center; width: 7rem; background: var(--sb-well); font-size: 4.6rem; }
 .ov-score b { display: block; animation: ov-pop 0.5s ease-out; }
-.ov-sit { display: flex; align-items: center; gap: 1.8rem; padding: 0 2rem 0 1.8rem; border-left: 0.1rem solid rgba(255, 255, 255, 0.1); }
-.ov-sit.word { font-size: 2.6rem; letter-spacing: 0.12em; color: #ffcf3a; }
+.ov-sit { display: flex; align-items: center; gap: 1.8rem; padding: 0 2rem 0 1.8rem; border-left: 0.1rem solid var(--sb-line); }
+.ov-sit.word { font-size: 2.6rem; letter-spacing: 0.12em; color: var(--sb-accent); }
 .ov-clk { color: #fff; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 .ov-sit.word .ov-clk { margin-left: 1.2rem; }
 .ov-detail { font-size: 2rem; font-weight: 600; color: #fff; letter-spacing: 0.02em; }
 .ov-inn { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; width: 4.4rem; font-size: 3rem; }
-.ov-inn i { width: 0; height: 0; border-left: 0.8rem solid transparent; border-right: 0.8rem solid transparent; border-bottom: 0.9rem solid #ffcf3a; opacity: 0.25; }
-.ov-inn i.dn { border-bottom: 0; border-top: 0.9rem solid #ffcf3a; }
+.ov-inn i { width: 0; height: 0; border-left: 0.8rem solid transparent; border-right: 0.8rem solid transparent; border-bottom: 0.9rem solid var(--sb-accent); opacity: 0.25; }
+.ov-inn i.dn { border-bottom: 0; border-top: 0.9rem solid var(--sb-accent); }
 .ov-inn i.on { opacity: 1; }
 .ov-sit svg { width: 6.2rem; height: 5.2rem; }
 .ov-sit rect { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.38); stroke-width: 2.2; transition: fill 0.25s; }
-.ov-sit rect.on { fill: #ffcf3a; stroke: #fff3c2; }
+.ov-sit rect.on { fill: var(--sb-accent); stroke: #fff3c2; }
 .ov-count { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; font-size: 3.4rem; letter-spacing: 0.02em; }
 .ov-count span { display: flex; gap: 0.6rem; }
 .ov-count i { width: 1.1rem; height: 1.1rem; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
-.ov-count i.on { background: #ffcf3a; }
+.ov-count i.on { background: var(--sb-accent); }
 
 .ov-strip { display: flex; align-items: center; gap: 2.4rem; height: 4.6rem; padding: 0 1.6rem 0 1.4rem; overflow: hidden; white-space: nowrap;
-  background: linear-gradient(180deg, #0b111c, #070b13); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, var(--sb-panel2), var(--sb-well)); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.07);
   transition: height 0.3s ease, opacity 0.3s ease; }
 .ov-bug.carded .ov-strip { height: 0; opacity: 0; }
 .ov-ab { display: flex; align-items: center; gap: 1.4rem; animation: ov-in 0.45s ease-out; }

@@ -17,7 +17,8 @@ export type StreamChannel = {
   bug_text: string | null; bug_url: string | null; sponsor_name: string | null; sponsor_line: string | null; sponsor_logo: string | null;
 };
 
-const BUG_AT: [BugPos, string][] = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
+const BUG_AT: [BugPos, string][] = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Middle left'], ['mc', 'Middle'], ['mr', 'Middle right'],
+  ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
 const QR_AT: (QrPos | null)[] = ['tl', 'tc', 'tr', 'ml', null, 'mr', 'bl', 'bc', 'br'];
 const QR_LABEL: Record<QrPos, string> = { tl: 'Top left', tc: 'Top centre', tr: 'Top right', ml: 'Middle left', mr: 'Middle right', bl: 'Bottom left', bc: 'Bottom centre', br: 'Bottom right' };
 const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batter'], ['pitcher', 'Pitcher'], ['dueup', 'Due up'], ['leaders', 'Leaders'], ['box', 'Box score'],
@@ -25,6 +26,19 @@ const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batte
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 // v4's five sound packs, every sound synthesized (lib/fx/audio.js).
 const PACKS: [string, string][] = [['bigleague', 'Big League organ'], ['modern', 'Modern'], ['sandlot', 'Sandlot 8-bit'], ['airhorn', 'Stadium air horns'], ['organ', 'Pipe organ']];
+// v4's themes and layouts for Scoreboard's own bug (components/overlay/themes.css).
+const THEMES: [string, [string, string][]][] = [
+  ['Your own', [['custom', 'Custom (your colours)'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20 (purple & gold)']]],
+  ['Clean', [['nightgame', 'Midnight'], ['espn', 'Broadcast Minimal'], ['green', 'Ballpark Green'], ['carbon', 'Carbon'], ['royal', 'Royal'], ['gold', 'Gold'], ['ice', 'Ice (light)']]],
+  ['Bold', [['neon', 'Neon'], ['volt', 'Volt (electric)'], ['blueprint', 'Blueprint'], ['foil', 'Holo Foil (refractor)'], ['jumbotron', 'Jumbotron (LED)']]],
+  ['Throwback', [['retro', 'Retro 8-bit'], ['chalkboard', 'Sandlot Slate'], ['americana', 'Americana (bunting)']]],
+];
+const STYLES: [string, string][] = [['bar', 'Bar (wide strip)'], ['scorebox', 'Scorebox (full broadcast)'], ['bug', 'Bug (stacked)'], ['minimal', 'Minimal (slim)'], ['lowerthird', 'Lower-third']];
+const SHOWS: [keyof NonNullable<Broadcast['show']>, string, string, boolean][] = [
+  ['clock', 'Game clock', 'Time limit, quarter or half', true], ['batter', 'Batter', 'The name on the strip', true], ['pitcher', 'Pitcher', 'The name on the strip', true],
+  ['pitchcount', 'Pitch count', 'Beside the pitcher', true], ['rhe', 'Hits and errors', 'Beside each score', false], ['runrule', 'Run rule', 'A badge when the lead reaches it', true],
+];
+
 // Every moment the stream can play, for a run-through from here.
 const ALL_FX = ['run', 'homerun', 'strikeout', 'doubleplay', 'stolenbase', 'walkoff', 'charge', 'touchdown', 'fieldgoal', 'turnover', 'goal', 'three', 'ace', 'bigplay'];
 
@@ -78,6 +92,9 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
     for (const k of ALL_FX) { await send(k); await new Promise((r) => setTimeout(r, 5500)); }
     setRunning(false);
   }
+  const show = bc.show ?? {};
+  const custom = bc.custom ?? {};
+  const setCustom = (k: string, v: string | number | boolean) => setB({ custom: { ...custom, [k]: v } });
   const pickLook = (l: Look) => { setLook(l); save({ look: l, layout: lay, qr }); };
   const moveLay = (l: Layout) => { setLay(l); save({ look, layout: l, qr }); };
   const moveQr = (q: QrLayer) => { setQr(q); save({ look, layout: lay, qr: q }); };
@@ -89,7 +106,9 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
     qr: { ...qr, on: !!link },
     bug: bugText.trim() || link ? { text: bugText.trim() || null, url: link } : null,
     sponsor: channel.sponsor_name ? { name: channel.sponsor_name, line: channel.sponsor_line, logo: channel.sponsor_logo } : null,
-  }), [team, look, lay, qr, bugText, link, channel.show_line, channel.sponsor_name, channel.sponsor_line, channel.sponsor_logo]);
+    // The preview shows the look, never a scene or the ticker: those are for air.
+    broadcast: { ...bc, scene: null, ticker: undefined },
+  }), [team, look, lay, qr, bugText, link, bc, channel.show_line, channel.sponsor_name, channel.sponsor_line, channel.sponsor_logo]);
 
   useEffect(() => {
     const post = () => frame.current?.contentWindow?.postMessage({ type: 'pb:demo', feed, card }, window.location.origin);
@@ -137,12 +156,66 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
           <label className="air-slide" style={{ borderTop: 0 }}><span>Size<b>{pct(lay.bug.scale)}</b></span>
             <input type="range" min={BUG_SCALE.min} max={BUG_SCALE.max} step={0.05} value={lay.bug.scale} onChange={(e) => moveLay({ ...lay, bug: { ...lay.bug, scale: Number(e.target.value) } })} />
           </label>
-          <div className="air-pos two" role="radiogroup" aria-label="Where the scorebug sits">
+          <div className="air-pos" role="radiogroup" aria-label="Where the scorebug sits">
             {BUG_AT.map(([p, label]) => (
               <button key={p} type="button" role="radio" aria-checked={lay.bug.pos === p} aria-label={label} className={lay.bug.pos === p ? 'on' : undefined} onClick={() => moveLay({ ...lay, bug: { ...lay.bug, pos: p } })} />
             ))}
             <small>{BUG_AT.find(([p]) => p === lay.bug.pos)![1]}</small>
           </div>
+        </div>
+      </section>
+
+      <section className="card pad">
+        <h2>Layout and theme</h2>
+        <p className="hint">{look === 'pressbox' ? 'Scoreboard’s own bug, laid out and painted any of v4’s ways.' : 'For the Scoreboard look. The animated looks bring their own design.'}</p>
+        <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <label className="field"><span>Layout</span>
+            <select className="select" value={bc.style ?? 'bar'} onChange={(e) => setB({ style: e.target.value === 'bar' ? null : e.target.value })}>
+              {STYLES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </label>
+          <label className="field"><span>Theme</span>
+            <select className="select" value={bc.theme ?? 'nightgame'} onChange={(e) => setB({ theme: e.target.value === 'nightgame' ? null : e.target.value })}>
+              {THEMES.map(([group, list]) => <optgroup key={group} label={group}>{list.map(([k, label]) => <option key={k} value={k}>{label}</option>)}</optgroup>)}
+            </select>
+          </label>
+        </div>
+        {bc.theme === 'custom' && (
+          <div className="stack" style={{ gap: 8 }}>
+            <div className="field-row" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+              {([['panel1', 'Panel', '#1d2638'], ['panel2', 'Panel fade', '#0b111c'], ['well', 'Score box', '#070b13'], ['text', 'Text', '#ffffff'], ['accent', 'Accent', '#ffcf3a']] as const).map(([k, label, d]) => (
+                <label key={k} className="field"><span>{label}</span>
+                  <input className="input" type="color" value={typeof custom[k] === 'string' ? (custom[k] as string) : d} onChange={(e) => setCustom(k, e.target.value)} />
+                </label>
+              ))}
+            </div>
+            <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <label className="field"><span>Type</span>
+                <select className="select" value={String(custom.font ?? 'condensed')} onChange={(e) => setCustom('font', e.target.value)}>
+                  <option value="condensed">Condensed</option><option value="clean">Clean</option><option value="mono">Mono</option><option value="serif">Serif</option>
+                </select>
+              </label>
+              <label className="field"><span>Corners</span>
+                <select className="select" value={String(custom.radius ?? '10')} onChange={(e) => setCustom('radius', Number(e.target.value))}>
+                  <option value="0">Square</option><option value="6">Soft</option><option value="10">Round</option><option value="18">Pill</option>
+                </select>
+              </label>
+            </div>
+            <label className="switch"><span className="switch-text"><b>Team colours behind the scores</b></span>
+              <input type="checkbox" checked={!!custom.teamFill} onChange={(e) => setCustom('teamFill', e.target.checked)} />
+            </label>
+          </div>
+        )}
+      </section>
+
+      <section className="card pad">
+        <h2>On the scorebug</h2>
+        <div className="air-autos">
+          {SHOWS.map(([k, label, sub, def]) => (
+            <label key={k} className="switch"><span className="switch-text"><b>{label}</b><small>{sub}</small></span>
+              <input type="checkbox" checked={show[k] ?? def} onChange={(e) => setB({ show: { ...show, [k]: e.target.checked } })} />
+            </label>
+          ))}
         </div>
       </section>
 

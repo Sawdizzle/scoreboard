@@ -19,7 +19,7 @@ const line = (id: string, ab: number, h: number, hr: number, rbi: number, bb: nu
   p_h: 0, p_r: 0, p_er: 0, p_bb: 0, p_so: 0, p_hbp: 0, p_wp: 0, p_bk: 0, ...pitch,
 });
 
-export type StreamSettings = Pick<Feed, 'look' | 'layout' | 'qr' | 'bug' | 'sponsor' | 'show_line'>;
+export type StreamSettings = Pick<Feed, 'look' | 'layout' | 'qr' | 'bug' | 'sponsor' | 'show_line'> & Partial<Pick<Feed, 'broadcast'>>;
 
 export function demoFeed(team: FeedTeam, s: StreamSettings): Feed {
   const us = lineup('u', US), them = lineup('t', THEM);

@@ -64,9 +64,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -113,6 +113,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       v: 'kit', show_line: line !== '0', auto_card: false, card: null, look: (look as Look) ?? 'pressbox', last: null, sponsor: { name: 'Dairy Barn', line: 'Cold treats on Elm Street', logo: null }, bug: { text: 'Streamed by example.test', url: 'https://example.test/watch' },
       layout: { bug: { scale: Number(bs) || undefined, pos: bpos as never }, cards: { scale: Number(cs) || undefined } },
       qr: qr ? { on: true, size: Number(qsize) || 18, pos: (qr as QrPos), opacity: Number(qop) || 1 } : null,
+      // &theme=retro&style=scorebox&rhe=1: v4's themes and layouts on Scoreboard's own bug.
+      broadcast: { theme, style, show: { rhe: rhe === '1' } },
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
       game: { id: 'g1', sport: (sport as Sport) ?? 'baseball', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,

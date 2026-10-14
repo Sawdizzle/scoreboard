@@ -1,0 +1,92 @@
+/* v4's themes and layouts (css/themes.css, css/styles.css), for Scoreboard's
+   own bug (look "Scoreboard"). A theme sets the bug's variables, and a few
+   add a structural touch; a layout rearranges the same parts. The animated
+   looks bring their own design and ignore both. Default: Midnight, Bar. */
+
+/* ---- Themes ---------------------------------------------------------------- */
+.ov[data-theme="espn"] { --sb-panel1: #18191c; --sb-panel2: #111214; --sb-well: #000; --sb-accent: #e2231a; --sb-line: rgba(255, 255, 255, 0.12); --sb-radius: 0.3rem;
+  --sb-font: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; }
+.ov[data-theme="retro"] { --sb-panel1: #0e1016; --sb-panel2: #05070c; --sb-well: #05070c; --sb-chalk: #eafff0; --sb-accent: #ff3ca6; --sb-line: #39ff14; --sb-radius: 0;
+  --sb-font: 'Courier New', ui-monospace, monospace; }
+.ov[data-theme="retro"] .ov-bug { border: 0.15rem solid #39ff14; box-shadow: 0.4rem 0.4rem 0 rgba(0, 0, 0, 0.85); }
+.ov[data-theme="retro"] .ov-score, .ov[data-theme="retro"] .ov-count { text-shadow: 0 0 0.4rem currentColor; }
+.ov[data-theme="green"] { --sb-panel1: #0f3624; --sb-panel2: #071c12; --sb-well: #04130b; --sb-chalk: #ffd24a; --sb-accent: #ff8a3c; --sb-line: rgba(255, 210, 74, 0.25); --sb-radius: 0.4rem;
+  --sb-font: 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif; }
+.ov[data-theme="green"] .ov-score, .ov[data-theme="green"] .ov-count { text-shadow: 0 0 0.5rem rgba(255, 210, 74, 0.55); }
+.ov[data-theme="neon"] { --sb-panel1: #0d0a22; --sb-panel2: #060412; --sb-well: #04030c; --sb-chalk: #eafffb; --sb-accent: #ff2bd6; --sb-line: rgba(0, 229, 255, 0.4); --sb-radius: 0.5rem;
+  --sb-font: 'Helvetica Neue', Arial, system-ui, sans-serif; }
+.ov[data-theme="neon"] .ov-bug { border: 0.07rem solid #00e5ff; box-shadow: 0 0 1.6rem rgba(0, 229, 255, 0.35); }
+.ov[data-theme="neon"] .ov-score, .ov[data-theme="neon"] .ov-count { text-shadow: 0 0 0.7rem currentColor; }
+.ov[data-theme="ice"] { --sb-panel1: #eef4fa; --sb-panel2: #cedeee; --sb-well: #dfe9f4; --sb-chalk: #12283d; --sb-accent: #e2593a; --sb-line: rgba(30, 60, 90, 0.16); --sb-radius: 0.7rem; }
+.ov[data-theme="ice"] .ov-strip small, .ov[data-theme="ice"] .ov-strip em { color: #3d5468; }
+.ov[data-theme="gold"] { --sb-panel1: #14120c; --sb-panel2: #0a0906; --sb-well: #050403; --sb-chalk: #f7efd8; --sb-accent: #d4af37; --sb-line: rgba(212, 175, 55, 0.5); --sb-radius: 0.5rem; }
+.ov[data-theme="gold"] .ov-bug { border: 0.07rem solid #d4af37; box-shadow: 0 0 1.2rem rgba(212, 175, 55, 0.25); }
+.ov[data-theme="gold"] .ov-score { color: #f4e4a8; }
+.ov[data-theme="carbon"] { --sb-panel1: #282a2e; --sb-panel2: #1c1e21; --sb-well: #0c0d0e; --sb-chalk: #eceef0; --sb-accent: #e2402f; --sb-line: rgba(255, 255, 255, 0.1); --sb-radius: 0.4rem; }
+.ov[data-theme="carbon"] .ov-rail { background: repeating-linear-gradient(45deg, #282a2e 0 0.4rem, #1c1e21 0.4rem 0.8rem); }
+.ov[data-theme="royal"] { --sb-panel1: #0a1030; --sb-panel2: #04081c; --sb-well: #02040f; --sb-chalk: #f2f4ff; --sb-accent: #e8c559; --sb-line: rgba(212, 175, 55, 0.35); --sb-radius: 0.6rem; }
+.ov[data-theme="royal"] .ov-bug { border: 0.07rem solid rgba(212, 175, 55, 0.3); }
+.ov[data-theme="volt"] { --sb-panel1: #0c0e0c; --sb-panel2: #050605; --sb-well: #000; --sb-chalk: #f3ffe9; --sb-accent: #c6ff00; --sb-line: rgba(198, 255, 0, 0.35); --sb-radius: 0.5rem; }
+.ov[data-theme="volt"] .ov-bug { border: 0.07rem solid #c6ff00; box-shadow: 0 0 1.5rem rgba(198, 255, 0, 0.22); }
+.ov[data-theme="volt"] .ov-score, .ov[data-theme="volt"] .ov-count { text-shadow: 0 0 0.7rem rgba(198, 255, 0, 0.6); }
+.ov[data-theme="blueprint"] { --sb-panel1: #081428; --sb-panel2: #050d1c; --sb-well: #030812; --sb-chalk: #eaf6ff; --sb-accent: #4fd6ff; --sb-line: rgba(90, 200, 255, 0.4); --sb-radius: 0.15rem;
+  --sb-font: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+.ov[data-theme="blueprint"] .ov-bug { border: 0.07rem solid rgba(90, 200, 255, 0.4); }
+.ov[data-theme="blueprint"] .ov-rail { background-image: linear-gradient(rgba(90, 200, 255, 0.09) 0.07rem, transparent 0.07rem), linear-gradient(90deg, rgba(90, 200, 255, 0.09) 0.07rem, transparent 0.07rem); background-size: 0.93rem 0.93rem; }
+.ov[data-theme="jumbotron"] { --sb-panel1: #08080a; --sb-panel2: #050506; --sb-well: #000; --sb-chalk: #fff6e0; --sb-accent: #ffb400; --sb-line: rgba(255, 180, 0, 0.32); --sb-radius: 0.4rem; }
+.ov[data-theme="jumbotron"] .ov-bug { border: 0.2rem solid rgba(255, 180, 0, 0.32); }
+.ov[data-theme="jumbotron"] .ov-rail { background-image: radial-gradient(rgba(255, 255, 255, 0.07) 0.07rem, transparent 0.09rem); background-size: 0.4rem 0.4rem; }
+.ov[data-theme="jumbotron"] .ov-score, .ov[data-theme="jumbotron"] .ov-count, .ov[data-theme="jumbotron"] .ov-inn { text-shadow: 0 0 0.6rem #ffb400; }
+.ov[data-theme="chalkboard"] { --sb-panel1: #163a2b; --sb-panel2: #122c21; --sb-well: #0c1f17; --sb-chalk: #f6f3e6; --sb-accent: #ffd977; --sb-line: rgba(246, 243, 230, 0.4); --sb-radius: 0.4rem;
+  --sb-font: 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive; }
+.ov[data-theme="chalkboard"] .ov-bug { border: 0.13rem dashed rgba(246, 243, 230, 0.65); }
+.ov[data-theme="americana"] { --sb-panel1: #101a3a; --sb-panel2: #060c20; --sb-well: #040817; --sb-chalk: #fff6e6; --sb-accent: #e0393e; --sb-line: rgba(255, 246, 230, 0.28); --sb-radius: 0.5rem; }
+.ov[data-theme="americana"] .ov-rail { box-shadow: inset 0 0.4rem 0 0 transparent; background-image: repeating-linear-gradient(90deg, #b22234 0 1.5rem, #f5ede0 1.5rem 3rem), linear-gradient(180deg, #101a3a, #060c20);
+  background-size: 100% 0.4rem, 100% 100%; background-repeat: no-repeat; }
+.ov[data-theme="foil"] { --sb-panel1: #16161e; --sb-panel2: #101016; --sb-well: #0a0a0e; --sb-chalk: #f4f6ff; --sb-accent: #ff9ad5; --sb-line: rgba(255, 255, 255, 0.25); --sb-radius: 0.7rem; }
+.ov[data-theme="foil"] .ov-bug { border: 0.13rem solid transparent; background: conic-gradient(from 210deg, #ff8a8a, #ffd58a, #b8ff9a, #8ad5ff, #b89aff, #ff9ad5, #ff8a8a) border-box; }
+.ov[data-theme="foil"] .ov-score, .ov[data-theme="foil"] .ov-count { text-shadow: -0.07rem 0 rgba(0, 229, 255, 0.45), 0.07rem 0 rgba(255, 43, 214, 0.45); }
+.ov[data-theme="bluesteel"] { --sb-panel1: #121a29; --sb-panel2: #0a0e16; --sb-well: #06090f; --sb-chalk: #f2f0e9; --sb-accent: #e0794a; --sb-line: rgba(242, 240, 233, 0.16); --sb-radius: 0;
+  --sb-font: 'Anton', 'Arial Black', 'Helvetica Neue', Arial, sans-serif; }
+.ov[data-theme="bluesteel"] .ov-bug { clip-path: polygon(1rem 0, 100% 0, 100% calc(100% - 1rem), calc(100% - 1rem) 100%, 0 100%, 0 1rem); }
+.ov[data-theme="bluesteel"] .ov-score b { font-family: 'Martian Mono', ui-monospace, monospace; font-size: 0.7em; padding: 0.2rem 0.5rem; border: 0.07rem solid rgba(242, 240, 233, 0.16); border-radius: 0.3rem; background: rgba(6, 9, 16, 0.6); }
+.ov[data-theme="bluesteel"] .ov-inn { color: #7fc0ef; font-family: 'Martian Mono', ui-monospace, monospace; font-size: 2.2rem; }
+.ov[data-theme="forever20"] { --sb-panel1: #5a3787; --sb-panel2: #281246; --sb-well: #1a0a2e; --sb-chalk: #fbf3dc; --sb-accent: #f4c84a; --sb-line: rgba(201, 162, 74, 0.55); --sb-radius: 0.5rem; }
+.ov[data-theme="forever20"] .ov-bug { border: 0.13rem solid #c9a24a; box-shadow: 0 0 0 0.13rem rgba(26, 10, 46, 0.9); }
+.ov[data-theme="forever20"] .ov-score { color: #f2d27a; }
+/* Custom: the variables come inline from the Stream screen's colours. */
+.ov[data-theme="custom"].team-fill .ov-score { background: linear-gradient(180deg, color-mix(in srgb, var(--c, #888) 55%, var(--sb-well)), var(--sb-well)); }
+
+/* ---- Layouts --------------------------------------------------------------- */
+/* Bug: stacked, one team a row, the situation under them. */
+.ov[data-style="bug"] .ov-rail, .ov[data-style="scorebox"] .ov-rail { flex-direction: column; height: auto; }
+.ov[data-style="bug"] .ov-team, .ov[data-style="scorebox"] .ov-team { height: 5.4rem; justify-content: space-between; border-bottom: 0.07rem solid var(--sb-line); }
+.ov[data-style="bug"] .ov-slab, .ov[data-style="scorebox"] .ov-slab { flex: 1; justify-content: flex-start; min-width: 22rem; max-width: none; }
+.ov[data-style="bug"] .ov-sit, .ov[data-style="scorebox"] .ov-sit { border-left: 0; justify-content: center; height: 6.2rem; }
+.ov[data-style="bug"] .ov-team.bat::after, .ov[data-style="scorebox"] .ov-team.bat::after { top: 0; bottom: 0; left: auto; right: 0; width: 0.5rem; height: auto; }
+/* Scorebox: the traditional box, with a big diamond and labelled B / S / O. */
+.ov-bso { display: none; flex-direction: column; gap: 0.3rem; font-size: 1.5rem; }
+.ov-bso span { display: flex; align-items: center; gap: 0.5rem; }
+.ov-bso em { width: 1.4rem; color: var(--sb-chalk); opacity: 0.7; }
+.ov-bso i { width: 1rem; height: 1rem; border-radius: 50%; border: 0.12rem solid rgba(255, 255, 255, 0.45); }
+.ov-bso i.on { background: var(--sb-accent); border-color: var(--sb-accent); }
+.ov[data-style="scorebox"] .ov-bso { display: flex; }
+.ov[data-style="scorebox"] .ov-count { display: none; }
+.ov[data-style="scorebox"] .ov-sit { justify-content: space-between; height: 8rem; padding: 0 2rem; }
+.ov[data-style="scorebox"] .ov-sit svg { width: 7.6rem; height: 6.4rem; }
+/* Minimal: slimmer, tighter, softer. */
+.ov[data-style="minimal"] .ov-rail { height: 5.2rem; }
+.ov[data-style="minimal"] .ov-slab { min-width: 9rem; padding: 0 1.1rem; }
+.ov[data-style="minimal"] .ov-slab img { width: 3.4rem; height: 3.4rem; }
+.ov[data-style="minimal"] .ov-score { width: 5.6rem; font-size: 3.6rem; }
+.ov[data-style="minimal"] .ov-sit { gap: 1.2rem; padding: 0 1.4rem; }
+.ov[data-style="minimal"] .ov-bug { border-radius: calc(var(--sb-radius) + 0.4rem); }
+/* Lower-third: a flatter banner with an accent tab on the leading edge. */
+.ov[data-style="lowerthird"] .ov-bug { border-radius: 0.25rem; }
+.ov[data-style="lowerthird"] .ov-rail::before { content: ''; flex: 0 0 0.6rem; background: var(--sb-accent); }
+.ov[data-style="lowerthird"] .ov-slab { padding: 0 2.2rem; }
+
+/* What the stream shows: the switches on the Stream screen. */
+.ov.no-batter .ov-ab, .ov.no-pitcher .ov-p { display: none; }
+.ov-he { display: flex; flex-direction: column; justify-content: center; gap: 0.2rem; padding: 0 0.8rem; font-size: 1.4rem; color: var(--sb-chalk); opacity: 0.8; background: var(--sb-well); }
+.ov-rr { align-self: center; margin: 0 1rem; padding: 0.4rem 0.9rem; border-radius: 0.4rem; background: #e5534b; color: #fff; font-size: 1.6rem; letter-spacing: 0.08em; animation: ov-in 0.45s ease-out; }
