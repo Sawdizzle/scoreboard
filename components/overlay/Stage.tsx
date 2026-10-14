@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import { LOOK_BUGS } from '@/components/overlay/looks';
-import { homerText } from '@/components/overlay/looks/types';
+import { homerText, type BugProps } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
@@ -261,7 +261,10 @@ export function clockOf(feed: Feed, now: number): string | null {
   return sec === null ? null : clockText(sec);
 }
 
-export function Stage({ feed, card, moment = null, now = 0 }: { feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string; runs: number } | null; now?: number }) {
+export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = null }: {
+  feed: Feed | null; card: CardKind | null; moment?: { text: string; who: string; runs: number } | null; now?: number;
+  intro?: BugProps['intro']; fx?: BugProps['fx'];
+}) {
   const v = feed ? feedView(feed) : null;
   if (!feed || !v) return <style>{ROOT}</style>;
   const { g, air } = v;
@@ -286,7 +289,7 @@ export function Stage({ feed, card, moment = null, now = 0 }: { feed: Feed | nul
   const clock = clockOf(feed, now);
   const detail = ball ? null : situationText(sport, feed.game!.live as SportLive, { away: away.display, home: home.display }) || null;
   const own = { g, air, away, home, status, showLine: feed.show_line, moment, topEdge: lay.bug.pos.startsWith('t'), period: ball ? null : periodText(sport, feed.game!.live as SportLive),
-    clock, detail,
+    clock, detail, intro, fx,
     abbrs: { away: abbr(feed.game!.is_home ? feed.opponent : feed.team), home: abbr(feed.game!.is_home ? feed.team : feed.opponent) } };
   // The finished half's cell, to pulse on the mid-inning board: the top of this inning, or the bottom of the last.
   const recap = halfRecap(feed, g);

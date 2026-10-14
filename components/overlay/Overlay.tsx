@@ -48,6 +48,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [auto, setAuto] = useState(false);
   const [moment, setMoment] = useState<{ text: string; who: string; runs: number } | null>(null);
   const [shot, setShot] = useState<FxShot | null>(null);
+  const [intro, setIntro] = useState<{ n: number; kind: 'intro' | 'tribute' } | null>(null);
   const [mute, setMute] = useState(false);
   const first = useRef(initial);
   // A running clock redraws each second; the rest of the page waits for the feed.
@@ -101,6 +102,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
           const k = String(f.cmd.kind);
           fire(k === 'charge' ? 'charge' : k, k === 'charge' ? 'charge' : k, f.cmd);
         }
+        if (seenCmd !== undefined && n > seenCmd && f.cmd?.type === 'intro') setIntro({ n, kind: f.cmd.kind === 'tribute' ? 'tribute' : 'intro' });
         if (seenCmd === undefined || n > seenCmd) seenCmd = n;
         const view = feedView(f);
         const now = view?.air.batter?.bid ?? null;
@@ -158,7 +160,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   }, []);
   const top = feed ? layoutOf(feed.layout).bug.pos.startsWith('t') : false;
   return <>
-    <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} />
+    <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} />
     <Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} />
     <Spots spot={feed?.spot ?? null} />
     {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}

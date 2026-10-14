@@ -34,6 +34,13 @@ export type BugProps = {
   moment: { text: string; who: string; runs: number } | null;
   // The bug sits along the top of the picture (anything that flies off it should go downwards).
   topEdge: boolean;
+  // A full-frame intro asked for from the pad (On Air). `n` is its stamp: a
+  // look that has an intro plays it once each time n changes; `kind` is
+  // 'intro', or 'tribute' for the Forever 20 memorial's own. null: none.
+  intro?: { n: number; kind: 'intro' | 'tribute' } | null;
+  // The stream-wide stinger playing now (walkoff, homerun, run, touchdown ...),
+  // with its stamp, for a look that adds its own touch to it. null: none.
+  fx?: { kind: string; n: number } | null;
 };
 
 export const MOMENTS = ['Home run', 'Strikeout', 'Strikeout looking', 'Single', 'Double', 'Triple', 'Double play', 'Stolen base', 'Sac fly', 'Walk', 'Hit by pitch'] as const;
