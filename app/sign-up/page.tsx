@@ -3,11 +3,16 @@ import Link from 'next/link';
 import { signUp } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { safeNext } from '@/lib/data';
+import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Create an account' };
 
 export default async function SignUp({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNext((await searchParams).next);
+  // An invite code is asked for only when the project has one set, and not on
+  // the way to accept a staff invite: the invite link is the pass.
+  const needsCode = supabaseConfigured && !next.startsWith('/invite/')
+    && !!(await (await createClient()).rpc('signup_needs_code')).data;
   return (
     <main className="shell">
       <div className="front">
@@ -25,6 +30,11 @@ export default async function SignUp({ searchParams }: { searchParams: Promise<{
           <label className="field"><span>Password · 8 characters or more</span>
             <input className="input" type="password" name="password" autoComplete="new-password" minLength={8} required />
           </label>
+          {needsCode && (
+            <label className="field"><span>Invite code</span>
+              <input className="input" type="text" name="code" autoComplete="off" autoCapitalize="none" required />
+            </label>
+          )}
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create account</Submit>
         </ActionForm>
         <p className="sub">Have an account? <Link className="link" href={`/sign-in?next=${encodeURIComponent(next)}`}>Sign in</Link></p>

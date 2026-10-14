@@ -53,12 +53,19 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   if (name.length > 60) return { error: 'Keep your name to 60 characters.' };
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Enter a valid email address.' };
   if (password.length < 8) return { error: 'Use a password of at least 8 characters.' };
+  // When the project asks for an invite code (signup_gate), the gate in the
+  // database checks it, or a staff invite the sign-up is on its way to accept.
+  const invite = /^\/invite\/([0-9a-f-]{36})$/i.exec(next)?.[1];
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email, password,
-    options: { data: { display_name: name }, emailRedirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: {
+      data: { display_name: name, invite_code: str(fd, 'code') || undefined, staff_invite: invite },
+      emailRedirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
   });
   if (error) {
+    if (/invite code/i.test(error.message)) return { error: 'That invite code is not right. Ask whoever runs this Scoreboard for it.' };
     if (error.code === 'user_already_exists') return { error: 'That email already has an account. Sign in instead.' };
     if (error.code === 'weak_password') return { error: 'That password is too easy to guess. Try a longer one.' };
     if (error.code === 'over_email_send_rate_limit') return { error: 'Too many sign-ups just now. Wait a minute and try again.' };
@@ -67,6 +74,33 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   // No session means the project wants the address confirmed first.
   if (!data.session) return { ok: `Check ${email} for a link to confirm your account.` };
   redirect(next);
+}
+
+// Forgotten password: a link by email that signs the person in and lands on
+// /reset to choose a new one. The answer is the same whether or not the
+// address has an account, so the form cannot be used to find out.
+export async function requestReset(_: FormState, fd: FormData): Promise<FormState> {
+  if (!supabaseConfigured) return NOT_CONNECTED;
+  const email = str(fd, 'email');
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Enter a valid email address.' };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await origin()}/auth/callback?next=/reset` });
+  if (error?.code === 'over_email_send_rate_limit') return { error: 'Too many emails just now. Wait a minute and try again.' };
+  return { ok: `If ${email} has an account, a link to reset its password is on its way.` };
+}
+
+export async function setPassword(_: FormState, fd: FormData): Promise<FormState> {
+  if (!supabaseConfigured) return NOT_CONNECTED;
+  const password = String(fd.get('password') ?? '');
+  if (password.length < 8) return { error: 'Use a password of at least 8 characters.' };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    if (error.code === 'same_password') return { error: 'That is the password you have now. Choose a new one.' };
+    if (error.code === 'weak_password') return { error: 'That password is too easy to guess. Try a longer one.' };
+    return { error: 'The reset link has expired. Ask for a new one.' };
+  }
+  redirect('/t');
 }
 
 export async function signOut() {

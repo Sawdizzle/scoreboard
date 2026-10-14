@@ -67,6 +67,8 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
   const box = boxScore(g, game.season?.game_innings ?? 7);
   const b = L.safeBases(g.bases) as { first: boolean; second: boolean; third: boolean };
   const list = plays(game);
+  // A game brought over from v4 has a play log but no per-player lines: no box.
+  const imported = !game.tonight.length && !!game.log?.length;
   const teamLink = game.team.slug ? `/team/${game.team.slug}` : '/';
 
   return (
@@ -114,7 +116,7 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
           </div>
         )}
 
-        {ball && status !== 'scheduled' && (['away', 'home'] as const).map((e) => {
+        {ball && status !== 'scheduled' && !imported && (['away', 'home'] as const).map((e) => {
           const lines = boxLines(game, sideOf(e));
           const br = e === 'away' ? away : home;
           if (!lines.batting.length && !lines.pitching.length) return null;

@@ -14,6 +14,8 @@ export type PublicGame = {
   lineups: { us: Lineup | null; them: Lineup | null };
   tonight: (Line & { side: Side; bid: string })[];
   pas: (Pa & { rbi: number })[];
+  // A game brought over from v4: its plays, which name no one.
+  log?: { inning: number | null; half: 'top' | 'bottom' | null; kind: string; code: string | null; runs: number }[];
 };
 
 // The same game in the stream's shape, so one view (lib/onair) reads both.
@@ -52,6 +54,14 @@ export function plays(p: PublicGame) {
     const b = p.lineups[side]?.batters?.find((x) => x.bid === bid);
     return b ? b.name || `No. ${b.num}` : 'Substitute';
   };
+  if (!p.pas.length && p.log?.length) {
+    // v4's plays: which half, not who. The batting side is the away team at the top.
+    return p.log.map((e, i) => ({
+      key: i, side: ((e.half === 'top') === p.game.is_home ? 'them' : 'us') as Side,
+      inning: e.inning ? ordinal(e.inning) : '', who: e.half === 'top' ? 'Top' : 'Bottom',
+      what: paText(e) + (e.runs ? `, ${e.runs} run${e.runs > 1 ? 's' : ''} in` : ''),
+    })).reverse();
+  }
   return p.pas.map((pa, i) => ({
     key: i, side: pa.side, inning: pa.inning ? ordinal(pa.inning) : '', who: name(pa.side, pa.bid),
     what: paText(pa) + (pa.rbi ? `, ${pa.rbi > 1 ? `${pa.rbi} ` : ''}RBI` : ''),
