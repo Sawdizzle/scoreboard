@@ -1,0 +1,226 @@
+/* Ka-Pow, native (see ComicBug.tsx). Written in the original page's pixels (public/bugs/comic.html), which were
+   drawn for a 1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame. */
+@font-face{font-family:'Bangers';font-weight:400;font-display:swap;src:url('/fonts/bugs/bangers-400.woff2') format('woff2')}
+@font-face{font-family:'Luckiest Guy';font-weight:400;font-display:swap;src:url('/fonts/bugs/luckiest-guy-400.woff2') format('woff2')}
+@font-face{font-family:'Comic Neue';font-weight:700;font-display:swap;src:url('/fonts/bugs/comic-neue-700.woff2') format('woff2')}
+
+.lk-comic{--ink:#141414;--paper:#FFF4D6;--yel:#FFD93B;--red:#E8262B;--cyan:#19B5E8;--mag:#E6247D;--ice:#9FE3FF;
+  --sfx:"Bangers","Impact",sans-serif;--num:"Luckiest Guy","Bangers","Impact",sans-serif;--cap:"Comic Neue","Comic Sans MS",sans-serif;
+  --dots:radial-gradient(circle,var(--dc,rgba(0,0,0,.3)) .17rem,transparent .21rem);
+  --pop:cubic-bezier(.25,1.8,.5,1);
+  width:fit-content;font-family:var(--cap);font-weight:700;color:var(--ink);text-transform:none;line-height:1;letter-spacing:normal}
+.lk-comic small,.lk-comic em,.lk-comic b{color:inherit}
+.lk-comic i{font-style:normal}
+.lk-comic .pkg{position:relative;width:74rem;display:flex;flex-direction:column;zoom:.933}
+.lk-comic .defs{position:absolute}
+.lk-comic .stroke{paint-order:stroke fill;-webkit-text-stroke:var(--sw,.6rem) var(--ink)}
+
+/* ---------- the strip ---------- */
+.lk-comic .pwrap{position:relative}
+.lk-comic .pwrap::before{content:"";position:absolute;inset:0;transform:translate(.8rem,.8rem) rotate(-1deg);background:rgba(0,0,0,.55);
+  clip-path:polygon(0 1.2%,38% 0,100% .6%,99.6% 98%,61% 100%,.4% 99.2%)}
+.lk-comic .xpage{position:relative;display:grid;grid-template-columns:44rem 26.4rem;grid-template-rows:8rem 8rem;gap:1rem;padding:1rem 1.2rem 1.2rem 1rem;
+  background:var(--paper);transform:rotate(-1deg);
+  clip-path:polygon(0 1.2%,38% 0,100% .6%,99.6% 98%,61% 100%,.4% 99.2%)}
+.lk-comic .panel{position:relative;background:var(--ink);clip-path:polygon(var(--q,0 1%,100% 0,99.4% 100%,.5% 98%))}
+.lk-comic .panel>.fill{position:absolute;inset:.5rem .6rem .5rem .5rem;overflow:hidden;clip-path:polygon(0 0,100% 1.5%,100% 100%,.6% 99%)}
+.lk-comic .panel.away{--q:0 0,100% 2%,99.5% 100%,.3% 97%}
+.lk-comic .panel.home{--q:.4% 2%,99.7% 0,100% 97%,0 100%}
+.lk-comic .panel.situ{grid-row:1/3;grid-column:2;--q:1.5% .5%,100% 0,98.8% 100%,0 99%}
+
+/* team panels: flat team colour + halftone shading, runs sub-panel */
+.lk-comic .team .fill{display:flex;align-items:center;background:var(--team,#888)}
+.lk-comic .team .fill::before{content:"";position:absolute;inset:0;background:var(--dots);background-size:.8rem .8rem;
+  -webkit-mask-image:linear-gradient(100deg,transparent 35%,#000 95%);mask-image:linear-gradient(100deg,transparent 35%,#000 95%)}
+.lk-comic .team .fill::after{content:"";position:absolute;inset:0;--dc:rgba(255,255,255,.28);background:var(--dots);background-size:.8rem .8rem;background-position:.3rem .2rem;
+  -webkit-mask-image:linear-gradient(100deg,#000 0%,transparent 30%);mask-image:linear-gradient(100deg,#000 0%,transparent 30%)}
+.lk-comic .ab{position:relative;z-index:1;flex:0 0 auto;width:4.8rem;height:100%;display:flex;align-items:center;justify-content:center}
+.lk-comic .ball{width:3.4rem;height:3.4rem;opacity:0;transform:scale(.2) rotate(-90deg);transition:opacity .25s,transform .45s cubic-bezier(.3,1.7,.5,1)}
+.lk-comic .team.batting .ball{opacity:1;transform:none}
+.lk-comic .abbr{position:relative;z-index:1;flex:1;min-width:0;font-family:var(--sfx);font-weight:400;font-size:5.8rem;line-height:1;letter-spacing:.03em;color:#fff;text-transform:uppercase;
+  --sw:.8rem;white-space:nowrap;overflow:hidden;text-overflow:clip;padding:.6rem 0 0 .4rem;text-shadow:.4rem .4rem 0 var(--ink)}
+.lk-comic .abbr.long{font-size:4.2rem;--sw:.7rem;text-shadow:.3rem .3rem 0 var(--ink)}
+.lk-comic .he{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:.5rem;margin-right:1rem}
+.lk-comic .he span{display:block;background:#fff;border:.3rem solid var(--ink);padding:.1rem .7rem 0;font:700 2.1rem/1 var(--cap);white-space:nowrap;box-shadow:.2rem .2rem 0 var(--ink)}
+.lk-comic .he span:first-child{transform:rotate(-2deg)} .lk-comic .he span:last-child{transform:rotate(1.5deg)}
+.lk-comic .he b{display:inline-block;font-family:var(--num);font-weight:400;font-size:2rem;margin-left:.5rem;animation:lkcomicNum .46s var(--pop)}
+.lk-comic .runs{position:relative;z-index:1;flex:0 0 auto;align-self:stretch;width:9.8rem;display:flex;align-items:center;justify-content:center;
+  border-left:.5rem solid var(--ink);background:color-mix(in srgb,var(--team,#888) 70%,#000);animation:lkcomicPunch .56s ease-out}
+.lk-comic .runs::before{content:"";position:absolute;inset:0;--dc:rgba(0,0,0,.35);background:var(--dots);background-size:.6rem .6rem}
+.lk-comic .runs .v{position:relative;font-family:var(--num);font-weight:400;font-size:7rem;line-height:1;color:var(--yel);--sw:1rem;padding-top:.8rem;
+  text-shadow:-.2rem -.1rem 0 rgba(25,181,232,.85),.4rem .4rem 0 var(--ink);animation:lkcomicNum .46s var(--pop)}
+/* a numeral changes: the new ink punches in with overshoot */
+@keyframes lkcomicNum{from{transform:scale(1.9) rotate(-10deg);opacity:.2}to{transform:scale(1);opacity:1}}
+@keyframes lkcomicPunch{0%{transform:scale(1)}25%{transform:scale(1.07) rotate(-1.2deg)}55%{transform:scale(.99) rotate(.4deg)}100%{transform:scale(1)}}
+
+/* situation panel: inning, inked diamond, count pips */
+.lk-comic .situ .fill{background:#fff;padding:1rem 1.4rem .8rem}
+.lk-comic .situ .fill::before{content:"";position:absolute;inset:0;--dc:rgba(25,181,232,.22);background:var(--dots);background-size:.9rem .9rem}
+.lk-comic .sit-top{position:relative;display:flex;align-items:center;justify-content:space-between;height:9.8rem}
+.lk-comic .inn{display:flex;flex-direction:column;align-items:center;width:8.4rem}
+.lk-comic .inn .half{display:flex;align-items:center;gap:.5rem;font-family:var(--sfx);font-weight:400;font-size:2.8rem;line-height:1;letter-spacing:.05em}
+.lk-comic .inn .tri{width:0;height:0;border-left:.9rem solid transparent;border-right:.9rem solid transparent;border-bottom:1.3rem solid var(--red)}
+.lk-comic .inn.bot .tri{border-bottom:0;border-top:1.3rem solid var(--red)}
+.lk-comic .inn .v{font-family:var(--num);font-weight:400;font-size:6.4rem;line-height:1;color:var(--red);--sw:.9rem;padding-top:.6rem;text-shadow:.4rem .4rem 0 var(--ink);animation:lkcomicNum .46s var(--pop)}
+.lk-comic .dia{position:relative;width:11.8rem;height:9.2rem}
+.lk-comic .dia .path{position:absolute;left:3.4rem;top:2.1rem;width:5rem;height:5rem;transform:rotate(45deg);border:.3rem solid var(--ink);opacity:.55}
+.lk-comic .base{position:absolute;width:3rem;height:3rem;transform:rotate(45deg);border:.4rem solid var(--ink);background:#fff;box-shadow:.3rem .3rem 0 var(--ink)}
+.lk-comic .base.b2{left:4.4rem;top:.4rem} .lk-comic .base.b1{left:8rem;top:4rem} .lk-comic .base.b3{left:.8rem;top:4rem}
+.lk-comic .base.on{background:var(--yel);animation:lkcomicBase .42s var(--pop)}
+.lk-comic .base.on::after{content:"";position:absolute;inset:0;--dc:rgba(232,38,43,.55);background:var(--dots);background-size:.6rem .6rem}
+@keyframes lkcomicBase{from{transform:rotate(45deg) scale(2)}to{transform:rotate(45deg) scale(1)}}
+.lk-comic .count{position:relative;display:flex;justify-content:space-between;align-items:center;margin-top:.6rem;padding-top:.9rem;border-top:.4rem solid var(--ink)}
+.lk-comic .grp{display:flex;align-items:center;gap:.3rem}
+.lk-comic .grp b{font-family:var(--sfx);font-weight:400;font-size:2.2rem;line-height:1;margin-right:.3rem;padding:.3rem .5rem .1rem;background:var(--ink);color:#fff;transform:rotate(-5deg)}
+.lk-comic .pip{width:1.8rem;height:1.8rem;border-radius:50%;border:.3rem solid var(--ink);background:#fff}
+.lk-comic .pip.on{background:var(--c);animation:lkcomicPip .38s var(--pop)}
+.lk-comic .balls{--c:#2FBF55} .lk-comic .strikes{--c:var(--yel)} .lk-comic .outs{--c:var(--red)}
+@keyframes lkcomicPip{from{transform:scale(2.2);box-shadow:0 0 0 .8rem rgba(20,20,20,.35)}to{transform:scale(1);box-shadow:0 0 0 0 transparent}}
+/* Pregame, Final, or a score-only sport's period, lettered where the inning goes */
+.lk-comic .situ .word{position:relative;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--sfx);font-weight:400;font-size:5.2rem;line-height:1;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--red);--sw:.8rem;text-shadow:.4rem .4rem 0 var(--ink);transform:rotate(-4deg)}
+.lk-comic .situ .word.per{font-size:3.4rem;--sw:.6rem;text-shadow:.3rem .3rem 0 var(--ink)}
+
+/* the half turns: a copy of the strip lifts away like a page */
+.lk-comic .turner{position:absolute;left:0;top:0;z-index:4;transform-origin:0 50%;pointer-events:none;animation:lkcomicTurn .9s cubic-bezier(.5,0,.6,1) forwards}
+@keyframes lkcomicTurn{0%{transform:perspective(260rem) rotate(-1deg) rotateY(0);filter:brightness(1);opacity:1;animation-timing-function:ease-in}
+  35%{transform:perspective(260rem) rotate(-1.5deg) rotateY(-45deg) skewY(-3deg);animation-timing-function:linear}
+  92%{transform:perspective(260rem) rotate(-2deg) rotateY(-86deg) skewY(-5deg);opacity:1}
+  100%{transform:perspective(260rem) rotate(-2deg) rotateY(-90deg);filter:brightness(.55);opacity:0;visibility:hidden}}
+
+/* narrator caption (batter) */
+.lk-comic .cap{position:relative;z-index:2;align-self:flex-start;margin:-2rem 0 0 2.6rem;max-width:70rem;display:flex;align-items:stretch;
+  transform:rotate(.9deg);filter:drop-shadow(.5rem .5rem 0 rgba(0,0,0,.55))}
+.lk-comic .cap .box{min-width:0;background:var(--yel);border:.4rem solid var(--ink);padding:.7rem 1.4rem .5rem;font:700 2.7rem/1 var(--cap);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  animation:lkcomicBox .48s cubic-bezier(.2,1,.3,1)}
+.lk-comic .cap .box small{font-size:2rem;margin-right:.6rem}
+@keyframes lkcomicBox{from{clip-path:inset(0 100% 0 0);transform:translateX(-1.8rem)}to{clip-path:inset(0 0 0 0);transform:none}}
+.lk-comic .cap .st,.lk-comic .cap .pc{flex:0 0 auto;display:flex;align-items:center;gap:.8rem;background:#fff;border:.4rem solid var(--ink);border-left:0;padding:.8rem 1.2rem .4rem;font:400 2.4rem/1 var(--num);white-space:nowrap}
+.lk-comic .cap .st:first-child,.lk-comic .cap .pc:first-child{border-left:.4rem solid var(--ink)}
+.lk-comic .cap .st{animation:lkcomicBox .48s .1s cubic-bezier(.2,1,.3,1) both}
+.lk-comic .cap .st b{font-weight:400;color:var(--red)}
+.lk-comic .cap .st span,.lk-comic .cap .pc small{font:700 2rem/1 var(--cap);text-transform:uppercase;padding-bottom:.3rem}
+.lk-comic .cap .pc b{display:inline-block;font-weight:400;margin-left:-.3rem;animation:lkcomicNum .46s var(--pop)}
+
+/* ---------- shared comic bits ---------- */
+.lk-comic .sfxw{font-family:var(--sfx);font-weight:400;line-height:1;letter-spacing:.03em;color:var(--yel);white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:var(--sw,1rem) var(--ink);
+  text-shadow:-.4rem -.3rem 0 rgba(25,181,232,.8),.4rem .3rem 0 rgba(230,36,125,.75),.7rem .7rem 0 var(--ink)}
+.lk-comic .burst{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.lk-comic .burst>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lk-comic .burst>.w{position:relative;text-align:center}
+.lk-comic .xnote{position:absolute;z-index:6;background:var(--yel);border:.4rem solid var(--ink);padding:.8rem 1.6rem .6rem;font:700 3rem/1.05 var(--cap);text-transform:uppercase;white-space:nowrap;
+  box-shadow:.6rem .6rem 0 rgba(0,0,0,.55)}
+.lk-comic .xnote small{display:block;font-size:1.9rem}
+.lk-comic .xnote b{font:400 4rem/1 var(--sfx);letter-spacing:.04em}
+.lk-comic .fxl{position:absolute;z-index:5;pointer-events:none;left:calc(100% + 1.8rem);top:1rem}
+/* punch in, hold, punch out */
+@keyframes lkcomicLife{0%{transform:scale(.1) rotate(calc(var(--rot)*3));opacity:0}10%{transform:scale(1.18) rotate(calc(var(--rot)*.5));opacity:1}17%{transform:scale(.96) rotate(var(--rot))}
+  24%{transform:scale(1) rotate(var(--rot))}86%{transform:scale(1.03) rotate(var(--rot));opacity:1}100%{transform:scale(.2) rotate(calc(var(--rot)*-2));opacity:0}}
+@keyframes lkcomicNoteL{0%{transform:translateX(-6rem) rotate(8deg);clip-path:inset(0 100% 0 0)}16%{transform:translateX(0) rotate(-1.5deg);clip-path:inset(0 0 0 0)}
+  86%{transform:translateX(0) rotate(-1.5deg);clip-path:inset(0 0 0 0);opacity:1}100%{transform:translateY(-2rem) rotate(-4deg);clip-path:inset(0 0 0 0);opacity:0}}
+@keyframes lkcomicNoteR{0%{transform:translateX(6rem) rotate(-8deg);clip-path:inset(0 0 0 100%)}16%{transform:translateX(0) rotate(-1.5deg);clip-path:inset(0 0 0 0)}
+  86%{transform:translateX(0) rotate(-1.5deg);clip-path:inset(0 0 0 0);opacity:1}100%{transform:translateY(-2rem) rotate(-4deg);clip-path:inset(0 0 0 0);opacity:0}}
+.lk-comic .xnote.fxl{animation:lkcomicNoteL 2.3s cubic-bezier(.2,1,.3,1) both}
+.lk-comic .xnote.halfn{animation-duration:2.4s;animation-delay:.42s}
+
+/* CRACK! beside the bug */
+.lk-comic .hit{width:26rem;height:17rem;--rot:-7deg;animation:lkcomicLife 1.5s ease-out both}
+.lk-comic .hit .sfxw{font-size:7rem;--sw:.9rem}
+.lk-comic .hit .sfxw.xsub{font-size:2.9rem;--sw:.6rem;color:#fff;margin-top:-.2rem;text-shadow:.3rem .3rem 0 var(--ink)}
+/* YER OUT! shout balloon; its tail points back at the bug */
+.lk-comic .balloon{width:30rem;height:19rem;--rot:-4deg;animation:lkcomicLife 2s ease-out both}
+.lk-comic .balloon>svg{transform:scale(-1,1)}
+.lk-comic .balloon>.w{margin-top:-2.6rem}
+.lk-comic .balloon .sfxw{font-size:6rem;--sw:.8rem}
+.lk-comic .balloon .bsub{font:700 1.9rem/1 var(--cap);text-transform:uppercase;margin-top:.2rem}
+/* BAM! off the runs box */
+.lk-comic .bam{z-index:7;width:20rem;height:15rem;left:14rem;top:-4rem;--rot:8deg;animation:lkcomicLife 1.65s ease-out both}
+.lk-comic .bam.home{top:5rem}
+.lk-comic .bam .sfxw{font-size:5.8rem;--sw:.8rem;color:#fff}
+
+/* ---------- K panel ---------- */
+.lk-comic .bigpanel{position:absolute;background:var(--ink)}
+.lk-comic .bigpanel>.fill{position:absolute;inset:1.1rem;overflow:hidden}
+.lk-comic .kp{position:absolute;z-index:8;pointer-events:none;width:56rem;height:37rem;left:calc(100% + 5rem);top:3rem;--kx:8rem;--kr:14deg;animation:lkcomicKp 3.3s ease-out both}
+@keyframes lkcomicKp{0%{transform:scale(.15) rotate(-16deg);opacity:0}10%{transform:scale(1.07) rotate(2deg);opacity:1}15%{transform:scale(.98) rotate(-1.5deg)}20%{transform:scale(1) rotate(-1deg)}
+  86%{transform:scale(1) rotate(-1deg);opacity:1}100%{transform:translate(var(--kx),9rem) rotate(var(--kr)) scale(.7);opacity:0}}
+.lk-comic .kpan{inset:0;clip-path:polygon(0 1.5%,100% 0,98.8% 100%,1% 98.5%)}
+.lk-comic .kpan .fill{background:radial-gradient(circle at 40% 45%,#fff 0%,#FFF3B0 40%,var(--yel) 100%)}
+.lk-comic .kpan .fill::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(232,38,43,.35) .2rem,transparent .26rem) 0 0/1.1rem 1.1rem;
+  -webkit-mask-image:radial-gradient(circle at 40% 45%,transparent 30%,#000 75%);mask-image:radial-gradient(circle at 40% 45%,transparent 30%,#000 75%)}
+.lk-comic .kp.xlook .kpan .fill{background:linear-gradient(170deg,#F2FBFF 0%,#BDEBFF 45%,#62C4EE 100%)}
+.lk-comic .kp.xlook .kpan .fill::before{background:radial-gradient(circle,rgba(255,255,255,.85) .22rem,transparent .28rem) 0 0/1.1rem 1.1rem}
+.lk-comic .bigk{position:absolute;z-index:1;left:7rem;top:3.6rem;width:26rem;text-align:center;font:400 29rem/1 var(--num);color:var(--red);paint-order:stroke fill;-webkit-text-stroke:1.6rem var(--ink);
+  text-shadow:-.5rem -.3rem 0 rgba(25,181,232,.8),.9rem .9rem 0 var(--ink);animation:lkcomicBigK .52s .18s cubic-bezier(.3,1.4,.5,1) backwards}
+@keyframes lkcomicBigK{0%{transform:scale(3) rotate(-20deg);opacity:0}70%{transform:scale(.9) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(-3deg)}}
+.lk-comic .kp.xlook .bigk{color:#DDF6FF;-webkit-text-stroke-color:#0B3C5D;text-shadow:-.5rem -.3rem 0 rgba(255,255,255,.9),.9rem .9rem 0 #0B3C5D;
+  animation:lkcomicBigK .52s .18s cubic-bezier(.3,1.4,.5,1) backwards,lkcomicShiver .24s .9s 4}
+.lk-comic .kp.xlook .bigk span{display:inline-block;transform:scaleX(-1)}
+@keyframes lkcomicShiver{0%{translate:0 0}25%{translate:.4rem 0}50%{translate:-.4rem .1rem}75%{translate:.3rem -.1rem}100%{translate:0 0}}
+.lk-comic .swirl{position:absolute;z-index:2;left:1rem;top:1rem;width:38rem;height:33rem;overflow:visible}
+.lk-comic .swirl path{stroke-dasharray:100;stroke-dashoffset:100;animation:lkcomicSwirl 1.2s calc(.2s + var(--i) * .06s) linear both}
+@keyframes lkcomicSwirl{0%{stroke-dashoffset:100}30%,70%{stroke-dashoffset:0}100%{stroke-dashoffset:-100}}
+.lk-comic .icicles{position:absolute;left:0;top:0;width:100%;height:6.4rem;overflow:visible}
+.lk-comic .kw{z-index:3;right:-4rem;top:-5rem;width:33rem;height:20rem;animation:lkcomicPopIn .56s .38s var(--pop) backwards}
+.lk-comic .kw .w{font-size:9.2rem;--sw:1rem}
+.lk-comic .kp.xlook .kw .w{font-size:8.8rem;color:#fff;text-shadow:-.4rem -.3rem 0 rgba(25,181,232,.9),.6rem .6rem 0 #0B3C5D;-webkit-text-stroke-color:#0B3C5D}
+@keyframes lkcomicPopIn{from{transform:scale(.1) rotate(-8deg)}to{transform:scale(1)}}
+.lk-comic .kcap{position:absolute;z-index:3;left:-1.6rem;bottom:-2.2rem;background:var(--yel);border:.5rem solid var(--ink);padding:1rem 2rem .7rem;font:700 2.4rem/1 var(--cap);text-transform:uppercase;
+  box-shadow:.6rem .6rem 0 rgba(0,0,0,.55);transform:rotate(-2deg);white-space:nowrap;animation:lkcomicKcap .42s .65s var(--pop) backwards}
+.lk-comic .kcap b{display:block;font-size:3.8rem;margin-top:.3rem}
+.lk-comic .kp.xlook .kcap{background:#fff}
+@keyframes lkcomicKcap{from{transform:translateX(-6rem) rotate(-8deg);opacity:0}to{transform:rotate(-2deg);opacity:1}}
+
+/* ---------- HOME RUN: a splash panel off the bug's edge, then it tears in two ---------- */
+.lk-comic .hrw{position:absolute;z-index:9;pointer-events:none;left:-6rem;top:calc(100% - 3rem);width:86rem;height:46rem}
+.lk-comic .half-l,.lk-comic .half-r,.lk-comic .half-l>i,.lk-comic .half-r>i{position:absolute;inset:0;display:block}
+.lk-comic .half-l{animation:lkcomicTornL .8s 3.58s forwards,lkcomicTearL .7s 3.6s cubic-bezier(.5,0,.8,.4) both}
+.lk-comic .half-r{animation:lkcomicTornR .8s 3.58s forwards,lkcomicTearR .7s 3.6s cubic-bezier(.5,0,.8,.4) both}
+@keyframes lkcomicTornL{from,to{filter:drop-shadow(.3rem 0 0 #fff) drop-shadow(.2rem 0 0 var(--ink))}}
+@keyframes lkcomicTornR{from,to{filter:drop-shadow(-.3rem 0 0 #fff) drop-shadow(-.2rem 0 0 var(--ink))}}
+@keyframes lkcomicTearL{to{transform:translate(-37rem,9.6rem) rotate(-16deg);opacity:0}}
+@keyframes lkcomicTearR{to{transform:translate(38rem,-8.4rem) rotate(13deg);opacity:0}}
+.lk-comic .sp{left:6rem;top:5rem;width:74rem;height:35rem;clip-path:polygon(0 1%,100% 0,99.3% 100%,.6% 98.5%);animation:lkcomicSpIn .55s cubic-bezier(.3,1.4,.5,1) both}
+.lk-comic .sp>.fill{inset:.7rem;clip-path:polygon(0 0,100% 1%,100% 100%,0 99%);background:radial-gradient(circle at 50% 50%,#FFF3A8 0%,var(--yel) 22%,#FF9A1F 58%,var(--red) 100%)}
+.lk-comic .speed{position:absolute;left:50%;top:50%;width:144rem;height:144rem;margin:-72rem 0 0 -72rem;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.6) 0 2.2deg,transparent 2.2deg 7deg);
+  -webkit-mask-image:radial-gradient(circle,transparent 9%,#000 26%);mask-image:radial-gradient(circle,transparent 9%,#000 26%);animation:lkcomicSpin 9s linear infinite}
+.lk-comic .dotburst{position:absolute;left:50%;top:50%;width:84rem;height:84rem;margin:-42rem 0 0 -42rem;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,38,43,.8) .16rem,transparent .2rem) 0 0/.8rem .8rem;
+  -webkit-mask-image:radial-gradient(circle,transparent 25%,#000 38%,transparent 60%);mask-image:radial-gradient(circle,transparent 25%,#000 38%,transparent 60%);animation:lkcomicDotBurst 1.3s ease-out .2s both}
+.lk-comic .kb{left:19rem;top:8rem;width:48rem;height:24rem;animation:lkcomicKbIn .6s cubic-bezier(.3,1.5,.5,1) .3s both}
+.lk-comic .kb .sfxw{font-size:10.6rem;--sw:1rem;animation:lkcomicJit .14s steps(1) .9s 14}
+.lk-comic .caps{position:absolute;left:8.4rem;top:33.8rem;display:flex;align-items:flex-end;gap:0}
+.lk-comic .c1{background:var(--yel);border:.4rem solid var(--ink);padding:.7rem 1.6rem .5rem;font:700 1.8rem/1 var(--cap);text-transform:uppercase;white-space:nowrap;box-shadow:.5rem .5rem 0 var(--ink);
+  animation:lkcomicCapIn .6s cubic-bezier(.2,1.2,.4,1) 1.25s both}
+.lk-comic .c1 b{display:block;font:400 4.4rem/1 var(--sfx);letter-spacing:.03em;color:var(--red);paint-order:stroke fill;-webkit-text-stroke:.5rem var(--ink);text-shadow:.3rem .3rem 0 var(--ink);margin-top:.2rem}
+.lk-comic .c1 span{display:block;font-size:2.6rem;margin-top:.2rem}
+.lk-comic .xtag{margin:0 0 -1.1rem -.8rem;background:var(--red);color:#fff;border:.4rem solid var(--ink);padding:.6rem 1.2rem .2rem;font:400 3.2rem/1 var(--sfx);letter-spacing:.04em;white-space:nowrap;
+  box-shadow:.4rem .4rem 0 var(--ink);transform:rotate(6deg);animation:lkcomicTagIn .45s cubic-bezier(.3,1.8,.5,1) 1.8s both}
+.lk-comic .hball{position:absolute;left:0;top:0;width:31rem;height:6.6rem;opacity:0;animation:lkcomicBallFly .75s cubic-bezier(.45,0,.9,.6) .95s forwards}
+.lk-comic .hball .streak{position:absolute;left:0;top:1.3rem;width:26.4rem;height:4rem;
+  background:repeating-linear-gradient(180deg,transparent 0 .36rem,#fff .36rem .66rem,var(--ink) .66rem .84rem,transparent .84rem 1.32rem);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000);mask-image:linear-gradient(90deg,transparent,#000)}
+.lk-comic .hball svg{position:absolute;right:0;top:0;width:6.6rem;height:6.6rem;animation:lkcomicSpin .3s linear infinite}
+@keyframes lkcomicSpIn{0%{transform:scale(.12) rotate(-14deg);opacity:0}15%{opacity:1}60%{transform:scale(1.06) rotate(1.2deg)}80%{transform:scale(.985) rotate(-.6deg)}100%{transform:scale(1) rotate(-1deg)}}
+@keyframes lkcomicSpin{to{transform:rotate(360deg)}}
+@keyframes lkcomicDotBurst{0%{transform:scale(.2);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes lkcomicKbIn{0%{transform:scale(0) rotate(-35deg)}50%{transform:scale(1.25) rotate(-1deg)}72%{transform:scale(.93) rotate(-6deg)}100%{transform:scale(1) rotate(-5deg)}}
+@keyframes lkcomicJit{0%{translate:0 0}25%{translate:.3rem -.2rem}50%{translate:-.2rem .2rem}75%{translate:.2rem .1rem}}
+@keyframes lkcomicCapIn{0%{transform:translateX(-54rem) rotate(-8deg)}70%{transform:translateX(1.4rem) rotate(-1deg)}100%{transform:translateX(0) rotate(-2deg)}}
+@keyframes lkcomicTagIn{0%{transform:scale(0) rotate(-30deg)}100%{transform:scale(1) rotate(6deg)}}
+@keyframes lkcomicBallFly{0%{transform:translate(7rem,32rem) rotate(-30deg) scale(.6);opacity:1}85%{opacity:1}100%{transform:translate(99rem,-28rem) rotate(-30deg) scale(1.25);opacity:0}}
+
+/* Where the bug sits. On the right, what flies off the bug goes to its left; along the bottom it rises from the bug's foot, and the splash opens above it. */
+.ov.bug-br .lk-comic .fxl,.ov.bug-tr .lk-comic .fxl{left:auto;right:calc(100% + 1.8rem)}
+.ov.bug-bl .lk-comic .fxl,.ov.bug-bc .lk-comic .fxl,.ov.bug-br .lk-comic .fxl{top:auto;bottom:4rem}
+.ov.bug-br .lk-comic .xnote.fxl,.ov.bug-tr .lk-comic .xnote.fxl{animation-name:lkcomicNoteR}
+.ov.bug-br .lk-comic .balloon>svg,.ov.bug-tr .lk-comic .balloon>svg{transform:none}
+.ov.bug-br .lk-comic .kp,.ov.bug-tr .lk-comic .kp{left:auto;right:calc(100% + 6rem);--kx:-8rem;--kr:-14deg}
+.ov.bug-bl .lk-comic .kp,.ov.bug-bc .lk-comic .kp,.ov.bug-br .lk-comic .kp{top:auto;bottom:1rem}
+.ov.bug-bl .lk-comic .hrw,.ov.bug-bc .lk-comic .hrw,.ov.bug-br .lk-comic .hrw{top:auto;bottom:calc(100% - 3rem)}
+.ov.bug-br .lk-comic .hrw,.ov.bug-tr .lk-comic .hrw{left:auto;right:-6rem}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-comic .speed,.lk-comic .kb .sfxw,.lk-comic .kp.xlook .bigk{animation:none}
+}

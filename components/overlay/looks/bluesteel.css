@@ -1,0 +1,177 @@
+/* Blue Steel, native (see BlueSteelBug.tsx). Written in the original page's pixels, which were drawn for a
+   1920 stage, then turned into rem (1rem = 1rem at 1280 wide); .bsx's zoom brings it to the size it had in its frame. */
+@font-face{font-family:'Anton';font-weight:400;font-display:swap;src:url('/fonts/anton-400.woff2') format('woff2')}
+.bsx{--navy:#0c121d;--navy-hi:#17223a;--navy-lo:#070b12;--edge:#03060b;--ink:#f2f0e9;--steel:#7fc0ef;--steel-hi:#bfe3fb;--steel-lo:#3d6e96;
+  --clay:#e0794a;--clay-hi:#ffb07a;--dim:#8596ac;--line:rgba(242,240,233,.14);--red:#e0524a;--green:#5fcf8a;
+  --bevel:linear-gradient(180deg,#a9c2d8 0%,#57728d 30%,#1d3048 58%,#35506c 80%,#8aa5bf 100%);
+  --disp:"Anton","Arial Black",Impact,sans-serif;--mono:var(--font-mono),ui-monospace,Menlo,monospace;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in:cubic-bezier(.7,0,.84,0);--slam:cubic-bezier(.55,0,.9,.35);
+  font-family:var(--disp);font-weight:400;color:var(--ink);text-transform:none;line-height:1;animation:bsxIn .7s var(--ease-out) both}
+.bsx em,.bsx small{color:inherit;font-weight:inherit}
+@keyframes bsxIn{from{opacity:0;transform:translateY(2rem)}}
+
+.bsx .lg{position:absolute;inset:0}
+.bsx .lg img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.bsx .lg .u{filter:drop-shadow(0 0.5rem 0.8rem rgba(0,0,0,.6))}
+.bsx .lg .f{transform-origin:51.4% 39.7%;animation:bsxSway 6.4s ease-in-out infinite,bsxGust 1.7s var(--ease-out)}
+@keyframes bsxSway{0%,100%{rotate:-1.2deg}50%{rotate:1.5deg}}
+@keyframes bsxGust{0%{transform:none}18%{transform:rotate(-6deg)}42%{transform:rotate(3.5deg)}66%{transform:rotate(-1.6deg)}100%{transform:none}}
+.bsx .lg .eye{position:absolute;left:34.5%;top:56.9%;width:30%;height:30%;margin:-15% 0 0 -15%;border-radius:50%;pointer-events:none;opacity:.24;
+  background:radial-gradient(circle,rgba(236,248,255,.95) 0,rgba(127,192,239,.62) 15%,rgba(127,192,239,.18) 36%,transparent 62%);
+  animation:bsxFlare 1.5s ease-out,bsxEye 4.6s 1.5s ease-in-out infinite}
+@keyframes bsxEye{0%,100%{opacity:.2}50%{opacity:.52}}
+@keyframes bsxFlare{0%{opacity:.3;transform:scale(1)}14%{opacity:1;transform:scale(2.1)}100%{opacity:.3;transform:scale(1)}}
+.bsx .lg .strk{position:absolute;left:34.5%;top:56.9%;width:150%;height:3%;margin:-1.5% 0 0 -75%;border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(236,248,255,.95) 0,rgba(127,192,239,.5) 30%,transparent 70%);animation:bsxStreak 1.2s ease-out}
+@keyframes bsxStreak{0%{opacity:0;transform:scaleX(.15)}16%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1.25)}}
+.bsx .lg .sh{position:absolute;inset:0;pointer-events:none;overflow:hidden;
+  -webkit-mask:url(/bugs/img/bluesteel-logo.webp) center/contain no-repeat;mask:url(/bugs/img/bluesteel-logo.webp) center/contain no-repeat}
+.bsx .lg .sh::before{content:"";position:absolute;top:-10%;bottom:-10%;left:-70%;width:55%;
+  background:linear-gradient(100deg,transparent,rgba(225,242,255,.8) 50%,transparent);animation:bsxShine 1.4s .3s var(--ease-out) both}
+@keyframes bsxShine{from{transform:translateX(0)}to{transform:translateX(400%)}}
+
+.bsx .pkg{display:flex;align-items:center;zoom:.933}
+.bsx .crest{position:relative;z-index:2;width:12.6rem;height:13.1rem;margin-right:-2.4rem;flex:0 0 auto}
+.bsx .main{position:relative}
+.bsx .xstack{display:flex;flex-direction:column;align-items:stretch;filter:drop-shadow(0 1.2rem 2.2rem rgba(0,0,0,.5))}
+.bsx .plate{position:relative;height:7.4rem;padding:0.2rem;background:var(--bevel);
+  clip-path:polygon(1.5rem 0,100% 0,100% calc(100% - 1.5rem),calc(100% - 1.5rem) 100%,0 100%,0 1.5rem)}
+.bsx .rail{position:relative;display:flex;align-items:stretch;height:100%;padding:0.4rem 0.6rem 0.4rem 3rem;overflow:hidden;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 0.1rem,transparent 0.1rem 0.3rem),linear-gradient(180deg,var(--navy-hi) 0%,#0e1627 48%,var(--navy-lo) 100%);
+  box-shadow:inset 0 0.1rem 0 rgba(191,227,251,.18),inset 0 -0.8rem 1.6rem rgba(0,0,0,.35);
+  clip-path:polygon(1.4rem 0,100% 0,100% calc(100% - 1.4rem),calc(100% - 1.4rem) 100%,0 100%,0 1.4rem)}
+.bsx .spec{position:absolute;inset:0;pointer-events:none;transform:translateX(-110%);animation:bsxSpec 1.3s .1s var(--ease-out);
+  background:linear-gradient(105deg,transparent 38%,rgba(191,227,251,.2) 47%,rgba(236,248,255,.34) 50%,rgba(191,227,251,.2) 53%,transparent 62%)}
+@keyframes bsxSpec{to{transform:translateX(110%)}}
+
+.bsx .team{position:relative;display:flex;align-items:stretch}
+.bsx .team + .team{box-shadow:-0.1rem 0 0 var(--line)}
+.bsx .slab{position:relative;display:flex;align-items:center;justify-content:center;min-width:11.8rem;padding:0 1.4rem 0 2.6rem}
+.bsx .slab::before{content:"";position:absolute;left:1rem;top:1.3rem;bottom:1.3rem;width:0.7rem;background:var(--tc);transform:skewX(-14deg);box-shadow:0 0 0 0.1rem rgba(242,240,233,.4)}
+.bsx .ab{font-size:3.1rem;letter-spacing:.05em;text-transform:uppercase;text-shadow:0 0.2rem 0 var(--edge);white-space:nowrap}
+.bsx .score{position:relative;display:flex;align-items:center;justify-content:center;width:7rem;margin:0.3rem 0.2rem;border-radius:0.4rem;overflow:hidden;
+  background:rgba(4,7,13,.78);border:0.1rem solid var(--line);box-shadow:inset 0 0.2rem 0.8rem rgba(0,0,0,.75);animation:bsxHeat 2.6s ease-out}
+.bsx .score .roll{font-family:var(--mono);font-weight:700;font-size:3.4rem;font-variant-numeric:tabular-nums}
+.bsx .score .roll b{display:block;font-weight:inherit;animation:bsxRoll .42s .09s var(--ease-out) both,bsxTemper 2.6s linear}
+@keyframes bsxRoll{from{transform:translateY(90%);opacity:0}}
+@keyframes bsxHeat{0%{background:rgba(255,150,80,.5);border-color:rgba(255,200,150,.9);box-shadow:inset 0 0 1.8rem rgba(255,190,120,.9),0 0 2.2rem rgba(224,121,74,.8)}
+  35%{background:rgba(224,121,74,.22);border-color:rgba(224,121,74,.7);box-shadow:inset 0 0 1.4rem rgba(224,121,74,.6),0 0 1.2rem rgba(224,121,74,.4)}
+  70%{background:rgba(61,110,150,.25);border-color:rgba(127,192,239,.6);box-shadow:inset 0 0 1.2rem rgba(127,192,239,.45),0 0 1rem rgba(127,192,239,.35)}}
+@keyframes bsxTemper{0%{color:#fffbef;text-shadow:0 0 0.4rem #fff,0 0 1.4rem #ffc27a,0 0 2.6rem #e0794a}
+  18%{color:#ffd9a6;text-shadow:0 0 1rem #ffa060,0 0 2.4rem rgba(224,121,74,.8)}
+  40%{color:#ef9160;text-shadow:0 0 1rem rgba(224,121,74,.6)}
+  68%{color:#8cc8f2;text-shadow:0 0 1.2rem rgba(127,192,239,.7)}}
+.bsx .team::after{content:"";position:absolute;left:1.2rem;right:0.8rem;bottom:0;height:0.3rem;background:linear-gradient(90deg,var(--steel-lo),var(--steel-hi));
+  box-shadow:0 0 1rem rgba(127,192,239,.8);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s var(--ease-out)}
+.bsx .team.bat::after{transform:scaleX(1)}
+
+.bsx .sit{display:flex;align-items:center;gap:1.6rem;padding:0 1.2rem 0 1.6rem;border-left:0.1rem solid var(--line)}
+.bsx .sit.word{font-size:2.4rem;letter-spacing:.12em;text-transform:uppercase;color:var(--steel-hi);padding:0 2.2rem;white-space:nowrap}
+.bsx .inn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:4.6rem;height:6rem;overflow:hidden;border-radius:0.3rem}
+.bsx .inn .arr{width:0;height:0;border-left:0.7rem solid transparent;border-right:0.7rem solid transparent;opacity:.2;transition:opacity .3s}
+.bsx .inn .up{border-bottom:0.8rem solid var(--steel)} .bsx .inn .dn{border-top:0.8rem solid var(--steel)}
+.bsx .inn .arr.on{opacity:1;filter:drop-shadow(0 0 0.4rem rgba(127,192,239,.8))}
+.bsx .inn .n{font-family:var(--mono);font-weight:700;font-size:2.5rem;line-height:1.05;margin:0.3rem 0}
+.bsx .inn .shut{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.1rem;transform:translateY(-102%);
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.14) 0 0.1rem,transparent 0.1rem 0.7rem),linear-gradient(180deg,#d4e4f1,#8fa9c1 55%,#6a8299);
+  color:var(--navy);box-shadow:inset 0 -0.2rem 0 rgba(0,0,0,.35);animation:bsxShut 2.8s linear}
+.bsx .inn .shut small{font-family:var(--mono);font-weight:800;font-size:1.1rem;letter-spacing:.12em;text-transform:uppercase}
+.bsx .inn .shut b{font-weight:400;font-size:3rem}
+@keyframes bsxShut{0%{transform:translateY(-102%);animation-timing-function:cubic-bezier(.5,0,.75,0)}14%{transform:translateY(3%)}17%{transform:translateY(-2%)}19%{transform:none}
+  84%{transform:none;animation-timing-function:cubic-bezier(.7,0,.84,0)}100%{transform:translateY(-102%)}}
+
+.bsx .dia{width:6.4rem;height:5.6rem;overflow:visible}
+.bsx .dia .path{fill:none;stroke:rgba(127,192,239,.16);stroke-width:1.4}
+.bsx .dia .plateH{fill:rgba(242,240,233,.35)}
+.bsx .dia .b{fill:rgba(4,7,13,.7);stroke:rgba(127,192,239,.5);stroke-width:1.8;transform-box:fill-box;transform-origin:50% 50%}
+.bsx .dia .b.on{fill:var(--clay);stroke:#ffd2b8;filter:drop-shadow(0 0 0.5rem rgba(224,121,74,.85))}
+.bsx .dia .b.pop{animation:bsxBase .55s var(--ease-out)}
+@keyframes bsxBase{0%{transform:scale(.3)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.bsx .bso{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:0.7rem;row-gap:0.5rem}
+.bsx .bso em{font-family:var(--mono);font-style:normal;font-weight:700;font-size:1.1rem;letter-spacing:.06em;color:var(--dim)}
+.bsx .bso .dots{display:flex;gap:0.5rem}
+.bsx .bso i{position:relative;width:1.2rem;height:1.2rem;border-radius:50%;background:rgba(242,240,233,.07);box-shadow:inset 0 0 0 0.15rem rgba(242,240,233,.2)}
+.bsx .bso .b i.on{background:var(--steel);box-shadow:0 0 0.8rem rgba(127,192,239,.8)}
+.bsx .bso .s i.on,.bsx .bso .o i.on{background:var(--clay);box-shadow:0 0 0.8rem rgba(224,121,74,.8)}
+.bsx .bso i.pop{animation:bsxDot .45s var(--ease-out)}
+@keyframes bsxDot{0%{transform:scale(1.9)}100%{transform:scale(1)}}
+.bsx .bso i::after{content:"";position:absolute;inset:-0.2rem;border-radius:50%;border:0.2rem solid var(--clay-hi);opacity:0}
+.bsx .bso .b i::after{border-color:var(--steel-hi)}
+.bsx .bso i.pop::after{animation:bsxRing .6s var(--ease-out)}
+@keyframes bsxRing{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(2.6)}}
+
+.bsx .strip{position:relative;height:3.4rem;margin:0 1.2rem 0 3.2rem;overflow:hidden;background:linear-gradient(180deg,#0d1422,#070b12);
+  box-shadow:inset 0 0.1rem 0 rgba(127,192,239,.18),inset 0 0 0 0.1rem rgba(127,192,239,.14);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 1rem),calc(100% - 1rem) 100%,1rem 100%,0 calc(100% - 1rem))}
+.bsx .line{position:absolute;inset:0;display:flex;align-items:center;gap:1.1rem;padding:0 1.6rem;white-space:nowrap}
+.bsx .line .xtag{flex:0 0 auto;padding:0.4rem 0.7rem 0.3rem;border-radius:0.2rem;font-family:var(--mono);font-weight:800;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase;
+  background:rgba(127,192,239,.14);color:var(--steel-hi)}
+.bsx .line .xtag.hot{background:var(--clay);color:#1a0b04} .bsx .line .xtag.ice{background:var(--steel);color:var(--navy)}
+.bsx .line .xtag.red{background:var(--red);color:#fff} .bsx .line .xtag.green{background:var(--green);color:#06210f}
+.bsx .line .txt{font-size:2rem;letter-spacing:.05em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.bsx .line .side{margin-left:auto;font-family:var(--mono);font-weight:600;font-size:1.2rem;letter-spacing:.06em;color:var(--dim);text-transform:uppercase}
+.bsx .line .side b{color:var(--ink);font-weight:800;margin-left:0.6rem}
+.bsx .line.in{animation:bsxLine .42s .14s var(--ease-out) both}
+@keyframes bsxLine{from{transform:translateY(100%);opacity:0}}
+
+.bsx .kw{position:absolute;top:0;left:calc(100% + 1.2rem);height:7.4rem;white-space:nowrap}
+.bsx .kflag{height:100%;padding:0.2rem;background:var(--bevel);animation:bsxCut 4.4s linear forwards}
+.bsx .kflag .kin{display:flex;align-items:stretch;height:100%;padding:0.4rem 3rem 0.4rem 0.4rem;background:linear-gradient(180deg,var(--navy-hi),var(--navy-lo));box-shadow:inset 0 0.1rem 0 rgba(191,227,251,.18)}
+.bsx .kflag .k{display:flex;align-items:center;justify-content:center;width:6.4rem;background:linear-gradient(180deg,var(--steel-hi),var(--steel) 55%,var(--steel-lo));
+  font-size:5.4rem;color:var(--navy);clip-path:polygon(0.8rem 0,100% 0,100% calc(100% - 0.8rem),calc(100% - 0.8rem) 100%,0 100%,0 0.8rem)}
+.bsx .kflag .k span{display:inline-block;animation:bsxSlam .45s .18s var(--ease-out) both}
+.bsx .kw.looking .k span{animation-name:bsxSlamL}
+@keyframes bsxSlam{from{transform:scale(2.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes bsxSlamL{from{transform:scaleX(-1) scale(2.4);opacity:0}to{transform:scaleX(-1) scale(1);opacity:1}}
+.bsx .kflag .kt{display:flex;flex-direction:column;justify-content:center;padding:0 0.4rem 0 1.6rem;gap:0.7rem}
+.bsx .kflag .kt b{font-weight:400;font-size:2.7rem;letter-spacing:.04em;text-transform:uppercase}
+.bsx .kflag .kt small{font-family:var(--mono);font-weight:600;font-size:1.3rem;letter-spacing:.06em;color:var(--dim);text-transform:uppercase}
+.bsx .kflag .kt > *{animation:bsxRise .45s .3s var(--ease-out) both}
+.bsx .kw .blade{position:absolute;top:-1.4rem;bottom:-1.4rem;left:0;width:0.3rem;background:linear-gradient(180deg,transparent,#fff 30%,var(--steel-hi) 70%,transparent);
+  box-shadow:0 0 1.2rem 0.2rem rgba(191,227,251,.9);transform:skewX(-28deg);opacity:0;animation:bsxBlade .5s var(--ease-out) forwards}
+@keyframes bsxCut{0%{clip-path:polygon(0 0,0 0,-4.4rem 100%,0 100%);animation-timing-function:cubic-bezier(.16,1,.3,1)}
+  12%{clip-path:polygon(0 0,calc(100% + 4.4rem) 0,100% 100%,0 100%)}
+  88%{clip-path:polygon(0 0,calc(100% + 4.4rem) 0,100% 100%,0 100%);animation-timing-function:cubic-bezier(.7,0,.84,0)}
+  100%{clip-path:polygon(calc(100% + 4.4rem) 0,calc(100% + 4.4rem) 0,100% 100%,100% 100%)}}
+@keyframes bsxBlade{0%{left:0;opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
+@keyframes bsxRise{from{transform:translateY(4.8rem)}to{transform:none}}
+
+.bsx .hrw{position:absolute;left:-6rem;bottom:calc(100% + 2.2rem);width:88rem;height:15rem;pointer-events:none;z-index:3}
+.bsx .hr{position:absolute;left:0;top:0;bottom:0;min-width:64rem;padding:0.3rem;background:var(--bevel);animation:bsxPlate 4.4s linear forwards;
+  clip-path:polygon(2.2rem 0,100% 0,100% calc(100% - 2.2rem),calc(100% - 2.2rem) 100%,0 100%,0 2.2rem)}
+.bsx .hr .hin{position:relative;display:flex;align-items:center;gap:1.8rem;height:100%;padding:0 7rem 0 15rem;overflow:hidden;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 0.1rem,transparent 0.1rem 0.3rem),radial-gradient(ellipse 60% 90% at 12% 50%,rgba(127,192,239,.2),transparent 70%),
+    linear-gradient(180deg,var(--navy-hi),#0d1526 50%,var(--navy-lo));box-shadow:inset 0 0.1rem 0 rgba(191,227,251,.2);
+  clip-path:polygon(2rem 0,100% 0,100% calc(100% - 2rem),calc(100% - 2rem) 100%,0 100%,0 2rem)}
+.bsx .hr .hcrest{position:absolute;left:0.8rem;top:50%;width:13.2rem;height:13.7rem;margin-top:-6.8rem;animation:bsxCrest .6s .22s var(--ease-out) both}
+@keyframes bsxCrest{from{transform:scale(.3) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+.bsx .hr .hbody{display:flex;flex-direction:column;justify-content:center;gap:0.8rem;flex:1;min-width:0}
+.bsx .hr .t1{display:flex;line-height:.9;padding-top:0.6rem;white-space:nowrap}
+.bsx .hr .t1 .ch{display:inline-block;font-size:8.2rem;letter-spacing:.03em;text-transform:uppercase;text-shadow:0 0.4rem 0 var(--edge);
+  animation:bsxStrike .2s calc(.38s + var(--i) * 60ms) var(--slam) both,bsxTemper 2.2s calc(.58s + var(--i) * 60ms) linear both}
+.bsx .hr .t1 .sp{display:inline-block;width:.28em;font-size:8.2rem}
+@keyframes bsxStrike{from{transform:scale(2) translateY(-0.8rem);opacity:0}to{transform:none;opacity:1}}
+.bsx .hr .t2{overflow:hidden;display:flex;align-items:center;gap:1.4rem;white-space:nowrap}
+.bsx .hr .t2 > *{animation:bsxRise .5s 1.05s var(--ease-out) both}
+.bsx .hr .t2 i{width:1.2rem;height:2.2rem;background:var(--tc);transform:skewX(-14deg);box-shadow:0 0 0 0.1rem rgba(242,240,233,.5);flex:0 0 auto}
+.bsx .hr .t2 b{font-weight:400;font-size:3rem;letter-spacing:.05em;text-transform:uppercase}
+.bsx .hr .t2 span{font-family:var(--mono);font-weight:700;font-size:1.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--clay-hi)}
+.bsx .hr .gleam{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.bsx .hr .gleam::before{content:"";position:absolute;top:0;bottom:0;left:-30%;width:26%;background:linear-gradient(105deg,transparent,rgba(225,242,255,.2),transparent);animation:bsxGleam 1.3s 1.9s var(--ease-out) both}
+@keyframes bsxGleam{from{transform:translateX(0)}to{transform:translateX(520%)}}
+@keyframes bsxPlate{0%{transform:scale(1.18);opacity:0;animation-timing-function:var(--slam)}6%{transform:scale(.985);opacity:1;animation-timing-function:var(--ease-out)}
+  10%{transform:none}90%{transform:none;opacity:1;animation-timing-function:var(--ease-in)}100%{transform:translateY(-1rem);opacity:0}}
+
+/* Where the bug sits. Right side: the crest leads from the right. Bottom: the strip rides above the plate, as in the original. */
+.ov.bug-br .bsx .pkg,.ov.bug-tr .bsx .pkg{flex-direction:row-reverse}
+.ov.bug-br .bsx .crest,.ov.bug-tr .bsx .crest{margin:0 0 0 -2.4rem}
+.ov.bug-br .bsx .rail,.ov.bug-tr .bsx .rail{padding:0.4rem 3rem 0.4rem 0.6rem}
+.ov.bug-br .bsx .strip,.ov.bug-tr .bsx .strip{margin:0 3.2rem 0 1.2rem}
+.ov.bug-bl .bsx .xstack,.ov.bug-bc .bsx .xstack,.ov.bug-br .bsx .xstack{flex-direction:column-reverse}
+.ov.bug-bl .bsx .strip,.ov.bug-bc .bsx .strip,.ov.bug-br .bsx .strip{clip-path:polygon(1rem 0,calc(100% - 1rem) 0,100% 1rem,100% 100%,0 100%,0 1rem)}
+.ov.bug-bl .bsx .kw,.ov.bug-bc .bsx .kw,.ov.bug-br .bsx .kw{top:auto;bottom:0}
+.ov.bug-br .bsx .kw,.ov.bug-tr .bsx .kw{left:auto;right:calc(100% + 1.2rem)}
+.ov.bug-tl .bsx .hrw,.ov.bug-tc .bsx .hrw,.ov.bug-tr .bsx .hrw{bottom:auto;top:calc(100% + 2.2rem)}
+.ov.bug-br .bsx .hrw,.ov.bug-tr .bsx .hrw{left:auto;right:-6rem}
+.ov.bug-br .bsx .hr,.ov.bug-tr .bsx .hr{left:auto;right:0}
+.bsx-fx{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:20;zoom:1}

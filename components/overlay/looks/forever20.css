@@ -1,0 +1,218 @@
+/* Forever 20, native (see Forever20Bug.tsx). Written in the original page's pixels (public/bugs/forever20.html),
+   which were drawn for a 1920 stage, then turned into rem; .pkg's zoom brings it to the size it had in its frame. */
+@font-face{font-family:'Graduate';font-weight:400;font-display:swap;src:url('/fonts/bugs/graduate-400.woff2') format('woff2')}
+.lk-f20{--purple:#472a68;--purple-hi:#5a3787;--purple-lo:#2c1548;--well:#1c0b33;--edge:#1a0a2e;
+  --gold:#c9a24a;--gold-hi:#f2d27a;--gold-lo:#8f6d25;--yellow:#f4c84a;
+  --ink:#fbf3dc;--dim:#b9a8d2;--rule:rgba(201,162,74,.35);
+  --crimson:#c53a4b;--green:#5fcf8a;--amber:#f0a53a;
+  --varsity:"Graduate","Rockwell","Arial Black",serif;
+  --font:var(--font-cond),"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in:cubic-bezier(.7,0,.84,0);
+  --ribbon:url('/bugs/img/forever20-ribbon.webp');
+  font-family:var(--font);font-weight:600;color:var(--ink);text-transform:none;line-height:1;-webkit-font-smoothing:antialiased}
+.lk-f20 em,.lk-f20 small{color:inherit;font-weight:inherit;font-style:normal}
+.lk-f20 .defs{position:absolute;width:0;height:0}
+
+/* ---------- Bug: the ribbon pin, then the rail with its strip ---------- */
+.lk-f20 .pkg{position:relative;display:flex;align-items:center;zoom:.933;filter:drop-shadow(0 1.2rem 2.6rem rgba(0,0,0,.5))}
+.lk-f20 .main{display:flex;flex-direction:column;align-items:stretch}
+
+/* the pin: the ribbon, overlapping the rail's leading edge */
+.lk-f20 .medal{position:relative;z-index:2;width:7.4rem;height:12.6rem;margin-right:-1.6rem;flex:0 0 auto;animation:lkf20PinIn .6s var(--ease-out) backwards}
+.lk-f20 .medal .mg{position:absolute;inset:0;animation:lkf20MemGlow 240s 90s linear infinite}
+.lk-f20 .medal img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0.3rem 0.5rem rgba(0,0,0,.55))}
+.lk-f20 .medal img.glow{animation:lkf20MedalGlow 3.2s .9s ease-in-out}
+@keyframes lkf20MedalGlow{0%,100%{filter:drop-shadow(0 0.3rem 0.5rem rgba(0,0,0,.55))}
+  40%,60%{filter:drop-shadow(0 0 1rem rgba(242,210,122,.9)) drop-shadow(0 0.3rem 0.5rem rgba(0,0,0,.55))}}
+/* when his line comes round in the strip, the pin glows with it */
+@keyframes lkf20MemGlow{0%,1.4%,100%{filter:drop-shadow(0 0 0 rgba(242,210,122,0))}.55%,.8%{filter:drop-shadow(0 0 1rem rgba(242,210,122,.9))}}
+/* a sheen clipped to the ribbon's own shape, every 17 seconds */
+.lk-f20 .shine{position:absolute;inset:0;pointer-events:none;overflow:hidden;
+  -webkit-mask:var(--ribbon) center/contain no-repeat;mask:var(--ribbon) center/contain no-repeat}
+.lk-f20 .shine::before{content:"";position:absolute;top:-10%;bottom:-10%;left:-60%;width:60%;
+  background:linear-gradient(100deg,transparent,rgba(255,244,210,.85) 50%,transparent);animation:lkf20Shine 17s 1s infinite backwards}
+@keyframes lkf20Shine{0%{transform:translateX(0);animation-timing-function:cubic-bezier(.16,1,.3,1)}8.8%,100%{transform:translateX(360%)}}
+@keyframes lkf20PinIn{from{opacity:0;transform:scale(.5) rotate(-12deg)}to{opacity:1;transform:none}}
+
+.lk-f20 .rail{position:relative;display:flex;align-items:stretch;height:7.2rem;padding:0.4rem 0.4rem 0.4rem 2rem;border-radius:0.9rem;overflow:hidden;
+  background:linear-gradient(180deg,var(--purple-hi) 0%,var(--purple) 42%,var(--purple-lo) 100%);
+  box-shadow:0 0 0 0.2rem var(--edge),inset 0 0 0 0.3rem var(--gold),inset 0 0 0 0.5rem var(--edge),inset 0 0.7rem 1.2rem rgba(255,255,255,.08);
+  animation:lkf20Build .7s .15s var(--ease-out) backwards}
+@keyframes lkf20Build{from{clip-path:inset(0 100% 0 0);transform:translateX(-1.2rem)}to{clip-path:inset(0 0 0 0);transform:none}}
+/* a slow gold light that crosses the rail on big moments */
+.lk-f20 .sheen{position:absolute;inset:0;pointer-events:none;transform:translateX(-110%);animation:lkf20Sheen 1.2s .4s var(--ease-out);
+  background:linear-gradient(105deg,transparent 35%,rgba(242,210,122,.32) 50%,transparent 65%)}
+@keyframes lkf20Sheen{to{transform:translateX(110%)}}
+
+/* team block: a team-colour stitch, the abbreviation, then the score well */
+.lk-f20 .team{position:relative;display:flex;align-items:stretch}
+.lk-f20 .team + .team{box-shadow:-0.1rem 0 0 var(--rule)}
+.lk-f20 .slab{position:relative;display:flex;align-items:center;justify-content:center;min-width:12rem;padding:0 1.4rem 0 2.2rem}
+.lk-f20 .slab::before{content:"";position:absolute;left:0.8rem;top:1rem;bottom:1rem;width:0.6rem;border-radius:0.3rem;background:var(--tc);
+  box-shadow:0 0 0 0.15rem rgba(242,210,122,.55)}
+.lk-f20 .ab{position:relative;font-family:var(--varsity);font-weight:400;font-size:2.9rem;letter-spacing:.03em;line-height:1;text-transform:uppercase;
+  color:var(--ink);text-shadow:0 0.2rem 0 var(--edge),0 0.3rem 0.6rem rgba(0,0,0,.4);white-space:nowrap}
+.lk-f20 .score{position:relative;display:flex;align-items:center;justify-content:center;width:7.4rem;margin:0.2rem 0;border-radius:0.5rem;
+  background:var(--well);box-shadow:inset 0 0.2rem 0.7rem rgba(0,0,0,.7),inset 0 0 0 0.1rem rgba(201,162,74,.28);
+  animation:lkf20Well 1.5s .38s var(--ease-out)}
+.lk-f20 .score .roll{font-family:var(--varsity);font-weight:400;font-size:4.4rem;line-height:1;font-variant-numeric:tabular-nums;
+  color:var(--gold-hi);text-shadow:0 0.2rem 0 #4a2d0c,0 0 1rem rgba(242,210,122,.25)}
+.lk-f20 .score .roll > b{animation:lkf20Roll .42s .09s var(--ease-out) backwards,lkf20Num 1.5s .38s var(--ease-out)}
+/* a run: the score well flashes gold */
+@keyframes lkf20Well{0%,22%{background:var(--gold-hi);box-shadow:0 0 2.4rem rgba(242,210,122,.9)}100%{background:var(--well)}}
+@keyframes lkf20Num{0%,22%{color:var(--purple-lo);text-shadow:none}}
+/* batting marker: a gold arrow along the foot of the batting team */
+.lk-f20 .team::after{content:"";position:absolute;left:1rem;right:1rem;bottom:0.1rem;height:0.4rem;border-radius:0.2rem;background:var(--gold-hi);
+  box-shadow:0 0 1rem rgba(242,210,122,.8);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s var(--ease-out)}
+.lk-f20 .team::before{content:"";position:absolute;right:0.4rem;bottom:-0.3rem;width:0;height:0;z-index:1;
+  border-left:1rem solid var(--gold-hi);border-top:0.5rem solid transparent;border-bottom:0.5rem solid transparent;
+  opacity:0;transition:opacity .3s .3s}
+.lk-f20 .team.bat::after{transform:scaleX(1)}
+.lk-f20 .team.bat::before{opacity:1}
+
+/* the arrow that carries a run across the rail */
+.lk-f20 .zip{position:absolute;left:-24rem;top:50%;width:23rem;height:3rem;margin-top:-1.5rem;pointer-events:none;z-index:3;animation:lkf20Zip .75s var(--ease-in) forwards}
+@keyframes lkf20Zip{from{left:-24rem}to{left:calc(100% + 4rem)}}
+
+/* rolling numerals: a new value slides up into its cell */
+.lk-f20 .roll{position:relative;display:inline-grid;overflow:hidden;vertical-align:bottom}
+.lk-f20 .roll > b{grid-area:1/1;font-weight:inherit;text-align:center;animation:lkf20Roll .42s .09s var(--ease-out) backwards}
+@keyframes lkf20Roll{from{transform:translateY(90%);opacity:0}}
+
+/* situation box */
+.lk-f20 .sit{display:flex;align-items:center;gap:1.8rem;padding:0 1.8rem;border-left:0.1rem solid var(--rule)}
+.lk-f20 .sit.word{font-family:var(--varsity);font-weight:400;font-size:2.4rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-hi);
+  text-shadow:0 0.2rem 0 var(--edge);padding:0 2.4rem;white-space:nowrap}
+.lk-f20 .inn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:4.4rem;height:5.6rem;perspective:22rem}
+.lk-f20 .inn .face{display:flex;flex-direction:column;align-items:center;gap:0.3rem;transform-origin:50% 50%;backface-visibility:hidden;animation:lkf20Face 3.2s linear}
+.lk-f20 .inn .arr{width:0;height:0;border-left:0.8rem solid transparent;border-right:0.8rem solid transparent;opacity:.22}
+.lk-f20 .inn .up{border-bottom:0.9rem solid var(--gold-hi)} .lk-f20 .inn .dn{border-top:0.9rem solid var(--gold-hi)}
+.lk-f20 .inn .arr.on{opacity:1;filter:drop-shadow(0 0 0.5rem rgba(242,210,122,.7))}
+.lk-f20 .inn .n{font-family:var(--varsity);font-weight:400;font-size:2.7rem;line-height:.95;color:var(--ink)}
+/* between halves the inning flips over to MID / END, then flips back */
+.lk-f20 .inn .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  line-height:.9;transform:rotateX(90deg);backface-visibility:hidden;color:var(--gold-hi);animation:lkf20Mid 3.2s linear}
+.lk-f20 .inn .mid small{font-weight:700;font-size:1.5rem;letter-spacing:.08em} .lk-f20 .inn .mid b{font-family:var(--varsity);font-weight:400;font-size:2.6rem}
+@keyframes lkf20Face{0%{transform:rotateX(0);animation-timing-function:cubic-bezier(.7,0,.84,0)}21.9%,81.2%{transform:rotateX(-90deg)}
+  81.3%{transform:rotateX(90deg);animation-timing-function:cubic-bezier(.16,1,.3,1)}100%{transform:rotateX(0)}}
+@keyframes lkf20Mid{0%{transform:rotateX(90deg)}21.9%{transform:rotateX(90deg);animation-timing-function:cubic-bezier(.16,1,.3,1)}43.8%{transform:rotateX(0)}
+  81.3%{transform:rotateX(0);animation-timing-function:cubic-bezier(.7,0,.84,0)}96.9%,100%{transform:rotateX(-90deg)}}
+
+.lk-f20 .dia{width:6.2rem;height:5.2rem;overflow:visible}
+.lk-f20 .dia .b{fill:rgba(28,11,51,.6);stroke:rgba(242,210,122,.55);stroke-width:2.2;transform-box:fill-box;transform-origin:50% 50%}
+.lk-f20 .dia .b.on{fill:var(--gold-hi);stroke:#fff3c9;filter:drop-shadow(0 0 0.6rem rgba(242,210,122,.85))}
+.lk-f20 .dia .b.pop{animation:lkf20Pop .55s var(--ease-out)}
+@keyframes lkf20Pop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+.lk-f20 .cnt{display:flex;flex-direction:column;align-items:center;gap:0.7rem}
+.lk-f20 .bs{font-weight:700;font-size:3.1rem;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:0.1rem}
+.lk-f20 .bs .dash{opacity:.5;margin:0 0.1rem}
+.lk-f20 .outs{display:flex;gap:0.6rem}
+.lk-f20 .outs i{width:1.1rem;height:1.1rem;border-radius:50%;background:rgba(28,11,51,.8);box-shadow:inset 0 0 0 0.15rem rgba(242,210,122,.45)}
+.lk-f20 .outs i.on{background:var(--gold-hi);box-shadow:0 0 0.8rem rgba(242,210,122,.8)}
+.lk-f20 .outs i.pop{animation:lkf20Pop .5s var(--ease-out)}
+
+/* ---------- Context strip: the at-bat, play tags, and his line ---------- */
+.lk-f20 .strip{position:relative;height:3.6rem;margin:0 1rem 0 2.2rem;overflow:hidden;
+  background:linear-gradient(180deg,#24103f,#170828);
+  border-radius:0 0 0.7rem 0.7rem;box-shadow:inset 0 0.1rem 0 var(--rule),0 0 0 0.15rem rgba(201,162,74,.45);
+  animation:lkf20Line .5s .5s var(--ease-out) backwards}
+.lk-f20 .line{position:absolute;inset:0;display:flex;align-items:center;gap:1.2rem;padding:0 1.4rem;white-space:nowrap}
+.lk-f20 .line .xtag{flex:0 0 auto;padding:0.3rem 0.8rem 0.2rem;border-radius:0.3rem;font-weight:700;font-size:1.7rem;letter-spacing:.08em;line-height:1;text-transform:uppercase;
+  background:rgba(242,210,122,.14);color:var(--ink)}
+.lk-f20 .line .xtag.gold{background:var(--gold-hi);color:var(--purple-lo)}
+.lk-f20 .line .xtag.red{background:var(--crimson);color:#fff}
+.lk-f20 .line .xtag.green{background:var(--green);color:#06210f}
+.lk-f20 .line .xtag.amber{background:var(--amber);color:#241100}
+.lk-f20 .line .xtag .back{display:inline-block;transform:scaleX(-1)}
+.lk-f20 .line .txt{font-weight:700;font-size:2.2rem;letter-spacing:.03em;line-height:1.2;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis}
+.lk-f20 .line .side{margin-left:auto;font-weight:600;font-size:1.9rem;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
+.lk-f20 .line .side b{color:var(--ink);font-weight:700;margin-left:0.6rem}
+.lk-f20 .line .today{font-weight:600;font-size:1.9rem;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
+.lk-f20 .line.in{animation:lkf20Line .42s .14s var(--ease-out) both}
+@keyframes lkf20Line{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+/* his line: the ribbon, and his name in varsity gold. It comes round every four minutes and covers the at-bat for a few seconds. */
+.lk-f20 .line.mem{background:linear-gradient(90deg,rgba(242,210,122,.14),transparent 70%),linear-gradient(180deg,#24103f,#170828);
+  animation:lkf20Mem 240s 90s linear infinite both}
+.lk-f20 .line.mem.hush{visibility:hidden}
+.lk-f20 .line.mem .rib{flex:0 0 auto;width:1.7rem;height:2.9rem;background:var(--ribbon) center/contain no-repeat}
+.lk-f20 .line.mem .txt{font-family:var(--varsity);font-weight:400;font-size:1.9rem;letter-spacing:.05em;color:var(--gold-hi)}
+.lk-f20 .line.mem .side{color:var(--gold)}
+@keyframes lkf20Mem{0%{transform:translateY(100%);opacity:0;animation-timing-function:cubic-bezier(.16,1,.3,1)}.23%{transform:none;opacity:1}
+  2.7%{transform:none;opacity:1;animation-timing-function:cubic-bezier(.7,0,.84,0)}2.85%,100%{transform:translateY(-100%);opacity:0}}
+
+/* ---------- Strikeout flag: a ribbon tail out the side of the rail ---------- */
+.lk-f20 .kflag{position:absolute;top:0.9rem;left:calc(100% + 1rem);display:flex;align-items:stretch;height:7.2rem;padding:0.5rem 4.4rem 0.5rem 0.5rem;
+  clip-path:inset(0 100% 0 0);white-space:nowrap;animation:lkf20Flag 3.4s var(--ease-out) forwards}
+/* a gold ribbon tail with a purple one inside it, notched at the far end */
+.lk-f20 .kflag::before,.lk-f20 .kflag::after{content:"";position:absolute;z-index:-1}
+.lk-f20 .kflag::before{inset:0;border-radius:0.8rem 0 0 0.8rem;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-lo));
+  clip-path:polygon(0 0,100% 0,calc(100% - 3rem) 50%,100% 100%,0 100%)}
+.lk-f20 .kflag::after{inset:0.4rem 0.6rem 0.4rem 0.4rem;border-radius:0.5rem 0 0 0.5rem;background:linear-gradient(180deg,var(--purple-hi),var(--purple-lo));
+  clip-path:polygon(0 0,100% 0,calc(100% - 2.6rem) 50%,100% 100%,0 100%)}
+.lk-f20 .kflag .k{display:flex;align-items:center;justify-content:center;width:6.6rem;border-radius:0.5rem;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold));font-family:var(--varsity);font-weight:400;font-size:5.2rem;line-height:1;color:var(--purple-lo)}
+.lk-f20 .kflag .k span{display:inline-block;animation:lkf20Slam .5s .15s var(--ease-out) both}
+.lk-f20 .kflag.looking .k span{animation-name:lkf20SlamL}
+.lk-f20 .kflag .kt{display:flex;flex-direction:column;justify-content:center;padding:0 0.6rem 0 1.6rem;gap:0.5rem}
+.lk-f20 .kflag .kt b{font-family:var(--varsity);font-weight:400;font-size:2.3rem;line-height:1;letter-spacing:.02em;text-transform:uppercase;color:var(--ink)}
+.lk-f20 .kflag .kt small{font-weight:600;font-size:1.7rem;line-height:1;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.lk-f20 .kflag .kt small em{color:var(--gold-hi)}
+@keyframes lkf20Flag{0%{clip-path:inset(0 100% 0 0)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@keyframes lkf20FlagR{0%{clip-path:inset(0 0 0 100%)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 100% 0 0)}}
+@keyframes lkf20Slam{from{transform:scale(2.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes lkf20SlamL{from{transform:scaleX(-1) scale(2.2);opacity:0}to{transform:scaleX(-1) scale(1);opacity:1}}
+
+/* ---------- Home run: the arrow flies and a ribbon banner opens behind it ---------- */
+.lk-f20 .hrw{position:absolute;left:0;bottom:calc(100% + 1.8rem);width:82rem;height:12.4rem;pointer-events:none;z-index:3}
+.lk-f20 .hr{position:absolute;inset:0;display:flex;align-items:center;gap:2.2rem;padding:0 7rem 0 2.2rem;
+  filter:drop-shadow(0 1.6rem 3rem rgba(0,0,0,.55));clip-path:inset(0 100% 0 0);animation:lkf20HrOpen 4.4s linear forwards}
+/* the banner: a gold ribbon with swallowtail ends, a purple ribbon inside it */
+.lk-f20 .hr::before,.lk-f20 .hr::after{content:"";position:absolute;z-index:-1}
+.lk-f20 .hr::before{inset:0;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-lo));
+  clip-path:polygon(0 0,100% 0,calc(100% - 4rem) 50%,100% 100%,0 100%,4rem 50%)}
+.lk-f20 .hr::after{inset:0.6rem 0.8rem;background:linear-gradient(180deg,var(--purple-hi),var(--purple) 45%,var(--purple-lo));
+  clip-path:polygon(0 0,100% 0,calc(100% - 3.5rem) 50%,100% 100%,0 100%,3.5rem 50%)}
+.lk-f20 .hr .hrib{flex:0 0 auto;width:6.2rem;height:10.6rem;margin-left:3.4rem;background:var(--ribbon) center/contain no-repeat;
+  filter:drop-shadow(0 0.2rem 0.4rem rgba(0,0,0,.5));animation:lkf20RibPop .6s .7s var(--ease-out) both}
+.lk-f20 .hr .hbody{display:flex;flex-direction:column;justify-content:center;gap:0.9rem;flex:1;min-width:0}
+.lk-f20 .hr .t1{overflow:hidden;line-height:1;padding-top:0.4rem}
+.lk-f20 .hr .t1 span{display:inline-block;font-family:var(--varsity);font-weight:400;font-size:6rem;letter-spacing:.02em;line-height:.95;text-transform:uppercase;
+  color:var(--gold-hi);text-shadow:0 0.3rem 0 var(--edge),0 0 1.8rem rgba(242,210,122,.35);animation:lkf20Rise .55s .55s var(--ease-out) both}
+.lk-f20 .hr .t2{overflow:hidden;display:flex;align-items:baseline;gap:1.4rem;white-space:nowrap;line-height:1.15}
+.lk-f20 .hr .t2 > *{animation:lkf20Rise .5s .8s var(--ease-out) both}
+.lk-f20 .hr .t2 b{font-weight:700;font-size:3rem;letter-spacing:.03em;text-transform:uppercase;color:var(--ink)}
+.lk-f20 .hr .t2 span{font-weight:700;font-size:2.2rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-hi);animation-delay:.92s}
+.lk-f20 .hr .t2 i{align-self:center;width:1.2rem;height:1.2rem;border-radius:0.3rem;background:var(--tc);box-shadow:0 0 0 0.15rem var(--gold-hi);flex:0 0 auto}
+.lk-f20 .hr .gleam{position:absolute;inset:0.6rem 0.8rem;pointer-events:none;overflow:hidden;
+  clip-path:polygon(0 0,100% 0,calc(100% - 3.5rem) 50%,100% 100%,0 100%,3.5rem 50%)}
+.lk-f20 .hr .gleam::before{content:"";position:absolute;top:0;bottom:0;left:-30%;width:30%;
+  background:linear-gradient(105deg,transparent,rgba(255,244,210,.35),transparent);animation:lkf20Gleam 1.3s 1.2s var(--ease-out) both}
+.lk-f20 .hrw .arrow{position:absolute;left:0;top:50%;width:26rem;height:3.6rem;margin-top:-1.8rem;z-index:2;animation:lkf20Shoot .8s var(--ease-in) forwards}
+@keyframes lkf20Shoot{0%{transform:translateX(-30rem);opacity:1}85%{opacity:1}100%{transform:translateX(86rem);opacity:0}}
+@keyframes lkf20HrOpen{0%{clip-path:inset(0 100% 0 0);animation-timing-function:cubic-bezier(.7,0,.84,0)}
+  18%{clip-path:inset(0 0 0 0)}88%{clip-path:inset(0 0 0 0);opacity:1;transform:none;animation-timing-function:cubic-bezier(.7,0,.84,0)}
+  100%{clip-path:inset(0 0 0 0);opacity:0;transform:translateY(0.8rem)}}
+@keyframes lkf20HrOpenT{0%{clip-path:inset(0 100% 0 0);animation-timing-function:cubic-bezier(.7,0,.84,0)}
+  18%{clip-path:inset(0 0 0 0)}88%{clip-path:inset(0 0 0 0);opacity:1;transform:none;animation-timing-function:cubic-bezier(.7,0,.84,0)}
+  100%{clip-path:inset(0 0 0 0);opacity:0;transform:translateY(-0.8rem)}}
+@keyframes lkf20RibPop{from{transform:scale(.3) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes lkf20Rise{from{transform:translateY(110%)}to{transform:none}}
+@keyframes lkf20Gleam{from{transform:translateX(0)}to{transform:translateX(480%)}}
+/* gold sparks thrown off the banner as it lands */
+.lk-f20 .sparks{position:absolute;inset:0;pointer-events:none}
+.lk-f20 .sparks i{position:absolute;left:var(--x);top:50%;width:0.7rem;height:0.7rem;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,#fff6d6 0,var(--gold-hi) 45%,transparent 70%);animation:lkf20Spark 1.3s var(--d) var(--ease-out) both}
+@keyframes lkf20Spark{0%{opacity:0;transform:translate(0,0) scale(.6)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1)}}
+
+/* Where the bug sits. Bottom: the strip rides above the rail. Right side: the strikeout flag comes out of the left. Top: the banner opens below. */
+.ov.bug-bl .lk-f20 .main,.ov.bug-bc .lk-f20 .main,.ov.bug-br .lk-f20 .main{flex-direction:column-reverse}
+.ov.bug-bl .lk-f20 .strip,.ov.bug-bc .lk-f20 .strip,.ov.bug-br .lk-f20 .strip{border-radius:0.7rem 0.7rem 0 0}
+.ov.bug-bl .lk-f20 .kflag,.ov.bug-bc .lk-f20 .kflag,.ov.bug-br .lk-f20 .kflag{top:auto;bottom:0.9rem}
+.ov.bug-br .lk-f20 .kflag,.ov.bug-tr .lk-f20 .kflag{left:auto;right:calc(100% + 1rem);padding:0.5rem 0.5rem 0.5rem 4.4rem;flex-direction:row-reverse;animation-name:lkf20FlagR}
+.ov.bug-br .lk-f20 .kflag::before,.ov.bug-tr .lk-f20 .kflag::before{border-radius:0 0.8rem 0.8rem 0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,3rem 50%)}
+.ov.bug-br .lk-f20 .kflag::after,.ov.bug-tr .lk-f20 .kflag::after{inset:0.4rem 0.4rem 0.4rem 0.6rem;border-radius:0 0.5rem 0.5rem 0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,2.6rem 50%)}
+.ov.bug-br .lk-f20 .kflag .kt,.ov.bug-tr .lk-f20 .kflag .kt{padding:0 1.6rem 0 0.6rem;align-items:flex-end}
+.ov.bug-tl .lk-f20 .hrw,.ov.bug-tc .lk-f20 .hrw,.ov.bug-tr .lk-f20 .hrw{bottom:auto;top:calc(100% + 1.8rem)}
+.ov.bug-tl .lk-f20 .hr,.ov.bug-tc .lk-f20 .hr,.ov.bug-tr .lk-f20 .hr{animation-name:lkf20HrOpenT}
+.ov.bug-br .lk-f20 .hrw,.ov.bug-tr .lk-f20 .hrw{left:auto;right:0}
