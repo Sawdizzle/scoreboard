@@ -1,5 +1,6 @@
 'use client';
 
+import { ObsPanel } from '@/components/pad/ObsPanel';
 import { Sheet } from '@/components/pad/PadSheets';
 import type { Brand } from '@/components/TeamBrand';
 import { inkOn } from '@/lib/format';
@@ -25,7 +26,7 @@ export const MOMENT_KEYS: Record<string, [string, string][]> = {
 const REASONS: [NonNullable<Scene['reason']>, string][] = [['lightning', 'Lightning'], ['rain', 'Rain'], ['weather', 'Weather'], ['suspended', 'Suspended'], ['called', 'Called']];
 export function ScenesControl({ broadcast, look, onBroadcast, onSend }: {
   broadcast: Broadcast | null | undefined; look?: string | null;
-  onBroadcast: (patch: BroadcastPatch) => void; onSend: (cmd: { type: string; kind?: string }) => void;
+  onBroadcast: (patch: BroadcastPatch) => void; onSend: (cmd: Record<string, unknown> & { type: string }) => void;
 }) {
   const scene = broadcast?.scene ?? null;
   const [title, setTitle] = useState(scene?.kind === 'starting' ? scene.title ?? '' : '');
@@ -115,9 +116,9 @@ export function Moments({ sport, rally, onCmd, onBroadcast }: {
 // scorebug, sizes, positions) is the Stream screen, not here. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
 // the scorebug does by itself.
-export function OnAir({ channel, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose }: {
-  channel: Channel; gameId: string; setupHref: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
-  onSet: (patch: Partial<Channel>) => void; onCmd: (kind: string) => void; onSend: (cmd: { type: string; kind?: string }) => void;
+export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose }: {
+  channel: Channel; teamId: string; gameId: string; setupHref: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
+  onSet: (patch: Partial<Channel>) => void; onCmd: (kind: string) => void; onSend: (cmd: Record<string, unknown> & { type: string }) => void;
   onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void;
 }) {
   const here = channel.game_id === gameId;
@@ -180,6 +181,7 @@ export function OnAir({ channel, gameId, setupHref, view, brand, when, live, fin
 
       <Moments sport="baseball" rally={!!channel.broadcast?.rally} onCmd={onCmd} onBroadcast={onBroadcast} />
       <ScenesControl broadcast={channel.broadcast} look={channel.look} onBroadcast={onBroadcast} onSend={onSend} />
+      <ObsPanel teamId={teamId} broadcast={channel.broadcast} onBroadcast={onBroadcast} onSend={onSend} />
 
       <p className="eyebrow">Spots · play once per tap</p>
       <div className="pgrid two">

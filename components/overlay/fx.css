@@ -72,3 +72,12 @@
   .fx-item, .fx-item *, .reveal-card { animation-duration: 0.6s !important; }
   .fx.rally::before { animation: none; opacity: 0.7; }
 }
+
+/* The rotating sponsor corner bug, top right, sliding in and out. */
+.ov-spbug { position: fixed; top: 3rem; right: 3rem; z-index: 15; display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.4rem; border-radius: 0.7rem;
+  background: linear-gradient(180deg, #1d2638, #0b111c); color: #f2f6fc; box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.45); font-family: var(--font-cond, 'Barlow Condensed'), sans-serif;
+  opacity: 0; transform: translateX(2rem); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.16, 1, .3, 1); pointer-events: none; }
+.ov-spbug.on { opacity: 1; transform: none; }
+.ov-spbug small { font-size: 1.3rem; letter-spacing: 0.14em; text-transform: uppercase; color: #a3aec2; }
+.ov-spbug img { height: 3.4rem; max-width: 10rem; object-fit: contain; }
+.ov-spbug b { font-size: 2.4rem; font-weight: 700; text-transform: uppercase; }

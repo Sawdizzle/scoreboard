@@ -294,6 +294,26 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
         )}
       </section>
 
+      <section className="card pad">
+        <h2>Sponsors in rotation</h2>
+        <p className="hint">A corner bug, &ldquo;Brought to you by&rdquo;, that comes up for eight seconds every few minutes, one sponsor after the next. One per line: the name, then a logo link if you have one.</p>
+        <label className="field"><span>Sponsors</span>
+          <textarea className="textarea" defaultValue={(bc.sponsors?.items ?? []).map((x) => [x.name, x.logo].filter(Boolean).join(' | ')).join('\n')} placeholder={'Dairy Barn | https://example.com/logo.png\nSmith Hardware'}
+            onBlur={(e) => setB({ sponsors: { ...(bc.sponsors ?? {}), items: e.target.value.split('\n').map((l) => l.split('|').map((x) => x.trim())).filter(([n]) => n)
+              .slice(0, 20).map(([name, logo]) => ({ name: name.slice(0, 40), logo: logo && /^https:\/\//.test(logo) ? logo : null })) } })} style={{ minHeight: 90 }} />
+        </label>
+        <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <label className="field"><span>Every</span>
+            <select className="select" value={String(bc.sponsors?.every ?? 180)} onChange={(e) => setB({ sponsors: { ...(bc.sponsors ?? {}), every: Number(e.target.value) } })}>
+              <option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option><option value="300">5 minutes</option><option value="600">10 minutes</option>
+            </select>
+          </label>
+          <label className="switch"><span className="switch-text"><b>Rotate on the stream</b></span>
+            <input type="checkbox" checked={!!bc.sponsors?.on} onChange={(e) => setB({ sponsors: { ...(bc.sponsors ?? {}), on: e.target.checked } })} />
+          </label>
+        </div>
+      </section>
+
       {canLead && (
         <section className="card pad">
           <h2>Sponsor</h2>

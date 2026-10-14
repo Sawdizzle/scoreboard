@@ -214,7 +214,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
   // A moment on the stream, once (send_cmd stamps it), and the broadcast's
   // standing settings (rally, scenes), merged key by key.
-  async function send(c: { type: string; kind?: string }) {
+  async function send(c: Record<string, unknown> & { type: string }) {
     const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: c });
     if (error) say('That did not reach the stream. Try again.'); else nudge();
   }
@@ -428,7 +428,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       }} />}
       {sheet && typeof sheet === 'object' && <Runner g={g} from={sheet.runner} who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
-      {sheet === 'air' && chan && <OnAir channel={chan} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
+      {sheet === 'air' && chan && <OnAir channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
         when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
         score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}

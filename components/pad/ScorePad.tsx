@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
+import { ObsPanel } from '@/components/pad/ObsPanel';
 import { Moments, ScenesControl, type Channel } from '@/components/pad/OnAir';
 import { Sheet } from '@/components/pad/PadSheets';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
@@ -145,7 +146,7 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
   }
   const toggleMatchClock = () => commit(matchClock(cur.current.live));
   // Moments and the rally glow on the stream, as the baseball pad's On Air has them.
-  async function send(c: { type: string; kind?: string }) {
+  async function send(c: Record<string, unknown> & { type: string }) {
     const { error } = await sb.rpc('send_cmd', { p_team: team.id, p_cmd: c });
     setLast(error ? 'That did not reach the stream. Try again.' : 'On the stream');
     if (!error) nudge();
@@ -360,6 +361,7 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
         <Sheet title="On Air" onClose={() => setAir(false)} close="Done">
           <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
           <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} />
+          <ObsPanel teamId={team.id} broadcast={bc} onBroadcast={bcast} onSend={send} />
           <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
         </Sheet>
       )}

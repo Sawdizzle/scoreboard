@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Fx, type FxShot } from '@/components/overlay/Fx';
+import { ObsBridge } from '@/components/overlay/ObsBridge';
 import { Scenes, type Weather } from '@/components/overlay/Scenes';
+import { SponsorBug } from '@/components/overlay/SponsorBug';
 import * as WX from '@/lib/fx/weather.js';
 import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
@@ -55,6 +57,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [shot, setShot] = useState<FxShot | null>(null);
   const [intro, setIntro] = useState<{ n: number; kind: 'intro' | 'tribute' } | null>(null);
   const [strike, setStrike] = useState(0);
+  // The last moment the stream marked (sound or stinger), for OBS auto-clip.
+  const [heard, setHeard] = useState<{ kind: string; n: number } | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
   const [mute, setMute] = useState(false);
   const first = useRef(initial);
@@ -114,7 +118,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     let seenCmd: number | undefined = first.current ? Number(first.current.cmd?.n) || 0 : undefined;
     let prev: Feed | null = first.current;
     const fire = (kind: string, fx: string | null, meta: Record<string, unknown> = {}) => {
-      if (kind) { try { A.play(kind); } catch { /* no audio here: the picture still plays */ } }
+      if (kind) { try { A.play(kind); } catch { /* no audio here: the picture still plays */ } setHeard({ kind, n: Date.now() }); }
       if (!fx) return;
       setShot({ kind: fx, n: Date.now(), meta });
       window.clearTimeout(fxTimer);
@@ -214,6 +218,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} />
     <Scenes feed={feed} now={now} weather={weather} strike={strike} />
     <Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} />
+    <ObsBridge token={token} feed={feed} fx={heard} />
+    <SponsorBug sponsors={feed?.broadcast?.sponsors} hold={!!feed?.broadcast?.scene} />
     <Spots spot={feed?.spot ?? null} />
     {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}
   </>;
