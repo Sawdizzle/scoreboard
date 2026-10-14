@@ -33,5 +33,26 @@ test('media reads but cannot change; outsiders and the public see nothing', asyn
   assert.equal((await t.as('stranger', `select 1 from opponents`)).length, 0);
   await fails(t.as(null, `select 1 from opponents`), /permission denied/);
   await fails(t.as('stranger', `insert into opponents (team_id, name, abbr) values ($1, 'Krum', 'KRUM')`, [team]), /row-level security/);
-  await fails(t.as('owner', `update opponents set name = 'Other' where team_id = $1`, [team]), /permission denied/);
+  // An opponent can be renamed (the Opponents screen); a media seat cannot.
+  await t.as('media', `update opponents set name = 'Other' where team_id = $1`, [team]);
+  assert.equal((await t.as<{ name: string }>('owner', `select name from opponents where team_id = $1`, [team]))[0].name, 'Sanger Wolf');
+  await t.as('owner', `update opponents set name = 'Sanger Wolves', color2 = '#000000' where team_id = $1`, [team]);
+  assert.equal((await t.as<{ name: string }>('owner', `select name from opponents where team_id = $1`, [team]))[0].name, 'Sanger Wolves');
+});
+
+test('a game against a listed opponent shows its logo and colours on the stream', async () => {
+  const [{ id: opp }] = await t.as<{ id: string }>('owner', `select id from opponents where team_id = $1`, [team]);
+  await t.as('owner', `update opponents set logo_url = 'https://example.test/k.png', color2 = '#123456' where id = $1`, [opp]);
+  const [{ id: game }] = await t.as<{ id: string }>('owner',
+    `insert into games (team_id, opponent_name, opponent_abbr, opponent_id) values ($1, 'Sanger Wolves', 'SANGER', $2) returning id`, [team, opp]);
+  const [{ token }] = await t.as<{ token: string }>('owner', `select token from channels where team_id = $1`, [team]);
+  await t.as('owner', `update channels set game_id = $2 where team_id = $1`, [team, game]);
+  const [{ f }] = await t.as<{ f: { opponent: { logo_url: string; color2: string } } }>(null, `select overlay_feed($1) f`, [token]);
+  assert.equal(f.opponent.logo_url, 'https://example.test/k.png');
+  assert.equal(f.opponent.color2, '#123456');
+  const [{ p }] = await t.as<{ p: { opponent: { logo_url: string } } }>(null, `select public_game($1) p`, [game]);
+  assert.equal(p.opponent.logo_url, 'https://example.test/k.png');
+  // Another team's opponent cannot be put on a game.
+  const [{ id: other }] = await t.as<{ id: string }>('stranger', `select id from create_team('River', 'RIV', '#2f63cc', '14U', null)`);
+  await fails(t.as('stranger', `insert into games (team_id, opponent_name, opponent_abbr, opponent_id) values ($1, 'X', 'X', $2)`, [other, opp]), /not on this team/);
 });

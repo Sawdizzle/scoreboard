@@ -13,7 +13,7 @@ const NEUTRALS = ['#ffffff', '#0b1018', '#9aa8c2'];
 // Shrink a logo in the browser: 512 px on the long side, transparency kept,
 // WebP where the browser can write it (PNG where it cannot). Its colours are
 // read from a 96 px copy, which is plenty for a palette.
-async function readLogo(file: File): Promise<{ blob: Blob; url: string; palette: ReturnType<typeof extractPalette> }> {
+export async function readLogo(file: File): Promise<{ blob: Blob; url: string; palette: ReturnType<typeof extractPalette> }> {
   const src = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((ok, bad) => {

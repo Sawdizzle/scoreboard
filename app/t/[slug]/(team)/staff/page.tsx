@@ -1,13 +1,7 @@
-import type { Metadata } from 'next';
-import { StaffView } from '@/components/views/StaffView';
-import { listInvites, listStaff, loadTeam } from '@/lib/data';
-import { origin } from '@/lib/origin';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Staff' };
-
+// One person runs Scoreboard for their own team: there are no staff seats to
+// hand out. The old address goes to the teams you play.
 export default async function Staff({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const { supabase, team, role, userId } = await loadTeam(slug);
-  const [staff, invites] = await Promise.all([listStaff(supabase, team.id), listInvites(supabase, team.id)]);
-  return <StaffView team={team} role={role} me={userId} staff={staff} invites={invites} origin={await origin()} />;
+  redirect(`/t/${(await params).slug}/opponents`);
 }

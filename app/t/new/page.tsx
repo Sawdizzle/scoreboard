@@ -32,7 +32,7 @@ export default async function NewTeam() {
               <input className="input" name="season" defaultValue={guessSeason()} maxLength={40} autoComplete="off" />
             </label>
           </div>
-          <p className="hint">You take the first of five staff seats, as the organizer. Next: your logo and colours.</p>
+          <p className="hint">Next: your logo and colours.</p>
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create team</Submit>
         </ActionForm>
       </div>

@@ -16,7 +16,9 @@ export const brandOf = (t: Pick<Team, 'name' | 'display_name' | 'color' | 'color
 // Scoreboard, else what was typed when the game was made.
 export const opponentBrand = (g: Game): Brand => g.opponent
   ? brandOf(g.opponent)
-  : { name: g.opponent_name, display: g.opponent_name, color: g.opponent_color, color2: '#f2f6fc', logo: null };
+  : g.saved
+    ? { name: g.saved.name, display: g.saved.name, color: g.saved.color, color2: g.saved.color2, logo: g.saved.logo_url }
+    : { name: g.opponent_name, display: g.opponent_name, color: g.opponent_color, color2: '#f2f6fc', logo: null };
 
 export const monogram = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 

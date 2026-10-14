@@ -12,7 +12,7 @@ Scoreboard is built for youth sports streamed with OBS (or any streaming softwar
 
 v5 is Scoreboard rebuilt around the team. v4 (tag [`v4.47`](https://github.com/Sawdizzle/scoreboard/tree/v4.47)) scored one game at a time for one account; v5 keeps everything the stream did and adds:
 
-- **Teams with five staff seats** (organizer, head coach, coach, scorer, media), filled by invite links.
+- **Your team, run by you.** One account scores for its own team; the teams you play are kept on an **Opponents** list with their logo, colours and roster, which load into the pad and the stream for every game against them.
 - **Rosters, seasons and player stats.** Every play names its batter and pitcher, so season lines (AVG, OBP, SLG, ERA, WHIP, W/L/SV) build themselves from scored games, on top of a GameChanger season import.
 - **Public team pages**: schedule and results, season stats, the roster, and a live page for every game, with each player shown the way the staff chose (full name, first name and initial, or number only).
 - **Stat cards from the scorebug**: batter, pitcher, due up, leaders, box score, lineup, defense, matchup, sponsor and the mid-inning board slide out from behind any look.
@@ -43,8 +43,8 @@ Scoreboard runs on a free Supabase project and Vercel. Setup takes about twenty 
 
 1. **Create an account** at `/sign-up` and confirm the email. On a phone, Share → **Add to Home Screen** opens Scoreboard full screen.
 2. **New team**: name, short code and age group; then the logo (its colours are read from it), the roster (type, paste a list, or import a GameChanger season export), and a season.
-3. **Invite your staff** from Staff: up to five seats, each a one-use link.
-4. **New game**: pick an opponent you have played (their last lineup comes along), another team on Scoreboard, or type a name. Set the start time, the venue, a ZIP or town for the weather, and the rules (time limit, run rule, period length).
+3. **Opponents** (Team → Opponents): add the teams you play, each with a logo (its colours are read from it), a short code and a roster.
+4. **New game**: pick one of your opponents (their roster becomes their lineup), another team on Scoreboard, or type a name. Set the start time, the venue, a ZIP or town for the weather, and the rules (time limit, run rule, period length).
 5. **Lineups**: tap players from the bench into the order, tap a spot on the field and then the player, or punch in the jersey numbers from the lineup card on the keypad.
 6. **Stream**: copy the Browser Source link from the Stream screen into OBS once (next section). It follows whichever game the pad is scoring.
 7. **Score** from the pad. It keeps the screen awake, saves every tap in order through a weak signal, and a second phone on the same game stays in step.
