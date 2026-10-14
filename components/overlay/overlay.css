@@ -24,7 +24,7 @@
 .ov.bug-bc .ov-dock, .ov.bug-tc .ov-dock { left: 0; right: 0; align-items: center; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
 .ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .ov-look { zoom: var(--bs); }
-/* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Pressbox's own bug and cards. */
+/* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Scoreboard's own bug and cards. */
 .ov-look > :not(.cb) em, .ov-look > :not(.cb) small { color: inherit; font-weight: inherit; }
 
 /* The cards' slot: against the scorebug, on the side away from the picture's edge. One card at a time; the

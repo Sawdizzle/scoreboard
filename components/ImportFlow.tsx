@@ -83,7 +83,7 @@ export function ImportFlow({ slug, seasons, roster, seasonId }: {
 
           <p className="hint">
             {fresh > 0 && `${fresh} ${fresh === 1 ? 'player is' : 'players are'} not on the roster and will be added. `}
-            Importing replaces any earlier GameChanger import for this season. Games you score in Pressbox are added on top, so
+            Importing replaces any earlier GameChanger import for this season. Games you score in Scoreboard are added on top, so
             import only the games GameChanger scored.
           </p>
           <Submit className="btn btn-primary btn-big" busy="Importing…">Import {rows.length - choice.filter((c) => c === 'skip').length} players</Submit>

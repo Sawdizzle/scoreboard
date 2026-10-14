@@ -11,10 +11,10 @@ import type { Game, Lineup, Side } from './types.ts';
 
 export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid' | 'qr';
 
-// How the scorebug looks: Pressbox's own, Classic, or one of the eleven looks
+// How the scorebug looks: Scoreboard's own, Classic, or one of the eleven looks
 // first drawn for Scoreboard (components/overlay/looks).
 export const LOOKS = [
-  ['pressbox', 'Pressbox'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
+  ['pressbox', 'Scoreboard'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
   ['classic-green', 'Classic Green'], ['pinball-dmd', 'Pinball'], ['chalkboard', 'Chalkboard'], ['comic', 'Comic'],
   ['split-flap', 'Split Flap'], ['receipt', 'Receipt'], ['pixel-rpg', 'Pixel RPG'],
 ] as const;
@@ -226,7 +226,7 @@ export function boxScore(g: G, innings: number) {
   return { innings: Array.from({ length: n - from }, (_, j) => from + j + 1), away: row('top'), home: row('bottom'), awayTot: tot('away'), homeTot: tot('home') };
 }
 
-// The words for a play worth a moment on Pressbox's own bug, or null.
+// The words for a play worth a moment on Scoreboard's own bug, or null.
 const MOMENTS: Record<string, string> = { H1: 'Single', H2: 'Double', H3: 'Triple', DP: 'Double play', SB: 'Stolen base', SF: 'Sac fly', BB: 'Walk', HBP: 'Hit by pitch' };
 export function momentText(last: Feed['last']) {
   if (!last) return null;

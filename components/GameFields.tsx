@@ -5,7 +5,7 @@ import { SPORTS, SPORT_LABEL } from '@/lib/sports';
 import type { Game, Season, Team } from '@/lib/types';
 
 // Who, where, when, and whether it counts. `opponent` is a team picked from
-// Pressbox; without one, the name is typed.
+// Scoreboard; without one, the name is typed.
 // `saved` is an opponent this team has played before: its name, short code
 // and colour fill the fields, and its last lineup comes with the game.
 export function GameFields({ seasons, game, opponent, changeHref, saved }: {
@@ -20,7 +20,7 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
           <TeamMark brand={brandOf(opponent)} />
           <span className="row-main">
             <span className="row-title">{opponent.name}{opponent.age_group && <small>{opponent.age_group}</small>}</span>
-            <span className="row-meta">On Pressbox · their roster loads into the lineup</span>
+            <span className="row-meta">On Scoreboard · their roster loads into the lineup</span>
           </span>
           {changeHref && <Link href={changeHref} className="link">Change</Link>}
         </div>

@@ -14,7 +14,7 @@ import { SplitFlapBug } from '@/components/overlay/looks/SplitFlapBug';
 import type { BugProps } from '@/components/overlay/looks/types';
 import type { Look } from '@/lib/onair';
 
-// Every look but Pressbox's own (which Stage draws itself) is a component
+// Every look but Scoreboard's own (which Stage draws itself) is a component
 // here: drawn in the page, so the stat cards can slide out from behind it.
 // Eleven of them are native rebuilds of Scoreboard's animated bugs
 // (public/bugs/<slug>.html, kept for reference and for their thumbnails).

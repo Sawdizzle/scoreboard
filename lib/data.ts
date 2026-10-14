@@ -123,7 +123,7 @@ export async function publicRoster(db: Db, teamId: string) {
   const { data } = await db.rpc('public_roster', { p_team: teamId });
   return (data ?? []) as { id: string; number: string; display_name: string | null; positions: string[] }[];
 }
-// Teams on Pressbox whose name matches, for picking an opponent.
+// Teams on Scoreboard whose name matches, for picking an opponent.
 export async function findTeams(db: Db, q: string, notTeam: string) {
   const term = q.replace(/[%_,()]/g, ' ').trim();
   if (term.length < 2) return [];
@@ -131,7 +131,7 @@ export async function findTeams(db: Db, q: string, notTeam: string) {
   return (data ?? []) as Team[];
 }
 
-// Opponents this team has played that are not teams on Pressbox, most
+// Opponents this team has played that are not teams on Scoreboard, most
 // recently used first. Staff only (the policy returns none to anyone else).
 export type SavedOpponent = { id: string; name: string; abbr: string; color: string; roster: Lineup };
 export async function listOpponents(db: Db, teamId: string) {

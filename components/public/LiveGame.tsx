@@ -144,7 +144,7 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
         )}
 
         {status === 'scheduled' && <p className="sub" style={{ padding: '0 4px' }}>The score shows here from the first pitch.</p>}
-        <p className="pub-foot">Scored on <Link href="/" className="link">Pressbox</Link></p>
+        <p className="pub-foot">Scored on <Link href="/" className="link">Scoreboard</Link></p>
       </div>
     </main>
   );

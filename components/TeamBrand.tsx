@@ -13,7 +13,7 @@ export const brandOf = (t: Pick<Team, 'name' | 'display_name' | 'color' | 'color
   color: t.color, color2: t.color2, logo: t.logo_url,
 });
 // The other side of a game: the opponent's own brand when they are on
-// Pressbox, else what was typed when the game was made.
+// Scoreboard, else what was typed when the game was made.
 export const opponentBrand = (g: Game): Brand => g.opponent
   ? brandOf(g.opponent)
   : { name: g.opponent_name, display: g.opponent_name, color: g.opponent_color, color2: '#f2f6fc', logo: null };

@@ -95,7 +95,7 @@ export default async function TeamPage({ params }: Props) {
           ) : <p className="sub" style={{ padding: '0 4px' }}>No roster yet.</p>}
         </section>
 
-        <p className="pub-foot">Scored on <Link href="/" className="link">Pressbox</Link></p>
+        <p className="pub-foot">Scored on <Link href="/" className="link">Scoreboard</Link></p>
       </div>
     </main>
   );

@@ -262,7 +262,7 @@ export function Stage({ feed, card, moment = null }: { feed: Feed | null; card: 
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
   const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
-  // Pressbox's own bug is drawn below; every other look is a component of its own.
+  // Scoreboard's own bug is drawn below; every other look is a component of its own.
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
   const lay = layoutOf(feed.layout);
   const Bug = feed.look ? LOOK_BUGS[feed.look] : undefined;

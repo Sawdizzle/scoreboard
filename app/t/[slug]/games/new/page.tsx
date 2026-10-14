@@ -10,7 +10,7 @@ import { canRunGames, type Team } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'New game' };
 
-// Find the other team on Pressbox (its roster comes along), or just type its
+// Find the other team on Scoreboard (its roster comes along), or just type its
 // name. Searching is a plain GET, so the page works before any script loads.
 export default async function NewGame({ params, searchParams }: {
   params: Promise<{ slug: string }>; searchParams: Promise<{ q?: string; opp?: string; typed?: string; saved?: string }>;
@@ -44,23 +44,23 @@ export default async function NewGame({ params, searchParams }: {
             <label className="field"><span>Who are you playing?</span>
               <input className="input" type="search" name="q" defaultValue={q} placeholder="Team name" autoComplete="off" autoFocus />
             </label>
-            <button type="submit" className="btn btn-quiet">Search Pressbox</button>
+            <button type="submit" className="btn btn-quiet">Search Scoreboard</button>
           </form>
           {q && (
             <div className="stack">
-              {results.length === 0 && <p className="sub" style={{ padding: '0 4px' }}>No team called &ldquo;{q}&rdquo; on Pressbox.</p>}
+              {results.length === 0 && <p className="sub" style={{ padding: '0 4px' }}>No team called &ldquo;{q}&rdquo; on Scoreboard.</p>}
               {results.map((t) => (
                 <Link key={t.id} href={`${base}?opp=${t.id}`} className="card seat">
                   <TeamMark brand={brandOf(t)} />
                   <span className="row-main">
                     <span className="row-title">{t.name}{t.age_group && <small>{t.age_group}</small>}</span>
-                    <span className="row-meta">On Pressbox · roster loads itself</span>
+                    <span className="row-meta">On Scoreboard · roster loads itself</span>
                   </span>
                 </Link>
               ))}
             </div>
           )}
-          <Link href={`${base}?typed=1${q ? `&q=${encodeURIComponent(q)}` : ''}`} className="btn btn-ghost">Not on Pressbox · type the name</Link>
+          <Link href={`${base}?typed=1${q ? `&q=${encodeURIComponent(q)}` : ''}`} className="btn btn-ghost">Not on Scoreboard · type the name</Link>
           {opponents.length > 0 && (
             <section className="stack" style={{ gap: 8 }}>
               <h2 className="h-sec" style={{ padding: '0 4px' }}>Teams you have played</h2>

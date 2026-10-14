@@ -30,7 +30,7 @@ const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
 };
 export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 
-// The scoring pad. Scoreboard's pad, rebuilt on Pressbox's lineups: BALL,
+// The scoring pad. Scoreboard's pad, rebuilt on Scoreboard's lineups: BALL,
 // STRIKE, FOUL and IN PLAY for the pitch; MORE for the rare ones; the runners
 // on the diamond for steals; the bar above for corrections and End game.
 //

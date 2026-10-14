@@ -95,7 +95,7 @@ export type Game = {
   venue: string | null;
   status: 'scheduled' | 'live' | 'final';
   live: Record<string, unknown>;
-  // The opponent's own team row, when they are on Pressbox.
+  // The opponent's own team row, when they are on Scoreboard.
   opponent?: Team | null;
 };
 

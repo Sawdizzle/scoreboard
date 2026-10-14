@@ -10,7 +10,7 @@ const body = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], 
 const mono = Martian_Mono({ subsets: ['latin'], weight: ['400', '600'], variable: '--font-mono', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: { default: 'Pressbox', template: '%s · Pressbox' },
+  title: { default: 'Scoreboard', template: '%s · Scoreboard' },
   description: 'Build the team once. Score the game once. The stats and the broadcast read from the same plays.',
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0b1018' };

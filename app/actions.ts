@@ -404,7 +404,7 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
     if (!UUID.test(oppId) || oppId === teamId) return { error: 'Pick the other team again.' } as const;
     // The opponent's identity comes from its own row, not from the form.
     const { data: t } = await supabase.from('teams').select('name, abbr, color, age_group').eq('id', oppId).maybeSingle<{ name: string; abbr: string; color: string; age_group: string | null }>();
-    if (!t) return { error: 'That team is no longer on Pressbox. Type its name instead.' } as const;
+    if (!t) return { error: 'That team is no longer on Scoreboard. Type its name instead.' } as const;
     name = `${t.name}${t.age_group ? ` ${t.age_group}` : ''}`.slice(0, 60); abbr = t.abbr; color = t.color;
   }
   if (!name) return { error: 'Who are you playing? Pick a team or type a name.' } as const;
