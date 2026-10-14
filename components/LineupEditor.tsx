@@ -32,6 +32,10 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
   const [num, setNum] = useState('');
   const [name, setName] = useState('');
   const [paste, setPaste] = useState('');
+  // The lineup card handed over at game time: jersey numbers in batting order
+  // on a keypad. A number on the roster brings that player; any other is typed in.
+  const [keypad, setKeypad] = useState(false);
+  const [typed, setTyped] = useState('');
   const [state, run, pending] = useActionState(
     async (prev: FormState, fd: FormData) => {
       const r = await saveLineup(slug, gameId, side, prev, fd);
@@ -83,6 +87,13 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
     if (!n && !name.trim()) return;
     add({ bid: newBid(), num: n, name: name.trim().slice(0, 60) });
     setNum(''); setName('');
+  }
+  function keyNext() {
+    const n = typed.replace(/\D/g, '').slice(0, 3);
+    if (!n) return;
+    const p = pool.find((x) => x.num === n && !team.batters.some((b) => b.bid === x.bid));
+    add(p ? { bid: p.bid, num: p.num, name: p.name } : { bid: newBid(), num: n, name: '' });
+    setTyped('');
   }
   function addPasted() {
     const list = parseRoster(paste);
@@ -186,6 +197,26 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {canEdit && (
+        <section className="stack" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-quiet" onClick={() => setKeypad(!keypad)} aria-expanded={keypad}>
+            {keypad ? 'Done with the keypad' : 'Jersey numbers keypad'}
+          </button>
+          {keypad && (
+            <div className="keypad" role="group" aria-label="Jersey number keypad">
+              <div className="keypad-typed"><b>{typed || '–'}</b><span>Batter {team.batters.length + 1} · the number on their back</span></div>
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'next'].map((k) => (
+                <button key={k} type="button" className={`keypad-key${k === 'next' ? ' next' : ''}`}
+                  aria-label={k === 'del' ? 'Back' : k === 'next' ? 'Next batter' : k}
+                  onClick={() => (k === 'del' ? setTyped(typed.slice(0, -1)) : k === 'next' ? keyNext() : setTyped((typed + k).slice(0, 3)))}>
+                  {k === 'del' ? '⌫' : k === 'next' ? 'Next ↵' : k}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

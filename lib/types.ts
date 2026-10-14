@@ -1,6 +1,6 @@
 // Row shapes, written by hand to match supabase/migrations. Swap for generated
 // types once the project exists and `supabase gen types` can run against it.
-
+import type { Clock, GameSettings } from './broadcast.ts';
 import type { Sport } from './sports.ts';
 
 export const ROLES = ['organizer', 'head_coach', 'coach', 'scorer', 'media'] as const;
@@ -95,6 +95,10 @@ export type Game = {
   venue: string | null;
   status: 'scheduled' | 'live' | 'final';
   live: Record<string, unknown>;
+  // The game clock, the game's rules, and where the venue is (for its weather).
+  clock?: Clock | null;
+  settings?: GameSettings;
+  venue_geo?: { lat: number; lon: number; tz?: string; label?: string } | null;
   // The opponent's own team row, when they are on Scoreboard.
   opponent?: Team | null;
 };

@@ -155,9 +155,9 @@ export function Runner({ g, from, who, onPick, onClose }: {
 }
 
 // Corrections, and ending the game. Nothing here goes on anyone's stats.
-export function Situation({ g, final, labels, onFix, onEnd, onClose }: {
+export function Situation({ g, final, labels, onFix, onEnd, onStartOver, onClose }: {
   g: G; final: boolean; labels: { away: string; home: string };
-  onFix: (res: unknown) => void; onEnd: (final: boolean) => void; onClose: () => void;
+  onFix: (res: unknown) => void; onEnd: (final: boolean) => void; onStartOver: () => void; onClose: () => void;
 }) {
   const b = L.safeBases(g.bases);
   const step = (label: string, value: string | number, minus: () => unknown, plus: () => unknown) => (
@@ -177,7 +177,17 @@ export function Situation({ g, final, labels, onFix, onEnd, onClose }: {
         {step('Outs', g.outs, () => L.adjustOuts(g, -1), () => L.adjustOuts(g, 1))}
         {step('Balls', g.balls, () => L.adjustBalls(g, -1), () => L.adjustBalls(g, 1))}
         {step('Strikes', g.strikes, () => L.adjustStrikes(g, -1), () => L.adjustStrikes(g, 1))}
+        {step('Pitch count', L.pitchCount(g), () => L.adjustPitch(g, -1), () => L.adjustPitch(g, 1))}
       </div>
+      <details className="fold">
+        <summary>Hits and errors</summary>
+        <div className="stack" style={{ gap: 4 }}>
+          {step(`${labels.away} hits`, Number(g.away_hits) | 0, () => L.adjustHits(g, 'away', -1), () => L.adjustHits(g, 'away', 1))}
+          {step(`${labels.home} hits`, Number(g.home_hits) | 0, () => L.adjustHits(g, 'home', -1), () => L.adjustHits(g, 'home', 1))}
+          {step(`${labels.away} errors`, Number(g.away_errors) | 0, () => L.adjustErrors(g, 'away', -1), () => L.adjustErrors(g, 'away', 1))}
+          {step(`${labels.home} errors`, Number(g.home_errors) | 0, () => L.adjustErrors(g, 'home', -1), () => L.adjustErrors(g, 'home', 1))}
+        </div>
+      </details>
       <div className="pgrid three">
         {(['first', 'second', 'third'] as const).map((k) => (
           <button key={k} type="button" className={`pdest${b[k] ? ' on' : ''}`} aria-pressed={b[k]} onClick={() => onFix(L.toggleBase(g, k))}>
@@ -193,6 +203,7 @@ export function Situation({ g, final, labels, onFix, onEnd, onClose }: {
       <button type="button" className={`btn ${final ? 'btn-quiet' : 'btn-danger'} btn-big`} onClick={() => onEnd(!final)}>
         {final ? 'Reopen the game' : 'End game'}
       </button>
+      <button type="button" className="btn btn-ghost" onClick={onStartOver}>Start the game over</button>
     </Sheet>
   );
 }

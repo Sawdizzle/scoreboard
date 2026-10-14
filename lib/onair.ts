@@ -6,6 +6,7 @@ import * as L from './rules/logic.js';
 import { positionOf } from './rules/roster.js';
 import { engineGame, tonight, type EngineSide, type G, type StatKey } from './scoring.ts';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
+import type { Broadcast, Cmd } from './broadcast.ts';
 import type { Sport } from './sports.ts';
 import type { Game, Lineup, Side } from './types.ts';
 
@@ -72,9 +73,13 @@ export type Feed = {
   layout?: { bug?: Partial<Layout['bug']>; cards?: Partial<Layout['cards']> } | null;
   // The last spot tapped in On Air: a new stamp plays one.
   spot?: { n: number; cut: 'pitch' | 'inning' } | null;
+  // How the stream looks and sounds beyond the bug, and the last one-shot command.
+  broadcast?: Broadcast | null;
+  cmd?: Cmd | null;
   roster?: { id: string; num: string; name: string }[];
   team: FeedTeam; opponent: FeedTeam;
-  game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & { seq: number; sport?: Sport }) | null;
+  game: (Pick<Game, 'id' | 'is_home' | 'status' | 'live'> & Partial<Pick<Game, 'clock' | 'settings' | 'starts_at' | 'venue' | 'venue_geo'>>
+    & { seq: number; sport?: Sport }) | null;
   season: { name: string; game_innings: number } | null;
   lineups: { us: Lineup | null; them: Lineup | null };
   tonight: (Line & { side: Side; bid: string })[];

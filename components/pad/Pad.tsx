@@ -55,22 +55,33 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const seq = useRef(game.seq);
   const [sync, setSync] = useState<'ok' | 'sending' | 'retry'>('ok');
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState<{ text: string; act?: { label: string; run: () => void } } | null>(null);
+  const [waiting, setWaiting] = useState(0);
+  const [online, setOnline] = useState(true);
   const [chan, setChan] = useState(channel);
+  // A hit typed on the keyboard (1, 2, 3, E) opens In Play at the fielder step.
+  const [startKind, setStartKind] = useState<string | null>(null);
   // The stream's page listens here: a nudge after each save, so the scorebug
   // moves with the tap instead of at its next poll.
   const wire = useRef<ReturnType<typeof sb.channel> | null>(null);
   const nudge = useCallback(() => { void wire.current?.send({ type: 'broadcast', event: 'tick', payload: {} }); }, []);
   const token = channel?.token;
+  // Another phone on this game nudges the same channel after each save; with
+  // nothing of ours waiting, take its plays (a pad left open does not go stale).
+  const follow = useRef<() => void>(() => {});
   useEffect(() => {
     if (!token) return;
-    const c = sb.channel(airTopic(token)).subscribe();
+    const c = sb.channel(airTopic(token)).on('broadcast', { event: 'tick' }, () => follow.current()).subscribe();
     wire.current = c;
     return () => { wire.current = null; void sb.removeChannel(c); };
   }, [sb, token]);
 
   const show = (v: typeof view) => { cur.current = v; setView(v); };
-  const say = (t: string) => { setToast(t); window.setTimeout(() => setToast((x) => (x === t ? '' : x)), 3500); };
+  const say = (text: string, act?: { label: string; run: () => void }) => {
+    const t = { text, act };
+    setToast(t);
+    window.setTimeout(() => setToast((x) => (x === t ? null : x)), act ? 6000 : 3500);
+  };
 
   const reload = useCallback(async () => {
     const [{ data: row }, { data: stats }] = await Promise.all([
@@ -81,6 +92,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     seq.current = row.seq;
     history.current = [];
     show({ g: engineGame({ ...game, live: row.live, status: row.status }, lineups, regulation), status: row.status, tonight: sumRows((stats ?? []) as StatRow[]), last: cur.current.last });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sb, game, lineups, regulation]);
 
   const pump = useCallback(async () => {
@@ -89,6 +101,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     let wait = 800;
     while (queue.current.length) {
       setSync('sending');
+      setWaiting(queue.current.length);
       const it = queue.current[0];
       const { data, error } = it.kind === 'play'
         ? await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status })
@@ -114,7 +127,40 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     }
     sending.current = false;
     setSync('ok');
+    setWaiting(0);
   }, [sb, game.id, reload, nudge]);
+
+  // Catch up with the server when it is safe to: nothing of ours waiting.
+  const idle = () => !queue.current.length && !sending.current;
+  useEffect(() => { follow.current = () => { if (!queue.current.length && !sending.current) void reload(); }; });
+  useEffect(() => {
+    const back = () => {
+      setOnline(navigator.onLine);
+      if (document.hidden) return;
+      if (idle()) void reload(); else void pump();
+    };
+    const off = () => setOnline(false);
+    document.addEventListener('visibilitychange', back);
+    window.addEventListener('online', back);
+    window.addEventListener('offline', off);
+    return () => { document.removeEventListener('visibilitychange', back); window.removeEventListener('online', back); window.removeEventListener('offline', off); };
+  }, [reload, pump]);
+
+  // Keep the screen on while the pad is open: a phone that sleeps mid-inning
+  // drops the connection and costs taps. Not every browser allows it.
+  useEffect(() => {
+    let lock: { release: () => Promise<void> } | null = null;
+    const take = async () => {
+      try {
+        const wl = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock;
+        if (wl && !document.hidden) lock = await wl.request('screen');
+      } catch { /* low battery or not allowed: the pad works without it */ }
+    };
+    void take();
+    const again = () => { if (!document.hidden) void take(); };
+    document.addEventListener('visibilitychange', again);
+    return () => { document.removeEventListener('visibilitychange', again); void lock?.release().catch(() => {}); };
+  }, []);
 
   // Record a play: here at once, then to the database in order.
   function commit(res: unknown, status: Status | null = null) {
@@ -148,13 +194,31 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     void pump();
   }
 
-  // What the stream shows: here at once, then saved. Any seat can run it.
+  // What the stream shows: here at once, then saved. Any seat can run it. A
+  // weak signal gets three tries before the tap is taken back.
   async function air(patch: Partial<Channel>) {
     const before = chan;
     if (!before) return;
     setChan({ ...before, ...patch });
-    const { error } = await sb.from('channels').update(patch).eq('team_id', team.id);
-    if (error) { setChan(before); say('That did not reach the stream. Try again.'); return; }
+    for (let i = 0; i < 3; i++) {
+      const { error } = await sb.from('channels').update(patch).eq('team_id', team.id);
+      if (!error) { nudge(); return; }
+      if (error.code && !/fetch|network/i.test(error.message)) break;
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+    setChan(before);
+    say('That did not reach the stream. Try again.');
+  }
+
+  // Start over: every play and its stats go; the game is back before the first pitch.
+  async function startOver() {
+    if (!window.confirm('Start this game over? Every play and its stats are cleared. Lineups stay.')) return;
+    const { error } = await sb.rpc('reset_game', { p_game: game.id });
+    if (error) { say(error.message || 'That did not work. Try again.'); return; }
+    queue.current = [];
+    await reload();
+    show({ ...cur.current, last: 'Game started over' });
+    setSheet(null);
     nudge();
   }
 
@@ -192,10 +256,39 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const dots = (n: number, of: number, color: string) => Array.from({ length: of }, (_, i) => <i key={i} style={{ background: i < n ? color : undefined }} />);
 
   const press = {
-    ball: () => { const r = L.onBall(g) as Res; if (r.sheet === 'walk') { const w = L.computeWalk(g.bases); commit({ type: 'walk', patch: L.endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(g, w.runs) }), payload: { runs: w.runs, play: L.playNote(g, 'BB', { runs: w.runs }) } }); say(w.runs ? `Walk · ${w.runs} run forced in` : 'Walk'); } else commit(r); },
+    ball: () => {
+      const r = L.onBall(g) as Res;
+      if (r.sheet !== 'walk') return commit(r);
+      const w = L.computeWalk(g.bases);
+      commit({ type: 'walk', patch: L.endPA(g, { balls: 0, strikes: 0, bases: w.bases, ...L.runsPatch(g, w.runs) }), payload: { runs: w.runs, play: L.playNote(g, 'BB', { runs: w.runs }) } });
+      // Forced runners only; the rare extra base is one tap away.
+      say(w.runs ? `Walk · ${w.runs} run forced in` : 'Walk', { label: 'Fix runners', run: () => setSheet('situation') });
+    },
     strike: () => ((g.strikes | 0) >= 2 ? setSheet('k3') : commit(L.onStrike(g))),
     foul: () => commit(L.onFoul(g)),
   };
+
+  // Keys for a laptop at the table: the pad's own letters, ignored while a
+  // sheet is open or a field has the cursor.
+  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
+  useEffect(() => { keys.current = (e) => {
+    if (sheet || locked || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = ((e.target as HTMLElement | null)?.tagName ?? '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    const k = e.key.toLowerCase();
+    const direct: Record<string, string> = { 1: 'H1', 2: 'H2', 3: 'H3', e: 'E' };
+    const act: Record<string, () => void> = {
+      b: press.ball, s: press.strike, f: press.foul, i: () => setSheet('inplay'), o: () => setSheet('inplay'), m: () => setSheet('more'), u: undo,
+      h: () => { const runs = L.computeHomeRun(g.bases).runs; commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }) }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' }); },
+    };
+    if (act[k]) { e.preventDefault(); act[k](); return; }
+    if (direct[k]) { e.preventDefault(); setSheet('inplay'); setStartKind(direct[k]); }
+  }; });
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => keys.current(e);
+    document.addEventListener('keydown', on);
+    return () => document.removeEventListener('keydown', on);
+  }, []);
 
   return (
     <div className="pad">
@@ -210,7 +303,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
             </span>
           ))}
         </div>
-        <span className={`pad-sync ${sync}`} role="status" aria-label={sync === 'ok' ? 'Saved' : sync === 'sending' ? 'Saving' : 'Waiting for signal'} />
+        <span className={`pad-sync ${online ? sync : 'retry'}`} role="status"
+          aria-label={!online ? 'Offline: plays are kept and sent when the signal is back' : sync === 'ok' ? 'Saved' : sync === 'sending' ? 'Saving' : 'Waiting for signal'}>
+          {waiting > 1 ? waiting : null}
+        </span>
       </header>
 
       <button type="button" className="pad-sit" onClick={() => setSheet('situation')} disabled={!canScore}>
@@ -239,7 +335,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         </span>
       </Link>
 
-      <div className="pad-last" role="status">{toast || view.last || (status === 'scheduled' ? 'First pitch starts the game.' : '')}</div>
+      <div className="pad-last" role="status">
+        {toast?.text || view.last || (status === 'scheduled' ? 'First pitch starts the game.' : '')}
+        {toast?.act && <button type="button" className="link pad-act" onClick={() => { toast.act!.run(); setToast(null); }}>{toast.act.label}</button>}
+      </div>
 
       <div className="pad-keys">
         <button type="button" className="pkey ball" onClick={press.ball} disabled={locked}>BALL</button>
@@ -268,9 +367,11 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         // A dropped third strike is a ball in play for the runners: the batter may run.
         if (k === 'dropped') setSheet('dropped'); else commit(L.onStrike(g, { looking: k === 'look' }));
       }} />}
-      {(sheet === 'inplay' || sheet === 'dropped') && <InPlay g={g} start={sheet === 'dropped' ? { kind: 'K3', pos: 'C' } : undefined} onClose={() => setSheet(null)} onRecord={({ kind, pos, dest }) => {
+      {(sheet === 'inplay' || sheet === 'dropped') && <InPlay g={g} start={sheet === 'dropped' ? { kind: 'K3', pos: 'C' } : startKind ? { kind: startKind, pos: '' } : undefined}
+        onClose={() => { setSheet(null); setStartKind(null); }} onRecord={({ kind, pos, dest }) => {
+        setStartKind(null);
         if (kind === 'HR') { const runs = L.computeHomeRun(g.bases).runs; commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }) }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' }); }
-        else commit(onPlay(g, { kind, pos, dest }));
+        else commit(onPlay(g, { kind, pos: pos || null, dest }));
       }} />}
       {sheet === 'more' && <More g={g} onClose={() => setSheet(null)} onPick={(k) => {
         commit(k === 'hbp' ? L.onHitByPitch(g) : k === 'ci' ? L.onCatcherInterference(g) : k === 'ibb' ? L.onIntentionalWalk(g) : L.onBalk(g));
@@ -281,7 +382,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
         score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onClose={() => setSheet(null)} />}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
-        onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} />}
+        onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} onStartOver={startOver} />}
     </div>
   );
 }
