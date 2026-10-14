@@ -1,53 +1,51 @@
 # Contributing
 
-This is a small, personal project that runs a real broadcast most weekends, so
-changes are judged on whether they hold up live. Bug reports and pull requests
-are welcome.
+This is a small project that runs a real broadcast most weekends, so changes
+are judged on whether they hold up live. Bug reports and pull requests are
+welcome.
 
 ## Ground rules
 
-- **No build step, and it stays that way.** Vanilla ES modules, no bundler, no
-  framework, no `package.json`. Dependencies are vendored under `js/vendor/`.
-  A pull request that adds a toolchain will not be merged.
-- **Rules live in `js/logic.js`.** It is pure: no DOM, no network, no clock.
-  Game rules go there and get a test. `js/control.js` wires the pad,
-  `js/overlay.js` draws the broadcast.
-- **The model is the source of truth, never the DOM.** Reading state back out of
-  inputs is how the lineup bugs happened.
-- **One home per control.** Game flow on the main pad, corrections in the
-  Situation sheet, on-air cards in Broadcast. Do not add a second button for
-  something that already has a place.
+- **Rules live in `lib/rules/`, and they are v4's.** Baseball (`logic.js`,
+  `roster.js`) and the other sports came over unchanged with their tests. They
+  are pure: a game in, a patch out, no DOM, no network, no clock. A rule change
+  goes there and gets a test in `tests/rules/`.
+- **The database decides.** Every write runs as the signed-in user through
+  `app/actions.ts` or an RPC, and Postgres policies say yes or no. A check in
+  the app only turns bad input into a sentence.
+- **One home per control.** Game flow on the pad, corrections in Fix the
+  situation, what is on air now in On Air, how the stream looks on the Stream
+  screen. Do not add a second button for something that already has a place.
+- **Looks are scoped.** A look is one component and one stylesheet; every
+  selector sits under its root class, and no class name is generic enough to
+  match another look's.
 
 ## Before you open a pull request
 
 ```
-node scripts/check.mjs
-node --test scripts/*.test.mjs
+npm test
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-`check.mjs` is the safety net a no-build app otherwise lacks: it catches a
-handler that no longer exists, a control wired to nothing, and a Supabase URL
-that disagrees between `js/config.js` and the `preconnect` lines. Both commands
-also run in CI on every pull request.
-
-Anything that changes what goes on screen needs a look at a real overlay, not
-only a passing test. `/control` → Setup → Overlay link → **Preview All FX**
-fires every animation, and **▶ Demo Mode** plays a fake game in a throwaway
-game.
+All four run in CI on every pull request. Anything that changes what goes on
+screen needs a look at it, not only a passing test: `/dev/kit?v=overlay` draws
+the stream over a stand-in camera, and the Stream screen's **Play every moment
+on the stream** fires every stinger at a real overlay.
 
 ## Database changes
 
 Schema changes are SQL files in `supabase/migrations/`, applied in filename
-order; `supabase/migrations/README.md` explains the naming. Write the migration
-so it can run against a project that already has data. If a change cannot be
-applied yet, it goes in `supabase/pending/` with a note saying what has to be
-true first.
+order and named by the version the project records when it is applied. Write
+each so it can run against a project that already has data, and add a test in
+`tests/` that exercises it as `anon` and `authenticated` (see `tests/db.ts`).
 
 Never widen RLS or expose a new anonymous RPC without saying why in the pull
 request. See `SECURITY.md` for what the rules are protecting.
 
 ## Style
 
-Match the file you are in: tabs or spaces, naming, comment density. Comments
-explain why, not what. Commit messages are a version bump and a plain sentence,
-for example `v4.11: back out the analytics tag`.
+Match the file you are in: naming, comment density, idiom. Comments explain
+why, not what. Commit messages are a plain sentence, with the version on
+release merges, for example `v5.1: the pad keeps the last pitch on a reload`.

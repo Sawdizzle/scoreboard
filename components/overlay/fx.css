@@ -1,0 +1,83 @@
+/* v4's stingers (css/anim.css), on the v5 stream's rem grid: 1rem is 1/128 of
+   the picture's width, so v4's pixel sizes at 1920 are divided by 15. */
+.fx { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; font-family: var(--disp, 'Barlow Condensed', sans-serif); }
+.fx-item { position: absolute; inset: 0; }
+
+/* Run scored: a soft flash along the floor. */
+.fx-run-flash { background: radial-gradient(circle at 50% 100%, rgba(232, 178, 58, 0.35), transparent 60%); animation: fx-run 0.85s ease-out forwards; }
+@keyframes fx-run { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Home run / touchdown: the steel plate slams in, with rays and chalk. */
+.hr-ball { position: absolute; top: 72%; left: -8%; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #d8dee8 60%, #aeb7c4); box-shadow: 0 0 1.2rem rgba(255, 255, 255, 0.85);
+  animation: fx-ball 0.9s cubic-bezier(.2, .5, .3, 1) forwards; }
+.hr-ball::after { content: ''; position: absolute; right: 55%; top: 50%; width: 13rem; height: 0.27rem; transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75)); filter: blur(2px); }
+@keyframes fx-ball { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(118vw, -60vh) scale(1.15); opacity: 1; } }
+.hr-rays { position: absolute; inset: 0; opacity: 0; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.06) 0deg 6deg, transparent 6deg 12deg);
+  animation: fx-rays 3.4s ease-out 0.8s forwards; }
+@keyframes fx-rays { 0% { opacity: 0; transform: scale(.4) rotate(0); } 20% { opacity: .5; } 100% { opacity: 0; transform: scale(1.7) rotate(45deg); } }
+.hr-plate { position: absolute; left: 50%; top: 50%; opacity: 0; transform: translate(-50%, -50%) scale(4);
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 1.5rem 3.6rem; border-radius: 0.9rem;
+  background: linear-gradient(180deg, #2b3648, #141b28); border: 0.13rem solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0.13rem 0 rgba(255, 255, 255, 0.15), inset 0 -0.4rem 1.3rem rgba(0, 0, 0, 0.6), 0 1.6rem 4rem rgba(0, 0, 0, 0.6);
+  animation: fx-plate 4.8s cubic-bezier(.2, .7, .2, 1) forwards; }
+.hr-plate .hr-l1 { font-weight: 800; font-size: 2.9rem; line-height: 1; letter-spacing: .16em; color: #8fb6de; }
+.hr-plate .hr-l2 { font-weight: 900; font-size: 6.1rem; line-height: .9; letter-spacing: .06em;
+  background: linear-gradient(180deg, #fff, #c8d1da); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@keyframes fx-plate {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(4); filter: blur(8px); } 14% { opacity: 0; } 18% { opacity: 1; filter: blur(0); }
+  24% { transform: translate(-50%, -50%) scale(.9); } 29% { transform: translate(-50%, -50%) scale(1.06); } 33% { transform: translate(-50%, -50%) scale(.98); }
+  37% { transform: translate(-50%, -50%) scale(1); } 39% { transform: translate(-51%, -50%) scale(1); } 41% { transform: translate(-49%, -50.4%) scale(1); }
+  43% { transform: translate(-50%, -50%) scale(1); } 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -53%) scale(1.02); }
+}
+.hr-particles, .wo-particles { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.wo-particles { top: 42%; }
+.hr-particles .chalk { position: absolute; width: 0.55rem; height: 0.55rem; border-radius: 0.13rem; background: #f2f6fc; opacity: 0; animation: fx-fly 1.4s ease-out forwards; }
+@keyframes fx-fly { 0% { opacity: 0; transform: translate(0, 0) scale(1.2) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.35) rotate(var(--r)); } }
+
+/* Walk-off / goal: the whole picture celebrates. */
+.fx-walkoff { display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, rgba(59, 111, 214, 0.25), transparent 55%); animation: fx-wo-bg 4.8s ease-out forwards; }
+@keyframes fx-wo-bg { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.wo-text { font-weight: 900; font-size: 22vh; line-height: .9; letter-spacing: .02em; opacity: 0;
+  background: linear-gradient(180deg, #fff, #8fb6de); -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: fx-wo-text 4.8s cubic-bezier(.2, .8, .2, 1) forwards; }
+@keyframes fx-wo-text { 0% { opacity: 0; transform: scale(.4) rotate(-6deg); } 8% { opacity: 1; } 16% { transform: scale(1.08) rotate(2deg); } 22% { transform: scale(1) rotate(0); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
+.wo-particles .confetti { position: absolute; width: 0.67rem; height: 0.93rem; border-radius: 0.13rem; opacity: 0; animation: fx-confetti 3.2s ease-in forwards; }
+@keyframes fx-confetti { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 60vh)) rotate(var(--r)); } }
+
+/* The smaller moments: a card that rises above the scorebug (or drops below
+   it when the bug sits along the top), holds, and goes. */
+.fx-reveal { position: absolute; left: 50%; transform: translateX(-50%); width: 40rem; }
+.fx-reveal.from-bottom { bottom: 16rem; }
+.fx-reveal.from-top { top: 16rem; }
+.reveal-card { display: flex; flex-direction: column; align-items: center; padding: 0.8rem 1.4rem; border-radius: 0.6rem;
+  background: linear-gradient(180deg, #1b2434, #0e1420); color: #f2f6fc; border-top: 0.25rem solid #e0a92a; box-shadow: 0 0.7rem 2rem rgba(0, 0, 0, 0.45);
+  font-weight: 900; font-size: 3rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.fx-reveal.from-bottom .reveal-card { animation: fx-up 2.6s cubic-bezier(.2, .8, .2, 1) both; }
+.fx-reveal.from-top .reveal-card { animation: fx-down 2.6s cubic-bezier(.2, .8, .2, 1) both; }
+.rv-sub { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.12em; color: #8fb6de; }
+@keyframes fx-up { 0% { transform: translateY(60%); opacity: 0; } 12% { opacity: 1; } 17% { transform: translateY(0); } 84% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(60%); opacity: 0; } }
+@keyframes fx-down { 0% { transform: translateY(-60%); opacity: 0; } 12% { opacity: 1; } 17% { transform: translateY(0); } 84% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60%); opacity: 0; } }
+
+/* Rally: a breathing amber edge that stays while it is on. Painted once; only opacity moves. */
+.fx.rally::before { content: ''; position: fixed; inset: 0; box-shadow: inset 0 0 4.7rem 0.8rem rgba(232, 178, 58, 0.5); will-change: opacity; animation: fx-rally 1.6s ease-in-out infinite; }
+@keyframes fx-rally { 0%, 100% { opacity: 0.44; } 50% { opacity: 1; } }
+
+/* The page in a browser (not OBS) needs one tap before it may play sound. */
+.fx-sound { position: fixed; top: 1rem; left: 1rem; z-index: 40; pointer-events: auto; padding: 0.5rem 1rem; border-radius: 99rem; border: 0;
+  background: rgba(11, 16, 24, 0.85); color: #f2f6fc; font: 600 1.3rem/1 system-ui, sans-serif; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-item, .fx-item *, .reveal-card { animation-duration: 0.6s !important; }
+  .fx.rally::before { animation: none; opacity: 0.7; }
+}
+
+/* The rotating sponsor corner bug, top right, sliding in and out. */
+.ov-spbug { position: fixed; top: 3rem; right: 3rem; z-index: 15; display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.4rem; border-radius: 0.7rem;
+  background: linear-gradient(180deg, #1d2638, #0b111c); color: #f2f6fc; box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.45); font-family: var(--font-cond, 'Barlow Condensed'), sans-serif;
+  opacity: 0; transform: translateX(2rem); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.16, 1, .3, 1); pointer-events: none; }
+.ov-spbug.on { opacity: 1; transform: none; }
+.ov-spbug small { font-size: 1.3rem; letter-spacing: 0.14em; text-transform: uppercase; color: #a3aec2; }
+.ov-spbug img { height: 3.4rem; max-width: 10rem; object-fit: contain; }
+.ov-spbug b { font-size: 2.4rem; font-weight: 700; text-transform: uppercase; }
