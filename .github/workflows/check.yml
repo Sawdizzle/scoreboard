@@ -1,0 +1,36 @@
+name: check
+
+# Runs on every push to main and on pull requests. The job keeps the name
+# `static-checks`: branch protection on main requires a job by that name.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here writes anything back. A fork's pull request runs this workflow,
+# so the token it gets should not be able to touch the repository.
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    env:
+      # The build bakes these into the client. Placeholders are enough to
+      # compile; no page is served from CI.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      # The rules engine, roster and stats parsing, and every migration in
+      # supabase/migrations applied to an in-process Postgres and checked as
+      # the role a real request would arrive as.
+      - run: npm test
+      - run: npm run build

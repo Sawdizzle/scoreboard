@@ -1,8 +1,8 @@
-# Pressbox (working name)
+# Scoreboard v5 (in progress)
 
-Scoreboard's next generation: teams with five staff seats, rosters, seasons and
-player stats, feeding the same Browser Source scorebug. See [PLAN.md](PLAN.md)
-for the stages; this is Stage 1, Team HQ.
+Scoreboard's next generation, built as Pressbox: teams with five staff seats,
+rosters, seasons and player stats, feeding the same Browser Source scorebug.
+The static v4 app is at tag `v4.47`. See [PLAN.md](PLAN.md) for the v5 stages.
 
 ## Run it
 
@@ -59,9 +59,9 @@ one current season, and the public roster's name masking.
 
 ## Database
 
-Supabase project `ntdslnchefusqvzgeevv` ("Pressbox", us-east-1), in the same
-organization as Scoreboard's project. Tables live in `public`, so no schema has
-to be exposed by hand.
+Scoreboard's Supabase project `zhucylsplepnghgybktt` (us-east-1). v5's tables
+live in `public`, beside v4's `scoreboard` schema, which v5 migrates its data
+from. `supabase/legacy/` holds v4's migrations and its signup function.
 
 Security advisors flag the `SECURITY DEFINER` functions as callable. That is
 intended: `invite_preview`, `public_roster`, `public_game` and `overlay_feed` (the stream page,

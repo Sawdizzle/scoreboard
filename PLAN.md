@@ -1,4 +1,50 @@
-# Pressbox (working name) — plan
+# Scoreboard v5.0 — plan
+
+Pressbox (built Oct 2-4 2026 as Scoreboard's next generation, `github.com/Sawdizzle/pressbox`)
+becomes Scoreboard v5.0. Its history is merged into this repo; the static v4 app is kept at tag
+`v4.47`. Decisions (Shawn, 2026-10-14):
+
+- **Pressbox becomes Scoreboard.** One repo (`Sawdizzle/scoreboard`), one Vercel project (`scoreboard`).
+- **Database:** Scoreboard's own Supabase project `zhucylsplepnghgybktt`. The v5 schema lives in
+  `public` beside the v4 `scoreboard` schema, which stays as the source for the data migration.
+  The Pressbox project `ntdslnchefusqvzgeevv` is restored once, only to copy its teams and stats over.
+- **Version:** v5.0 (numbering stays monotonic after v4.47).
+- **Parity before prod switches:** everything Scoreboard v4.47 does that Pressbox does not, including
+  sound and moment buttons, the full-screen scenes and weather, OBS control, the other sports in full
+  with their clocks, and Scoreboard's themes, layouts and custom colours, plus the MLBFox bug.
+- **Old data comes along:** v4's final games (plays, line scores, recaps) and saved teams.
+
+## v5 stages
+
+Each stage is committed on the `v5` branch, tested on the Vercel preview
+(`scoreboard-git-v5-sawdizzles-projects.vercel.app`), and ends with a checklist. `main` (prod)
+does not change until Shawn says merge.
+
+1. **Foundation.** Pressbox code in this repo; schema applied to Scoreboard's Supabase; Vercel
+   preview builds Next.js; CI (`static-checks`) runs typecheck, lint, tests and build; MLBFox,
+   bug gallery and icons carried in; clean `/bugs/<slug>` and `/ads/<slug>` URLs kept.
+2. **Data and links.** Pressbox's teams, players, seasons, stats and opponents copied in; Shawn's
+   account; v4 saved teams and final games migrated; redirects for `/control`, `/overlay?ch=`,
+   `/overlay?game=`, `/recap?game=`; OBS channel token kept so the Browser Source link survives;
+   sign-up invite gate and password reset.
+3. **Pad parity.** Pitch count and hits/errors fixes, keyboard shortcuts, wake lock, live sync
+   between phones, write-queue count, Fix runners after ball four, Reset, auto walk-off, run-rule
+   watch, jersey keypad, PWA manifest.
+4. **Other sports and clocks.** Football, soccer, basketball and volleyball situations as in v4;
+   game clock, time limit, soccer count-up.
+5. **Sound and moments.** The audio engine and packs, generic stingers, Walk-off / Charge! / Rally /
+   Turnover / Big Play buttons.
+6. **Scenes.** Starting Soon (countdown, venue weather), Final, Game paused with storm effects,
+   ticker, Elevated scenes, the Blue Steel / Midnight / Forever 20 intros and Midnight's sky,
+   MLBFox as a native look, overlay auto-reload on a new release.
+7. **Looks.** v4's themes, layouts and custom colours on the v5 overlay; nine-spot position grid.
+8. **OBS control.** Replay, auto-clip, cameras, Go Live / Record / Buffer, permission tiers.
+9. **Release.** README, CONTRIBUTING, SECURITY, screenshots, GitHub description and topics,
+   `v5.0.0` tag and release notes, Pressbox repo archived, merge to `main` on Shawn's word.
+
+---
+
+# Pressbox plan (as built, Oct 2026)
 
 Scoreboard grows from a scorebug into the whole thing: build a team once, score the
 game once, and the roster, the season stats and the broadcast all read from the same
