@@ -16,6 +16,11 @@ becomes Scoreboard v5.0. Its history is merged into this repo; the static v4 app
 
 ## v5 stages
 
+Status (2026-10-14): stages 1 to 8 are built on `v5` and on its preview; stage 9's
+docs, version and runbook are done. The switch itself (merge to `main`, the
+`v5.0.0` tag and release, the GitHub description, archiving Pressbox) waits for
+Shawn: see `docs/CUTOVER-v5.md`.
+
 Each stage is committed on the `v5` branch, tested on the Vercel preview
 (`scoreboard-git-v5-sawdizzles-projects.vercel.app`), and ends with a checklist. `main` (prod)
 does not change until Shawn says merge.
