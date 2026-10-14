@@ -174,4 +174,85 @@
 .ov.bug-tl .bsx .hrw,.ov.bug-tc .bsx .hrw,.ov.bug-tr .bsx .hrw{bottom:auto;top:calc(100% + 2.2rem)}
 .ov.bug-br .bsx .hrw,.ov.bug-tr .bsx .hrw{left:auto;right:-6rem}
 .ov.bug-br .bsx .hr,.ov.bug-tr .bsx .hr{left:auto;right:0}
-.bsx-fx{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:20;zoom:1}
+
+/* ---------- Over the whole picture ----------
+   FullFrame (BlueSteelBug.tsx) places these over the picture from inside the dock; this is where they start. */
+.bsx .bsx-ff{position:fixed;left:0;top:0;width:100vw;height:100vh;transform-origin:0 0;pointer-events:none;z-index:20;overflow:hidden}
+.bsx .hero-ff{z-index:30}
+.bsx .bsx-fx{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+
+/* CSS sparks: a streak thrown along --a for --r with drag, falling --g, over --t from --d */
+.bsx .spks{position:absolute;left:var(--x);top:var(--y);width:0;height:0}
+.bsx .spk{position:absolute;left:0;top:0;animation:bsxFall var(--t) var(--d) cubic-bezier(.55,0,1,.45) both}
+.bsx .spk i{position:absolute;left:0;top:0;transform:rotate(var(--a))}
+.bsx .spk b{position:absolute;right:0;top:-0.1rem;width:var(--l);height:0.2rem;border-radius:0.1rem;background:linear-gradient(90deg,transparent,var(--c));
+  box-shadow:0 0 0.4rem var(--c);animation:bsxThrow var(--t) var(--d) cubic-bezier(.16,1,.3,1) both}
+@keyframes bsxThrow{0%{transform:translateX(0);opacity:0}6%{opacity:1}100%{transform:translateX(var(--r));opacity:0}}
+@keyframes bsxFall{from{transform:none}to{transform:translateY(var(--g))}}
+
+/* ---------- The intro: full frame (the original's, in its 1920 stage's pixels / 15) ---------- */
+.bsx .hero{position:absolute;inset:0}
+.bsx .hero .veil{position:absolute;inset:0;opacity:0;animation:bsxVeil 9.8s linear forwards;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 0.07rem,transparent 0.07rem 0.27rem),
+    radial-gradient(ellipse 60% 70% at 50% 42%,rgba(23,34,58,.9) 0%,rgba(9,14,25,.95) 60%,rgba(3,6,11,.98) 100%)}
+@keyframes bsxVeil{0%{opacity:0}6%{opacity:1}80%{opacity:1}96%,100%{opacity:0}}
+.bsx .hero .halo{position:absolute;left:50%;top:22rem;width:73.33rem;height:73.33rem;margin:-36.67rem 0 0 -36.67rem;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,rgba(127,192,239,.26) 0%,rgba(127,192,239,.08) 34%,transparent 62%);animation:bsxHalo 7s 1.2s ease-in-out both}
+@keyframes bsxHalo{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1)}100%{opacity:.7;transform:scale(1.08)}}
+/* the forge light: a line that opens, then scans the crest into being */
+.bsx .hero .scan{position:absolute;left:50%;top:6.8rem;width:50.67rem;height:0.2rem;margin-left:-25.33rem;border-radius:0.13rem;opacity:0;
+  background:linear-gradient(90deg,transparent,var(--steel-hi) 20%,#fff 50%,var(--steel-hi) 80%,transparent);
+  box-shadow:0 0 1.2rem 0.27rem rgba(127,192,239,.7);animation:bsxScan 1.5s .35s cubic-bezier(.45,0,.2,1) both}
+@keyframes bsxScan{0%{opacity:0;transform:translateY(0) scaleX(0)}18%{opacity:1;transform:translateY(0) scaleX(1)}
+  86%{opacity:1;transform:translateY(30.4rem) scaleX(.9)}100%{opacity:0;transform:translateY(31.33rem) scaleX(.2)}}
+.bsx .hero .hlogo{position:absolute;left:50%;top:6.93rem;width:29.33rem;height:30.53rem;margin-left:-14.67rem;animation:bsxShakeS .32s 2.91s ease-out}
+.bsx .hero .hlogo .lg{clip-path:inset(0 0 100% 0);animation:bsxReveal 1.23s .62s cubic-bezier(.45,0,.2,1) both}
+@keyframes bsxReveal{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 -10% 0)}}
+/* its eye catches at 1.5 s and again at 5.6 s; the steel sheen crosses it at 4.3 s */
+.bsx .hero .lg .f{animation:bsxSway 6.4s ease-in-out infinite,bsxGust 1.7s 1.5s var(--ease-out),bsxGust 1.7s 5.6s var(--ease-out)}
+.bsx .hero .lg .eye{animation:bsxFlare 1.5s 1.5s ease-out,bsxFlare 1.5s 5.6s ease-out,bsxEye 4.6s 7.1s ease-in-out infinite}
+.bsx .hero .lg .strk{animation:bsxStreak 1.2s 1.5s ease-out,bsxStreak 1.2s 5.6s ease-out}
+.bsx .hero .lg .sh::before{animation:bsxShine 1.4s 4.3s var(--ease-out) both}
+.bsx .hero .word{position:absolute;left:0;right:0;top:39.33rem;display:flex;flex-direction:column;align-items:center;gap:0.93rem;
+  animation:bsxShakeL .32s 2.91s ease-out,bsxWordOut .7s 7.4s var(--ease-in) forwards}
+.bsx .hero .w1{display:flex;line-height:.9;white-space:nowrap;text-transform:uppercase}
+.bsx .hero .w1 .ch{position:relative;display:inline-block;font-size:11.73rem;letter-spacing:.05em;color:var(--ink);
+  text-shadow:0 0.47rem 0 var(--edge),0 0 2.67rem rgba(127,192,239,.2);
+  animation:bsxStrike .22s calc(2.05s + var(--i) * 80ms) var(--slam) both,bsxTemper 2.3s calc(2.27s + var(--i) * 80ms) linear both,bsxPing .9s calc(4.3s + var(--i) * 55ms) ease-in-out}
+.bsx .hero .w1 .sp{display:inline-block;width:.32em;font-size:11.73rem}
+@keyframes bsxPing{0%,100%{color:var(--ink)}40%{color:#fff;text-shadow:0 0.47rem 0 var(--edge),0 0 2rem rgba(191,227,251,.95)}}
+.bsx .hero .w2{text-transform:uppercase;font-size:3.87rem;letter-spacing:.42em;margin-right:-.42em;color:var(--steel);text-shadow:0 0.27rem 0 var(--edge);opacity:0;
+  animation:bsxTrack 1.2s 3.05s var(--ease-out) both}
+@keyframes bsxTrack{from{opacity:0;letter-spacing:1.1em;margin-right:-1.1em}to{opacity:1;letter-spacing:.42em;margin-right:-.42em}}
+.bsx .hero .w3{display:flex;align-items:center;gap:1.47rem;font-family:var(--mono);font-weight:700;font-size:1.73rem;letter-spacing:.14em;color:var(--dim);opacity:0;
+  animation:bsxFadeUp .9s 3.6s var(--ease-out) both}
+.bsx .hero .w3 i{width:6rem;height:0.13rem;background:linear-gradient(90deg,transparent,var(--steel))}
+.bsx .hero .w3 i:last-child{background:linear-gradient(90deg,var(--steel),transparent)}
+.bsx .hero .w3 span{color:var(--ink)} .bsx .hero .w3 em{font-style:normal;color:var(--clay)}
+@keyframes bsxFadeUp{from{opacity:0;transform:translateY(0.93rem)}to{opacity:1;transform:none}}
+@keyframes bsxWordOut{to{opacity:0;transform:translateY(-0.93rem)}}
+@keyframes bsxShakeL{0%,100%{transform:none}25%{transform:translate(-0.47rem,0.28rem)}50%{transform:translate(0.47rem,-0.23rem)}75%{transform:translate(-0.23rem,0.14rem)}}
+@keyframes bsxShakeS{0%,100%{transform:none}25%{transform:translate(-0.2rem,0.12rem)}50%{transform:translate(0.2rem,-0.1rem)}75%{transform:translate(-0.1rem,0.06rem)}}
+/* embers drifting up off the forge, all through it */
+.bsx .hero .embers{position:absolute;inset:0;overflow:hidden}
+.bsx .hero .embers i{position:absolute;left:var(--x);top:100%;width:var(--s);height:var(--s);border-radius:50%;opacity:0;
+  background:radial-gradient(circle,#fff 0,var(--c) 45%,transparent 72%);box-shadow:0 0 0.6rem var(--c);animation:bsxEmber var(--t) var(--d) linear both}
+@keyframes bsxEmber{0%{opacity:0;transform:none}12%{opacity:var(--o)}35%{transform:translate(var(--w),calc(var(--rise) * -.35))}
+  70%{opacity:var(--o);transform:translate(calc(var(--w) * -1),calc(var(--rise) * -.7))}100%{opacity:0;transform:translate(var(--w),calc(var(--rise) * -1))}}
+
+/* While it plays the bug waits; when the crest lands in it the plate builds out of it. */
+.bsx.await .pkg{visibility:hidden}
+.bsx.landed .plate{animation:bsxBuild .8s var(--ease-out) both}
+.bsx.landed .strip{animation:bsxLineIn .5s .4s var(--ease-out) both}
+.ov.bug-br .bsx.landed .plate,.ov.bug-tr .bsx.landed .plate{animation-name:bsxBuildR}
+@keyframes bsxBuild{from{clip-path:polygon(0 0,0 0,0 calc(100% - 1.5rem),0 100%,0 100%,0 1.5rem)}
+  to{clip-path:polygon(1.5rem 0,100% 0,100% calc(100% - 1.5rem),calc(100% - 1.5rem) 100%,0 100%,0 1.5rem)}}
+@keyframes bsxBuildR{from{clip-path:polygon(100% 0,100% 0,100% calc(100% - 1.5rem),100% 100%,100% 100%,100% 1.5rem)}
+  to{clip-path:polygon(1.5rem 0,100% 0,100% calc(100% - 1.5rem),calc(100% - 1.5rem) 100%,0 100%,0 1.5rem)}}
+@keyframes bsxLineIn{from{transform:translateY(100%);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){
+  .bsx .spks,.bsx .hero .embers,.bsx .hero .scan{display:none}
+  .bsx .hero .hlogo,.bsx .hero .word,.bsx .hero .lg .f,.bsx .hero .w1 .ch,.bsx.landed .plate,.bsx.landed .strip{animation:none}
+  .bsx .hero .word{animation:bsxWordOut .7s 7.4s var(--ease-in) forwards}
+}

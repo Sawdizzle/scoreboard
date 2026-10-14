@@ -1,6 +1,9 @@
+'use client';
 /* eslint-disable @next/next/no-img-element -- the memorial ribbon, a small fixed file from /public */
 import './forever20.css';
+import { useEffect, useRef, useState } from 'react';
 import type { Brand } from '@/components/TeamBrand';
+import { FullFrame, hash, useShow } from '@/components/overlay/looks/BlueSteelBug';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
 
 // Forever 20, drawn here: Scoreboard's memorial bug (public/bugs/forever20.html),
@@ -13,7 +16,11 @@ import { homerText, tabName, type BugProps } from '@/components/overlay/looks/ty
 //
 // As in ClassicBug, the motion is CSS started by a `key`: a new value mounts
 // a new element and its animation plays once. The original's full-frame
-// tribute before the first pitch is not carried over.
+// tribute is kept, asked for from the pad (intro kind 'tribute'): the ribbon
+// rises in the middle of the frame with his name beside it and gold light
+// drifting up, then folds down into the pin and the bug builds out of it. The
+// plain intro (kind 'intro') is the original's other one: the bug builds out
+// of its pin again.
 const RIBBON = '/bugs/img/forever20-ribbon.webp';
 
 // What the strip says for a play: a tag, its colour, and a few words.
@@ -42,6 +49,48 @@ const SPARKS = Array.from({ length: 16 }, (_, i) => {
   } as React.CSSProperties;
 });
 
+// The tribute's gold light, drifting up (the original rolled these at random on load).
+const MOTES = Array.from({ length: 30 }, (_, i) => {
+  const r = (k: number) => hash(700 + i * 17 + k), t = 7 + r(3) * 6;
+  return { '--x': `${(r(1) * 100).toFixed(1)}%`, '--s': `${(0.27 + r(2) * 0.47).toFixed(2)}rem`, '--t': `${t.toFixed(1)}s`, '--d': `${(-r(4) * t).toFixed(1)}s`,
+    '--dx': `${((r(5) - 0.5) * 10.67).toFixed(2)}rem`, '--o': (0.35 + r(6) * 0.5).toFixed(2) } as React.CSSProperties;
+});
+
+function Tribute({ n, pin, onLand }: { n: number; pin: React.RefObject<HTMLDivElement | null>; onLand: (n: number) => void }) {
+  const rib = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // At 7.9 s the big ribbon folds down onto the pin; at 9 s the bug builds out of it.
+    let anim: Animation | null = null;
+    const fold = window.setTimeout(() => {
+      const big = rib.current, to = pin.current;
+      if (!big || !to) return;
+      const a = big.getBoundingClientRect(), b = to.getBoundingClientRect();
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      anim = big.animate([{ transform: 'none' }, { transform: `translate(${b.left + b.width / 2 - (a.left + a.width / 2)}px,${b.top + b.height / 2 - (a.top + a.height / 2)}px) scale(${b.height / Math.max(1, a.height)})` }],
+        { duration: still ? 1 : 1100, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
+    }, 7900);
+    const land = window.setTimeout(() => onLand(n), 9000);
+    return () => { window.clearTimeout(fold); window.clearTimeout(land); anim?.cancel(); };
+  }, [n, pin, onLand]);
+  return (
+    <div className="hero">
+      <i className="veil" />
+      <div className="motes">{MOTES.map((m, i) => <i key={i} style={m} />)}</div>
+      <div className="wrap">
+        <div ref={rib} className="hrib"><i className="halo" /><img src={RIBBON} alt="" /><i className="shine" /></div>
+        <div className="text">
+          <small>Tonight we play for</small>
+          <div className="nm"><b>Julian</b></div>
+          <i className="rule" />
+          <div className="num"><span>#20</span><em>Sanger, TX</em></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+// How long a stamp is held: the build-in keys the bug on the last one asked for, for good.
+const HOLD = 2147483647;
+
 // The ribbon's arrow: a gold trail, the shaft, a feather and the point.
 function Arrow({ className }: { className: string }) {
   return (
@@ -65,7 +114,14 @@ function Side({ brand, abbr, score, bat }: { brand: Brand; abbr: string; score: 
   );
 }
 
-export function Forever20Bug({ g, air, away, home, abbrs, status, period, showLine, moment }: BugProps) {
+export function Forever20Bug({ g, air, away, home, abbrs, status, period, showLine, moment, intro }: BugProps) {
+  // The tribute: the bug waits hidden while it plays, then builds out of the ribbon that folds into its pin.
+  const tribute = useShow(intro?.kind === 'tribute' ? intro.n : null, 9900);
+  const [landed, setLanded] = useState<number | null>(null);
+  const pin = useRef<HTMLDivElement>(null);
+  const hiding = tribute !== null && landed !== tribute;
+  // The plain intro: the bug builds out of its pin again (a new key mounts it afresh).
+  const built = useShow(intro && intro.kind !== 'tribute' ? intro.n : null, HOLD);
   const live = status === 'live', top = g.half === 'top', ball = period === null;
   const bases = g.bases as { first?: boolean; second?: boolean; third?: boolean };
   const balls = Math.min(g.balls | 0, 3), strikes = Math.min(g.strikes | 0, 2), outs = g.outs | 0;
@@ -85,15 +141,16 @@ export function Forever20Bug({ g, air, away, home, abbrs, status, period, showLi
   const ended = !top ? { word: 'Mid', n: inning } : inning > 1 ? { word: 'End', n: inning - 1 } : { word: 'Top', n: 1 };
 
   return (
-    <div className="lk-f20">
+    <div className={`lk-f20${hiding ? ' await' : landed !== null ? ' landed' : ''}`}>
+      {tribute !== null && <FullFrame key={tribute} className="lkf20-ff" watch><Tribute n={tribute} pin={pin} onLand={setLanded} /></FullFrame>}
       <svg className="defs" aria-hidden="true">
         <defs>
           <linearGradient id="lkf20-trail" x1="0" x2="1"><stop offset="0" stopColor="#f2d27a" stopOpacity="0" /><stop offset="1" stopColor="#f2d27a" stopOpacity=".85" /></linearGradient>
           <linearGradient id="lkf20-metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff0c2" /><stop offset=".5" stopColor="#e2bd62" /><stop offset="1" stopColor="#8f6d25" /></linearGradient>
         </defs>
       </svg>
-      <div className="pkg">
-        <div className="medal">
+      <div key={built ?? 'pkg'} className="pkg">
+        <div ref={pin} className="medal">
           <span className="mg"><img className={hr ? 'glow' : undefined} src={RIBBON} alt="" /></span>
           <i className="shine" />
         </div>
@@ -119,7 +176,7 @@ export function Forever20Bug({ g, air, away, home, abbrs, status, period, showLi
               )}
             {/* A gold light crosses the rail on a run or a home run, and the arrow carries the run. */}
             <i key={`${runs}${hr ? 'h' : ''}`} className="sheen" />
-            {runs > 0 && <Arrow key={runs} className="zip" />}
+            {runs > 0 && <Arrow key={`z${runs}`} className="zip" />}
           </div>
           {ball && live && (
             <div className="strip">

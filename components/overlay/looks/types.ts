@@ -41,6 +41,8 @@ export type BugProps = {
   // The stream-wide stinger playing now (walkoff, homerun, run, touchdown ...),
   // with its stamp, for a look that adds its own touch to it. null: none.
   fx?: { kind: string; n: number } | null;
+  // Rally mode is on (the pad's Rally switch), for a look with its own rally touch.
+  rally?: boolean;
 };
 
 export const MOMENTS = ['Home run', 'Strikeout', 'Strikeout looking', 'Single', 'Double', 'Triple', 'Double play', 'Stolen base', 'Sac fly', 'Walk', 'Hit by pitch'] as const;

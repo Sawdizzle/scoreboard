@@ -33,6 +33,8 @@
 .ov.bug-mr .ov-ext > .ov-card { justify-self: end; }
 .ov.bug-mc .ov-ext > .ov-card { justify-self: center; }
 .ov.bug-ml .ov-ext > .ov-card, .ov.bug-mc .ov-ext > .ov-card, .ov.bug-mr .ov-ext > .ov-card { align-self: start; }
+/* A look's full-frame show (an intro): no drop shadow over the whole picture while it runs. */
+.ov-dock:has(.lk-hot) { filter: none; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
 .ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .ov-look { zoom: var(--bs); }
 /* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Scoreboard's own bug and cards. */
