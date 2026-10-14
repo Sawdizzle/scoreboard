@@ -1,0 +1,146 @@
+/* MLBFox, native (see MlbFoxBug.tsx). Written in the original page's pixels (public/bugs/mlbfox.html), which were
+   drawn for a 1920 stage, then turned into rem (px / 10); .mf's zoom brings it to the size it had in its frame. */
+.lk-mf{--navy:#0a1838;--navy-2:#13285a;--blue:#1c4d94;--blue-2:#163f7c;--ink:#fff;
+  --rule:#d9dde6;          /* the light seams between the blocks */
+  --gold:#ffcc1a;--red:#d81e2c;--green:#1d9a52;--amber:#f28c00;--slate:#2c3550;
+  font-family:var(--font-cond),"Barlow Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;font-weight:700;color:var(--ink);
+  text-transform:none;line-height:1;-webkit-font-smoothing:antialiased}
+.lk-mf em,.lk-mf small,.lk-mf b,.lk-mf i{color:inherit;font-weight:inherit;font-style:normal}
+
+/* ---------- The bug ---------- */
+.lk-mf .mf{position:relative;width:64rem;zoom:.933;filter:drop-shadow(0 1rem 1.8rem rgba(0,0,0,.45));
+  animation:lkmfIntro .6s cubic-bezier(.2,.9,.3,1)}
+/* room for the bases that hang below */
+.lk-mf.dia .mf{padding-bottom:4rem}
+@keyframes lkmfIntro{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 -2rem -8rem 0)}}
+
+.lk-mf .bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:1.8rem;padding:0 2rem;
+  font-weight:700;line-height:1;text-transform:uppercase;letter-spacing:.015em;white-space:nowrap;overflow:hidden}
+.lk-mf .bar .l{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lk-mf .bar .r{flex:none;display:flex;align-items:center}
+.lk-mf .r1{height:4.8rem;font-size:3.4rem;background:linear-gradient(180deg,var(--navy-2),var(--navy))}
+.lk-mf .r2{height:5rem;font-size:3.4rem;background:linear-gradient(180deg,var(--blue),var(--blue-2));border-top:0.2rem solid rgba(255,255,255,.14)}
+.lk-mf .r1 .ks{display:inline-block;margin-right:1.6rem;color:#ffd75a}
+.lk-mf .r1 .ks.pop{animation:lkmfKpop .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes lkmfKpop{0%{transform:scale(1.7);color:#fff}100%{transform:none}}
+.lk-mf .bar .clk{margin-left:1.6rem;font-variant-numeric:tabular-nums}
+
+/* the batter bar's callout: wipes across, holds, then wipes away */
+.lk-mf .say{position:absolute;inset:0;display:flex;align-items:center;gap:1.6rem;padding:0 2rem;background:var(--sb,var(--gold));color:var(--sc,#111);
+  clip-path:inset(0 100% 0 0);animation:lkmfSay 2.6s forwards}
+@keyframes lkmfSay{0%{clip-path:inset(0 100% 0 0);animation-timing-function:cubic-bezier(.6,0,.2,1)}
+  12%{clip-path:inset(0 0 0 0)}88%{clip-path:inset(0 0 0 0);animation-timing-function:cubic-bezier(.6,0,.2,1)}100%{clip-path:inset(0 100% 0 0)}}
+.lk-mf .say .stag{font-size:3.6rem}
+.lk-mf .say .txt{margin-left:auto;font-size:3rem;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* ---------- Score row: two team blocks either side of the black box ---------- */
+.lk-mf .main{position:relative;display:grid;grid-template-columns:1fr 17.2rem 1fr;height:13.2rem;margin-top:0.6rem}
+.lk-mf .tm{position:relative;display:flex;color:var(--ink);align-items:center;overflow:hidden;
+  background:
+    repeating-linear-gradient(118deg,rgba(255,255,255,.07) 0 0.2rem,transparent 0.2rem 0.7rem),
+    radial-gradient(ellipse at 30% 0%,rgba(255,255,255,.22),transparent 65%),
+    linear-gradient(180deg,var(--tb,#2a5ab0),color-mix(in srgb,var(--tb,#2a5ab0) 72%,#000))}
+.lk-mf .tm.home{flex-direction:row-reverse}
+/* the team's logo, anchored to the outer edge behind the score; the abbreviation stands in without one */
+.lk-mf .tm .lg{position:absolute;z-index:0;top:50%;width:13.2rem;height:11.6rem;object-fit:contain;translate:0 -50%;
+  filter:drop-shadow(0 0.3rem 0.4rem rgba(0,0,0,.35));pointer-events:none}
+.lk-mf .tm.away .lg{left:0.4rem;object-position:0 50%}
+.lk-mf .tm.home .lg{right:0.4rem;object-position:100% 50%}
+.lk-mf .tm.has-logo .ab{visibility:hidden}
+.lk-mf .tm .ab{flex:none;width:10.4rem;text-align:center;font-weight:700;font-size:var(--abs,4.6rem);line-height:1;letter-spacing:.01em;
+  text-shadow:0 0.2rem 0 rgba(0,0,0,.35);white-space:nowrap}
+.lk-mf .tm .tsc{position:relative;z-index:1;flex:1;display:flex;justify-content:center;font-weight:700;font-size:12.4rem;line-height:1;text-shadow:0 0.3rem 0 rgba(0,0,0,.28)}
+/* a run: the block flashes white */
+.lk-mf .tm .fl,.lk-mf .tm .win{position:absolute;z-index:2;inset:0;background:#fff;opacity:0;pointer-events:none}
+.lk-mf .tm .fl{animation:lkmfFlash .9s ease-out}
+@keyframes lkmfFlash{0%{opacity:.75}100%{opacity:0}}
+/* a walk-off: the winner's block blinks */
+.lk-mf .tm .win{animation:lkmfWin .5s ease-in-out 10 alternate}
+@keyframes lkmfWin{from{opacity:0}to{opacity:.32}}
+/* light sweep across the blocks */
+/* (it moves its background, not itself, so it never shows past the bug's edge) */
+.lk-mf .main .sheen{position:absolute;z-index:2;inset:0;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,transparent 45%,rgba(255,255,255,.35) 50%,transparent 55%) no-repeat;background-size:300% 100%;
+  animation:lkmfSheen 1s ease-in-out}
+@keyframes lkmfSheen{0%{opacity:1;background-position:100% 0}100%{opacity:1;background-position:0 0}}
+
+.lk-mf .mid{position:relative;background:#000;border-left:0.3rem solid var(--rule);border-right:0.3rem solid var(--rule);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.4rem;line-height:1;font-weight:700;overflow:hidden}
+.lk-mf .l1{display:flex;align-items:center;justify-content:center;gap:1.4rem;font-size:5.4rem}
+.lk-mf .inn{display:flex;align-items:center;gap:0.3rem}
+.lk-mf .arr{width:1.8rem;height:1.5rem;background:#fff;clip-path:polygon(50% 0,100% 100%,0 100%);margin-top:-1.4rem;transition:transform .3s}
+.lk-mf .arr.dn{transform:rotate(180deg);margin-top:1.4rem}
+.lk-mf .cnt{display:flex}
+.lk-mf .l2{display:flex;align-items:baseline;justify-content:center;gap:0.5rem;font-size:4.6rem;padding-bottom:1rem}
+.lk-mf .l2 .ow{font-size:3.6rem;letter-spacing:.03em}
+/* between halves: MID / END over the inning, then back to the count */
+.lk-mf .mid .ms{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;
+  transform:translateY(100%);animation:lkmfFlip 2.95s both}
+.lk-mf .mid .ms small{font-size:3rem;color:var(--gold);letter-spacing:.08em}
+.lk-mf .mid .ms b{font-size:6.2rem}
+@keyframes lkmfFlip{0%{transform:translateY(100%);animation-timing-function:cubic-bezier(.6,0,.2,1)}
+  12%{transform:none}88%{transform:none;animation-timing-function:cubic-bezier(.6,0,.2,1)}100%{transform:translateY(100%)}}
+/* Pregame, Final, or another sport's period (and its clock) where the inning and count go */
+.lk-mf .mid.word{gap:0.8rem;padding:0 0.6rem;text-align:center}
+.lk-mf .mid.word b{font-size:5.4rem;letter-spacing:.02em;white-space:nowrap}
+.lk-mf .mid.word b.sm{font-size:3.8rem}
+.lk-mf .mid.word small{font-size:3.4rem;color:var(--gold);letter-spacing:.04em;white-space:nowrap}
+.lk-mf .mid.word small.clk{color:#fff;font-size:4.2rem;font-variant-numeric:tabular-nums}
+
+/* rolling numerals: a new value mounts and rolls up into its cell */
+.lk-mf .roll{display:inline-grid;overflow:hidden}
+.lk-mf .roll > b{grid-area:1/1;animation:lkmfRoll .4s cubic-bezier(.2,.9,.3,1)}
+@keyframes lkmfRoll{from{transform:translateY(90%);opacity:0}to{transform:none;opacity:1}}
+
+/* the light strip under each team */
+.lk-mf .feet{display:grid;grid-template-columns:1fr 17.2rem 1fr;height:1.2rem}
+.lk-mf .feet i{background:linear-gradient(180deg,var(--ft,#ccc),color-mix(in srgb,var(--ft,#ccc) 75%,#000))}
+.lk-mf .feet span{background:#000;border-left:0.3rem solid var(--rule);border-right:0.3rem solid var(--rule)}
+
+/* bases: bevelled plates in perspective, hung under the count box */
+.lk-mf .bases{position:absolute;left:50%;top:11.6rem;width:20rem;height:7rem;margin-left:-10rem;overflow:visible;z-index:3}
+.lk-mf .bases .top{fill:url(#lkmfSilver);transition:fill .2s}
+.lk-mf .bases .sl{fill:#8d929b}.lk-mf .bases .sr{fill:#5d626b}
+.lk-mf .bases .on .top{fill:url(#lkmfGold)}
+.lk-mf .bases .on .sl{fill:#c98a00}.lk-mf .bases .on .sr{fill:#9a6400}
+.lk-mf .bases g{transform-box:fill-box;transform-origin:50% 60%}
+.lk-mf .bases g.pop{animation:lkmfBpop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes lkmfBpop{0%{transform:translateY(-1.4rem) scale(1.15)}100%{transform:none}}
+
+/* ---------- Home run / walk-off: a banner that opens on the bug (on top, or under it at the top of the picture) ---------- */
+.lk-mf .hrb{--hg:0.6rem;position:relative;height:0;overflow:hidden;display:flex;
+  background:linear-gradient(180deg,#123376,#0a1838)}
+.lk-mf.at-top.dia .hrb{--hg:4rem}
+.lk-mf .hrb.play{animation:lkmfOpen 4.4s cubic-bezier(.6,0,.2,1) forwards}
+.lk-mf .hrb.play.wo{animation-name:lkmfOpenWo;animation-duration:4.9s}
+.lk-mf.at-top .hrb.play{animation-name:lkmfOpenT}
+.lk-mf.at-top .hrb.play.wo{animation-name:lkmfOpenWoT}
+@keyframes lkmfOpen{0%{height:0;margin-bottom:0}9%,88%{height:11.6rem;margin-bottom:var(--hg)}100%{height:0;margin-bottom:0}}
+@keyframes lkmfOpenWo{0%{height:0;margin-bottom:0}7%,91%{height:11.6rem;margin-bottom:var(--hg)}100%{height:0;margin-bottom:0}}
+@keyframes lkmfOpenT{0%{height:0;margin-top:0}9%,88%{height:11.6rem;margin-top:var(--hg)}100%{height:0;margin-top:0}}
+@keyframes lkmfOpenWoT{0%{height:0;margin-top:0}7%,91%{height:11.6rem;margin-top:var(--hg)}100%{height:0;margin-top:0}}
+.lk-mf .hchip{flex:none;width:11.8rem;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--abs,4.6rem);color:var(--ci,#fff);
+  background:repeating-linear-gradient(118deg,rgba(255,255,255,.07) 0 0.2rem,transparent 0.2rem 0.7rem),var(--tb,#2a5ab0);border-right:0.3rem solid var(--rule)}
+.lk-mf .hchip .lg{width:9.6rem;height:9.6rem;object-fit:contain;filter:drop-shadow(0 0.3rem 0.4rem rgba(0,0,0,.35))}
+.lk-mf .hchip.has-logo span{display:none}
+.lk-mf .hrb .words{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 2.2rem;min-width:0;line-height:1;text-transform:uppercase}
+.lk-mf .hrb .t1{font-weight:700;font-size:7rem;letter-spacing:.01em;white-space:nowrap}
+.lk-mf .hrb .t2{display:flex;justify-content:space-between;gap:1.6rem;margin-top:0.4rem;font-weight:600;font-size:3rem;color:#cfdaf0;white-space:nowrap}
+.lk-mf .hrb .t2 b{color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lk-mf .hrb.play .t1{animation:lkmfSlam .55s cubic-bezier(.2,1.4,.4,1) .35s backwards}
+.lk-mf .hrb.play .t2{animation:lkmfRise .45s ease-out .7s backwards}
+.lk-mf .hrb.wo .t1{color:var(--gold)}
+@keyframes lkmfSlam{from{transform:translateX(-4rem);opacity:0}}
+@keyframes lkmfRise{from{transform:translateY(1.6rem);opacity:0}}
+.lk-mf .hrb::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 40%,rgba(255,255,255,.4) 50%,transparent 60%);transform:translateX(-100%)}
+.lk-mf .hrb.play::after{animation:lkmfHsweep 1.1s ease-in-out .5s}
+.lk-mf .hrb.play.wo::after{animation:lkmfHsweep 1.1s ease-in-out .5s 3}
+@keyframes lkmfHsweep{to{transform:translateX(100%)}}
+
+@media (prefers-reduced-motion:reduce){
+  .lk-mf .mf,.lk-mf .tm .fl,.lk-mf .main .sheen,.lk-mf .hrb.play::after,.lk-mf .bases g.pop,.lk-mf .r1 .ks.pop{animation:none}
+  .lk-mf .tm .win{animation:none;opacity:.2}
+  .lk-mf .roll > b{animation-duration:.01s}
+  .lk-mf .say{animation-name:lkmfSayR}
+}
+@keyframes lkmfSayR{0%,99%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 100% 0 0)}}

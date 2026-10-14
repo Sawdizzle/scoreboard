@@ -12,10 +12,10 @@ import type { Game, Lineup, Side } from './types.ts';
 
 export type CardKind = 'batter' | 'pitcher' | 'dueup' | 'leaders' | 'box' | 'lineup' | 'defense' | 'matchup' | 'sponsor' | 'mid' | 'qr';
 
-// How the scorebug looks: Scoreboard's own, Classic, or one of the eleven looks
+// How the scorebug looks: Scoreboard's own, Classic, or one of the twelve looks
 // first drawn for Scoreboard (components/overlay/looks).
 export const LOOKS = [
-  ['pressbox', 'Scoreboard'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'],
+  ['pressbox', 'Scoreboard'], ['classic', 'Classic'], ['primetime', 'Prime Time'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20'], ['midnight', 'Midnight'], ['mlbfox', 'MLBFox'],
   ['classic-green', 'Classic Green'], ['pinball-dmd', 'Pinball'], ['chalkboard', 'Chalkboard'], ['comic', 'Comic'],
   ['split-flap', 'Split Flap'], ['receipt', 'Receipt'], ['pixel-rpg', 'Pixel RPG'],
 ] as const;
@@ -24,7 +24,8 @@ export type Line = Partial<Record<StatKey, number>>;
 
 // The stream's layout. A scale of 1 is the size a thing was drawn at, which
 // fills a lot of a picture; the default is well under it.
-export const BUG_POS = ['tl', 'tc', 'tr', 'bl', 'bc', 'br'] as const;
+// Nine places, as v4 had: the three corners and middles along the top and bottom, and the middle row.
+export const BUG_POS = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br'] as const;
 export type BugPos = (typeof BUG_POS)[number];
 export type Layout = { bug: { scale: number; pos: BugPos }; cards: { scale: number } };
 export const BUG_SCALE = { min: 0.3, max: 1.2 }, CARD_SCALE = { min: 0.4, max: 1.2 };

@@ -6,6 +6,7 @@ import { ClassicGreenBug } from '@/components/overlay/looks/ClassicGreenBug';
 import { ComicBug } from '@/components/overlay/looks/ComicBug';
 import { Forever20Bug } from '@/components/overlay/looks/Forever20Bug';
 import { MidnightBug } from '@/components/overlay/looks/MidnightBug';
+import { MlbFoxBug } from '@/components/overlay/looks/MlbFoxBug';
 import { PinballBug } from '@/components/overlay/looks/PinballBug';
 import { PixelRpgBug } from '@/components/overlay/looks/PixelRpgBug';
 import { PrimeTimeBug } from '@/components/overlay/looks/PrimeTimeBug';
@@ -16,10 +17,10 @@ import type { Look } from '@/lib/onair';
 
 // Every look but Scoreboard's own (which Stage draws itself) is a component
 // here: drawn in the page, so the stat cards can slide out from behind it.
-// Eleven of them are native rebuilds of Scoreboard's animated bugs
+// Twelve of them are native rebuilds of Scoreboard's animated bugs
 // (public/bugs/<slug>.html, kept for reference and for their thumbnails).
 export const LOOK_BUGS: Partial<Record<Look, ComponentType<BugProps>>> = {
-  classic: ClassicBug, bluesteel: BlueSteelBug, primetime: PrimeTimeBug, forever20: Forever20Bug, midnight: MidnightBug,
+  classic: ClassicBug, bluesteel: BlueSteelBug, primetime: PrimeTimeBug, forever20: Forever20Bug, midnight: MidnightBug, mlbfox: MlbFoxBug,
   'classic-green': ClassicGreenBug, 'pinball-dmd': PinballBug, chalkboard: ChalkboardBug, comic: ComicBug,
   'split-flap': SplitFlapBug, receipt: ReceiptBug, 'pixel-rpg': PixelRpgBug,
 };
