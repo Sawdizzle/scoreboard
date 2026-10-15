@@ -1,13 +1,13 @@
 'use client';
 /* eslint-disable @next/next/no-img-element -- small fixed thumbnails from /public */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { resetStreamLink, saveSponsor, saveStreamBug } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { CopyLink } from '@/components/CopyLink';
 import { BugPreview, brandOf } from '@/components/TeamBrand';
 import { demoFeed } from '@/lib/demo-feed';
-import { BUG_SCALE, CARD_SCALE, LOOKS, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
+import { BUG_SCALE, CARD_SCALE, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Team } from '@/lib/types';
@@ -26,14 +26,34 @@ const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batte
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 // v4's five sound packs, every sound synthesized (lib/fx/audio.js).
 const PACKS: [string, string][] = [['bigleague', 'Big League organ'], ['modern', 'Modern'], ['sandlot', 'Sandlot 8-bit'], ['airhorn', 'Stadium air horns'], ['organ', 'Pipe organ']];
-// v4's themes and layouts for Scoreboard's own bug (components/overlay/themes.css).
-const THEMES: [string, [string, string][]][] = [
-  ['Your own', [['custom', 'Custom (your colours)'], ['bluesteel', 'Blue Steel'], ['forever20', 'Forever 20 (purple & gold)']]],
-  ['Clean', [['nightgame', 'Midnight'], ['espn', 'Broadcast Minimal'], ['green', 'Ballpark Green'], ['carbon', 'Carbon'], ['royal', 'Royal'], ['gold', 'Gold'], ['ice', 'Ice (light)']]],
-  ['Bold', [['neon', 'Neon'], ['volt', 'Volt (electric)'], ['blueprint', 'Blueprint'], ['foil', 'Holo Foil (refractor)'], ['jumbotron', 'Jumbotron (LED)']]],
-  ['Throwback', [['retro', 'Retro 8-bit'], ['chalkboard', 'Sandlot Slate'], ['americana', 'Americana (bunting)']]],
+// v4's Design list: five layouts of Scoreboard's own bug, painted by the
+// theme, and the animated scorebugs, which bring their own look and play
+// their own home run, strikeout and hit moments (components/overlay/looks).
+const LAYOUTS: [string, string, string][] = [
+  ['scorebox', 'Scorebox', 'Full broadcast'], ['bar', 'Bar', 'Wide strip'], ['bug', 'Bug', 'Stacked'], ['minimal', 'Minimal', 'Slim'], ['lowerthird', 'Lower-third', 'Across the bottom'],
 ];
-const STYLES: [string, string][] = [['bar', 'Bar (wide strip)'], ['scorebox', 'Scorebox (full broadcast)'], ['bug', 'Bug (stacked)'], ['minimal', 'Minimal (slim)'], ['lowerthird', 'Lower-third']];
+const ANIMATED: [Look, string, string][] = [
+  ['mlbfox', 'MLBFox', 'National TV'], ['primetime', 'Prime Time', 'Network TV'], ['bluesteel', 'Blue Steel', 'The club, forged'], ['forever20', 'Forever 20', 'In memory of Julian'],
+  ['midnight', 'Midnight', 'Under the lights'], ['classic', 'Classic', 'One tight row'], ['classic-green', 'Classic Green', 'Ballpark board'], ['pinball-dmd', 'Backglass', 'Pinball display'],
+  ['chalkboard', 'Chalk Talk', 'Dugout chalkboard'], ['comic', 'Ka-Pow', 'Comic book'], ['split-flap', 'Departures', 'Split-flap board'],
+  ['receipt', 'Play-by-Play Printer', 'Receipt'], ['pixel-rpg', 'Battle Mode', '16-bit'],
+];
+// v4's themes, with the colours each paints (components/overlay/themes.css):
+// panel, panel fade, score box, text, accent. Midnight is the default.
+type Swatch = [string, string, string, string, string];
+const THEMES: [string, [string, string, Swatch?][]][] = [
+  ['Your own', [['custom', 'Custom'], ['bluesteel', 'Blue Steel', ['#121a29', '#0a0e16', '#06090f', '#f2f0e9', '#e0794a']], ['forever20', 'Forever 20', ['#5a3787', '#281246', '#1a0a2e', '#fbf3dc', '#f4c84a']]]],
+  ['Clean', [['nightgame', 'Midnight', ['#1d2638', '#0b111c', '#070b13', '#ffffff', '#ffcf3a']], ['espn', 'Broadcast Minimal', ['#18191c', '#111214', '#000000', '#ffffff', '#e2231a']],
+    ['green', 'Ballpark Green', ['#0f3624', '#071c12', '#04130b', '#ffd24a', '#ff8a3c']], ['carbon', 'Carbon', ['#282a2e', '#1c1e21', '#0c0d0e', '#eceef0', '#e2402f']],
+    ['royal', 'Royal', ['#0a1030', '#04081c', '#02040f', '#f2f4ff', '#e8c559']], ['gold', 'Gold', ['#14120c', '#0a0906', '#050403', '#f7efd8', '#d4af37']],
+    ['ice', 'Ice', ['#eef4fa', '#cedeee', '#dfe9f4', '#12283d', '#e2593a']]]],
+  ['Bold', [['neon', 'Neon', ['#0d0a22', '#060412', '#04030c', '#eafffb', '#ff2bd6']], ['volt', 'Volt', ['#0c0e0c', '#050605', '#000000', '#f3ffe9', '#c6ff00']],
+    ['blueprint', 'Blueprint', ['#081428', '#050d1c', '#030812', '#eaf6ff', '#4fd6ff']], ['foil', 'Holo Foil', ['#16161e', '#101016', '#0a0a0e', '#f4f6ff', '#ff9ad5']],
+    ['jumbotron', 'Jumbotron', ['#08080a', '#050506', '#000000', '#fff6e0', '#ffb400']]]],
+  ['Throwback', [['retro', 'Retro 8-bit', ['#0e1016', '#05070c', '#05070c', '#eafff0', '#ff3ca6']], ['chalkboard', 'Sandlot Slate', ['#163a2b', '#122c21', '#0c1f17', '#f6f3e6', '#ffd977']],
+    ['americana', 'Americana', ['#101a3a', '#060c20', '#040817', '#fff6e6', '#e0393e']]]],
+];
+const swatchVars = (w: Swatch) => ({ '--p1': w[0], '--p2': w[1], '--w': w[2], '--c': w[3], '--a': w[4] }) as CSSProperties;
 const SHOWS: [keyof NonNullable<Broadcast['show']>, string, string, boolean][] = [
   ['clock', 'Game clock', 'Time limit, quarter or half', true], ['batter', 'Batter', 'The name on the strip', true], ['pitcher', 'Pitcher', 'The name on the strip', true],
   ['pitchcount', 'Pitch count', 'Beside the pitcher', true], ['rhe', 'Hits and errors', 'Beside each score', false], ['runrule', 'Run rule', 'A badge when the lead reaches it', true],
@@ -95,6 +115,14 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
   const show = bc.show ?? {};
   const custom = bc.custom ?? {};
   const setCustom = (k: string, v: string | number | boolean) => setB({ custom: { ...custom, [k]: v } });
+  const style = bc.style ?? 'bar';
+  const theme = bc.theme ?? 'nightgame';
+  const col = (k: string, d: string) => (typeof custom[k] === 'string' ? (custom[k] as string) : d);
+  const customPaint: Swatch = [col('panel1', '#1d2638'), col('panel2', '#0b111c'), col('well', '#070b13'), col('text', '#ffffff'), col('accent', '#ffcf3a')];
+  // The layout tiles wear the theme that will paint them.
+  const paint = theme === 'custom' ? customPaint : THEMES.flatMap(([, l]) => l).find(([k]) => k === theme)?.[2] ?? THEMES[1][1][0][2]!;
+  // A layout is Scoreboard's own bug in that arrangement.
+  const pickLayout = (k: string) => { if (look !== 'pressbox') pickLook('pressbox'); setB({ style: k === 'bar' ? null : k }); };
   const pickLook = (l: Look) => { setLook(l); save({ look: l, layout: lay, qr }); };
   const moveLay = (l: Layout) => { setLay(l); save({ look, layout: l, qr }); };
   const moveQr = (q: QrLayer) => { setQr(q); save({ look, layout: lay, qr: q }); };
@@ -144,11 +172,25 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
 
       <section className="card pad">
         <h2>Scorebug</h2>
-        <div className="looks" role="radiogroup" aria-label="Scorebug look">
-          {LOOKS.map(([slug, name]) => (
+        <p className="hint">A layout is painted by the theme below and works for every sport. An animated scorebug brings its own look and plays its own home run, strikeout and hit moments. Try them all at <a href="/bugs" target="_blank" rel="noopener">/bugs</a>.</p>
+        <span className="legend">Layouts · painted by your theme</span>
+        <div className="looks designs" role="radiogroup" aria-label="Scorebug layout">
+          {LAYOUTS.map(([k, name, sub]) => {
+            const on = look === 'pressbox' && style === k;
+            return (
+              <button key={k} type="button" role="radio" aria-checked={on} className={`look${on ? ' on' : ''}`} onClick={() => pickLayout(k)}>
+                <span className="look-thumb"><span className={`dz dz-${k}`} style={swatchVars(paint)}><i /><i /><i /></span></span>
+                <b>{name}<small>{sub}</small></b>
+              </button>
+            );
+          })}
+        </div>
+        <span className="legend">Animated · their own look and moments</span>
+        <div className="looks designs" role="radiogroup" aria-label="Animated scorebug">
+          {ANIMATED.map(([slug, name, sub]) => (
             <button key={slug} type="button" role="radio" aria-checked={look === slug} className={`look${look === slug ? ' on' : ''}`} onClick={() => pickLook(slug)}>
-              <span className="look-thumb">{slug === 'pressbox' || slug === 'classic' ? <BugPreview brand={brandOf(team)} /> : <img src={`/bugs/thumbs/${slug}.png`} alt="" loading="lazy" />}</span>
-              <b>{name}</b>
+              <span className="look-thumb">{slug === 'classic' ? <BugPreview brand={brandOf(team)} /> : <img src={`/bugs/thumbs/${slug}.png`} alt="" loading="lazy" />}</span>
+              <b>{name}<small>{sub}</small></b>
             </button>
           ))}
         </div>
@@ -166,45 +208,51 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
       </section>
 
       <section className="card pad">
-        <h2>Layout and theme</h2>
-        <p className="hint">{look === 'pressbox' ? 'Scoreboard’s own bug, laid out and painted any of v4’s ways.' : 'For the Scoreboard look. The animated looks bring their own design.'}</p>
-        <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <label className="field"><span>Layout</span>
-            <select className="select" value={bc.style ?? 'bar'} onChange={(e) => setB({ style: e.target.value === 'bar' ? null : e.target.value })}>
-              {STYLES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-            </select>
-          </label>
-          <label className="field"><span>Theme</span>
-            <select className="select" value={bc.theme ?? 'nightgame'} onChange={(e) => setB({ theme: e.target.value === 'nightgame' ? null : e.target.value })}>
-              {THEMES.map(([group, list]) => <optgroup key={group} label={group}>{list.map(([k, label]) => <option key={k} value={k}>{label}</option>)}</optgroup>)}
-            </select>
-          </label>
-        </div>
-        {bc.theme === 'custom' && (
-          <div className="stack" style={{ gap: 8 }}>
-            <div className="field-row" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-              {([['panel1', 'Panel', '#1d2638'], ['panel2', 'Panel fade', '#0b111c'], ['well', 'Score box', '#070b13'], ['text', 'Text', '#ffffff'], ['accent', 'Accent', '#ffcf3a']] as const).map(([k, label, d]) => (
-                <label key={k} className="field"><span>{label}</span>
-                  <input className="input" type="color" value={typeof custom[k] === 'string' ? (custom[k] as string) : d} onChange={(e) => setCustom(k, e.target.value)} />
+        <h2>Theme</h2>
+        {look !== 'pressbox' ? (
+          <p className="hint">{ANIMATED.find(([k]) => k === look)?.[1] ?? 'This scorebug'} brings its own colours. Pick a layout above to paint it with a theme.</p>
+        ) : (
+          <>
+            {THEMES.map(([group, list]) => (
+              <div key={group} className="stack" style={{ gap: 6 }}>
+                <span className="legend">{group}</span>
+                <div className="themes" role="radiogroup" aria-label={`${group} themes`}>
+                  {list.map(([k, name, w]) => (
+                    <button key={k} type="button" role="radio" aria-checked={theme === k} className={`theme${theme === k ? ' on' : ''}`} onClick={() => setB({ theme: k === 'nightgame' ? null : k })}>
+                      <span className="dz dz-bar" style={swatchVars(w ?? customPaint)}><i /><i /><i /></span>
+                      <b>{name}</b>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {theme === 'custom' && (
+              <div className="stack" style={{ gap: 8 }}>
+                <div className="field-row" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+                  {([['panel1', 'Panel', '#1d2638'], ['panel2', 'Panel fade', '#0b111c'], ['well', 'Score box', '#070b13'], ['text', 'Text', '#ffffff'], ['accent', 'Accent', '#ffcf3a']] as const).map(([k, label, d]) => (
+                    <label key={k} className="field"><span>{label}</span>
+                      <input className="input" type="color" value={typeof custom[k] === 'string' ? (custom[k] as string) : d} onChange={(e) => setCustom(k, e.target.value)} />
+                    </label>
+                  ))}
+                </div>
+                <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <label className="field"><span>Type</span>
+                    <select className="select" value={String(custom.font ?? 'condensed')} onChange={(e) => setCustom('font', e.target.value)}>
+                      <option value="condensed">Condensed</option><option value="clean">Clean</option><option value="mono">Mono</option><option value="serif">Serif</option>
+                    </select>
+                  </label>
+                  <label className="field"><span>Corners</span>
+                    <select className="select" value={String(custom.radius ?? '10')} onChange={(e) => setCustom('radius', Number(e.target.value))}>
+                      <option value="0">Square</option><option value="6">Soft</option><option value="10">Round</option><option value="18">Pill</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="switch"><span className="switch-text"><b>Team colours behind the scores</b></span>
+                  <input type="checkbox" checked={!!custom.teamFill} onChange={(e) => setCustom('teamFill', e.target.checked)} />
                 </label>
-              ))}
-            </div>
-            <div className="field-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <label className="field"><span>Type</span>
-                <select className="select" value={String(custom.font ?? 'condensed')} onChange={(e) => setCustom('font', e.target.value)}>
-                  <option value="condensed">Condensed</option><option value="clean">Clean</option><option value="mono">Mono</option><option value="serif">Serif</option>
-                </select>
-              </label>
-              <label className="field"><span>Corners</span>
-                <select className="select" value={String(custom.radius ?? '10')} onChange={(e) => setCustom('radius', Number(e.target.value))}>
-                  <option value="0">Square</option><option value="6">Soft</option><option value="10">Round</option><option value="18">Pill</option>
-                </select>
-              </label>
-            </div>
-            <label className="switch"><span className="switch-text"><b>Team colours behind the scores</b></span>
-              <input type="checkbox" checked={!!custom.teamFill} onChange={(e) => setCustom('teamFill', e.target.checked)} />
-            </label>
-          </div>
+              </div>
+            )}
+          </>
         )}
       </section>
 
