@@ -19,6 +19,7 @@ import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
 import { PlayerView } from '@/components/views/PlayerView';
 import { RosterView } from '@/components/views/RosterView';
+import { StatsView } from '@/components/views/StatsView';
 import { SeasonView } from '@/components/views/SeasonView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { StreamSetup } from '@/components/stream/StreamSetup';
@@ -159,6 +160,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'pitcher' && <PlayerView team={team} role={role} player={players[4]} lines={stats.filter((x) => x.player_id === 'p5')} seasons={seasons} />}
       {v === 'staff' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={[]} origin="http://localhost:3000" /></>}
       {v === 'staff-link' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={invites} origin="http://localhost:3000" /></>}
+      {v === 'stats' && <>{tabs}<StatsView slug={team.slug} seasons={seasons} season={season} lines={stats} players={players} fmt={team.name_format} /></>}
       {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} games={schedule} />}
       {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)}
         padGames={{ s1: [{ id: 'g1', season_id: 's1', opponent_name: 'Sanger Wolf', is_home: true, starts_at: '2026-10-17T17:00:00Z' }] }} /></div>}
