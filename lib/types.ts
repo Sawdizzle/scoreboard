@@ -100,6 +100,9 @@ export type Game = {
   is_home: boolean;
   starts_at: string | null;
   venue: string | null;
+  // The field's street address (directions, and the weather), and the tournament's page.
+  address?: string | null;
+  tournament_url?: string | null;
   status: 'scheduled' | 'live' | 'final';
   live: Record<string, unknown>;
   // The game clock, the game's rules, and where the venue is (for its weather).

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { GamePlace } from '@/components/GamePlace';
 import { Check, ChevronRight } from '@/components/icons';
 import { leaders } from '@/components/StatTables';
 import { Matchup, Readiness } from '@/components/GameBits';
@@ -35,6 +36,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
             <span className="sub">{game.venue}</span>
           </div>
           <Matchup team={team} game={game} />
+          <GamePlace game={game} compact />
           <div className="next-foot">
             {game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
             <div className="btn-row">

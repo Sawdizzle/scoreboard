@@ -659,3 +659,45 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   .stream > :not(.stream-prev) { grid-column: 2; margin-bottom: 18px; }
   .stream > .chips-row { margin: 0 0 18px; padding: 0; }
 }
+
+/* ---- A game's place and sky (components/GamePlace.tsx) -------------------- */
+.gplace { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.gwx { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gwx-main { display: flex; flex-direction: column; min-width: 0; }
+.gwx-main b { font-family: var(--disp); font-size: 34px; line-height: 0.95; }
+.gwx-main span { font-weight: 600; font-size: 14px; color: var(--soft); }
+.gwx-main small { font-size: 12.5px; color: var(--body); }
+.gplace-links { flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gplace-links .btn-row { flex-wrap: nowrap; gap: 8px; }
+.gplace-links .btn { flex: 1 1 0; min-width: 0; min-height: 40px; padding: 0 12px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gplace-addr { margin: 0; }
+.gplace.compact .gwx-main b { font-size: 28px; }
+.next-game > .gplace { padding: 14px 16px 0; }
+
+.sky { flex: 0 0 auto; overflow: visible; }
+.sk-sun circle { fill: #ffcf3a; }
+.sk-rays rect { fill: #ffcf3a; }
+.sk-rays { transform-origin: 32px 30px; animation: sk-turn 14s linear infinite; }
+.sk-sun > circle { filter: drop-shadow(0 0 5px rgba(255, 207, 58, 0.6)); animation: sk-glow 3.5s ease-in-out infinite alternate; }
+.sk-moon path { fill: #e6ecf7; filter: drop-shadow(0 0 4px rgba(230, 236, 247, 0.5)); }
+.sk-star { fill: #fff; animation: sk-twinkle 2.4s ease-in-out infinite; } .sk-star.s2 { animation-delay: -1.2s; }
+.sk-cloud { fill: #e8eef7; }
+.sk-cloud.back { fill: #9fb0c9; }
+.sk-cloud.dark { fill: #7d8aa1; }
+.sk-cloud.drift { animation: sk-drift 6s ease-in-out infinite alternate; }
+.sk-cloud.drift2 { animation: sk-drift 8s ease-in-out -3s infinite alternate-reverse; }
+.sk-drop { stroke: #6ea8f0; stroke-width: 2.4; stroke-linecap: round; animation: sk-fall 0.8s linear infinite; }
+.sk-drop.light { stroke-width: 1.6; animation-duration: 1.2s; }
+.sk-flake { fill: #fff; animation: sk-snow 2.2s linear infinite; }
+.sk-bolt { fill: #ffcf3a; animation: sk-flash 2.6s steps(1) infinite; }
+.sk-fog rect { fill: #b9c4d6; animation: sk-drift 5s ease-in-out infinite alternate; }
+.sk-fog rect + rect { animation-delay: -2.5s; }
+@keyframes sk-turn { to { transform: rotate(360deg); } }
+@keyframes sk-glow { from { opacity: 0.85; } to { opacity: 1; } }
+@keyframes sk-twinkle { 50% { opacity: 0.2; } }
+@keyframes sk-drift { from { transform: translateX(-2px); } to { transform: translateX(3px); } }
+@keyframes sk-fall { from { transform: translateY(-6px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(6px); opacity: 0; } }
+@keyframes sk-snow { from { transform: translate(0, -6px); opacity: 0; } 30% { opacity: 1; } to { transform: translate(3px, 8px); opacity: 0; } }
+@keyframes sk-flash { 0%, 100% { opacity: 0; } 6% { opacity: 1; } 10% { opacity: 0.2; } 14% { opacity: 1; } 22% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky * { animation: none !important; } }
+.pub-place { padding: 12px 16px 4px; border-top: 1px solid var(--line); margin-top: 8px; }
