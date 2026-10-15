@@ -129,6 +129,9 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
   onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void; inline?: boolean;
 }) {
   const here = channel.game_id === gameId;
+  // Before first pitch the lineup cards can go up: the leadoff batter, the starting pitchers, the order.
+  const pre = !live && !final;
+  const open = live || pre;
   const { batter, pitcher, dueUp } = view;
   const up = (k: CardKind) => here && channel.card === k;
   const flip = (k: CardKind) => onSet({ card: up(k) ? null : k, ...(here ? {} : { game_id: gameId }) });
@@ -141,9 +144,9 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
           <small>{channel.game_id ? 'The stream is showing another game.' : 'The stream follows the pad from the first pitch; this puts it up now.'}</small>
         </button>
       )}
-      <p className="eyebrow">{live ? `Right now · ${when}` : final ? 'Final · the box score can stay up' : 'Cards come up once the game is live'}</p>
+      <p className="eyebrow">{live ? `Right now · ${when}` : final ? 'Final · the box score can stay up' : 'Before first pitch · the leadoff batter, the starters and the lineups'}</p>
 
-      <button type="button" className={`air-batter${up('batter') ? ' on' : ''}`} aria-pressed={up('batter')} disabled={!live || !batter} onClick={() => flip('batter')}>
+      <button type="button" className={`air-batter${up('batter') ? ' on' : ''}`} aria-pressed={up('batter')} disabled={!open || !batter} onClick={() => flip('batter')}>
         <span className="air-num" style={{ '--c': brand.color, '--ink': inkOn(brand.color) } as React.CSSProperties}>{batter?.num || '–'}</span>
         <span className="air-main">
           <span className="air-top"><b>Batter card</b><span className={`tag${up('batter') ? ' live' : ''}`}>{up('batter') ? 'On air' : 'Off air'}</span></span>
@@ -158,18 +161,18 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
       </button>
 
       <div className="pgrid two">
-        <button type="button" className={`pchoice${up('pitcher') ? ' on' : ''}`} aria-pressed={up('pitcher')} disabled={!live || !pitcher} onClick={() => flip('pitcher')}>
+        <button type="button" className={`pchoice${up('pitcher') ? ' on' : ''}`} aria-pressed={up('pitcher')} disabled={!open || !pitcher} onClick={() => flip('pitcher')}>
           <b>Pitcher card</b>
           <small>{pitcher ? `#${pitcher.num} ${pitcher.last} · ${pitcher.pitches} pitches${k && k !== '0' ? ` · ${k} K` : ''}` : 'No pitcher set'}</small>
         </button>
-        <button type="button" className={`pchoice${up('dueup') ? ' on' : ''}`} aria-pressed={up('dueup')} disabled={!live || !dueUp.length} onClick={() => flip('dueup')}>
+        <button type="button" className={`pchoice${up('dueup') ? ' on' : ''}`} aria-pressed={up('dueup')} disabled={!open || !dueUp.length} onClick={() => flip('dueup')}>
           <b>Due up</b>
           <small>{dueUp.map((b) => shortName(b.name)).join(', ') || 'No lineup set'}</small>
         </button>
       </div>
 
       <div className="pgrid two">
-        <button type="button" className={`pchoice${up('leaders') ? ' on' : ''}`} aria-pressed={up('leaders')} disabled={!live} onClick={() => flip('leaders')}>
+        <button type="button" className={`pchoice${up('leaders') ? ' on' : ''}`} aria-pressed={up('leaders')} disabled={!open} onClick={() => flip('leaders')}>
           <b>Team leaders</b><small>AVG · HR · RBI · SB</small>
         </button>
         <button type="button" className={`pchoice${up('box') ? ' on' : ''}`} aria-pressed={up('box')} disabled={!live && !final} onClick={() => flip('box')}>
@@ -179,7 +182,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
 
       <div className="pgrid three">
         {([['lineup', 'Lineup', dueUp.length > 0], ['defense', 'Defense', view.defense.length > 0], ['matchup', 'Matchup', !!batter && !!pitcher], ['mid', 'Mid-inning', true]] as const).map(([k, label, ok]) => (
-          <button key={k} type="button" className={`pchoice${up(k) ? ' on' : ''}`} aria-pressed={up(k)} disabled={!live || !ok} onClick={() => flip(k)}><b>{label}</b></button>
+          <button key={k} type="button" className={`pchoice${up(k) ? ' on' : ''}`} aria-pressed={up(k)} disabled={!(k === 'mid' ? live : open) || !ok} onClick={() => flip(k)}><b>{label}</b></button>
         ))}
         {channel.sponsor_name && (
           <button type="button" className={`pchoice${up('sponsor') ? ' on' : ''}`} aria-pressed={up('sponsor')} onClick={() => flip('sponsor')}><b>Sponsor</b><small>{channel.sponsor_name}</small></button>
