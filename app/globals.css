@@ -507,10 +507,29 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .chips-row::-webkit-scrollbar { display: none; }
 .chips-row .chip { flex: 0 0 auto; min-height: 38px; cursor: pointer; }
 .chips-row .chip.on { background: var(--chalk); border-color: var(--chalk); color: var(--on-steel); }
-/* Thirteen looks in one row to swipe, so the size controls stay near the preview. */
-.stream .looks { display: flex; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scrollbar-width: none; }
-.stream .looks::-webkit-scrollbar { display: none; }
-.stream .look { flex: 0 0 148px; width: 148px; min-width: 0; }
+/* The Design picker: layouts, then the animated scorebugs, two to a row on a phone. */
+.stream .designs { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin-bottom: 6px; }
+.look b small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+.look.on b small { color: var(--soft); }
+/* A layout or theme drawn small in the colours it will wear: --p1/--p2 the
+   panel, --w the score boxes, --c the text, --a the accent. */
+.dz { position: relative; display: flex; gap: 3px; padding: 3px; border-radius: 4px; background: linear-gradient(180deg, var(--p1), var(--p2)); box-shadow: inset 0 -2px 0 var(--a); }
+.dz i { display: block; border-radius: 2px; background: var(--w); }
+.dz i:nth-child(1), .dz i:nth-child(2) { box-shadow: inset 3px 0 0 var(--a), inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); }
+.dz i:nth-child(3) { background: color-mix(in srgb, var(--c) 85%, transparent); }
+.dz-bar { width: 112px; height: 22px; } .dz-bar i { flex: 1; } .dz-bar i:nth-child(3) { flex: 0 0 18px; }
+.dz-minimal { width: 96px; height: 14px; padding: 2px; } .dz-minimal i { flex: 1; } .dz-minimal i:nth-child(3) { flex: 0 0 12px; }
+.dz-bug, .dz-scorebox { display: grid; grid-template-columns: 1fr 22px; grid-template-rows: 1fr 1fr; height: 34px; }
+.dz-bug { width: 64px; } .dz-scorebox { width: 104px; }
+.dz-bug i:nth-child(3), .dz-scorebox i:nth-child(3) { grid-column: 2; grid-row: 1 / 3; }
+.dz-scorebox i:nth-child(3) { background: var(--w); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent); }
+.dz-bug i:nth-child(1), .dz-scorebox i:nth-child(1) { grid-row: 1; grid-column: 1; } .dz-bug i:nth-child(2), .dz-scorebox i:nth-child(2) { grid-row: 2; grid-column: 1; }
+.dz-lowerthird { width: 128px; height: 16px; align-self: flex-end; margin-bottom: 6px; } .dz-lowerthird i { flex: 1; } .dz-lowerthird i:nth-child(3) { flex: 0 0 26px; }
+.dz-lowerthird::before { content: ''; position: absolute; left: 0; bottom: 100%; width: 46px; height: 7px; border-radius: 3px 3px 0 0; background: var(--a); }
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.theme { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 7px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--line-2); color: var(--soft); cursor: pointer; text-align: left; }
+.theme.on { border-color: var(--gold); color: var(--chalk); }
+.theme .dz { width: auto; } .theme b { font-size: 13px; padding: 0 2px; }
 
 /* The jersey-number keypad on the lineup screen. */
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
