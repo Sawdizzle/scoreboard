@@ -33,6 +33,7 @@ export type Scene = {
   title?: string;          // Starting Soon's line ("Game starting soon"), or the Final's
   reason?: 'lightning' | 'rain' | 'weather' | 'suspended' | 'called'; // why play is paused
   at?: string | null;      // what a countdown runs to: a restart time (paused)
+  since?: string | null;   // when that countdown was set, so the stream can show how much of it is left
 };
 
 export type Broadcast = {

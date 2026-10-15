@@ -16,6 +16,7 @@ v5 is Scoreboard rebuilt around the team. v4 (tag [`v4.47`](https://github.com/S
 - **Rosters, seasons and player stats.** Every play names its batter and pitcher, so season lines (AVG, OBP, SLG, ERA, WHIP, W/L/SV) build themselves from scored games, on top of a GameChanger season import.
 - **Public team pages**: schedule and results, season stats, the roster, and a live page for every game, with each player shown the way the staff chose (full name, first name and initial, or number only).
 - **Stat cards from the scorebug**: batter, pitcher, due up, leaders, box score, lineup, defense, matchup, sponsor and the mid-inning board slide out from behind any look.
+- **Showtime scenes**: Starting Soon, the mid-inning board, Final and Game paused, lit in both teams' colours with stadium beams and a moving floor. A slash of both colours wipes each one on. The countdown rolls and the final score counts up. The winner gets light rays and confetti, and a delay gets a live weather radar with a restart dial. Standard keeps the plain set for a slow streaming computer.
 - **The Stream screen**: v4's Design picker (five layouts painted by a theme, or one of thirteen animated scorebugs with their own moments, MLBFox first), the theme as colour tiles, and every sound and position setting, over a live preview.
 
 Everything v4 did on the stream is here too: the fourteen looks (Scoreboard's own, Classic, Prime Time, Blue Steel, Forever 20, Midnight, MLBFox, Classic Green, Pinball, Chalkboard, Comic, Split Flap, Receipt, Pixel RPG), v4's seventeen themes and five layouts with custom colours, synthesized sound in five packs, the walk-off and other stingers, Starting Soon, Final and Game paused scenes with venue weather, the announcement ticker, rotating sponsors, the on-air spots for our other apps, and OBS control from the pad.
@@ -97,7 +98,7 @@ npm run lint
 npm run build
 ```
 
-`/dev/kit` draws every screen from made-up data with no database: `?v=today`, `roster`, `player`, `season`, `staff`, `game`, `lineup`, `pad`, `scorepad&sport=football`, `stream`, `public-game`, and `?v=overlay` for the stream over a stand-in camera (`&look=primetime`, `&card=batter`, `&theme=retro&style=scorebox`, `&sport=football`, `&status=final`). It returns 404 in a production build.
+`/dev/kit` draws every screen from made-up data with no database: `?v=today`, `roster`, `player`, `season`, `staff`, `game`, `lineup`, `pad`, `scorepad&sport=football`, `stream`, `public-game`, and `?v=overlay` for the stream over a stand-in camera (`&look=primetime`, `&card=batter`, `&theme=retro&style=scorebox`, `&sport=football`, `&status=final`, `&scene=starting` (`final&win=1`, `paused&reason=rain`, `mid`, `&ss=standard`)). It returns 404 in a production build.
 
 | Path | What it is |
 | --- | --- |

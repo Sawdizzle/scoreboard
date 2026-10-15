@@ -4,7 +4,11 @@ import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
 import { SpotsDemo } from '@/components/overlay/Spots';
+import { Scenes } from '@/components/overlay/Scenes';
 import { Stage } from '@/components/overlay/Stage';
+
+// A fixed moment for the scenes' countdowns, so the kit draws the same every time.
+const KIT_NOW = Date.parse('2026-10-17T14:33:00Z');
 import type { CardKind, Feed, Look, QrPos } from '@/lib/onair';
 import { LiveGame } from '@/components/public/LiveGame';
 import type { PublicGame } from '@/lib/public';
@@ -65,9 +69,9 @@ const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -115,19 +119,23 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       layout: { bug: { scale: Number(bs) || undefined, pos: bpos as never }, cards: { scale: Number(cs) || undefined } },
       qr: qr ? { on: true, size: Number(qsize) || 18, pos: (qr as QrPos), opacity: Number(qop) || 1 } : null,
       // &theme=retro&style=scorebox&rhe=1: v4's themes and layouts on Scoreboard's own bug.
-      broadcast: { theme, style, show: { rhe: rhe === '1' } },
+      // &scene=starting (final, paused, mid)&reason=rain&ss=standard: the full-frame scenes; &win=1 has us winning the Final.
+      broadcast: { theme, style, show: { rhe: rhe === '1' }, scene_style: ss === 'standard' ? 'standard' : undefined,
+        scene: scene === 'starting' || scene === 'final' || scene === 'paused' ? { kind: scene, reason: (reason as never) ?? 'lightning', at: new Date(KIT_NOW + 24 * 60000).toISOString(), since: new Date(KIT_NOW - 6 * 60000).toISOString() } : null },
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },
       game: { id: 'g1', sport: (sport as Sport) ?? 'baseball', is_home: true, status: (status as Game['status']) ?? 'live', seq: 9,
         live: { inning: 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: false, second: true, third: false }, home_score: 2, away_score: 4,
           home_hits: 4, away_hits: 6, home_errors: 0, away_errors: 1, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 0 }],
-          state: { batIdx: { home: 1 }, pitches: { away: 58 } } } },
+          state: { batIdx: { home: 1 }, pitches: { away: 58 } }, ...(win ? { home_score: 6, inning: 7, half: 'bottom', outs: 3, line_score: [{ top: 1, bottom: 0 }, { top: 0, bottom: 2 }, { top: 3, bottom: 0 }, { top: 0, bottom: 0 }, { top: 0, bottom: 1 }, { top: 0, bottom: 0 }, { top: 0, bottom: 3 }] } : {}) },
+        starts_at: new Date(KIT_NOW + 12 * 60000).toISOString(), venue: 'Railyard Park' },
       lineups: { us: lineup, them },
       tonight: [{ side: 'us', bid: 'p1', b_pa: 2, b_ab: 1, b_bb: 1 }, { side: 'us', bid: 'p3', b_pa: 2, b_ab: 2, b_h: 1 }, { side: 'them', bid: 'o0', p_outs: 13, p_r: 2, p_so: 4, p_pitches: 58 }],
       pas: [{ side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8' }],
       season_stats: stats,
     };
-    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={(card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park', runs: Number(moment) || 0 } : null} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
+    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={scene === 'mid' ? 'mid' : (card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park', runs: Number(moment) || 0 } : null} />
+      <Scenes feed={feed} now={KIT_NOW} weather={{ temp: 72, text: 'Clear', icon: '☀️', wind: 8, dir: 'SW', pop: 10 }} strike={0} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
   }
   return (
     <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
