@@ -614,6 +614,11 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   .pad-main { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
   .pad.has-console { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; }
   .pad-console { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px 20px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); }
+  /* The score-only pad takes the height its keys need and On Air the rest.
+     Where they do not fit, its keys scroll and the score, the clock and the
+     bar stay put. */
+  .pad.spad.has-console { grid-template-rows: minmax(0, auto) minmax(300px, 1fr); }
+  .spad.has-console .spad-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
   .pad-team { padding: 6px 12px 6px 6px; border-radius: 14px; }
   .pad-name { font-size: 14px; }
   .pad-team b { font-size: 40px; }
@@ -625,7 +630,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 }
 
 @media (min-width: 1024px) and (min-height: 600px) and (orientation: landscape), (min-width: 1280px) and (min-height: 600px) {
-  .pad.has-console { grid-template-columns: minmax(460px, 1.1fr) minmax(380px, 1fr); grid-template-rows: minmax(0, 1fr); max-width: 1600px; gap: 18px; }
+  .pad.has-console, .pad.spad.has-console { grid-template-columns: minmax(460px, 1.1fr) minmax(380px, 1fr); grid-template-rows: minmax(0, 1fr); max-width: 1600px; gap: 18px; }
   .pad.has-console .pad-console { padding: 18px 22px 24px; }
 }
 

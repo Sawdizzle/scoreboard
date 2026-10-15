@@ -90,7 +90,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   }
   if (v === 'scorepad') {
     // The score-only pad: /dev/kit?v=scorepad&sport=football (soccer, basketball, volleyball).
-    return <ScorePad slug={team.slug} team={team} canScore channel={null}
+    return <ScorePad slug={team.slug} team={team} canScore
+      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: false, card: null, sponsor_name: 'Dairy Barn', bug_url: 'https://example.test', broadcast: {}, look: 'pressbox' }}
       game={{ ...game, sport: (sport as Sport) ?? 'football', status: 'live', seq: 0, live: { home_score: 14, away_score: 7, state: { period: 2 } } }} />;
   }
   if (v === 'public-game') {

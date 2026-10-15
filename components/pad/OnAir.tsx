@@ -116,8 +116,9 @@ export function Moments({ sport, rally, onCmd, onBroadcast }: {
 // tap one to raise it, tap it again to clear it. The two switches are what
 // the scorebug does by itself.
 // On a phone On Air is a sheet over the pad; on a tablet or bigger it is the
-// console that stays open beside (or under) the keys.
-function Frame({ inline, onClose, children }: { inline?: boolean; onClose: () => void; children: React.ReactNode }) {
+// console that stays open beside (or under) the keys. The score-only pad
+// fills the same frame with its own On Air.
+export function AirFrame({ inline, onClose, children }: { inline?: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!inline) return <Sheet title="On Air" onClose={onClose} close="Done">{children}</Sheet>;
   return <section className="pconsole" aria-label="On Air"><h2 className="pconsole-title">On Air</h2>{children}</section>;
 }
@@ -133,7 +134,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
   const flip = (k: CardKind) => onSet({ card: up(k) ? null : k, ...(here ? {} : { game_id: gameId }) });
   const k = pitcher?.today.find((c) => c.k === 'K')?.v;
   return (
-    <Frame inline={inline} onClose={onClose}>
+    <AirFrame inline={inline} onClose={onClose}>
       {!here && (
         <button type="button" className="pchoice on" onClick={() => onSet({ game_id: gameId, card: null })}>
           <b>Put this game on the stream</b>
@@ -216,7 +217,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
         </label>
       </div>
       <Link href={setupHref} className="link" style={{ alignSelf: 'center' }}>Look, sizes and positions: Stream setup ›</Link>
-    </Frame>
+    </AirFrame>
   );
 }
 

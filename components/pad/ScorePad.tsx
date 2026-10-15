@@ -5,14 +5,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
 import { ObsPanel } from '@/components/pad/ObsPanel';
-import { Moments, ScenesControl, type Channel } from '@/components/pad/OnAir';
-import { Sheet } from '@/components/pad/PadSheets';
+import { AirFrame, Moments, ScenesControl, type Channel } from '@/components/pad/OnAir';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import { clockSet, clockText, mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { Basketball as B, Football as F, PERIOD_MINUTES, periodName, Soccer as S, soccerSeconds, sportGame, sportSaid, situationText, Volleyball as V,
   type SideKey, type SportLive, type SportRes } from '@/lib/sports';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Game, Team } from '@/lib/types';
+import { CONSOLE, useMedia } from '@/lib/use-media';
 
 type Status = Game['status'];
 type Item = { type: string; patch: object; payload: object; status: Status | null } | 'undo';
@@ -39,6 +39,8 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
   const token = channel?.token ?? null;
   const [bc, setBc] = useState<Broadcast>(channel?.broadcast ?? {});
   const [air, setAir] = useState(false);
+  // A tablet or bigger keeps On Air open as a console beside the keys.
+  const wide = useMedia(CONSOLE);
   const sport = game.sport as Sport;
   const [live, setLive] = useState<SportLive>(game.live as SportLive);
   const [status, setStatus] = useState<Status>(game.status);
@@ -197,8 +199,19 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
   const sc = S.scState(g) as { half: number; stoppage: number; cards: Record<SideKey, { y: number; r: number }>; clock: { running: boolean } };
   const vb = V.vbState(g) as { set: number; sets: Record<SideKey, number>; serve: SideKey | null; target: number };
 
+  const console_ = wide && !!channel;
+  const airPanel = (inline: boolean) => channel && (
+    <AirFrame inline={inline} onClose={() => setAir(false)}>
+      <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
+      <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} />
+      <ObsPanel teamId={team.id} broadcast={bc} onBroadcast={bcast} onSend={send} />
+      <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
+    </AirFrame>
+  );
+
   return (
-    <div className="pad spad">
+    <div className={`pad spad${console_ ? ' has-console' : ''}`}>
+      <div className="pad-main">
       <header className="pad-head">
         <Link href={`/t/${slug}/games/${game.id}`} aria-label="Leave the pad" className="icon-btn">‹</Link>
         <div className="pad-score">
@@ -351,20 +364,15 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
       <nav className="pad-bar">
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
-        {channel && <button type="button" className={`pbar air${bc.rally || bc.scene ? ' on' : ''}`} onClick={() => setAir(true)}>On Air</button>}
+        {channel && !console_ && <button type="button" className={`pbar air${bc.rally || bc.scene ? ' on' : ''}`} onClick={() => setAir(true)}>On Air</button>}
         <button type="button" className="pbar" disabled={!canScore}
           onClick={() => commit({ type: final ? 'reopen_game' : 'end_game', patch: {} }, final ? 'live' : 'final')}>
           {final ? 'Reopen' : 'End game'}
         </button>
       </nav>
-      {air && channel && (
-        <Sheet title="On Air" onClose={() => setAir(false)} close="Done">
-          <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
-          <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} />
-          <ObsPanel teamId={team.id} broadcast={bc} onBroadcast={bcast} onSend={send} />
-          <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
-        </Sheet>
-      )}
+      </div>
+      {console_ && <aside className="pad-console">{airPanel(true)}</aside>}
+      {air && !console_ && airPanel(false)}
     </div>
   );
 }
