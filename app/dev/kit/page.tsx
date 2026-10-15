@@ -66,6 +66,12 @@ const game: Game = { id: 'g1', sport: 'baseball', team_id: 't1', season_id: 's1'
   opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {},
   opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U' } };
 const lineup = lineupFromRoster(players);
+// A season's schedule: two played, one live, two to come, in listGames order.
+const schedule: Game[] = ([
+  ['g-a', '2026-09-12T17:00:00Z', 'final', 'Canyon Hawks', false], ['g-b', '2026-09-26T23:00:00Z', 'final', 'Eastside Thunder', true],
+  ['g1', game.starts_at, 'live', 'River 14U', true], ['g-d', '2026-10-17T18:00:00Z', 'scheduled', 'Mesa Miners', false],
+  ['g-e', '2026-10-24T23:30:00Z', 'scheduled', 'North Valley Storm', true],
+] as const).map(([id, starts_at, status, opponent_name, is_home]) => ({ ...game, id, starts_at, status, opponent_name, is_home }));
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
@@ -153,7 +159,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'pitcher' && <PlayerView team={team} role={role} player={players[4]} lines={stats.filter((x) => x.player_id === 'p5')} seasons={seasons} />}
       {v === 'staff' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={[]} origin="http://localhost:3000" /></>}
       {v === 'staff-link' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={invites} origin="http://localhost:3000" /></>}
-      {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} />}
+      {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} games={schedule} />}
       {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)} /></div>}
       {v === 'season-empty' && <SeasonView team={team} role={role} seasons={seasons} />}
       {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" /></>}
