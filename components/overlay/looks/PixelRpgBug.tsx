@@ -2,6 +2,7 @@ import './pixel-rpg.css';
 import type { CSSProperties, ReactElement } from 'react';
 import type { Brand } from '@/components/TeamBrand';
 import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Battle Mode, drawn here: Scoreboard's 16-bit bug (public/bugs/pixel-rpg.html),
 // rebuilt as part of the page. The at-bat is a turn-based battle: double-line
@@ -170,7 +171,7 @@ function Typed({ text }: { text: string }) {
   return <b key={text} className="ty" style={{ animationDuration: `${n * 45}ms`, animationTimingFunction: `steps(${n})` }}>{text}</b>;
 }
 
-const surname = (n: string | null | undefined) => { const p = String(n || '').trim().split(/\s+/); return (p[p.length - 1] || '').toUpperCase().slice(0, 10); };
+const surname = (n: string | null | undefined) => shortName(String(n || '')).toUpperCase().slice(0, 10);
 const HITS: Record<string, [string, number]> = { Single: ['SINGLE', 1], Double: ['DOUBLE', 2], Triple: ['TRIPLE', 3] };
 
 function Row({ brand, abbr, r, h, e, bat }: { brand: Brand; abbr: string; r: number; h: number; e: number; bat: boolean }) {

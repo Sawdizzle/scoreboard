@@ -1,6 +1,7 @@
 import './split-flap.css';
 import type { Brand } from '@/components/TeamBrand';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Departures, drawn here: Scoreboard's split-flap station board
 // (public/bugs/split-flap.html), rebuilt as part of the page so the stat cards
@@ -24,11 +25,11 @@ const up = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, 
 const padL = (s: unknown, n: number) => (up(s) + ' '.repeat(n)).slice(0, n);
 const padR = (s: unknown, n: number) => (' '.repeat(n) + up(s)).slice(-n);
 const cells = (str: string, col: string, fl = false): C[] => [...str].map((ch) => ({ ch, col, fl }));
-const surname = (n: string) => { const p = n.trim().split(/\s+/); return p[p.length - 1] || ''; };
+const surname = shortName;
 const ord = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] || 'TH');
 function fitName(n: string, len: number) {
   const full = up(n).trim(); if (full.length <= len) return full;
-  const p = full.split(/\s+/), s = p[p.length - 1], ini = `${p[0][0]}. ${s}`;
+  const p = full.split(/\s+/), s = shortName(full), ini = s === full ? s : `${p[0][0]}. ${s}`;
   return ini.length <= len ? ini : s.slice(0, len);
 }
 // Tonight's line ("1-3, HR, 2 RBI") in a few cells: as many whole parts as fit, never half of one.

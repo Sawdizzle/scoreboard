@@ -1,6 +1,7 @@
 import './comic.css';
 import type { Brand } from '@/components/TeamBrand';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Ka-Pow, drawn here: the scorebug as a comic-book panel strip
 // (public/bugs/comic.html), rebuilt as part of the page so the stat cards can
@@ -70,7 +71,7 @@ const SWIRL = [0, 1, 2].map((i) => {
 const SHOUT = burstPts(22, 96, 80, 11, 0.08, 0.62);
 const FROZEN = burstPts(9, 100, 74, 13, 0.25);
 const HITS: Record<string, [string, number]> = { Single: ['SINGLE', 1], Double: ['DOUBLE!', 2], Triple: ['TRIPLE!!', 3] };
-const lastName = (n: string) => n.trim().split(/\s+/).pop() ?? '';
+const lastName = shortName;
 const ballSvg = (
   <svg className="ball" viewBox="-20 -20 40 40" aria-hidden="true">
     <circle r="16" fill="#fff" stroke="#141414" strokeWidth="4" />

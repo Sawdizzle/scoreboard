@@ -1,17 +1,55 @@
-import { deleteTeam } from '@/app/actions';
+import { deleteTeam, saveNameFormat } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
-import { canEditTeam, canManageSeats, type Role, type Team } from '@/lib/types';
+import { formatName } from '@/lib/format';
+import { canEditTeam, canManageSeats, NAME_FORMATS, type NameFormat, type Role, type Team } from '@/lib/types';
+
+const FORMAT_LABEL: Record<NameFormat, string> = {
+  full: 'Full name', initial_last: 'First initial, last name', last: 'Last name', first: 'First name', first_initial: 'First name, last initial',
+};
+const SAMPLE = { first_name: 'Alex', last_name: 'Raney' };
+
+// One format for every player's name: pad, lineup, On Air, the stream and the
+// public pages. A player's own public-name setting can only show less.
+function NameFormatCard({ team, canEdit }: { team: Team; canEdit: boolean }) {
+  return (
+    <section className="card pad">
+      <h2>Player names</h2>
+      <p className="hint">How players are named on the pad, the lineup, On Air, the stream and the public pages. A player set to &ldquo;First name, last initial&rdquo; or &ldquo;Number only&rdquo; on their player screen keeps that on the stream and the public pages.</p>
+      {canEdit ? (
+        <ActionForm action={saveNameFormat.bind(null, team.slug)} className="form">
+          <fieldset>
+            <legend className="legend">Show names as</legend>
+            <div className="stack" style={{ gap: 6 }}>
+              {NAME_FORMATS.map((fmt) => (
+                <label key={fmt} className="pill wide" style={{ display: 'flex' }}>
+                  <input type="radio" name="name_format" value={fmt} defaultChecked={team.name_format === fmt} />
+                  <span style={{ flex: 1, justifyContent: 'space-between', borderRadius: 12, gap: 12 }}>
+                    <b>{formatName(SAMPLE, fmt)}</b><small style={{ fontWeight: 500 }}>{FORMAT_LABEL[fmt]}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <Submit busy="Saving…">Save name format</Submit>
+        </ActionForm>
+      ) : (
+        <p className="note note-plain">Names show as <b>{formatName(SAMPLE, team.name_format)}</b> ({FORMAT_LABEL[team.name_format].toLowerCase()}). The organizer or head coach changes this.</p>
+      )}
+    </section>
+  );
+}
 
 export function SettingsView({ team, role, welcome, publicUrl }: { team: Team; role: Role; welcome?: boolean; publicUrl?: string }) {
   return (
     <div className="page">
       <BrandEditor team={team} canEdit={canEditTeam(role)} welcome={welcome} />
+      <NameFormatCard team={team} canEdit={canEditTeam(role)} />
       {publicUrl && (
         <section className="card pad">
           <h2>Public team page</h2>
-          <p className="hint">Schedule, live scores, box scores, roster and season stats, for families and fans. No account needed. Players appear under the name chosen on their player screen.</p>
+          <p className="hint">Schedule, live scores, box scores, roster and season stats, for families and fans. No account needed. Players appear under the team&rsquo;s name format, or less where their player screen says so.</p>
           <CopyLink url={publicUrl} label="Public team page link" />
         </section>
       )}

@@ -5,7 +5,7 @@ import { MidShow } from '@/components/overlay/Showtime';
 import { LOOK_BUGS } from '@/components/overlay/looks';
 import { homerText, type BugProps } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
-import { inkOn } from '@/lib/format';
+import { inkOn, shortName } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
 import { boxScore, breakText, halfRecap, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
@@ -225,7 +225,7 @@ function Defense({ list, brand, on }: { list: AirView['defense']; brand: Brand; 
       <div className="ov-field">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 96 L4 44 Q50 -14 96 44 Z" /><path d="M50 90 L30 68 L50 46 L70 68 Z" /></svg>
         {list.map((d) => (
-          <span key={d.pos} style={{ left: `${SPOT[d.pos][0]}%`, top: `${SPOT[d.pos][1]}%` }}><small>{d.pos}</small><b>{d.name.trim().split(/\s+/).pop()}</b></span>
+          <span key={d.pos} style={{ left: `${SPOT[d.pos][0]}%`, top: `${SPOT[d.pos][1]}%` }}><small>{d.pos}</small><b>{shortName(d.name)}</b></span>
         ))}
       </div>
     </div>

@@ -7,7 +7,7 @@ import { fullName, inkOn, publicName, shortDate } from '@/lib/format';
 import { batting, hasPitching, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
 import { canEditTeam, type Player, type PublicName, type Role, type Season, type Team } from '@/lib/types';
 
-const PUBLIC_LABEL: Record<PublicName, string> = { full: 'Full name', first_initial: 'First name, last initial', number: 'Number only' };
+const PUBLIC_LABEL: Record<PublicName, string> = { full: 'Team name format', first_initial: 'First name, last initial', number: 'Number only' };
 
 export function PlayerView({ team, role, player: p, lines = [], seasons = [], seasonId }: {
   team: Team; role: Role; player: Player; lines?: SeasonLine[]; seasons?: Season[]; seasonId?: string;
@@ -84,7 +84,7 @@ export function PlayerView({ team, role, player: p, lines = [], seasons = [], se
                     <label key={mode} className="pill wide" style={{ display: 'flex' }}>
                       <input type="radio" name="public_name" value={mode} defaultChecked={p.public_name === mode} />
                       <span style={{ flex: 1, justifyContent: 'space-between', borderRadius: 12, gap: 12 }}>
-                        <b>{publicName(p, mode)}</b><small style={{ fontWeight: 500 }}>{PUBLIC_LABEL[mode]}</small>
+                        <b>{publicName(p, mode, team.name_format)}</b><small style={{ fontWeight: 500 }}>{PUBLIC_LABEL[mode]}</small>
                       </span>
                     </label>
                   ))}
@@ -108,7 +108,7 @@ export function PlayerView({ team, role, player: p, lines = [], seasons = [], se
             </details>
           </>
         ) : (
-          <p className="note note-plain">Shown publicly as <b>{publicName(p, p.public_name)}</b>. The organizer or head coach edits players.</p>
+          <p className="note note-plain">Shown publicly as <b>{publicName(p, p.public_name, team.name_format)}</b>. The organizer or head coach edits players.</p>
         )}
       </div>
     </>

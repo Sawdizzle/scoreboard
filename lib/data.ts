@@ -4,7 +4,7 @@ import { createClient, supabaseConfigured } from './supabase/server';
 import type { SeasonLine } from './stats';
 import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
-export const TEAM_COLS = 'id, slug, name, display_name, abbr, color, color2, palette, logo_url, age_group';
+export const TEAM_COLS = 'id, slug, name, display_name, abbr, color, color2, palette, logo_url, age_group, name_format';
 const PLAYER_COLS = 'id, team_id, first_name, last_name, number, bats, throws, positions, public_name, active';
 const SEASON_COLS = 'id, team_id, name, starts_on, ends_on, is_current, game_innings';
 

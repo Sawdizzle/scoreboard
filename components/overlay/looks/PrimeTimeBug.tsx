@@ -1,6 +1,7 @@
 import './primetime.css';
 import type { Brand } from '@/components/TeamBrand';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Prime Time, drawn here: Scoreboard's network-television bug
 // (public/bugs/primetime.html), rebuilt as part of the page so the stat cards
@@ -16,7 +17,7 @@ import { homerText, tabName, type BugProps } from '@/components/overlay/looks/ty
 // new element and its animation plays once.
 type Tag = { tag: React.ReactNode; cls: string; text: string };
 
-const surname = (n: string | undefined) => { const w = String(n ?? '').trim().split(/\s+/).filter(Boolean); return w.length ? w[w.length - 1] : ''; };
+const surname = (n: string | undefined) => shortName(String(n ?? ''));
 const ordinal = (n: number) => { const s = ['TH', 'ST', 'ND', 'RD'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
 
 // What the strip says for a play, in the original's words.
