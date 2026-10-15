@@ -11,8 +11,10 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#0b1018',
     theme_color: '#0b1018',
     icons: [
-      { src: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      // The same art drawn inside Android's safe zone, for icons cut to a circle or squircle.
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }
