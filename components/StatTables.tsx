@@ -1,19 +1,20 @@
 import Link from 'next/link';
-import { fullName } from '@/lib/format';
+import { staffName } from '@/lib/format';
 import { batting, hasBatting, hasPitching, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
-import type { Player } from '@/lib/types';
+import type { NameFormat, Player } from '@/lib/types';
 
 // A season's batting and pitching, one row per player who did either. Sorted
 // the way a coach reads them: hitters by average, pitchers by innings.
 // `players` need only an id, a number and a name; the public page passes
-// public names and no link (there is no public player page).
-export function StatTables({ slug, lines, players, gameInnings, link = true }: {
-  slug: string; lines: SeasonLine[]; players: Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>[]; gameInnings: number; link?: boolean;
+// public names and no link (there is no public player page). `fmt` is the
+// team's name format, for staff screens that pass whole names.
+export function StatTables({ slug, lines, players, gameInnings, link = true, fmt = 'full' }: {
+  slug: string; lines: SeasonLine[]; players: Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>[]; gameInnings: number; link?: boolean; fmt?: NameFormat;
 }) {
   const who = new Map(players.map((p) => [p.id, p]));
   const cell = (s: SeasonLine) => {
     const p = who.get(s.player_id);
-    const body = <><span className="jersey">{p?.number || '–'}</span>{p ? fullName(p) || `No. ${p.number}` : 'Removed player'}</>;
+    const body = <><span className="jersey">{p?.number || '–'}</span>{p ? staffName(p, fmt) : 'Removed player'}</>;
     return <td className="who">{link ? <Link href={`/t/${slug}/player/${s.player_id}?s=${s.season_id}`}>{body}</Link> : <span>{body}</span>}</td>;
   };
   const hitters = lines.filter(hasBatting)

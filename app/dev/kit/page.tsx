@@ -32,7 +32,7 @@ import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } 
 // /dev/kit?v=roster (today, roster, player, staff, season, settings), and
 // &role=coach to see a seat that cannot edit. Development only. The forms are
 // real, so submitting one here fails at the first query; it is for looking.
-const baseTeam: Team = { id: 't1', slug: 'blue-steel-14u', name: 'Blue Steel Baseball', display_name: 'Blue Steel', abbr: 'STEEL', color: '#2857b5', color2: '#e0a92a', palette: ['#2857b5', '#e0a92a', '#ffffff'], logo_url: null, age_group: '14U' };
+const baseTeam: Team = { id: 't1', slug: 'blue-steel-14u', name: 'Blue Steel Baseball', display_name: 'Blue Steel', abbr: 'STEEL', color: '#2857b5', color2: '#e0a92a', palette: ['#2857b5', '#e0a92a', '#ffffff'], logo_url: null, age_group: '14U', name_format: 'full' };
 const season: Season = { id: 's1', team_id: 't1', name: 'Fall 2026', starts_on: '2026-09-05', ends_on: '2026-11-15', is_current: true, game_innings: 7 };
 const seasons: Season[] = [season, { id: 's2', team_id: 't1', name: 'Spring 2026', starts_on: null, ends_on: null, is_current: false, game_innings: 7 }];
 const P = (id: number, number: string, first_name: string, last_name: string, positions: Position[], bats: Player['bats'], throws: Player['throws'], active = true): Player =>
@@ -64,7 +64,7 @@ const stats: SeasonLine[] = [
 ];
 const game: Game = { id: 'g1', sport: 'baseball', team_id: 't1', season_id: 's1', counts_for_stats: true, opponent_team_id: 'o1', opponent_name: 'River 14U',
   opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {},
-  opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U' } };
+  opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U', name_format: 'full' } };
 const lineup = lineupFromRoster(players);
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];

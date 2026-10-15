@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Pad } from '@/components/pad/Pad';
 import { ScorePad } from '@/components/pad/ScorePad';
-import { getGame, getLineups, listSeasons, loadTeam, seasonStats } from '@/lib/data';
+import { getGame, getLineups, listPlayers, listSeasons, loadTeam, seasonStats } from '@/lib/data';
+import { withRosterNames } from '@/lib/lineup';
 import type { Channel } from '@/components/pad/OnAir';
 import { CHANNEL_COLS } from '@/lib/broadcast';
 import type { StatRow } from '@/lib/scoring';
@@ -17,12 +18,15 @@ export default async function PadPage({ params }: { params: Promise<{ slug: stri
   const { supabase, team, role } = await loadTeam(slug);
   const game = await getGame(supabase, team.id, gameId);
   if (!game) notFound();
-  const [lineups, seasons, seqRow, stats] = await Promise.all([
+  const [lineups, seasons, seqRow, stats, players] = await Promise.all([
     getLineups(supabase, game.id),
     listSeasons(supabase, team.id),
     supabase.from('games').select('seq').eq('id', game.id).single(),
     supabase.from('game_stats').select('*').eq('game_id', game.id),
+    listPlayers(supabase, team.id),
   ]);
+  // Our batters under the team's name format, whatever it was when the lineup was saved.
+  if (lineups.us) lineups.us = withRosterNames(lineups.us, players, team.name_format);
   const season = seasons.find((s) => s.id === game.season_id) ?? seasons.find((s) => s.is_current);
   const lines = season ? await seasonStats(supabase, team.id, season.id) : [];
   // Before the Stage 3 migration there is no channel; the pad then has no On Air.

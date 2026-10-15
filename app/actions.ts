@@ -15,7 +15,7 @@ import { abbrFor } from '@/lib/format';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
 import { SPORTS, type Sport } from '@/lib/sports';
-import { POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Position, type PublicName, type Role } from '@/lib/types';
+import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 const NOT_CONNECTED: FormState = { error: 'This app is not connected to its database yet.' };
@@ -179,6 +179,21 @@ export async function saveBrand(slug: string, _: FormState, fd: FormData): Promi
   revalidatePath('/t');
   return { ok: 'Saved.' };
 }
+// How the team's players are named everywhere. Each player's public-name
+// setting still caps it on the stream and the public pages (in the database).
+export async function saveNameFormat(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const fmt = str(fd, 'name_format');
+  if (!(NAME_FORMATS as readonly string[]).includes(fmt)) return { error: 'Pick how player names look.' };
+  const { supabase, team } = await loadTeam(slug);
+  const { data, error } = await supabase.from('teams').update({ name_format: fmt as NameFormat }).eq('id', team.id).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}`, 'layout');
+  revalidatePath(`/pad/${slug}`, 'layout');
+  revalidatePath(`/team/${slug}`, 'layout');
+  return { ok: 'Saved. Every screen now names players this way.' };
+}
+
 // The storage path inside our bucket, only for this team's own folder.
 function logoPath(url: string, teamId: string) {
   const marker = `/storage/v1/object/public/${LOGO_BUCKET}/`;

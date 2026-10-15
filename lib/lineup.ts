@@ -2,37 +2,48 @@
 // positions and ids: this file only builds lineups from a roster and checks
 // what the pad will need.
 import { FIELD_POSITIONS, filled, missingPositions, normalizeTeam } from './rules/roster.js';
-import { byJersey, fullName } from './format.ts';
-import type { Lineup, LineupBatter, Player } from './types.ts';
+import { byJersey, formatName } from './format.ts';
+import type { Lineup, LineupBatter, NameFormat, Player } from './types.ts';
 
 export const FIELD = FIELD_POSITIONS as readonly string[];
 
-export const batterOf = (p: Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>): LineupBatter =>
-  ({ bid: p.id, num: p.number, name: fullName(p) });
+export const batterOf = (p: Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>, fmt: NameFormat = 'full'): LineupBatter =>
+  ({ bid: p.id, num: p.number, name: formatName(p, fmt) });
 
 export const emptyLineup = (): Lineup => ({ batters: [], positions: {} });
 
 // Everyone active, in jersey order, each put at the first position listed for
 // them that nobody earlier has taken. A start the coach rearranges, not a guess
 // that pretends to be a decision.
-export function lineupFromRoster(players: Player[]): Lineup {
+export function lineupFromRoster(players: Player[], fmt: NameFormat = 'full'): Lineup {
   const active = players.filter((p) => p.active).sort(byJersey);
   const positions: Record<string, string> = {};
   for (const p of active) {
     const pos = p.positions.find((x) => FIELD.includes(x) && !positions[x]);
     if (pos) positions[pos] = p.id;
   }
-  return normalizeTeam({ batters: active.map(batterOf), positions }) as Lineup;
+  return normalizeTeam({ batters: active.map((p) => batterOf(p, fmt)), positions }) as Lineup;
 }
 
 // Last game's lineup, minus anyone no longer on the active roster, with names
 // and numbers refreshed from the roster.
-export function lineupFromLast(last: Lineup, players: Player[]): Lineup {
+export function lineupFromLast(last: Lineup, players: Player[], fmt: NameFormat = 'full'): Lineup {
   const live = new Map(players.filter((p) => p.active).map((p) => [p.id, p]));
-  const batters = (last.batters || []).filter((b) => live.has(b.bid)).map((b) => batterOf(live.get(b.bid)!));
+  const batters = (last.batters || []).filter((b) => live.has(b.bid)).map((b) => batterOf(live.get(b.bid)!, fmt));
   const keep = new Set(batters.map((b) => b.bid));
   const positions = Object.fromEntries(Object.entries(last.positions || {}).filter(([, bid]) => keep.has(bid)));
   return normalizeTeam({ batters, positions }) as Lineup;
+}
+
+// A saved lineup with each roster player's name and number as the roster has
+// them now, in the team's format: a lineup keeps the names it was saved with,
+// and the format may have changed since. A batter typed in at the field (not
+// on the roster) keeps what was typed.
+export function withRosterNames(l: Lineup, players: Player[], fmt: NameFormat = 'full'): Lineup {
+  const by = new Map(players.map((p) => [p.id, p]));
+  const batters = (l.batters || []).map((b) => { const p = by.get(b.bid); return p ? batterOf(p, fmt) : b; });
+  // normalizeTeam refreshes the pitcher's copy from positions.P as well.
+  return normalizeTeam({ ...l, batters }) as Lineup;
 }
 
 // What the setup checklist and the Today card say about a lineup.

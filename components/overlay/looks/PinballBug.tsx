@@ -1,6 +1,7 @@
 import './pinball-dmd.css';
 import type { Brand } from '@/components/TeamBrand';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Backglass, drawn here: Scoreboard's pinball bug (public/bugs/pinball-dmd.html),
 // rebuilt as part of the page so the stat cards can sit behind it. A chrome and
@@ -18,7 +19,7 @@ import { homerText, tabName, type BugProps } from '@/components/overlay/looks/ty
 // then hides itself, giving it back to the resting screen.
 const v = (o: Record<string, string | number>) => o as React.CSSProperties;
 const clean = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9 +\-!.'?]/g, '').trim();
-const surname = (s: string) => clean(s).split(/\s+/).pop() ?? '';
+const surname = (s: string) => shortName(clean(s));
 // A name for the display's 50-dot column: six letters at most.
 const dmdName = (b: Brand, abbr: string) => clean(abbr || b.display).slice(0, 6);
 

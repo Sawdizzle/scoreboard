@@ -1,5 +1,6 @@
 import './receipt.css';
 import { tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // The Play-by-Play Printer, drawn here: Scoreboard's thermal receipt printer
 // (public/bugs/receipt.html) rebuilt as part of the page so the stat cards can
@@ -17,7 +18,7 @@ import { tabName, type BugProps } from '@/components/overlay/looks/types';
 // a new element and its animation plays once.
 type Row = { cls: string; code: React.ReactNode; txt: string; right?: string; small?: string };
 
-const last = (n: string) => (n.trim().split(/\s+/).pop() ?? '').toUpperCase();
+const last = (n: string) => shortName(n).toUpperCase();
 const pad = (s: string | number, n: number) => String(s).padStart(n);
 const STARS = `${'* '.repeat(13)}*`;
 const ART = [

@@ -3,6 +3,7 @@ import './midnight.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FullFrame, hash, useShow } from '@/components/overlay/looks/BlueSteelBug';
 import { homerText, tabName, type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // Midnight, drawn here: Scoreboard's night-game bug (public/bugs/midnight.html),
 // rebuilt as part of the page so the stat cards can sit behind its plate. The
@@ -43,7 +44,7 @@ const TW: [number, number, number, number, boolean][] = [
 const TW_HR: [number, number, number, number, boolean][] = [
   ...TW, [10, 22, 4.6, 1.5, true], [29, 82, 2.7, 3.1, false], [46, 6, 3.9, 2.4, false], [62, 89, 4.3, 0.7, false], [72, 9, 2.5, 4.1, true], [89, 81, 3.2, 2.9, false], [97, 23, 5.1, 1.1, false],
 ];
-const surname = (n: string) => n.trim().split(/\s+/).pop() ?? '';
+const surname = shortName;
 
 /* ---------- The sky: one canvas for everything that flies (the original's, ported) ----------
    P sparks and motes   C comets (a ball, a shooting star)   R flashes and rings

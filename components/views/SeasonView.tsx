@@ -81,7 +81,7 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
               <div className="slash">
                 {teamLine(stats).map((x) => <div key={x.k}><b className="live">{x.v}</b><span>{x.k.toUpperCase()}</span></div>)}
               </div>
-              <StatTables slug={team.slug} lines={stats} players={players} gameInnings={sel.game_innings} />
+              <StatTables slug={team.slug} lines={stats} players={players} gameInnings={sel.game_innings} fmt={team.name_format} />
               <p className="source">From GameChanger, imported {shortDate(stats.reduce((a, s) => (s.imported_at && s.imported_at > a ? s.imported_at : a), ''))}.</p>
             </>
           ) : (

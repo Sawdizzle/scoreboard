@@ -3,7 +3,7 @@
 import { ObsPanel } from '@/components/pad/ObsPanel';
 import { Sheet } from '@/components/pad/PadSheets';
 import type { Brand } from '@/components/TeamBrand';
-import { inkOn } from '@/lib/format';
+import { inkOn, shortName } from '@/lib/format';
 import Link from 'next/link';
 import { useState } from 'react';
 import type { Broadcast, BroadcastPatch, Scene } from '@/lib/broadcast';
@@ -164,7 +164,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
         </button>
         <button type="button" className={`pchoice${up('dueup') ? ' on' : ''}`} aria-pressed={up('dueup')} disabled={!live || !dueUp.length} onClick={() => flip('dueup')}>
           <b>Due up</b>
-          <small>{dueUp.map((b) => b.name.split(' ').pop()).join(', ') || 'No lineup set'}</small>
+          <small>{dueUp.map((b) => shortName(b.name)).join(', ') || 'No lineup set'}</small>
         </button>
       </div>
 

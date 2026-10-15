@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 import { ChevronLeft } from '@/components/icons';
 import { LineupEditor, type PoolPlayer } from '@/components/LineupEditor';
 import { getGame, getLineups, lastLineup, listOpponents, listPlayers, listSeasons, loadTeam, publicRoster, seasonStats } from '@/lib/data';
-import { byJersey, fullName } from '@/lib/format';
-import { emptyLineup, lineupFromLast, lineupFromRoster } from '@/lib/lineup';
+import { byJersey, formatName } from '@/lib/format';
+import { emptyLineup, lineupFromLast, lineupFromRoster, withRosterNames } from '@/lib/lineup';
 import { normalizeTeam } from '@/lib/rules/roster.js';
 import { batting, rate3 } from '@/lib/stats';
 import { canRunGames, type Lineup, type Side } from '@/lib/types';
@@ -31,12 +31,12 @@ export default async function LineupPage({ params, searchParams }: {
     const seasonId = game.season_id ?? seasons.find((s) => s.is_current)?.id;
     const stats = seasonId ? await seasonStats(supabase, team.id, seasonId) : [];
     const avg = new Map(stats.filter((s) => s.b_pa > 0).map((s) => [s.player_id, rate3(batting(s).avg)]));
-    pool = players.filter((p) => p.active).sort(byJersey).map((p) => ({ bid: p.id, num: p.number, name: fullName(p), avg: avg.get(p.id) }));
-    const fromLast = last ? lineupFromLast(last, players) : null;
-    const fromRoster = lineupFromRoster(players);
+    pool = players.filter((p) => p.active).sort(byJersey).map((p) => ({ bid: p.id, num: p.number, name: formatName(p, team.name_format), avg: avg.get(p.id) }));
+    const fromLast = last ? lineupFromLast(last, players, team.name_format) : null;
+    const fromRoster = lineupFromRoster(players, team.name_format);
     if (fromLast) presets.push({ label: 'Same as last game', lineup: fromLast });
     presets.push({ label: 'Whole roster, by number', lineup: fromRoster });
-    initial = saved ?? fromLast ?? fromRoster;
+    initial = (saved && withRosterNames(saved, players, team.name_format)) ?? fromLast ?? fromRoster;
   } else {
     if (game.opponent_team_id) {
       const theirs = await publicRoster(supabase, game.opponent_team_id);

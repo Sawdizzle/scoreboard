@@ -4,7 +4,7 @@ import { leaders } from '@/components/StatTables';
 import { Matchup, Readiness } from '@/components/GameBits';
 import { Slab, brandOf } from '@/components/TeamBrand';
 import { LocalTime } from '@/components/LocalTime';
-import { fullName } from '@/lib/format';
+import { staffName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import { canEditTeam, canRunGames, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
 
@@ -70,7 +70,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
                 <Link key={k} href={`${base}/player/${best.s.player_id}`} className="row">
                   <span className="leader-k">{k}</span>
                   <span className="jersey" style={{ flexBasis: 34, fontSize: 24 }}>{p?.number || '–'}</span>
-                  <span className="row-main"><span className="row-title">{p ? fullName(p) || `No. ${p.number}` : 'Player'}</span></span>
+                  <span className="row-main"><span className="row-title">{p ? staffName(p, team.name_format) : 'Player'}</span></span>
                   <span className="leader-v">{show(best.v)}</span>
                 </Link>
               );

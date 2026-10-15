@@ -35,6 +35,11 @@ export type Position = (typeof POSITIONS)[number];
 export const PUBLIC_NAMES = ['full', 'first_initial', 'number'] as const;
 export type PublicName = (typeof PUBLIC_NAMES)[number];
 
+// How a team names its players everywhere (teams.name_format). Each player's
+// public_name caps it on the stream and the public pages.
+export const NAME_FORMATS = ['full', 'initial_last', 'last', 'first', 'first_initial'] as const;
+export type NameFormat = (typeof NAME_FORMATS)[number];
+
 export type Team = {
   id: string;
   slug: string;
@@ -48,6 +53,8 @@ export type Team = {
   palette: string[];
   logo_url: string | null;
   age_group: string | null;
+  // How the team's players are named; 'full' until the team picks another.
+  name_format: NameFormat;
 };
 
 export type Player = {

@@ -2,6 +2,7 @@
 import './mlbfox.css';
 import type { Brand } from '@/components/TeamBrand';
 import { type BugProps } from '@/components/overlay/looks/types';
+import { shortName } from '@/lib/format';
 
 // MLBFox, drawn here: Scoreboard's national-TV playoff bug, kept simple
 // (public/bugs/mlbfox.html), rebuilt as part of the page so the stat cards can
@@ -21,8 +22,12 @@ type Side = 'away' | 'home';
 
 const up = (s: string | null | undefined) => String(s ?? '').toUpperCase();
 const words = (n: string | null | undefined) => String(n ?? '').trim().split(/\s+/).filter(Boolean);
-// "Carter Hayes" → "C. HAYES", the way the network lists a hitter.
-const short = (n: string | null | undefined) => { const w = words(n); return up(w.length > 1 ? `${w[0][0]}. ${w[w.length - 1]}` : w[0] ?? ''); };
+// "Carter Hayes" → "C. HAYES", the way the network lists a hitter. A name that
+// ends in an initial ("Alex R.", a team's format) is already short: it stays.
+const short = (n: string | null | undefined) => {
+  const w = words(n), s = shortName(w.join(' '));
+  return up(w.length > 1 && s !== w.join(' ') ? `${w[0][0]}. ${s}` : s);
+};
 const ordinal = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] || 'TH');
 // The abbreviation's size by its length, so a long one still fits the block.
 const abSize = (s: string) => `${([5.6, 5.6, 5.4, 4.6, 3.8, 3.2][s.length] ?? 2.6)}rem`;

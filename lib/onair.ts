@@ -4,6 +4,7 @@
 // counts, so the pad's On Air panel and the scorebug page cannot disagree.
 import * as L from './rules/logic.js';
 import { positionOf } from './rules/roster.js';
+import { shortName } from './format.ts';
 import { engineGame, tonight, type EngineSide, type G, type StatKey } from './scoring.ts';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
 import type { Broadcast, Cmd } from './broadcast.ts';
@@ -168,7 +169,7 @@ export function airView(g: G, ctx: AirCtx): AirView {
     const r = has ? pitching(s, ctx.gameInnings) : null;
     const name = p.name || `#${p.num}`;
     pitcher = {
-      bid: p.bid, num: p.num, name, last: p.name ? p.name.trim().split(/\s+/).pop() ?? name : name,
+      bid: p.bid, num: p.num, name, last: p.name ? shortName(p.name) || name : name,
       pitches: L.pitchCount(g),
       today: [{ v: innings(t.p_outs ?? 0), k: 'IP' }, { v: String(t.p_r ?? 0), k: 'R' }, { v: String(t.p_so ?? 0), k: 'K' }, { v: String(t.p_pitches ?? 0), k: 'P' }],
       season: r ? [{ v: rate2(r.era), k: 'ERA' }, { v: String(s.p_so), k: 'K' }, { v: rate2(r.whip), k: 'WHIP' }] : null,
@@ -256,7 +257,7 @@ export function halfRecap(feed: Feed, g: G): string[] {
   const lineup = feed.lineups?.[batted];
   return (feed.pas ?? []).filter((p) => p.side === batted && p.inning === inning).map((p) => {
     const b = lineup?.batters?.find((x) => x.bid === p.bid);
-    const who = b ? (b.name ? b.name.trim().split(/\s+/).pop()! : `#${b.num}`) : '';
+    const who = b ? (b.name ? shortName(b.name) : `#${b.num}`) : '';
     return `${who} ${paText(p).toLowerCase()}`.trim();
   });
 }

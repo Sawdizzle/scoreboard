@@ -12,6 +12,7 @@ import { positionOf } from '@/lib/rules/roster.js';
 import { engineGame, lastPlayText, onPlay, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { airView } from '@/lib/onair';
+import { shortName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
 import { CONSOLE, useMedia } from '@/lib/use-media';
@@ -391,7 +392,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
           </span>
         </span>
         <span className="pad-pitcher">
-          <small>{pitcher ? `#${pitcher.num} ${pitcher.name.split(' ').pop() ?? ''}` : 'Pitcher'}</small>
+          <small>{pitcher ? `#${pitcher.num} ${shortName(pitcher.name)}` : 'Pitcher'}</small>
           <b>{L.pitchCount(g)}</b>
         </span>
       </Link>
