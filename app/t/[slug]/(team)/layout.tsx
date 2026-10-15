@@ -12,7 +12,8 @@ export default async function TeamSection({ children, params }: { children: Reac
   ]);
   return (
     <>
-      <div className="page-top" style={{ paddingTop: 10 }}>
+      {/* The sidebar lists these sections from an iPad on its side up, so the switch is for smaller screens. */}
+      <div className="page-top team-tabs" style={{ paddingTop: 10 }}>
         <TeamTabs slug={slug} players={players.count ?? 0} opponents={opponents.count ?? 0} />
       </div>
       {children}

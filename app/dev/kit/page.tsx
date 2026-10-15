@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { TabBar, TeamTabs } from '@/components/TabBar';
+import { TeamTabs } from '@/components/TabBar';
+import { TeamFrame } from '@/components/TeamFrame';
 import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
@@ -16,7 +17,6 @@ import type { Sport } from '@/lib/sports';
 import { ScorePad } from '@/components/pad/ScorePad';
 import { GameView } from '@/components/views/GameView';
 import { lineupFromRoster } from '@/lib/lineup';
-import { TeamHeader } from '@/components/TeamHeader';
 import { PlayerView } from '@/components/views/PlayerView';
 import { RosterView } from '@/components/views/RosterView';
 import { SeasonView } from '@/components/views/SeasonView';
@@ -77,7 +77,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   const role = (r ?? 'organizer') as Role;
   const base = `/t/${team.slug}`;
   const at = v === 'today' ? base : `${base}/${v}`;
-  const tabs = <div className="page-top" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} opponents={6} at={at} /></div>;
+  const tabs = <div className="page-top team-tabs" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} opponents={6} at={at} /></div>;
   if (v === 'pad') {
     // A game in the 5th: two on, 2-1, the made-up lineups on both sides. Taps
     // work on screen; they fail to save, since nothing is behind this page.
@@ -138,8 +138,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       <Scenes feed={feed} now={KIT_NOW} weather={{ temp: 72, text: 'Clear', icon: '☀️', wind: 8, dir: 'SW', pop: 10 }} strike={0} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
   }
   return (
-    <div className="shell has-tabs" style={{ '--team': team.color } as React.CSSProperties}>
-      <TeamHeader team={team} role={role} season={season} />
+    <TeamFrame team={team} role={role} season={season} at={at}>
       {v === 'today' && <TodayView team={team} role={role} players={11} opponents={6} season={season} stats={stats} roster={players} game={game} lineups={{ us: lineup }} />}
       {v === 'today-empty' && <TodayView team={team} role={role} players={11} opponents={6} season={season} />}
       {v === 'game' && <GameView team={team} role={role} game={game} lineups={{ us: lineup }} seasons={seasons} />}
@@ -159,7 +158,6 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" /></>}
       {v === 'stream' && <>{tabs}<StreamSetup team={team} canLead={role !== 'coach'} streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000"
         channel={{ look: 'pressbox', layout: null, qr: null, show_line: true, bug_text: 'Streamed by example.test', bug_url: 'https://example.test', sponsor_name: 'Dairy Barn', sponsor_line: 'Cold treats on Elm Street', sponsor_logo: null }} /></>}
-      <TabBar slug={team.slug} at={at} />
-    </div>
+    </TeamFrame>
   );
 }

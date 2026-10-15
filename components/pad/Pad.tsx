@@ -14,6 +14,7 @@ import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broad
 import { airView } from '@/lib/onair';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
+import { CONSOLE, useMedia } from '@/lib/use-media';
 import type { Game, Lineup, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
@@ -57,6 +58,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const seq = useRef(game.seq);
   const [sync, setSync] = useState<'ok' | 'sending' | 'retry'>('ok');
   const [sheet, setSheet] = useState<Sheet>(null);
+  // A tablet or bigger keeps On Air open as a console beside the keys.
+  const wide = useMedia(CONSOLE);
   const [toast, setToast] = useState<{ text: string; act?: { label: string; run: () => void } } | null>(null);
   const [waiting, setWaiting] = useState(0);
   const [online, setOnline] = useState(true);
@@ -340,8 +343,16 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     return () => document.removeEventListener('keydown', on);
   }, []);
 
+  const console_ = wide && !!chan;
+  const airPanel = (inline: boolean) => chan && (
+    <OnAir channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
+      when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final} inline={inline}
+      score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />
+  );
+
   return (
-    <div className="pad">
+    <div className={`pad${console_ ? ' has-console' : ''}`}>
+      <div className="pad-main">
       <header className="pad-head">
         <Link href={`/t/${slug}/games/${game.id}`} aria-label="Leave the pad" className="icon-btn">‹</Link>
         <div className="pad-score">
@@ -410,8 +421,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !view.last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, fieldSide)}`}>Field</Link>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
-        {chan && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
+        {chan && !console_ && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
       </nav>
+      </div>
+      {console_ && <aside className="pad-console">{airPanel(true)}</aside>}
 
       {sheet === 'k3' && <StrikeThree g={g} onClose={() => setSheet(null)} onPick={(k) => {
         // A dropped third strike is a ball in play for the runners: the batter may run.
@@ -428,9 +441,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       }} />}
       {sheet && typeof sheet === 'object' && <Runner g={g} from={sheet.runner} who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
-      {sheet === 'air' && chan && <OnAir channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
-        when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final}
-        score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />}
+      {sheet === 'air' && !console_ && airPanel(false)}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
         extra={<>
           {game.settings?.time_limit ? <GameClock gameId={game.id} initial={game.clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={nudge} /> : null}

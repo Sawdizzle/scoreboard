@@ -115,10 +115,17 @@ export function Moments({ sport, rally, onCmd, onBroadcast }: {
 // scorebug, sizes, positions) is the Stream screen, not here. One card on air at a time:
 // tap one to raise it, tap it again to clear it. The two switches are what
 // the scorebug does by itself.
-export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose }: {
+// On a phone On Air is a sheet over the pad; on a tablet or bigger it is the
+// console that stays open beside (or under) the keys.
+function Frame({ inline, onClose, children }: { inline?: boolean; onClose: () => void; children: React.ReactNode }) {
+  if (!inline) return <Sheet title="On Air" onClose={onClose} close="Done">{children}</Sheet>;
+  return <section className="pconsole" aria-label="On Air"><h2 className="pconsole-title">On Air</h2>{children}</section>;
+}
+
+export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose, inline }: {
   channel: Channel; teamId: string; gameId: string; setupHref: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
   onSet: (patch: Partial<Channel>) => void; onCmd: (kind: string) => void; onSend: (cmd: Record<string, unknown> & { type: string }) => void;
-  onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void;
+  onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void; inline?: boolean;
 }) {
   const here = channel.game_id === gameId;
   const { batter, pitcher, dueUp } = view;
@@ -126,7 +133,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
   const flip = (k: CardKind) => onSet({ card: up(k) ? null : k, ...(here ? {} : { game_id: gameId }) });
   const k = pitcher?.today.find((c) => c.k === 'K')?.v;
   return (
-    <Sheet title="On Air" onClose={onClose} close="Done">
+    <Frame inline={inline} onClose={onClose}>
       {!here && (
         <button type="button" className="pchoice on" onClick={() => onSet({ game_id: gameId, card: null })}>
           <b>Put this game on the stream</b>
@@ -209,7 +216,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
         </label>
       </div>
       <Link href={setupHref} className="link" style={{ alignSelf: 'center' }}>Look, sizes and positions: Stream setup ›</Link>
-    </Sheet>
+    </Frame>
   );
 }
 
