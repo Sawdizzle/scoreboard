@@ -19,7 +19,9 @@ const fail = (status: number, error: string) => NextResponse.json({ error }, { s
 
 export async function POST(req: Request) {
   if (!supabaseConfigured) return fail(503, 'The database is not set up.');
-  if (!process.env.ANTHROPIC_API_KEY) return fail(503, 'Recaps are not switched on here yet (no ANTHROPIC_API_KEY).');
+  // Trimmed: a key pasted into the dashboard with a stray newline is refused as a bad key.
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return fail(503, 'Recaps are not switched on here yet (no ANTHROPIC_API_KEY).');
   const { gameId } = (await req.json().catch(() => ({}))) as { gameId?: string };
   if (!gameId || !/^[0-9a-f-]{36}$/i.test(gameId)) return fail(400, 'Which game?');
 
@@ -60,7 +62,7 @@ export async function POST(req: Request) {
     venue: game.venue, season: p.season?.name ?? null, ageGroup: p.team.age_group,
   };
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   const prompt = recapPrompt(facts, ctx);
   let content: RecapContent | null = null;
   let problems: string[] = [];
@@ -107,6 +109,9 @@ Write the whole pack again, fixing these and keeping what was right.`;
     }
   } catch (e) {
     await log(false);
+    if (e instanceof Anthropic.APIError) console.error('recap: Anthropic', e.status, e.requestID ?? '', e.message);
+    if (e instanceof Anthropic.AuthenticationError) return fail(502, 'The Anthropic key was refused (401). Check ANTHROPIC_API_KEY in Vercel.');
+    if (e instanceof Anthropic.PermissionDeniedError) return fail(502, 'The Anthropic key cannot use this model (403). Check the key’s workspace in the Anthropic Console.');
     if (e instanceof Anthropic.RateLimitError) return fail(429, 'The writer is busy. Try again in a minute.');
     if (e instanceof Anthropic.APIError) return fail(502, `The writer failed (${e.status ?? 'network'}). Try again.`);
     throw e;
