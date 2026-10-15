@@ -7,8 +7,9 @@ import { StatTables } from '@/components/StatTables';
 import { Slab, brandOf } from '@/components/TeamBrand';
 import { TEAM_COLS, listGames, listSeasons, publicRoster, seasonStats } from '@/lib/data';
 import { result } from '@/lib/public';
+import { splitSchedule } from '@/lib/schedule';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
-import type { Team } from '@/lib/types';
+import type { Game, Team } from '@/lib/types';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -41,6 +42,7 @@ export default async function TeamPage({ params }: Props) {
   const record = finals.length ? `${finals.filter((r) => r?.startsWith('W')).length}-${finals.filter((r) => r?.startsWith('L')).length}` : null;
   const players = roster.map((r) => ({ id: r.id, number: r.number, first_name: r.display_name ?? '', last_name: '' }));
   const base = `/team/${team.slug}`;
+  const { upcoming, completed } = splitSchedule(games);
 
   return (
     <main className="shell has-tabs" style={{ '--team': team.color, paddingBottom: 32 } as React.CSSProperties}>
@@ -57,24 +59,19 @@ export default async function TeamPage({ params }: Props) {
 
         <section className="stack" style={{ gap: 8 }}>
           <h2 className="h-sec" style={{ padding: '0 4px' }}>Schedule</h2>
-          {games.length ? (
-            <div className="card" style={{ padding: '4px 12px' }}>
-              <div className="rows">
-                {games.map((g) => (
-                  <Link key={g.id} href={`${base}/game/${g.id}`} className="game-row">
-                    <span className="game-when"><LocalTime iso={g.starts_at} mode="day" /><LocalTime iso={g.starts_at} mode="time" /></span>
-                    <span className="row-main">
-                      <span className="row-title">{g.is_home ? 'vs' : 'at'} {g.opponent_name}</span>
-                      <span className="row-meta">{[g.venue, g.counts_for_stats ? null : 'Scrimmage'].filter(Boolean).join(' · ') || ' '}</span>
-                    </span>
-                    <span className={`pub-result${g.status === 'live' ? ' live' : ''}`}>{g.status === 'live' ? 'Live' : result(g) ?? ''}</span>
-                    <span className="chev"><ChevronRight /></span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : <p className="sub" style={{ padding: '0 4px' }}>No games on the schedule yet.</p>}
+          {upcoming.length ? <GameRows base={base} games={upcoming} />
+            : <p className="sub" style={{ padding: '0 4px' }}>{completed.length ? 'No games left this season.' : 'No games on the schedule yet.'}</p>}
         </section>
+
+        {completed.length > 0 && (
+          <section className="stack" style={{ gap: 8 }}>
+            <div className="h-row" style={{ padding: '0 4px', alignItems: 'center' }}>
+              <h2 className="h-sec">Completed</h2>
+              <span className="sub">{completed.length} played</span>
+            </div>
+            <GameRows base={base} games={completed} />
+          </section>
+        )}
 
         {season && <StatTables slug={team.slug} lines={lines} players={players} gameInnings={season.game_innings} link={false} />}
 
@@ -98,5 +95,25 @@ export default async function TeamPage({ params }: Props) {
         <p className="pub-foot">Scored on <Link href="/" className="link">Scoreboard</Link></p>
       </div>
     </main>
+  );
+}
+
+function GameRows({ base, games }: { base: string; games: Game[] }) {
+  return (
+    <div className="card" style={{ padding: '4px 12px' }}>
+      <div className="rows">
+        {games.map((g) => (
+          <Link key={g.id} href={`${base}/game/${g.id}`} className="game-row">
+            <span className="game-when"><LocalTime iso={g.starts_at} mode="day" /><LocalTime iso={g.starts_at} mode="time" /></span>
+            <span className="row-main">
+              <span className="row-title">{g.is_home ? 'vs' : 'at'} {g.opponent_name}</span>
+              <span className="row-meta">{[g.venue, g.counts_for_stats ? null : 'Scrimmage'].filter(Boolean).join(' · ') || ' '}</span>
+            </span>
+            <span className={`pub-result${g.status === 'live' ? ' live' : ''}`}>{g.status === 'live' ? 'Live' : result(g) ?? ''}</span>
+            <span className="chev"><ChevronRight /></span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
