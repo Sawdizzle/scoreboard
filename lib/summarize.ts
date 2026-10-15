@@ -49,6 +49,9 @@ export type ScoringPlay = {
   inning: number; half: Half; side: Side; runs: number; score: Score;
   // "Home run", "Single", "Stolen base", "Run scored" ...; "Score corrected" for a fix on the Situation screen.
   what: string; kind: string; batter: string | null; scorers: string[]; correction?: true;
+  // In a half with gaps: the runs are right, but not when in the half they
+  // scored, so the score shown is only a lower bound. Never say it.
+  partial?: true;
 };
 export type Moment = { kind: 'HR' | 'GS' | 'DP' | 'walkoff' | 'comeback' | 'run_rule' | 'shutout' | 'big_inning'; side: Side; inning: number | null; half: Half | null; text: string };
 export type GameFacts = {
@@ -195,6 +198,7 @@ export function summarizeGame(input: SummaryInput): GameFacts {
       if ((r[s] ?? 0) > logged) facts.gaps.push({ inning: r.inning, half, side: s, runs: (r[s] ?? 0) - logged });
     }
     facts.runsMatchScore = !facts.gaps.length && run.us === score.us && run.them === score.them;
+    if (facts.gaps.length) reconcile(facts, away);
   }
 
   // Big innings: five runs or more in one half, from the line score.
@@ -217,6 +221,46 @@ export function summarizeGame(input: SummaryInput): GameFacts {
 
   facts.standouts = standouts(stats, name);
   return facts;
+}
+
+// A log with gaps: its running score falls behind the line score at the first
+// gap and stays behind. Restart each half from the line score, flag the scores
+// inside a half with gaps as unknown, and judge leads and ties from what is
+// known: every play in a whole half, and only the end of a half with gaps.
+function reconcile(facts: GameFacts, away: Side) {
+  const halves: { inning: number; half: Half; side: Side; start: Score; end: Score }[] = [];
+  let at: Score = { us: 0, them: 0 };
+  for (const r of facts.lineScore.innings) for (const half of ['top', 'bottom'] as Half[]) {
+    const side: Side = half === 'top' ? away : away === 'us' ? 'them' : 'us';
+    const end = { ...at, [side]: at[side] + (r[side] ?? 0) } as Score;
+    halves.push({ inning: r.inning, half, side, start: at, end });
+    at = end;
+  }
+  const gap = (inning: number, half: Half) => facts.gaps.some((g) => g.inning === inning && g.half === half);
+
+  const steps: { inning: number; half: Half; score: Score }[] = [];
+  for (const h of halves) {
+    let now = { ...h.start };
+    for (const p of facts.scoringPlays) {
+      if (p.inning !== h.inning || p.half !== h.half || p.correction) continue;
+      now = { ...now, [p.side]: now[p.side] + p.runs };
+      p.score = { ...now };
+      if (gap(h.inning, h.half)) p.partial = true;
+      else steps.push({ inning: h.inning, half: h.half, score: p.score });
+    }
+    if (gap(h.inning, h.half)) steps.push({ inning: h.inning, half: h.half, score: h.end });
+  }
+
+  facts.leadChanges = []; facts.ties = 0; facts.biggestDeficit = { us: 0, them: 0 };
+  let leader: Side | null = null;
+  for (const st of steps) {
+    const now: Side | null = st.score.us > st.score.them ? 'us' : st.score.them > st.score.us ? 'them' : null;
+    if (now && leader && now !== leader) facts.leadChanges.push({ inning: st.inning, half: st.half, side: now, score: st.score });
+    if (!now && leader) facts.ties += 1;
+    if (now) leader = now;
+    facts.biggestDeficit.us = Math.max(facts.biggestDeficit.us, st.score.them - st.score.us);
+    facts.biggestDeficit.them = Math.max(facts.biggestDeficit.them, st.score.us - st.score.them);
+  }
 }
 
 // Who stood out: up to three of ours and two of theirs, hitting or pitching.

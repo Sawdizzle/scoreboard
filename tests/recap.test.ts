@@ -52,6 +52,11 @@ test('a v4 game with gaps: the line score’s running totals still count as real
   assert.deepEqual(checkRecap(good({ headline: 'Blue Steel 10-2', recap: 'Down 2-0, we led 4-2 after one.', social: { instagram: '', facebook: '', x: '10-2 win' } }), factsOf('krum')), []);
 });
 
+test('a gappy half: in-between scores the log cannot vouch for are caught, end-of-half scores are not', () => {
+  const p = checkRecap(good({ headline: 'Blue Steel 10-2', recap: 'Tied 2-2 in the 1st, we led 4-2 after one and 6-2 after two, then 5-2 in the 3rd.', social: { instagram: '', facebook: '', x: '' } }), factsOf('krum'));
+  assert.deepEqual(p, ['"2-2" is not a score or play code from the facts.', '"5-2" is not a score or play code from the facts.']);
+});
+
 test('the player of the game must be someone the facts name', () => {
   const p = checkRecap(good({ player_of_the_game: { name_or_number: 'Johnny Vance', reason: 'Two hits.' } }), factsOf('desp'));
   assert.match(p[0], /not a player the facts name/);

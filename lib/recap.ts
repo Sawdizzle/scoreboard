@@ -41,7 +41,7 @@ export const RECAP_SYSTEM = `You write post-game content for a youth sports team
 You are given the game's facts as JSON. They are the only source of truth.
 - Use only what the facts say. Never invent a play, a score, an inning, a statistic, a quote or a player.
 - Name a player only as the facts write them ("Johnny Vance", "J. Vance" or "#12"). A play with no batter named happened, but say it without a name ("an RBI single"). Never guess who it was.
-- The facts' "gaps" are runs the line score has that the play log does not explain. You may give that inning's total from the line score, but never say how those runs scored.
+- The facts' "gaps" are runs the line score has that the play log does not explain. You may give that inning's total from the line score, but never say how those runs scored. A scoring play marked "partial" is in such a half: its runs are real, but never give the score after it, and never say the game was tied or the lead changed inside that half.
 - Scores: write them as "6-5", winner first, and only scores from the facts: the final, or the score after a scoring play.
 - "us" is the team you write for; "them" is the opponent. Write as the team's own broadcast: warm, upbeat, proud of the effort. These are kids: never criticise a player, an umpire or the other team. A loss is told with credit to the opponent and to our effort.
 - When the facts are thin (few plays, no names), write less rather than fill it in.
@@ -76,7 +76,7 @@ export function checkRecap(c: RecapContent, facts: GameFacts): string[] {
   const pair = (a: number, b: number) => { known.add(`${a}-${b}`); known.add(`${b}-${a}`); };
   pair(facts.score.us, facts.score.them);
   pair(0, 0);
-  for (const s of facts.scoringPlays) pair(s.score.us, s.score.them);
+  for (const s of facts.scoringPlays) if (!s.partial) pair(s.score.us, s.score.them);
   for (const m of JSON.stringify(facts).matchAll(PAIR)) pair(Number(m[1]), Number(m[2]));
   // A v4 log with gaps: the score at the end of each half, from the line score.
   const run = { us: 0, them: 0 };

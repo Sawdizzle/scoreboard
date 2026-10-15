@@ -230,6 +230,21 @@ test('a v4 game with runs missing from its log says where', () => {
   assert.deepEqual(f.lineScore.us, { r: 10, h: 4, e: 3 });
 });
 
+test('after a gap, the score restarts from the line score each half, and the gappy half’s scores are marked partial', () => {
+  const f = summarizeGame(v4('krum'));
+  // The log has 8 of our 10 runs. Before the fix every score after the 1st was 2 short.
+  assert.deepEqual(f.scoringPlays.map((s) => [s.inning, s.half, s.runs, `${s.score.us}-${s.score.them}`, !!s.partial]), [
+    [1, 'top', 1, '0-1', false], [1, 'top', 1, '0-2', false],
+    [1, 'bottom', 1, '1-2', true], [1, 'bottom', 1, '2-2', true],
+    [2, 'bottom', 2, '6-2', false],
+    [3, 'bottom', 1, '7-2', false], [3, 'bottom', 3, '10-2', false],
+  ]);
+  // The 2-2 tie inside the 1st is not known to have happened; the lead change at the end of it is.
+  assert.equal(f.ties, 0);
+  assert.deepEqual(f.leadChanges.map((c) => [c.inning, c.half, c.side, `${c.score.us}-${c.score.them}`]), [[1, 'bottom', 'us', '4-2']]);
+  assert.deepEqual(f.biggestDeficit, { us: 2, them: 8 });
+});
+
 test('the other sports: the score, and no plays', () => {
   const f = summarizeGame({ game: { is_home: false, status: 'final', live: { home_score: 21, away_score: 14 }, sport: 'football' }, teams: { us: 'Us', them: 'Them' }, events: [] });
   assert.equal(f.result, 'L');
