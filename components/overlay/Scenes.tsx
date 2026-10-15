@@ -8,6 +8,7 @@ import { inkOn } from '@/lib/format';
 import { boxScore, feedView, type Feed } from '@/lib/onair';
 import * as L from '@/lib/rules/logic.js';
 import { periodName, type SportLive } from '@/lib/sports';
+import { Backdrop, Confetti, Countdown as Dial, CountUp, Digits, Medallion, Ring, Wipe, teamVars, titleSize } from '@/components/overlay/Showtime';
 
 // v4's full-frame scenes on the v5 stream: Starting Soon (the sport's field
 // drawing itself, both teams, a countdown to first pitch and the venue's
@@ -68,6 +69,17 @@ function WeatherLine({ w, where }: { w: Weather | null; where?: string | null })
   );
 }
 
+function StWx({ w, where, className, style }: { w: Weather | null; where?: string | null; className?: string; style?: React.CSSProperties }) {
+  if (!w && !where) return null;
+  return (
+    <div className={`st-wx${className ? ` ${className}` : ''}`} style={style}>
+      {w && <><span className="ic" aria-hidden="true">{w.icon}</span><b>{w.temp}°</b><span>{w.text}</span>{w.wind ? <span>Wind {w.dir} {w.wind} mph</span> : null}{w.pop != null && <span>{w.pop}% rain</span>}</>}
+      {where && <span>{where}</span>}
+    </div>
+  );
+}
+const at = (s: string) => ({ '--in': s }) as React.CSSProperties;
+
 // A countdown in the scene: to first pitch, or to the restart.
 function Countdown({ at, now, done, label }: { at: string | null | undefined; now: number; done: string; label?: string }) {
   if (!at || !now) return null;
@@ -100,7 +112,8 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
   const scene = feed?.broadcast?.scene ?? null;
   const ticker = feed?.broadcast?.ticker;
   const tickText = ticker?.on && ticker.text?.trim() ? ticker.text.trim() : '';
-  const elevated = feed?.broadcast?.scene_style === 'elevated';
+  // Showtime is the default; Standard is the plain v4 set, for a slow machine.
+  const elevated = feed?.broadcast?.scene_style !== 'standard';
   const game = feed?.game ?? null;
   let body: React.ReactNode = null;
 
@@ -119,7 +132,35 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
     if (scene.kind === 'starting') {
       const [label, start] = START[sport] ?? START.baseball;
       const when = game?.starts_at ? new Date(game.starts_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-      body = (
+      const title = scene.title || 'Game starting soon';
+      const ms = game?.starts_at && now ? Date.parse(game.starts_at) - now : null;
+      body = elevated ? (
+        <div className="st st-start" style={style}>
+          <Backdrop />
+          <Wipe a={away.color} b={home.color} />
+          <div className="st-top">
+            <span className="st-chip st-from-l"><i className="dot" />Pregame · {label}</span>
+            {feed.season?.name && <span className="st-chip st-from-r">{feed.season.name}</span>}
+          </div>
+          <div className="st-stage">
+            <h1 className="st-title" style={{ fontSize: titleSize(title, 8.4, 140) }}>{title}</h1>
+            <div className="st-match">
+              <div className="st-side st-from-l" style={at('1s')}><Medallion b={away} abbr={aAbbr} /><strong style={{ fontSize: size }}>{away.display}</strong><i className="st-bar" style={teamVars(away)} /></div>
+              <div className="st-vs"><Ring text={when ? `${start} ${when}` : title} /><b>VS</b></div>
+              <div className="st-side st-from-r" style={at('1s')}><Medallion b={home} abbr={hAbbr} /><strong style={{ fontSize: size }}>{home.display}</strong><i className="st-bar" style={teamVars(home)} /></div>
+            </div>
+          </div>
+          <div className="st-foot st-in" style={at('1.6s')}>
+            {(ms != null || when) && (
+              <div className={`st-clock st-glass${ms != null && ms > 0 && ms <= 60000 ? ' soon' : ''}`}>
+                <small>{start}{when && <em>{when}</em>}</small>
+                {ms == null ? null : ms <= 0 ? <b className="now">Starting now</b> : <Digits text={clockText(Math.round(ms / 1000))} />}
+              </div>
+            )}
+            <StWx w={weather} where={where} />
+          </div>
+        </div>
+      ) : (
         <div className="scn scn-starting" style={style}>
           <Field sport={sport} />
           <div className="scn-kicker"><span>{label}</span><b>{scene.title || 'Game starting soon'}</b></div>
@@ -140,7 +181,39 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
       const winner = story.winner === 'home' ? home : story.winner === 'away' ? away : null;
       const how = story.walkoff ? 'Walk-off' : story.runRule ? 'Run rule' : '';
       const box = v && sport === 'baseball' ? boxScore(v.g, feed.season?.game_innings ?? 7) : null;
-      body = (
+      const title = scene.title || (winner ? `${winner.display} win` : 'Final');
+      const side = (k: 'away' | 'home') => (story.winner === k ? ' won' : story.winner ? ' lost' : '');
+      const team = (k: 'away' | 'home') => {
+        const b = k === 'away' ? away : home, n = k === 'away' ? as : hs;
+        return (
+          <div className={`st-team st-glass ${k}${side(k)} ${k === 'away' ? 'st-from-l' : 'st-from-r'}`} style={{ ...teamVars(b), '--in': '1.1s' } as React.CSSProperties}>
+            <Medallion b={b} abbr={k === 'away' ? aAbbr : hAbbr} size={13} glory={story.winner === k} />
+            <div className="who"><small>{story.winner === k ? 'Winner' : k === 'away' ? 'Away' : 'Home'}</small><strong>{b.display}</strong></div>
+            <span className="pts"><CountUp n={n} delay={1.5} /></span>
+          </div>
+        );
+      };
+      body = elevated ? (
+        <div className="st st-final" style={{ ...style, '--win': winner?.color ?? 'transparent' } as React.CSSProperties}>
+          <Backdrop floor={false} />
+          {winner && <i className="st-flood" />}
+          <Wipe a={away.color} b={home.color} />
+          {winner && <Confetti colors={[winner.color, winner.color2, '#ffd25e', '#ffffff']} />}
+          <span className="st-chip gold st-in" style={at('0.8s')}>Final{how ? ` · ${how}` : ''}</span>
+          <h1 className="st-title" style={{ '--in': '0.95s', fontSize: titleSize(title, 9, 150) } as React.CSSProperties}>{title}</h1>
+          <div className="st-score">{team('away')}<div className="st-mid st-in" style={at('1.3s')}><i />Final<i /></div>{team('home')}</div>
+          {box && (
+            <table className="st-line st-glass st-in" style={at('1.5s')}>
+              <thead><tr><th />{box.innings.map((n) => <td key={n}>{n}</td>)}<td className="r">R</td><td>H</td><td>E</td></tr></thead>
+              <tbody>
+                {([[away, box.away, box.awayTot], [home, box.home, box.homeTot]] as const).map(([b, cells, tot], i) => (
+                  <tr key={i}><th style={teamVars(b)}>{b.display}</th>{[...cells, ...tot].map((c, j) => <td key={j} className={j === cells.length ? 'r' : undefined} style={{ '--i': j + i * 2 } as React.CSSProperties}>{c}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
         <div className="scn scn-final" style={style}>
           <div className="scn-kicker"><span>{how || 'Final'}</span><b>{scene.title || (winner ? `${winner.display} win` : 'Final')}</b></div>
           <div className="scn-main">
@@ -169,7 +242,36 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
         ? `${v.g.half === 'bottom' ? 'Bottom' : 'Top'} of the ${['', '1st', '2nd', '3rd'][v.g.inning | 0] ?? `${v.g.inning}th`}${v.g.outs ? ` · ${v.g.outs} out${v.g.outs > 1 ? 's' : ''}` : ''}`
         : periodName(sport, live);
       const clock = reason !== 'suspended' && reason !== 'called';
-      body = (
+      const ms = scene.at && now ? Date.parse(scene.at) - now : null;
+      const total = scene.at && scene.since ? Date.parse(scene.at) - Date.parse(scene.since) : 30 * 60000;
+      const radar = reason === 'lightning' || reason === 'rain' || reason === 'weather';
+      body = elevated ? (
+        <div className="st st-paused" style={style}>
+          <Backdrop floor={false} motes={false} />
+          <Storm reason={reason} strike={strike} />
+          <Wipe a={away.color} b={home.color} />
+          <div className={`st-radar st-in${radar ? '' : ' calm'}`} style={at('0.9s')}>
+            {radar ? <><i className="cell c1" /><i className="cell c2" /><i className="cell c3" /><i className="sweep" /><i className="you" /></> : <span className="glyph">{p.icon}</span>}
+          </div>
+          <div className="st-pcol">
+            <span className="st-chip st-from-r" style={at('0.8s')}>{p.icon} {p.tag}</span>
+            <h1 className="st-title" style={at('0.95s')}>{p.title}</h1>
+            <p className="st-in" style={at('1.1s')}>{p.sub}</p>
+            {clock && ms != null && (
+              <div className="st-restart st-glass st-in" style={at('1.3s')}>
+                <div className="dialw"><Dial left={ms} total={total} /><span aria-hidden="true">{p.icon}</span></div>
+                <div><small>Expected restart</small>{ms <= 0 ? <b className="now">Any minute</b> : <Digits text={clockText(Math.round(ms / 1000))} />}</div>
+              </div>
+            )}
+            <StWx w={weather} where={where} className="st-in" style={at('1.5s')} />
+          </div>
+          <div className="st-strip st-glass st-in" style={at('1.6s')}>
+            <span style={teamVars(away)}><i />{away.display}<b>{as}</b></span>
+            <span style={teamVars(home)}><i />{home.display}<b>{hs}</b></span>
+            <small>{stands}</small>
+          </div>
+        </div>
+      ) : (
         <div className={`scn scn-paused pz-${reason}`} style={style}>
           <Storm reason={reason} strike={strike} />
           <div className="scn-kicker"><span>{p.icon} {p.tag}</span><b>{p.title}</b></div>

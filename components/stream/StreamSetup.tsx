@@ -8,7 +8,7 @@ import { CopyLink } from '@/components/CopyLink';
 import { BugPreview, brandOf } from '@/components/TeamBrand';
 import { demoFeed } from '@/lib/demo-feed';
 import { BUG_SCALE, CARD_SCALE, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
-import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
+import { mergeBroadcast, type Broadcast, type BroadcastPatch, type Scene } from '@/lib/broadcast';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Team } from '@/lib/types';
 
@@ -59,6 +59,13 @@ const SHOWS: [keyof NonNullable<Broadcast['show']>, string, string, boolean][] =
   ['pitchcount', 'Pitch count', 'Beside the pitcher', true], ['rhe', 'Hits and errors', 'Beside each score', false], ['runrule', 'Run rule', 'A badge when the lead reaches it', true],
 ];
 
+// The scenes the preview can show. Mid-inning is the board between halves.
+type PrevKey = 'starting' | 'mid' | 'final' | 'lightning' | 'rain';
+const SCENE_OF: Record<Exclude<PrevKey, 'mid'>, Scene> = {
+  starting: { kind: 'starting' }, final: { kind: 'final' }, lightning: { kind: 'paused', reason: 'lightning' }, rain: { kind: 'paused', reason: 'rain' },
+};
+const SCENES: [PrevKey | null, string][] = [[null, 'None'], ['starting', 'Starting soon'], ['mid', 'Mid-inning'], ['final', 'Final'], ['lightning', 'Lightning delay'], ['rain', 'Rain delay']];
+
 // Every moment the stream can play, for a run-through from here.
 const ALL_FX = ['run', 'homerun', 'strikeout', 'doubleplay', 'stolenbase', 'walkoff', 'charge', 'touchdown', 'fieldgoal', 'turnover', 'goal', 'three', 'ace', 'bigplay'];
 
@@ -73,6 +80,8 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
   const [bugText, setBugText] = useState(channel.bug_text ?? '');
   const [bugUrl, setBugUrl] = useState(channel.bug_url ?? '');
   const [card, setCard] = useState<CardKind | null>(null);
+  const [prevKey, setPrevKey] = useState<Exclude<PrevKey, 'mid'> | null>(null);
+  const prevScene = prevKey ? SCENE_OF[prevKey] : null;
   const [bc, setBc] = useState<Broadcast>(channel.broadcast ?? {});
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
@@ -134,9 +143,9 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
     qr: { ...qr, on: !!link },
     bug: bugText.trim() || link ? { text: bugText.trim() || null, url: link } : null,
     sponsor: channel.sponsor_name ? { name: channel.sponsor_name, line: channel.sponsor_line, logo: channel.sponsor_logo } : null,
-    // The preview shows the look, never a scene or the ticker: those are for air.
-    broadcast: { ...bc, scene: null, ticker: undefined },
-  }), [team, look, lay, qr, bugText, link, bc, channel.show_line, channel.sponsor_name, channel.sponsor_line, channel.sponsor_logo]);
+    // The preview shows the look, and a scene only when one is picked below; the ticker is for air.
+    broadcast: { ...bc, scene: prevScene, ticker: undefined },
+  }), [team, look, lay, qr, bugText, link, bc, prevScene, channel.show_line, channel.sponsor_name, channel.sponsor_line, channel.sponsor_logo]);
 
   useEffect(() => {
     const post = () => frame.current?.contentWindow?.postMessage({ type: 'pb:demo', feed, card }, window.location.origin);
@@ -302,11 +311,21 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
 
       <section className="card pad">
         <h2>Scenes</h2>
-        <p className="hint">Starting Soon, Final and Game paused cover the whole picture; they are put up and taken down from On Air in the pad. Pick their style here.</p>
+        <p className="hint">Starting Soon, the mid-inning board, Final and Game paused cover the whole picture; they are put up and taken down from On Air in the pad. Showtime lights them in your colours, with a wipe, a countdown that rolls and confetti for the winner. Standard is the plain set, for a slow streaming computer.</p>
         <div className="pills" role="radiogroup" aria-label="Scene style">
-          {([['standard', 'Standard'], ['elevated', 'Elevated · network TV']] as const).map(([k, label]) => (
-            <label key={k} className="pill wide"><input type="radio" name="scene_style" checked={(bc.scene_style ?? 'standard') === k} onChange={() => setB({ scene_style: k === 'standard' ? null : k })} /><span>{label}</span></label>
+          {([['elevated', 'Showtime'], ['standard', 'Standard']] as const).map(([k, label]) => (
+            <label key={k} className="pill wide"><input type="radio" name="scene_style" checked={(bc.scene_style === 'standard' ? 'standard' : 'elevated') === k} onChange={() => setB({ scene_style: k === 'elevated' ? null : k })} /><span>{label}</span></label>
           ))}
+        </div>
+        <span className="legend">See one in the preview</span>
+        <div className="chips" role="radiogroup" aria-label="Scene shown in the preview">
+          {SCENES.map(([k, label]) => {
+            const on = k === 'mid' ? card === 'mid' : prevKey === k && card !== 'mid';
+            return (
+              <button key={label} type="button" role="radio" aria-checked={on} className={`chip${on ? ' on' : ''}`}
+                onClick={() => { setPrevKey(k === 'mid' ? null : k); setCard(k === 'mid' ? 'mid' : null); box.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>{label}</button>
+            );
+          })}
         </div>
       </section>
 

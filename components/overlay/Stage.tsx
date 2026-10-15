@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- logos are small files from Storage, shown at fixed sizes */
 import './overlay.css';
 import './themes.css';
+import { MidShow } from '@/components/overlay/Showtime';
 import { LOOK_BUGS } from '@/components/overlay/looks';
 import { homerText, type BugProps } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
@@ -162,9 +163,19 @@ function Box({ final, on, ...t }: BoxProps & { final: boolean; on: boolean }) {
 // Between halves the whole picture is the board: where the game stands, the
 // half that just ended, and who comes up next. It takes over by itself at the
 // third out (auto_mid) and gives the picture back on the next pitch.
-function MidScene({ title, tag, list, up, fresh, recap, scores, on, ...t }: BoxProps & {
+function MidScene({ title, tag, list, up, fresh, recap, scores, on, show, abbrs, sponsor, ...t }: BoxProps & {
   title: string; tag: string; list: BatterView[]; up: Brand; fresh: Fresh; recap: string[]; scores: { away: number; home: number }; on: boolean;
+  show: boolean; abbrs: { away: string; home: string }; sponsor: Feed['sponsor'];
 }) {
+  // Showtime, the elevated scenes' package, unless the Stream screen asks for Standard.
+  if (show) {
+    return (
+      <div className={`ov-mid${on ? ' on' : ''}`} aria-hidden={!on}>
+        {on && <MidShow tag={tag} title={title} away={t.away} home={t.home} abbrs={abbrs} scores={scores} recap={recap} list={list} up={up}
+          sponsor={sponsor ? { name: sponsor.name, logo: sponsor.logo } : null} line={<LineTable {...t} title="" fresh={fresh} />} />}
+      </div>
+    );
+  }
   const side = (b: Brand, score: number, lead: boolean) => (
     <div className={`md-team${lead ? ' lead' : ''}`} style={vars(b)}>
       <div className="md-slab">{b.logo && <img src={b.logo} alt="" />}<span style={fit(b.display, 6.4, 46)}>{b.display}</span></div>
@@ -333,7 +344,8 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
       style={{ '--bs': lay.bug.scale, '--cs': lay.cards.scale, ...(theme === 'custom' ? customVars(bc.custom) : {}) } as React.CSSProperties}>
       <style>{ROOT}</style>
       <MidScene box={box} away={away} home={home} title={breakText(g)} tag={g.half === 'bottom' ? `Mid ${g.inning}` : `End ${Math.max(1, (g.inning | 0) - 1)}`}
-        list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} recap={recap} scores={{ away: g.away_score | 0, home: g.home_score | 0 }} on={shown === 'mid'} />
+        list={air.dueUp} up={brandFor(air.batSide)} fresh={fresh} recap={recap} scores={{ away: g.away_score | 0, home: g.home_score | 0 }} on={shown === 'mid'}
+        show={bc.scene_style !== 'standard'} abbrs={own.abbrs} sponsor={feed.sponsor} />
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
       <Qr bug={feed.bug} qr={feed.qr} />
       <div className="ov-dock">

@@ -60,10 +60,10 @@ export function ScenesControl({ broadcast, look, onBroadcast, onSend }: {
           <input className="input" inputMode="numeric" value={mins} onChange={(e) => setMins(e.target.value)} disabled={reason === 'suspended' || reason === 'called'} />
         </label>
         <button type="button" className={`btn ${up('paused') ? 'btn-danger' : 'btn-quiet'}`} style={{ alignSelf: 'end' }}
-          onClick={() => onBroadcast({ scene: up('paused') ? null : { kind: 'paused', reason, at: at(mins) } })}>{up('paused') ? 'End the pause' : 'Pause the game'}</button>
+          onClick={() => onBroadcast({ scene: up('paused') ? null : { kind: 'paused', reason, at: at(mins), since: new Date().toISOString() } })}>{up('paused') ? 'End the pause' : 'Pause the game'}</button>
       </div>
       {up('paused') && scene?.reason === 'lightning' && (
-        <button type="button" className="pchoice" onClick={() => { onBroadcast({ scene: { ...scene, at: at('30') } }); onSend({ type: 'strike' }); }}>
+        <button type="button" className="pchoice" onClick={() => { onBroadcast({ scene: { ...scene, at: at('30'), since: new Date().toISOString() } }); onSend({ type: 'strike' }); }}>
           <b>New strike</b><small>Thunder on the stream; the 30 minutes start again</small>
         </button>
       )}
