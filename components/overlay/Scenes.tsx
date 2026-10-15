@@ -108,6 +108,24 @@ function Storm({ reason, strike }: { reason: NonNullable<Scene['reason']>; strik
   );
 }
 
+// The pregame blurb under the matchup on Starting Soon, when the operator put
+// one up for this game. Three short lines; any of the last two may be empty.
+const hasBlurb = (feed: Feed) => {
+  const b = feed.broadcast?.blurb;
+  return !!b && !!feed.game && b.game_id === feed.game.id && !!b.line1;
+};
+function BlurbLines({ feed, elevated, delay }: { feed: Feed; elevated: boolean; delay?: string }) {
+  const b = feed.broadcast?.blurb;
+  if (!b || !hasBlurb(feed)) return null;
+  return (
+    <div className={`scn-blurb${elevated ? ' st-glass st-in' : ''}`} style={delay ? ({ '--in': delay } as React.CSSProperties) : undefined}>
+      <b>{b.line1}</b>
+      {b.line2 && <span>{b.line2}</span>}
+      {b.storyline && <em>{b.storyline}</em>}
+    </div>
+  );
+}
+
 export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now: number; weather: Weather | null; strike: number }) {
   const scene = feed?.broadcast?.scene ?? null;
   const ticker = feed?.broadcast?.ticker;
@@ -136,7 +154,7 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
       const title = scene.title || 'Game starting soon';
       const ms = game?.starts_at && now ? Date.parse(game.starts_at) - now : null;
       body = elevated ? (
-        <div className="st st-start" style={style}>
+        <div className={`st st-start${hasBlurb(feed) ? ' has-blurb' : ''}`} style={style}>
           <Backdrop />
           <Wipe a={away.color} b={home.color} />
           <div className="st-top">
@@ -150,6 +168,7 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
               <div className="st-vs"><Ring text={when ? `${start} ${when}` : title} /><b>VS</b></div>
               <div className="st-side st-from-r" style={at('1s')}><Medallion b={home} abbr={hAbbr} /><strong style={{ fontSize: size }}>{home.display}</strong><i className="st-bar" style={teamVars(home)} /></div>
             </div>
+            <BlurbLines feed={feed} elevated delay="1.3s" />
           </div>
           <div className="st-foot st-in" style={at('1.6s')}>
             {(ms != null || when) && (
@@ -162,7 +181,7 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
           </div>
         </div>
       ) : (
-        <div className="scn scn-starting" style={style}>
+        <div className={`scn scn-starting${hasBlurb(feed) ? ' has-blurb' : ''}`} style={style}>
           <Field sport={sport} />
           <div className="scn-kicker"><span>{label}</span><b>{scene.title || 'Game starting soon'}</b></div>
           <div className="scn-main">
@@ -170,6 +189,7 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
             <div className="scn-vs">VS</div>
             <div className="scn-side"><TeamBlock b={home} abbr={hAbbr} /><strong style={{ fontSize: size }}>{home.display}</strong></div>
           </div>
+          <BlurbLines feed={feed} elevated={false} />
           <WeatherLine w={weather} where={where} />
           <Countdown at={game?.starts_at} now={now} done="Starting now" label={when ? `${start} · ${when}` : undefined} />
         </div>
