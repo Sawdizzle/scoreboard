@@ -31,7 +31,8 @@ test('media reads but cannot change; outsiders and the public see nothing', asyn
   await t.as('media', `delete from opponents where team_id = $1`, [team]);
   assert.equal((await t.as('owner', `select 1 from opponents where team_id = $1`, [team])).length, 1);
   assert.equal((await t.as('stranger', `select 1 from opponents`)).length, 0);
-  await fails(t.as(null, `select 1 from opponents`), /permission denied/);
+  assert.equal((await t.as(null, `select 1 from opponents`)).length, 0);
+  await fails(t.as(null, `select roster from opponents`), /permission denied/);
   await fails(t.as('stranger', `insert into opponents (team_id, name, abbr) values ($1, 'Krum', 'KRUM')`, [team]), /row-level security/);
   // An opponent can be renamed (the Opponents screen); a media seat cannot.
   await t.as('media', `update opponents set name = 'Other' where team_id = $1`, [team]);
@@ -52,6 +53,15 @@ test('a game against a listed opponent shows its logo and colours on the stream'
   assert.equal(f.opponent.color2, '#123456');
   const [{ p }] = await t.as<{ p: { opponent: { logo_url: string } } }>(null, `select public_game($1) p`, [game]);
   assert.equal(p.opponent.logo_url, 'https://example.test/k.png');
+  // The public team page embeds a played opponent's brand on its games; the roster stays staff only.
+  const [g] = await t.as<{ name: string; logo_url: string }>(null,
+    `select o.name, o.logo_url from games g join opponents o on o.id = g.opponent_id where g.id = $1`, [game]);
+  assert.deepEqual(g, { name: 'Sanger Wolves', logo_url: 'https://example.test/k.png' });
+  await fails(t.as(null, `select roster from opponents`), /permission denied/);
+  await fails(t.as(null, `select team_id from opponents`), /permission denied/);
+  await t.as('owner', `insert into opponents (team_id, name, abbr) values ($1, 'Never Played', 'NP')`, [team]);
+  assert.deepEqual((await t.as<{ name: string }>(null, `select name from opponents`)).map((r) => r.name), ['Sanger Wolves']);
+  assert.equal((await t.as('stranger', `select 1 from opponents`)).length, 0);
   // Another team's opponent cannot be put on a game.
   const [{ id: other }] = await t.as<{ id: string }>('stranger', `select id from create_team('River', 'RIV', '#2f63cc', '14U', null)`);
   await fails(t.as('stranger', `insert into games (team_id, opponent_name, opponent_abbr, opponent_id) values ($1, 'X', 'X', $2)`, [other, opp]), /not on this team/);
