@@ -283,8 +283,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .icon-btn.sm { width: 36px; height: 44px; border-radius: 10px; font-size: 11px; }
 .icon-btn[disabled] { opacity: 0.3; cursor: default; }
 .tag.dim { background: none; border: 1px dashed var(--line-2); color: var(--muted); }
-.save-bar { position: sticky; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35); }
+/* Save sits at the end of the form, in its place: it does not float over the page. */
+.save-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px;
+  padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line-2); }
 .save-bar .bad { color: var(--bad-text); }
 
 .game-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 4px; border-top: 1px solid var(--raised); }
