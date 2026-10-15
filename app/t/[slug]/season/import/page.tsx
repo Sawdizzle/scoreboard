@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronLeft } from '@/components/icons';
 import { ImportFlow } from '@/components/ImportFlow';
-import { listPlayers, listSeasons, loadTeam } from '@/lib/data';
+import { listPlayers, listSeasons, loadTeam, padScoredGames } from '@/lib/data';
+import { padGamesBySeason } from '@/lib/gamechanger';
 import { canEditTeam } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Import from GameChanger' };
@@ -12,7 +13,9 @@ export default async function ImportPage({ params, searchParams }: {
 }) {
   const { slug } = await params;
   const { supabase, team, role } = await loadTeam(slug);
-  const [seasons, players] = await Promise.all([listSeasons(supabase, team.id), listPlayers(supabase, team.id)]);
+  const [seasons, players, padGames] = await Promise.all([
+    listSeasons(supabase, team.id), listPlayers(supabase, team.id), padScoredGames(supabase, team.id),
+  ]);
   return (
     <div className="page" style={{ paddingTop: 6 }}>
       <div className="h-row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 2 }}>
@@ -24,7 +27,7 @@ export default async function ImportPage({ params, searchParams }: {
       ) : seasons.length === 0 ? (
         <p className="note note-plain">Create a season first: an import fills one season.</p>
       ) : (
-        <ImportFlow slug={slug} seasons={seasons} seasonId={(await searchParams).s}
+        <ImportFlow slug={slug} seasons={seasons} seasonId={(await searchParams).s} padGames={padGamesBySeason(padGames)}
           roster={players.map(({ id, number, first_name, last_name }) => ({ id, number, first_name, last_name }))} />
       )}
     </div>

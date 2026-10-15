@@ -3,16 +3,21 @@
 import { useMemo, useState } from 'react';
 import { importStats } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
-import { matchRows, parseGameChanger, type ImportRow, type RosterRef } from '@/lib/gamechanger';
+import { LocalTime } from '@/components/LocalTime';
+import { matchRows, padGameLabel, padGamesWhy, parseGameChanger, type ImportRow, type PadGame, type RosterRef } from '@/lib/gamechanger';
 import { batting, innings, rate3, type SeasonLine } from '@/lib/stats';
 import type { Season } from '@/lib/types';
 
 // Choose the export, see who each row is, import. The file never leaves the
 // browser as a file: it is read here, and only the rows chosen go to the
-// server, where every number is checked again.
-export function ImportFlow({ slug, seasons, roster, seasonId }: {
-  slug: string; seasons: Season[]; roster: RosterRef[]; seasonId?: string;
+// server, where every number is checked again. A season the pad has scored
+// games in is closed to imports (padGamesBlock), and says which games.
+export function ImportFlow({ slug, seasons, roster, seasonId, padGames }: {
+  slug: string; seasons: Season[]; roster: RosterRef[]; seasonId?: string; padGames: Record<string, PadGame[]>;
 }) {
+  const [season, setSeason] = useState(() =>
+    seasons.find((s) => s.id === seasonId)?.id ?? seasons.find((s) => s.is_current)?.id ?? seasons[0].id);
+  const scored = padGames[season] ?? [];
   const [rows, setRows] = useState<ImportRow[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -39,6 +44,21 @@ export function ImportFlow({ slug, seasons, roster, seasonId }: {
 
   return (
     <div className="stack" style={{ gap: 16 }}>
+      <label className="field"><span>Import into</span>
+        <select className="select" value={season} onChange={(e) => setSeason(e.currentTarget.value)}>
+          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_current ? ' (current)' : ''}</option>)}
+        </select>
+      </label>
+
+      {scored.length > 0 ? (
+        <div role="alert" className="note note-bad stack" style={{ gap: 8 }}>
+          <strong>No import for this season: {scored.length === 1 ? '1 game was' : `${scored.length} games were`} scored in Scoreboard.</strong>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {scored.map((g) => <li key={g.id}><LocalTime iso={g.starts_at} mode="day" /> {padGameLabel(g)}</li>)}
+          </ul>
+          <span>{padGamesWhy(scored.length)}</span>
+        </div>
+      ) : (<>
       <label className="field"><span>GameChanger export (.csv)</span>
         <input className="input file" type="file" accept=".csv,text/csv" onChange={(e) => read(e.currentTarget.files?.[0])} />
       </label>
@@ -48,11 +68,7 @@ export function ImportFlow({ slug, seasons, roster, seasonId }: {
       {rows && (
         <ActionForm action={importStats.bind(null, slug)} className="form">
           <input type="hidden" name="rows" value={payload} />
-          <label className="field"><span>Import into</span>
-            <select className="select" name="season_id" defaultValue={seasonId ?? seasons.find((s) => s.is_current)?.id}>
-              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_current ? ' (current)' : ''}</option>)}
-            </select>
-          </label>
+          <input type="hidden" name="season_id" value={season} />
           {warnings.map((w) => <p key={w} className="note note-plain">{w}</p>)}
 
           <div className="col-head" style={{ padding: '4px 4px 0' }}>
@@ -89,6 +105,7 @@ export function ImportFlow({ slug, seasons, roster, seasonId }: {
           <Submit className="btn btn-primary btn-big" busy="Importing…">Import {rows.length - choice.filter((c) => c === 'skip').length} players</Submit>
         </ActionForm>
       )}
+      </>)}
     </div>
   );
 }

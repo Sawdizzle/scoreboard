@@ -160,7 +160,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'staff' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={[]} origin="http://localhost:3000" /></>}
       {v === 'staff-link' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={invites} origin="http://localhost:3000" /></>}
       {v === 'season' && <SeasonView team={team} role={role} seasons={seasons} stats={stats} players={players} games={schedule} />}
-      {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)} /></div>}
+      {v === 'import' && <div className="page"><ImportFlow slug={team.slug} seasons={seasons} roster={players.slice(0, 6)}
+        padGames={{ s1: [{ id: 'g1', season_id: 's1', opponent_name: 'Sanger Wolf', is_home: true, starts_at: '2026-10-17T17:00:00Z' }] }} /></div>}
       {v === 'season-empty' && <SeasonView team={team} role={role} seasons={seasons} />}
       {v === 'settings' && <>{tabs}<SettingsView team={team} role={role} publicUrl="http://localhost:3000/team/blue-steel-14u" /></>}
       {v === 'stream' && <>{tabs}<StreamSetup team={team} canLead={role !== 'coach'} streamUrl="http://localhost:3000/overlay/5f0c2c1e-0000-4000-8000-000000000000"

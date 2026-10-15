@@ -143,3 +143,31 @@ export function matchRows(rows: ImportRow[], roster: RosterRef[]): (string | nul
   }
   return out;
 }
+
+// A season the pad has scored games in takes no GameChanger import. Season
+// stats are the import plus every game scored here (see season_stats), and
+// GameChanger's season totals already hold those games, so each one would
+// count twice. A cut-off date would rest on the file being cut to match,
+// which nothing here can check, so the import is simply closed for that season.
+export type PadGame = { id: string; season_id: string; opponent_name: string; is_home: boolean; starts_at: string | null };
+export const padGameLabel = (g: Pick<PadGame, 'opponent_name' | 'is_home'>) => `${g.is_home ? 'vs' : 'at'} ${g.opponent_name}`;
+
+export function padGamesBySeason(games: PadGame[]) {
+  const out: Record<string, PadGame[]> = {};
+  for (const g of games) (out[g.season_id] ??= []).push(g);
+  return out;
+}
+
+// Why, for the import screen, which lists the games itself.
+export function padGamesWhy(n: number) {
+  const one = n === 1;
+  return `GameChanger's season totals already include ${one ? 'it' : 'them'}, so importing would count ${one ? 'that game' : 'those games'} twice. `
+    + 'Stats for this season now come from the pad, and any earlier import stays as it is.';
+}
+
+export function padGamesBlock(games: Pick<PadGame, 'opponent_name' | 'is_home'>[]): string | null {
+  const n = games.length;
+  if (!n) return null;
+  return `${n === 1 ? '1 game' : `${n} games`} in this season ${n === 1 ? 'was' : 'were'} scored in Scoreboard `
+    + `(${games.map(padGameLabel).join(', ')}). ${padGamesWhy(n)}`;
+}

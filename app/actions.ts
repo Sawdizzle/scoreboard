@@ -7,12 +7,12 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
-import { listOpponents, loadTeam, safeNext } from '@/lib/data';
+import { listOpponents, loadTeam, padScoredGames, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
 import { geocodeAddress, tournamentUrl } from '@/lib/geo';
 import { abbrFor } from '@/lib/format';
-import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
+import { emptyCounts, padGamesBlock, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
 import { SPORTS, type Sport } from '@/lib/sports';
 import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
@@ -409,6 +409,10 @@ export async function importStats(slug: string, _: FormState, fd: FormData): Pro
   if (choices.length > 60) return { error: 'An import is at most 60 players.' };
 
   const { supabase, team } = await loadTeam(slug);
+  // The page already says so; this holds whatever the browser sent.
+  let blocked: string | null;
+  try { blocked = padGamesBlock(await padScoredGames(supabase, team.id, seasonId)); } catch { return { error: 'Could not check this season\'s games. Try again.' }; }
+  if (blocked) return { error: blocked };
   const kept = choices.filter((c) => c && c.match !== 'skip');
   if (!kept.length) return { error: 'Every row is set to skip.' };
 

@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient, supabaseConfigured } from './supabase/server';
+import type { PadGame } from './gamechanger';
 import type { SeasonLine } from './stats';
 import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
@@ -108,6 +109,20 @@ export async function listGames(db: Db, teamId: string, seasonId?: string) {
   if (seasonId) q = q.eq('season_id', seasonId);
   const { data } = await q.order('starts_at', { ascending: true, nullsFirst: false });
   return (data ?? []) as unknown as Game[];
+}
+// Games the pad has scored for us that count for stats, by season if given:
+// season stats already hold them, so their season takes no GameChanger import.
+// One game_stats row per game is enough to know. A failed read throws, so
+// the import is never let through on a guess.
+export async function padScoredGames(db: Db, teamId: string, seasonId?: string) {
+  let q = db.from('games').select('id, season_id, opponent_name, is_home, starts_at, game_stats!inner(id)')
+    .eq('team_id', teamId).eq('counts_for_stats', true).not('season_id', 'is', null)
+    .eq('game_stats.side', 'us').limit(1, { referencedTable: 'game_stats' });
+  if (seasonId) q = q.eq('season_id', seasonId);
+  const { data, error } = await q.order('starts_at', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(({ id, season_id, opponent_name, is_home, starts_at }) =>
+    ({ id, season_id, opponent_name, is_home, starts_at })) as PadGame[];
 }
 export async function getGame(db: Db, teamId: string, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
