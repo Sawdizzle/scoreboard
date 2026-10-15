@@ -5,6 +5,7 @@ import { Plus } from '@/components/icons';
 import { StatTables } from '@/components/StatTables';
 import { ScheduleList } from '@/components/GameBits';
 import { guessSeason, shortDate } from '@/lib/format';
+import { splitSchedule } from '@/lib/schedule';
 import { batting, rate3, type SeasonLine } from '@/lib/stats';
 import { canEditTeam, canRunGames, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
 
@@ -46,6 +47,7 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
   const dates = sel && (sel.starts_on || sel.ends_on)
     ? [shortDate(sel.starts_on) || 'Open start', shortDate(sel.ends_on) || 'open end'].join(' to ')
     : null;
+  const { upcoming, completed } = splitSchedule(games);
   return (
     <div className="page wide" style={{ paddingTop: 10 }}>
       {seasons.length > 0 && (
@@ -73,8 +75,19 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
               <h2 className="h-sec">Schedule</h2>
               {canRunGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
             </div>
-            {games.length ? <ScheduleList slug={team.slug} games={games} /> : <p className="sub" style={{ padding: '0 4px' }}>No games in {sel.name} yet.</p>}
+            {upcoming.length ? <ScheduleList slug={team.slug} games={upcoming} />
+              : <p className="sub" style={{ padding: '0 4px' }}>{completed.length ? `No games left in ${sel.name}.` : `No games in ${sel.name} yet.`}</p>}
           </section>
+
+          {completed.length > 0 && (
+            <section className="stack" style={{ gap: 6 }}>
+              <div className="h-row" style={{ padding: '0 4px', alignItems: 'center' }}>
+                <h2 className="h-sec">Completed</h2>
+                <span className="sub">{completed.length} played</span>
+              </div>
+              <ScheduleList slug={team.slug} games={completed} />
+            </section>
+          )}
 
           {stats.length > 0 ? (
             <>
