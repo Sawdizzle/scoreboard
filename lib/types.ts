@@ -28,6 +28,8 @@ export const canEditTeam = (role: Role | null) => role === 'organizer' || role =
 export const canManageSeats = (role: Role | null) => role === 'organizer';
 // Games and lineups: anyone who coaches or scores. Media watches.
 export const canRunGames = (role: Role | null) => role !== null && role !== 'media';
+// AI recaps: organizers and coaches write and publish them.
+export const canWriteRecaps = (role: Role | null) => role === 'organizer' || role === 'head_coach' || role === 'coach';
 
 export const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'UT'] as const;
 export type Position = (typeof POSITIONS)[number];

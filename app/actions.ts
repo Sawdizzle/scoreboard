@@ -14,6 +14,7 @@ import { geocodeAddress, tournamentUrl } from '@/lib/geo';
 import { abbrFor } from '@/lib/format';
 import { emptyCounts, padGamesBlock, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
+import { RecapContent } from '@/lib/recap';
 import { SPORTS, type Sport } from '@/lib/sports';
 import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
@@ -727,4 +728,36 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   }
   revalidatePath(`/t/${slug}`, 'layout');
   return { ok: 'Lineup saved.' };
+}
+
+// ---- Recaps -------------------------------------------------------------------
+// Claude writes the draft (app/api/ai/recap); these save the coach's edits and
+// publish it to the public game page, or take it back down.
+export async function saveRecap(slug: string, gameId: string, _: FormState, fd: FormData): Promise<FormState> {
+  let raw: unknown;
+  try { raw = JSON.parse(str(fd, 'content')); } catch { return { error: 'The recap did not come through. Try Save again.' }; }
+  const parsed = RecapContent.safeParse(raw);
+  if (!parsed.success) return { error: 'Something in that recap is not valid. Reload and try again.' };
+  if (parsed.data.social.x.length > 280) return { error: `The X post is ${parsed.data.social.x.length} characters; keep it to 280.` };
+  const { supabase, team, userId } = await loadTeam(slug);
+  const { data, error } = await supabase.from('game_recaps')
+    .update({ content: parsed.data, edited_at: new Date().toISOString(), updated_by: userId })
+    .eq('team_id', team.id).eq('game_id', gameId).select('status');
+  if (error) return { error: say(error) };
+  if (!data?.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}/games/${gameId}`);
+  if (data[0].status === 'published') revalidatePath(`/team/${slug}/game/${gameId}`);
+  return { ok: data[0].status === 'published' ? 'Saved. The public page shows the new text.' : 'Saved.' };
+}
+
+export async function publishRecap(slug: string, gameId: string, publish: boolean, _: FormState): Promise<FormState> {
+  const { supabase, team, userId } = await loadTeam(slug);
+  const { data, error } = await supabase.from('game_recaps')
+    .update({ status: publish ? 'published' : 'draft', published_at: publish ? new Date().toISOString() : null, updated_by: userId })
+    .eq('team_id', team.id).eq('game_id', gameId).select('game_id');
+  if (error) return { error: say(error) };
+  if (!data?.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}/games/${gameId}`);
+  revalidatePath(`/team/${slug}/game/${gameId}`);
+  return { ok: publish ? 'Published on the public game page.' : 'Taken down. It is a draft again.' };
 }
