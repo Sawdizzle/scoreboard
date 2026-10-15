@@ -167,7 +167,7 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
   }, []);
 
   return (
-    <div className="page stream">
+    <div className="page wide stream">
       <div className="stream-prev" ref={box}>
         <iframe ref={frame} src="/overlay/demo" title="Stream preview" tabIndex={-1} />
         <span>Preview · made-up game</span>

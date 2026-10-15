@@ -47,7 +47,7 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
     ? [shortDate(sel.starts_on) || 'Open start', shortDate(sel.ends_on) || 'open end'].join(' to ')
     : null;
   return (
-    <div className="page" style={{ paddingTop: 10 }}>
+    <div className="page wide" style={{ paddingTop: 10 }}>
       {seasons.length > 0 && (
         <nav className="chips" aria-label="Seasons">
           {seasons.map((s) => (

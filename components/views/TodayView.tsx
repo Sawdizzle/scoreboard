@@ -26,7 +26,8 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
       meta: season ? season.name : 'Name the season the stats will count for' },
   ];
   return (
-    <div className="page" style={{ paddingTop: 10 }}>
+    <div className="page wide today" style={{ paddingTop: 10 }}>
+      <h1 className="wide-title disp">Today</h1>
       {game ? (
         <section className="card next-game">
           <div className="next-top">
@@ -78,7 +79,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
         </section>
       )}
 
-      <section>
+      <section className="setup">
         <div className="h-row" style={{ padding: '2px 4px 6px' }}>
           <h2 className="h-sec">Team setup</h2>
           {!canEditTeam(role) && <span className="sub">View only for your seat</span>}
