@@ -1,0 +1,48 @@
+// AI recaps: drafts are staff only; a published recap is public; only
+// organizers and coaches write one; usage rows stay with their team.
+import { test, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { makeDb } from './db.ts';
+
+type Db = Awaited<ReturnType<typeof makeDb>>;
+let t: Db;
+let team = '', other = '', game = '', otherGame = '';
+const content = JSON.stringify({ headline: 'Steel win', recap: 'They won.' });
+
+before(async () => {
+  t = await makeDb();
+  await t.signUp('owner', 'Olive');
+  await t.signUp('stranger', 'Sam');
+  await t.signUp('rival', 'Rita');
+  [{ id: team }] = await t.as<{ id: string }>('owner', `select id from create_team('Blue Steel', 'STEEL', '#2f63cc', '14U', 'Fall 2026')`);
+  [{ id: other }] = await t.as<{ id: string }>('rival', `select id from create_team('Hawks', 'HAWKS', '#cc2f2f', '14U', 'Fall 2026')`);
+  [{ id: game }] = await t.as<{ id: string }>('owner', `insert into games (team_id, opponent_name, opponent_abbr) values ($1, 'Hawks', 'HAWKS') returning id`, [team]);
+  [{ id: otherGame }] = await t.as<{ id: string }>('rival', `insert into games (team_id, opponent_name, opponent_abbr) values ($1, 'Steel', 'STEEL') returning id`, [other]);
+});
+
+test('staff write a draft; nobody else sees it until it is published', async () => {
+  await t.as('owner', `insert into game_recaps (game_id, team_id, content, facts, model) values ($1, $2, $3, '{}', 'claude-sonnet-5-5')`, [game, team, content]);
+  assert.equal((await t.as('owner', `select 1 from game_recaps where game_id = $1`, [game])).length, 1);
+  assert.equal((await t.as(null, `select 1 from game_recaps where game_id = $1`, [game])).length, 0);
+  assert.equal((await t.as('stranger', `select 1 from game_recaps where game_id = $1`, [game])).length, 0);
+  await t.as('owner', `update game_recaps set status = 'published', published_at = now() where game_id = $1`, [game]);
+  assert.equal((await t.as(null, `select 1 from game_recaps where game_id = $1`, [game])).length, 1);
+});
+
+test('a recap belongs to its game’s team, and only that team’s staff write it', async () => {
+  // Another team's staff cannot file a recap under our game, nor theirs under ours.
+  await assert.rejects(t.as('rival', `insert into game_recaps (game_id, team_id, content, facts) values ($1, $2, $3, '{}')`, [otherGame, team, content]));
+  await assert.rejects(t.as('rival', `insert into game_recaps (game_id, team_id, content, facts) values ($1, $2, $3, '{}')`, [game, other, content]));
+  await assert.rejects(t.as('stranger', `insert into game_recaps (game_id, team_id, content, facts) values ($1, $2, $3, '{}')`, [otherGame, other, content]));
+  const changed = await t.as('rival', `update game_recaps set content = '{"headline":"x"}' where game_id = $1 returning 1`, [game]);
+  assert.equal(changed.length, 0);
+});
+
+test('usage rows: staff add their own team’s, and only they read them', async () => {
+  await t.as('owner', `insert into ai_usage (team_id, game_id, kind, model, input_tokens, output_tokens, ok) values ($1, $2, 'recap', 'claude-sonnet-5-5', 1200, 800, true)`, [team, game]);
+  await assert.rejects(t.as('rival', `insert into ai_usage (team_id, game_id, kind, model, ok) values ($1, $2, 'recap', 'm', true)`, [other, game]));
+  await assert.rejects(t.as('stranger', `insert into ai_usage (team_id, kind, model, ok) values ($1, 'recap', 'm', true)`, [team]));
+  assert.equal((await t.as('owner', `select 1 from ai_usage where team_id = $1`, [team])).length, 1);
+  assert.equal((await t.as('rival', `select 1 from ai_usage where team_id = $1`, [team])).length, 0);
+  await assert.rejects(t.as(null, `select 1 from ai_usage`));
+});

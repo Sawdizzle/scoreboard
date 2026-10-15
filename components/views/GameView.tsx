@@ -6,11 +6,12 @@ import { GameFields } from '@/components/GameFields';
 import { Matchup, Readiness } from '@/components/GameBits';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
+import { RecapCard, type RecapRow } from '@/components/RecapCard';
 import { SPORT_LABEL } from '@/lib/sports';
-import { canEditTeam, canRunGames, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
+import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
-export function GameView({ team, role, game, lineups, seasons }: {
-  team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[];
+export function GameView({ team, role, game, lineups, seasons, recap = null }: {
+  team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[]; recap?: RecapRow | null;
 }) {
   const base = `/t/${team.slug}/games/${game.id}`;
   const run = canRunGames(role);
@@ -51,6 +52,10 @@ export function GameView({ team, role, game, lineups, seasons }: {
         <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary btn-big">
           {game.status === 'live' ? 'Back to the pad' : game.status === 'final' ? 'Open the pad · final' : 'Open the pad'}
         </Link>
+      )}
+
+      {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && (
+        <RecapCard key={`${recap?.generated_at}|${recap?.status}|${recap?.edited_at}`} slug={team.slug} gameId={game.id} initial={recap} />
       )}
 
       {run && (

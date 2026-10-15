@@ -35,7 +35,7 @@ function BoxTable({ title, cols, rows }: { title: string; cols: string[]; rows: 
 
 // The public game page. It asks again every few seconds while the game is on;
 // an answer with nothing new is one line.
-export function LiveGame({ initial }: { initial: PublicGame }) {
+export function LiveGame({ initial, recap = null }: { initial: PublicGame; recap?: { headline: string; recap: string } | null }) {
   const [game, setGame] = useState(initial);
   const first = useRef(initial);
 
@@ -116,6 +116,14 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
               </tbody>
             </table>
           </div>
+        )}
+
+        {recap && status === 'final' && (
+          <article className="card pad pub-recap">
+            <span className="eyebrow gold">Recap</span>
+            <h2 className="h-sec" style={{ fontSize: 20 }}>{recap.headline}</h2>
+            {recap.recap.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => <p key={i} style={{ margin: 0, lineHeight: 1.55 }}>{para.trim()}</p>)}
+          </article>
         )}
 
         {ball && status !== 'scheduled' && !imported && (['away', 'home'] as const).map((e) => {
