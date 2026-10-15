@@ -28,13 +28,15 @@ export type Line = Partial<Record<StatKey, number>>;
 // Nine places, as v4 had: the three corners and middles along the top and bottom, and the middle row.
 export const BUG_POS = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br'] as const;
 export type BugPos = (typeof BUG_POS)[number];
-export type Layout = { bug: { scale: number; pos: BugPos }; cards: { scale: number } };
+// The stat cards slide out from behind the scorebug ('bug'), or stand on their own in any of the nine places.
+export type CardPos = 'bug' | BugPos;
+export type Layout = { bug: { scale: number; pos: BugPos }; cards: { scale: number; pos: CardPos } };
 export const BUG_SCALE = { min: 0.3, max: 1.2 }, CARD_SCALE = { min: 0.4, max: 1.2 };
 export function layoutOf(l: Feed['layout']): Layout {
   const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
   return {
     bug: { scale: num(l?.bug?.scale, BUG_SCALE.min, BUG_SCALE.max, 0.6), pos: (BUG_POS as readonly string[]).includes(l?.bug?.pos as string) ? (l!.bug!.pos as BugPos) : 'bl' },
-    cards: { scale: num(l?.cards?.scale, CARD_SCALE.min, CARD_SCALE.max, 0.75) },
+    cards: { scale: num(l?.cards?.scale, CARD_SCALE.min, CARD_SCALE.max, 0.75), pos: (BUG_POS as readonly string[]).includes(l?.cards?.pos as string) ? (l!.cards!.pos as BugPos) : 'bug' },
   };
 }
 

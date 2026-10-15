@@ -7,7 +7,7 @@ import { ActionForm, Submit } from '@/components/ActionForm';
 import { CopyLink } from '@/components/CopyLink';
 import { BugPreview, brandOf } from '@/components/TeamBrand';
 import { demoFeed } from '@/lib/demo-feed';
-import { BUG_SCALE, CARD_SCALE, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
+import { BUG_SCALE, CARD_SCALE, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type CardPos, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch, type Scene } from '@/lib/broadcast';
 import { browserClient } from '@/lib/supabase/browser';
 import type { Team } from '@/lib/types';
@@ -19,6 +19,8 @@ export type StreamChannel = {
 
 const BUG_AT: [BugPos, string][] = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Middle left'], ['mc', 'Middle'], ['mr', 'Middle right'],
   ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
+// Cards on their own start across the picture from the scorebug, where there is room.
+const FREE_DEFAULT: Record<BugPos, BugPos> = { tl: 'tr', tc: 'bc', tr: 'tl', ml: 'mr', mc: 'bc', mr: 'ml', bl: 'br', bc: 'tc', br: 'bl' };
 const QR_AT: (QrPos | null)[] = ['tl', 'tc', 'tr', 'ml', null, 'mr', 'bl', 'bc', 'br'];
 const QR_LABEL: Record<QrPos, string> = { tl: 'Top left', tc: 'Top centre', tr: 'Top right', ml: 'Middle left', mr: 'Middle right', bl: 'Bottom left', bc: 'Bottom centre', br: 'Bottom right' };
 const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batter'], ['pitcher', 'Pitcher'], ['dueup', 'Due up'], ['leaders', 'Leaders'], ['box', 'Box score'],
@@ -135,6 +137,8 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
   const pickLook = (l: Look) => { setLook(l); save({ look: l, layout: lay, qr }); };
   const moveLay = (l: Layout) => { setLay(l); save({ look, layout: l, qr }); };
   const moveQr = (q: QrLayer) => { setQr(q); save({ look, layout: lay, qr: q }); };
+  // Moving the cards shows one in the preview, so there is something to see move.
+  const placeCards = (pos: CardPos) => { moveLay({ ...lay, cards: { ...lay.cards, pos } }); if (!card) setCard('batter'); };
 
   const link = /^https:\/\/\S+\.\S+/.test(bugUrl.trim()) ? bugUrl.trim() : /^[\w-]+(\.[\w-]+)+/.test(bugUrl.trim()) ? `https://${bugUrl.trim()}` : null;
   const feed = useMemo(() => demoFeed(team, {
@@ -278,10 +282,30 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
 
       <section className="card pad">
         <h2>Stat cards</h2>
-        <p className="hint">A card slides out from behind the scorebug, on whichever side has room. Pick one above to see it; they are raised and cleared from On Air in the pad.</p>
+        <p className="hint">Cards are raised and cleared from On Air in the pad. They can slide out from behind the scorebug, or stand on their own anywhere on the picture. Pick a card above to see it here.</p>
+        <div className="pills" role="radiogroup" aria-label="Where the cards appear">
+          {([['bug', 'With the scorebug'], ['free', 'On their own']] as const).map(([k, label]) => {
+            const on = (lay.cards.pos === 'bug') === (k === 'bug');
+            return (
+              <label key={k} className="pill wide"><input type="radio" name="card_pos" checked={on}
+                onChange={() => placeCards(k === 'bug' ? 'bug' : FREE_DEFAULT[lay.bug.pos])} /><span>{label}</span></label>
+            );
+          })}
+        </div>
+        {lay.cards.pos !== 'bug' && (
+          <div className="air-autos air-qr">
+            <div className="air-pos" role="radiogroup" aria-label="Where the cards stand">
+              {BUG_AT.map(([p, label]) => (
+                <button key={p} type="button" role="radio" aria-checked={lay.cards.pos === p} aria-label={p === lay.bug.pos ? `${label}, where the scorebug is` : label}
+                  className={lay.cards.pos === p ? 'on' : p === lay.bug.pos ? 'taken' : undefined} disabled={p === lay.bug.pos} onClick={() => placeCards(p)} />
+              ))}
+              <small>{BUG_AT.find(([p]) => p === lay.cards.pos)?.[1]}</small>
+            </div>
+          </div>
+        )}
         <div className="air-autos air-qr">
           <label className="air-slide" style={{ borderTop: 0 }}><span>Size<b>{pct(lay.cards.scale)}</b></span>
-            <input type="range" min={CARD_SCALE.min} max={CARD_SCALE.max} step={0.05} value={lay.cards.scale} onChange={(e) => moveLay({ ...lay, cards: { scale: Number(e.target.value) } })} />
+            <input type="range" min={CARD_SCALE.min} max={CARD_SCALE.max} step={0.05} value={lay.cards.scale} onChange={(e) => moveLay({ ...lay, cards: { ...lay.cards, scale: Number(e.target.value) } })} />
           </label>
         </div>
       </section>

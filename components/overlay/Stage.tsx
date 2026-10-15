@@ -338,6 +338,20 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
     <rect x={x} y={y} width="16" height="16" transform={`rotate(45 ${x + 8} ${y + 8})`} className={on ? 'on' : undefined} />
   );
 
+  const ext = (
+    <div className="ov-ext">
+      <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
+      <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
+      <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
+      <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
+      <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
+        <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
+      <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
+      <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
+      <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
+    </div>
+  );
+
   return (
     <div className={`ov bug-${lay.bug.pos}${show.batter === false ? ' no-batter' : ''}${show.pitcher === false ? ' no-pitcher' : ''}${theme === 'custom' && bc.custom?.teamFill ? ' team-fill' : ''}`}
       data-theme={theme} data-style={style}
@@ -348,19 +362,11 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
         show={bc.scene_style !== 'standard'} abbrs={own.abbrs} sponsor={feed.sponsor} />
       {feed.bug?.text && <div className="ov-chan">{feed.bug.text}</div>}
       <Qr bug={feed.bug} qr={feed.qr} />
+      {/* Or the cards stand on their own, wherever the Stream screen puts them. */}
+      {lay.cards.pos !== 'bug' && <div className={`ov-free at-${lay.cards.pos}`}>{ext}</div>}
       <div className="ov-dock">
         {/* Every card is an extension of the scorebug: one slot on its far side, and a card slides out from behind the plate. */}
-        <div className="ov-ext">
-          <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
-          <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
-          <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
-          <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
-          <Box box={box} away={away} home={home} final={status === 'final'} on={shown === 'box'} />
-            <Lineup list={air.order} at={air.batter?.bid ?? null} brand={brandFor(air.batSide)} on={shown === 'lineup'} />
-          <Defense list={air.defense} brand={brandFor(air.fieldSide)} on={shown === 'defense'} />
-          <Matchup b={air.batter} p={air.pitcher} bat={brandFor(air.batSide)} field={brandFor(air.fieldSide)} on={shown === 'matchup'} />
-          <Sponsor sp={feed.sponsor} on={shown === 'sponsor'} />
-        </div>
+        {lay.cards.pos === 'bug' && ext}
         {Bug && <div className="ov-look"><Bug {...own} /></div>}
         {!Bug && <div className={`ov-moment${moment ? ' on' : ''}`} aria-hidden={!moment}>{moment && <><b>{moment.text === 'Home run' && moment.runs >= 4 ? 'Grand slam' : moment.text}</b><span>{[moment.who, moment.text === 'Home run' && moment.runs < 4 ? homerText(moment.runs) : ''].filter(Boolean).join(' · ')}</span></>}</div>}
         {!Bug && <div className={`ov-bug${shown === 'batter' ? ' carded' : ''}`}>
