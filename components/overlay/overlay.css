@@ -56,6 +56,26 @@
 /* The channel bug's line gives up the bottom right to a scorebug put there. */
 .ov.bug-br .ov-chan { right: auto; left: 4.8rem; }
 
+/* Cards on their own (layout.cards.pos): a layer of their own in one of the nine places, apart from the
+   scorebug. They slide in from their own edge and fade, with every corner rounded, since nothing hides
+   their back edge. */
+.ov-free { position: absolute; z-index: 3; display: flex; pointer-events: none; filter: drop-shadow(0 1.2rem 2.6rem rgba(0, 0, 0, 0.5)); }
+.ov-free.at-tl, .ov-free.at-ml, .ov-free.at-bl { left: 4.8rem; }
+.ov-free.at-tr, .ov-free.at-mr, .ov-free.at-br { right: 4.8rem; }
+.ov-free.at-tc, .ov-free.at-mc, .ov-free.at-bc { left: 0; right: 0; justify-content: center; }
+.ov-free.at-tl, .ov-free.at-tc, .ov-free.at-tr { top: 4.8rem; }
+.ov-free.at-bl, .ov-free.at-bc, .ov-free.at-br { bottom: 4.4rem; }
+.ov-free.at-ml, .ov-free.at-mc, .ov-free.at-mr { top: 50%; transform: translateY(-50%); }
+.ov .ov-free .ov-ext { overflow: visible; }
+.ov .ov-free .ov-ext > .ov-card { align-self: center; justify-self: start; border-radius: 0.9rem; opacity: 0; transform: translateX(-4rem);
+  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.35s ease, visibility 0s linear 0.55s; }
+.ov .ov-free:is(.at-tr, .at-mr, .at-br) .ov-ext > .ov-card { justify-self: end; transform: translateX(4rem); }
+.ov .ov-free:is(.at-tc, .at-mc, .at-bc) .ov-ext > .ov-card { justify-self: center; transform: translateY(3rem); }
+.ov .ov-free.at-tc .ov-ext > .ov-card { transform: translateY(-3rem); }
+.ov .ov-free:is(.at-tl, .at-tc, .at-tr) .ov-ext > .ov-card { align-self: start; }
+.ov .ov-free:is(.at-bl, .at-bc, .at-br) .ov-ext > .ov-card { align-self: end; }
+.ov .ov-free .ov-ext > .ov-card.on { opacity: 1; transform: none; transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.35s ease, visibility 0s; }
+
 /* ---- The scorebug ---- */
 .ov-bug { display: flex; flex-direction: column; border-radius: var(--sb-radius); overflow: hidden; color: var(--sb-chalk); font-family: var(--sb-font); }
 .ov-rail { display: flex; align-items: stretch; height: 6.8rem; background: linear-gradient(180deg, var(--sb-panel1), var(--sb-panel2)); box-shadow: inset 0 0.1rem 0 rgba(255, 255, 255, 0.14); }

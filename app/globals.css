@@ -495,6 +495,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .air-pos { display: grid; grid-template-columns: repeat(3, 56px) 1fr; align-items: center; gap: 6px; padding: 12px 14px; border-top: 1px solid var(--line); }
 .air-pos button { height: 44px; border-radius: 10px; background: var(--bg); border: 1.5px solid var(--line-2); cursor: pointer; }
 .air-pos button.on { background: var(--gold); border-color: #ffe08a; }
+.air-pos button.taken { background: repeating-linear-gradient(135deg, var(--raised) 0 4px, transparent 4px 8px); cursor: not-allowed; opacity: 0.6; }
 .air-pos small { grid-column: 4; grid-row: 1 / span 3; padding-left: 10px; font-size: 13px; color: var(--body); }
 .air-pos.two { grid-template-columns: repeat(3, 56px) 1fr; }
 .air-pos.two small { grid-row: 1 / span 2; }
