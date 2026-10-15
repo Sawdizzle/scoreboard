@@ -137,8 +137,11 @@ test('the QR layer: stored values are clamped, and anything odd falls back', () 
   assert.deepEqual(qrLayer(null), { on: false, size: 10, pos: 'tr', opacity: 1 });
   assert.deepEqual(qrLayer({ on: true, size: 500, pos: 'br', opacity: 0 }), { on: true, size: 40, pos: 'br', opacity: 0.2 });
   assert.deepEqual(qrLayer({ on: 'yes', size: 'big', pos: 'middle' } as never), { on: false, size: 10, pos: 'tr', opacity: 1 });
-  assert.deepEqual(layoutOf(null), { bug: { scale: 0.6, pos: 'bl' }, cards: { scale: 0.75 } });
-  assert.deepEqual(layoutOf({ bug: { scale: 9, pos: 'tr' }, cards: { scale: 0 } }), { bug: { scale: 1.2, pos: 'tr' }, cards: { scale: 0.4 } });
+  assert.deepEqual(layoutOf(null), { bug: { scale: 0.6, pos: 'bl' }, cards: { scale: 0.75, pos: 'bug' } });
+  assert.deepEqual(layoutOf({ bug: { scale: 9, pos: 'tr' }, cards: { scale: 0 } }), { bug: { scale: 1.2, pos: 'tr' }, cards: { scale: 0.4, pos: 'bug' } });
+  // Cards on their own keep their place; anything else stays with the scorebug.
+  assert.equal(layoutOf({ cards: { pos: 'br' } }).cards.pos, 'br');
+  assert.equal(layoutOf({ cards: { pos: 'middle' as never } }).cards.pos, 'bug');
   assert.deepEqual(layoutOf({ bug: { pos: 'mm' as never } }).bug, { scale: 0.6, pos: 'bl' });
 });
 
