@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { GamePlace } from '@/components/GamePlace';
 import { deleteGame, updateGame } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
@@ -26,6 +27,7 @@ export function GameView({ team, role, game, lineups, seasons }: {
           <span className="sub">{game.venue}</span>
         </div>
         <Matchup team={team} game={game} />
+        <GamePlace game={game} />
         <div className="next-foot">
           <span className="sub">
             {game.sport !== 'baseball' ? `${SPORT_LABEL[game.sport]} · score only` : game.counts_for_stats ? `Counts for ${season?.name ?? 'no season'}` : 'Scrimmage: scored, not added to stats'}

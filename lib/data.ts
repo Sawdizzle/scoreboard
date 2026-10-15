@@ -89,7 +89,18 @@ export async function playerStats(db: Db, playerId: string) {
   return (data ?? []) as SeasonLine[];
 }
 
-const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, status, live, clock, settings, venue_geo, opponent_id, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS}), saved:opponents!games_opponent_id_fkey(name, abbr, color, color2, logo_url)`;
+const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, address, tournament_url, status, live, clock, settings, venue_geo, opponent_id, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS}), saved:opponents!games_opponent_id_fkey(name, abbr, color, color2, logo_url)`;
+
+// A tournament weekend: the next game is usually at the same field, in the same
+// tournament, so a new game starts with the place of a game within three days.
+export async function recentPlace(db: Db, teamId: string) {
+  const near = (ms: number) => new Date(Date.now() + ms).toISOString();
+  const { data } = await db.from('games').select('venue, address, tournament_url')
+    .eq('team_id', teamId).gte('starts_at', near(-3 * 864e5)).lte('starts_at', near(3 * 864e5))
+    .or('address.not.is.null,tournament_url.not.is.null').order('starts_at', { ascending: false }).limit(1)
+    .maybeSingle<Pick<Game, 'venue' | 'address' | 'tournament_url'>>();
+  return data;
+}
 
 // A team's games, soonest first; games with no time yet sort last.
 export async function listGames(db: Db, teamId: string, seasonId?: string) {

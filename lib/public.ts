@@ -9,7 +9,7 @@ export type PublicTeam = FeedTeam & { slug: string | null };
 export type PublicGame = {
   v: string;
   team: PublicTeam; opponent: PublicTeam;
-  game: Pick<Game, 'id' | 'is_home' | 'status' | 'live' | 'starts_at' | 'venue' | 'counts_for_stats'> & { seq: number; sport?: Sport };
+  game: Pick<Game, 'id' | 'is_home' | 'status' | 'live' | 'starts_at' | 'venue' | 'counts_for_stats' | 'address' | 'tournament_url' | 'venue_geo'> & { seq: number; sport?: Sport };
   season: Feed['season'];
   lineups: { us: Lineup | null; them: Lineup | null };
   tonight: (Line & { side: Side; bid: string })[];

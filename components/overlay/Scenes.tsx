@@ -126,7 +126,8 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
     const live = (game?.live ?? {}) as SportLive & Record<string, unknown>;
     const as = Number(live.away_score) || 0, hs = Number(live.home_score) || 0;
     const size = nameSize(away.display, home.display);
-    const where = game?.venue_geo?.label ?? game?.venue ?? null;
+    // The field by name when it has one ("Railyard Park, Field 3"), else the town the weather is for.
+    const where = game?.venue || game?.venue_geo?.label || null;
     const style = { '--away': away.color, '--home': home.color } as React.CSSProperties;
 
     if (scene.kind === 'starting') {

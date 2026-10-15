@@ -10,7 +10,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { listOpponents, loadTeam, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
-import { geocode } from '@/lib/fx/weather.js';
+import { geocodeAddress, tournamentUrl } from '@/lib/geo';
 import { abbrFor } from '@/lib/format';
 import { emptyCounts, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
@@ -471,17 +471,21 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
   const whole = (k: string, max: number) => { const v = Math.round(Number(str(fd, k))); return v > 0 && v <= max ? v : null; };
   const limit = whole('time_limit_min', 300), runRule = whole('run_rule', 30), period = whole('period_minutes', 60);
   const settings = { time_limit: limit ? limit * 60 : null, run_rule: runRule, period_minutes: period };
-  // Where the weather comes from: a ZIP or a town, looked up once (Open-Meteo)
-  // and kept on the game as rounded coordinates. Unchanged, it is left alone.
-  const wq = str(fd, 'weather_q').slice(0, 60);
+  // The field's address: directions for everyone, and where the weather comes
+  // from. It is looked up once (lib/geo.ts) and kept on the game as rounded
+  // coordinates; unchanged, it is left alone. A ZIP or a town works too.
+  const address = str(fd, 'address');
+  if (address.length > 160) return { error: 'Keep the address to 160 characters.' } as const;
   let venueGeo: Record<string, unknown> | null | undefined;
-  if (wq !== str(fd, 'weather_was')) {
-    if (!wq) venueGeo = null;
+  if (address !== str(fd, 'address_was')) {
+    if (!address) venueGeo = null;
     else {
-      try { venueGeo = (await geocode(wq)) as Record<string, unknown> | null; } catch { venueGeo = undefined; }
-      if (venueGeo === null) return { error: `Could not find "${wq}" for the weather. Try a ZIP code.` } as const;
+      try { venueGeo = await geocodeAddress(address); } catch { venueGeo = undefined; }
+      if (venueGeo === null) return { error: `Could not find "${address}" for the weather. Add the city and ZIP.` } as const;
     }
   }
+  const tourney = tournamentUrl(str(fd, 'tournament_url'));
+  if (tourney === false) return { error: 'The tournament link should be a web address, like https://playtgs.com/…' } as const;
   return {
     settings,
     ...(venueGeo !== undefined ? { venue_geo: venueGeo } : {}),
@@ -490,6 +494,8 @@ async function gameFields(fd: FormData, teamId: string, supabase: Awaited<Return
     is_home: str(fd, 'is_home') !== 'away',
     starts_at: startsAt ? new Date(startsAt).toISOString() : null,
     venue: venue || null,
+    address: address || null,
+    tournament_url: tourney,
     season_id: UUID.test(seasonId) ? seasonId : null,
     counts_for_stats: fd.get('counts_for_stats') === 'on',
   } as const;

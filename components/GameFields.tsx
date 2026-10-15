@@ -8,10 +8,14 @@ import type { Game, Season, Team } from '@/lib/types';
 // Scoreboard; without one, the name is typed.
 // `saved` is an opponent this team has played before: its name, short code
 // and colour fill the fields, and its last lineup comes with the game.
-export function GameFields({ seasons, game, opponent, changeHref, saved }: {
+export function GameFields({ seasons, game, opponent, changeHref, saved, place }: {
   seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string; saved?: { id?: string; name: string; abbr: string; color: string; players: number } | null;
+  // A new game's field, address and tournament, from a game the same weekend.
+  place?: Pick<Game, 'venue' | 'address' | 'tournament_url'> | null;
 }) {
   const current = seasons.find((s) => s.is_current);
+  // A game from before addresses has the ZIP or town its weather was looked up from.
+  const addr = game ? game.address ?? (game.venue_geo ? String((game.venue_geo as { query?: string }).query ?? game.venue_geo.label ?? '') : '') : place?.address ?? '';
   return (
     <>
       {opponent ? (
@@ -52,13 +56,16 @@ export function GameFields({ seasons, game, opponent, changeHref, saved }: {
         </div>
       </fieldset>
       <DateTimeField name="starts_at" value={game?.starts_at ?? null} label="First pitch" />
-      <label className="field"><span>Where</span>
-        <input className="input" name="venue" defaultValue={game?.venue ?? ''} maxLength={80} placeholder="Railyard Park, Field 3" autoComplete="off" />
+      <label className="field"><span>Field</span>
+        <input className="input" name="venue" defaultValue={game ? game.venue ?? '' : place?.venue ?? ''} maxLength={80} placeholder="Railyard Park, Field 3" autoComplete="off" />
       </label>
-      <label className="field"><span>Weather from · ZIP or town, for Starting Soon and delays</span>
-        <input className="input" name="weather_q" defaultValue={game?.venue_geo ? String((game.venue_geo as { query?: string }).query ?? game.venue_geo.label ?? '') : ''} maxLength={60} placeholder="76266" autoComplete="off" />
+      <label className="field"><span>Address · directions, and the weather for first pitch</span>
+        <input className="input" name="address" defaultValue={addr} maxLength={160} placeholder="2600 Railyard Rd, Aubrey, TX 76227" autoComplete="street-address" />
       </label>
-      <input type="hidden" name="weather_was" value={game?.venue_geo ? String((game.venue_geo as { query?: string }).query ?? game.venue_geo.label ?? '') : ''} />
+      <input type="hidden" name="address_was" value={game ? addr : ''} />
+      <label className="field"><span>Tournament link · optional</span>
+        <input className="input" name="tournament_url" type="url" inputMode="url" defaultValue={game ? game.tournament_url ?? '' : place?.tournament_url ?? ''} maxLength={300} placeholder="https://playtgs.com/…" autoComplete="off" />
+      </label>
       {seasons.length > 0 && (
         <label className="field"><span>Season</span>
           <select className="select" name="season_id" defaultValue={game ? game.season_id ?? '' : current?.id ?? ''}>

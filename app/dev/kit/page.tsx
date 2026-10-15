@@ -63,7 +63,7 @@ const stats: SeasonLine[] = [
   L(6, 11, 35, 8, 2, 0, 4, 2, 11, 3), L(9, 10, 25, 6, 1, 0, 4, 3, 6, 1, { p_g: 4, p_gs: 2, p_outs: 29, p_bf: 48, p_pitches: 170, p_h: 12, p_r: 9, p_er: 7, p_bb: 6, p_so: 14 }),
 ];
 const game: Game = { id: 'g1', sport: 'baseball', team_id: 't1', season_id: 's1', counts_for_stats: true, opponent_team_id: 'o1', opponent_name: 'River 14U',
-  opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', status: 'scheduled', live: {},
+  opponent_abbr: 'RIVER', opponent_color: '#1a7541', is_home: true, starts_at: '2026-10-03T23:30:00Z', venue: 'Railyard Park, Field 3', address: '2600 Railyard Rd, Aubrey, TX 76227', tournament_url: 'https://playtgs.com/events/fall-classic', venue_geo: { lat: 33.3, lon: -96.99, label: 'Aubrey, TX' }, status: 'scheduled', live: {},
   opponent: { id: 'o1', slug: 'river-14u', name: 'River Rapids', display_name: 'River Rapids', abbr: 'RIVER', color: '#1a7541', color2: '#f2f6fc', palette: [], logo_url: null, age_group: '14U', name_format: 'full' } };
 const lineup = lineupFromRoster(players);
 // A season's schedule: two played, one live, two to come, in listGames order.

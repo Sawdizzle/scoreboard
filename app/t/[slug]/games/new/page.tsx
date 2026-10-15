@@ -4,7 +4,7 @@ import { createGame } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
 import { ChevronLeft } from '@/components/icons';
-import { TEAM_COLS, findTeams, listOpponents, listSeasons, loadTeam, type SavedOpponent } from '@/lib/data';
+import { TEAM_COLS, findTeams, listOpponents, listSeasons, loadTeam, recentPlace, type SavedOpponent } from '@/lib/data';
 import { TeamMark, brandOf } from '@/components/TeamBrand';
 import { canRunGames, type Team } from '@/lib/types';
 
@@ -27,6 +27,7 @@ export default async function NewGame({ params, searchParams }: {
   }
   const opponents = canRunGames(role) ? await listOpponents(supabase, team.id) : [];
   const saved = opponents.find((o) => o.id === savedId) ?? null;
+  const recent = await recentPlace(supabase, team.id);
   const filled = (o: SavedOpponent) => (o.roster?.batters ?? []).filter((b) => b.num || b.name).length;
   const base = `/t/${slug}/games/new`;
   const picking = !opponent && !typed && !saved;
@@ -81,7 +82,7 @@ export default async function NewGame({ params, searchParams }: {
         </>
       ) : (
         <ActionForm action={createGame.bind(null, slug)} className="form">
-          <GameFields seasons={seasons} opponent={opponent} changeHref={base} saved={saved && { id: saved.id, name: saved.name, abbr: saved.abbr, color: saved.color, players: filled(saved) }} />
+          <GameFields place={recent} seasons={seasons} opponent={opponent} changeHref={base} saved={saved && { id: saved.id, name: saved.name, abbr: saved.abbr, color: saved.color, players: filled(saved) }} />
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create game · set lineups</Submit>
         </ActionForm>
       )}

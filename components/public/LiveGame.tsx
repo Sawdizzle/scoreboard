@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { GamePlace } from '@/components/GamePlace';
 import { useEffect, useRef, useState } from 'react';
 import { LocalTime } from '@/components/LocalTime';
 import { Slab, brandOf } from '@/components/TeamBrand';
@@ -97,6 +98,7 @@ export function LiveGame({ initial }: { initial: PublicGame }) {
           {ball && live && air.batter && (
             <p className="pub-now">At bat: <b>{air.batter.name}</b>{air.batter.today ? ` (${air.batter.today})` : ''}{air.pitcher ? <> · Pitching: <b>{air.pitcher.name}</b>, {air.pitcher.pitches} pitches</> : null}</p>
           )}
+          {status !== 'final' && <div className="pub-place"><GamePlace game={game.game} /></div>}
         </section>
 
         {ball && status !== 'scheduled' && (
