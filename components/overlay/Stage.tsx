@@ -60,7 +60,7 @@ function Stat({ v, k, gold }: { v: string; k: string; gold?: boolean }) {
   return <span className="ov-stat"><b className={gold ? 'gold' : undefined}>{v}</b><small>{k}</small></span>;
 }
 
-function BatterCard({ b, brand, season, on }: { b: BatterView | null; brand: Brand; season: string; on: boolean }) {
+function BatterCard({ b, brand, season, on, first = false }: { b: BatterView | null; brand: Brand; season: string; on: boolean; first?: boolean }) {
   return (
     <div className={`ov-card ov-batter${on && b ? ' on' : ''}`} aria-hidden={!on}>
       {b && <>
@@ -70,7 +70,7 @@ function BatterCard({ b, brand, season, on }: { b: BatterView | null; brand: Bra
         </div>
         <div className="ov-who">
           <div>
-            <em>Now batting</em>
+            <em>{first ? 'Leading off' : 'Now batting'}</em>
             <strong style={fit(b.name, 5.4, 34)}>{b.name}</strong>
           </div>
           <div className="ov-today">
@@ -313,7 +313,10 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
   // A card held by hand comes first; else the mid-inning board between halves, when that is on.
   const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
-  const shown = want === 'sponsor' ? want : !ball ? null : live || (want === 'box' && status === 'final') ? want : null;
+  // Before first pitch the lineup cards work too (the leadoff batter, the starters, the order); the
+  // mid-inning board and the box score wait for a game in play.
+  const pre = status === 'scheduled' && want !== 'mid' && want !== 'box';
+  const shown = want === 'sponsor' ? want : !ball ? null : live || pre || (want === 'box' && status === 'final') ? want : null;
   // Scoreboard's own bug is drawn below; every other look is a component of its own.
   const abbr = (t: Feed['team']) => (t.abbr || '').toUpperCase();
   const lay = layoutOf(feed.layout);
@@ -340,7 +343,7 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
 
   const ext = (
     <div className="ov-ext">
-      <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} />
+      <BatterCard b={air.batter} brand={brandFor(air.batSide)} season={batUs && feed.season ? feed.season.name : 'Season'} on={shown === 'batter'} first={status === 'scheduled'} />
       <PitcherCard p={air.pitcher} brand={brandFor(air.fieldSide)} on={shown === 'pitcher'} />
       <DueUp list={air.dueUp} brand={brandFor(air.batSide)} when={`${top ? 'Top' : 'Bot'} ${g.inning}`} on={shown === 'dueup'} />
       <Leaders list={leaders(feed.season_stats, feed.roster ?? [])} brand={us} season={feed.season?.name ?? 'Season'} on={shown === 'leaders'} />
