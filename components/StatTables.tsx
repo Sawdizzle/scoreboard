@@ -70,10 +70,11 @@ export function StatTables({ slug, lines, players, gameInnings, link = true, fmt
 }
 
 // Who leads the team, for the Today screen. Average needs a few trips to the
-// plate to mean anything: at least two per game the team has data for.
+// plate to mean anything: a plate appearance per game the team has data for,
+// three at least (lib/leaderboard.ts uses the same bar).
 export function leaders(lines: SeasonLine[]) {
   const games = Math.max(0, ...lines.map((s) => s.b_g));
-  const qualified = lines.filter((s) => s.b_pa >= Math.max(1, games * 2));
+  const qualified = lines.filter((s) => s.b_pa >= Math.max(3, games));
   const top = <T,>(list: SeasonLine[], v: (s: SeasonLine) => T | null, cmp: (a: T, b: T) => number) => {
     let best: { s: SeasonLine; v: T } | null = null;
     for (const s of list) { const x = v(s); if (x !== null && (!best || cmp(x, best.v) > 0)) best = { s, v: x }; }

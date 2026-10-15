@@ -11,11 +11,11 @@ export function TabBar({ slug, at }: { slug: string; at?: string }) {
   const path = at ?? here;
   const base = `/t/${slug}`;
   // The Team tab's own sections, listed under it only in the sidebar.
-  const subs = [['roster', 'Roster'], ['opponents', 'Opponents'], ['settings', 'Team settings'], ['stream', 'Stream']].map(([p, label]) => (
+  const subs = [['roster', 'Roster'], ['stats', 'Stats'], ['opponents', 'Opponents'], ['settings', 'Team settings'], ['stream', 'Stream']].map(([p, label]) => (
     { href: `${base}/${p}`, label, on: path.startsWith(`${base}/${p}`) || (p === 'roster' && path.startsWith(`${base}/player`)) }));
   const tabs = [
     { href: base, label: 'Today', on: path === base || path.startsWith(`${base}/games`) },
-    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/opponents', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)), subs },
+    { href: `${base}/roster`, label: 'Team', on: ['/roster', '/stats', '/opponents', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)), subs },
     { href: `${base}/season`, label: 'Season', on: path.startsWith(`${base}/season`) },
   ];
   return (
@@ -43,12 +43,13 @@ export function TeamTabs({ slug, players, opponents, at }: { slug: string; playe
   const base = `/t/${slug}`;
   const tabs = [
     { href: `${base}/roster`, label: `Roster · ${players}`, on: path.startsWith(`${base}/roster`) },
+    { href: `${base}/stats`, label: 'Stats', on: path.startsWith(`${base}/stats`) },
     { href: `${base}/opponents`, label: `Opponents · ${opponents}`, on: path.startsWith(`${base}/opponents`) },
     { href: `${base}/settings`, label: 'Team', on: path.startsWith(`${base}/settings`) },
     { href: `${base}/stream`, label: 'Stream', on: path.startsWith(`${base}/stream`) },
   ];
   // With the sidebar showing these sections, the screen gets a title instead of the switch.
-  const title = ['Roster', 'Opponents', 'Team settings', 'Stream'][tabs.findIndex((t) => t.on)];
+  const title = ['Roster', 'Stats', 'Opponents', 'Team settings', 'Stream'][tabs.findIndex((t) => t.on)];
   return (
     <>
       {title && <h1 className="seg-title disp">{title}</h1>}

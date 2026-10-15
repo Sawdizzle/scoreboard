@@ -701,3 +701,32 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 @keyframes sk-flash { 0%, 100% { opacity: 0; } 6% { opacity: 1; } 10% { opacity: 0.2; } 14% { opacity: 1; } 22% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sky * { animation: none !important; } }
 .pub-place { padding: 12px 16px 4px; border-top: 1px solid var(--line); margin-top: 8px; }
+
+/* ---- Team > Stats (components/views/StatsView.tsx) ------------------------- */
+/* Five sections in the team switch: on a phone it scrolls rather than squeeze. */
+.team-tabs .seg { grid-auto-columns: max-content; overflow-x: auto; scrollbar-width: none; }
+.team-tabs .seg::-webkit-scrollbar { display: none; }
+.team-tabs .seg-item { padding: 0 14px; }
+@media (min-width: 560px) { .team-tabs .seg { grid-auto-columns: 1fr; } }
+.lb-seg { align-self: flex-start; }
+.lb-seg .seg-item { border: 0; background: none; cursor: pointer; padding: 0 18px; font: inherit; font-weight: 600; font-size: 14.5px; color: var(--soft); }
+.lb-seg .seg-item[aria-current="page"] { background: var(--steel); color: var(--on-steel); font-weight: 700; }
+.lb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.lb-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.lb-card header { display: flex; flex-direction: column; gap: 2px; }
+.lb-card header b { font-size: 15px; }
+.lb-card header small { font-size: 12px; color: var(--body); }
+.lb-card.good { box-shadow: inset 0 3px 0 var(--gold); }
+.lb-card.work { box-shadow: inset 0 3px 0 #e5534b; }
+.lb-card ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lb-card li { display: flex; align-items: center; gap: 10px; min-height: 40px; border-top: 1px solid var(--line); }
+.lb-card li:first-child { border-top: 0; }
+.lb-rank { flex: 0 0 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; font-size: 12px; font-weight: 800; background: var(--raised); color: var(--soft); }
+.lb-card.good li:first-child .lb-rank { background: var(--gold); color: #1d1300; }
+.lb-card.work li:first-child .lb-rank { background: #e5534b; color: #fff; }
+.lb-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-who .jersey { flex: 0 0 26px; font-size: 18px; }
+.lb-v { font-family: var(--disp); font-size: 22px; font-weight: 700; }
+.lb-card.good li:first-child .lb-v { color: var(--gold); }
+.stat-table.sortable th button { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; white-space: nowrap; }
+.stat-table.sortable th[aria-sort] button { color: var(--chalk); }

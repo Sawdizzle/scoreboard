@@ -63,7 +63,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
         <section className="leaders">
           <div className="h-row" style={{ padding: '2px 4px 2px' }}>
             <h2 className="h-sec">Team leaders</h2>
-            <Link href={`${base}/season`} className="link">Full stats</Link>
+            <Link href={`${base}/stats`} className="link">Full stats</Link>
           </div>
           <div className="rows">
             {top.map(({ k, best, show }) => {
