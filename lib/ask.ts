@@ -1,11 +1,12 @@
 // "Ask your stats": a coach's question answered from the team's own numbers.
 // Claude gets the season's lines (with the rates worked out here, so it never
 // does the arithmetic), the games and their results, and each pad-scored
-// game's lines, and answers only from them. Staff only: full names are fine.
+// game's lines, and answers only from them. Staff only; players are named in
+// the team's chosen format, so a team that keeps first names sends no more.
 import { z } from 'zod';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from './stats.ts';
 import { formatName } from './format.ts';
-import type { Player } from './types.ts';
+import type { NameFormat, Player } from './types.ts';
 
 export const ASK_MODEL = 'claude-sonnet-5-5';
 
@@ -29,8 +30,9 @@ const nz = (o: Record<string, number>) => Object.fromEntries(Object.entries(o).f
 export type GameRow = { id: string; starts_at: string | null; opponent_name: string; is_home: boolean; status: string; live: { home_score?: number; away_score?: number } | null; counts_for_stats: boolean };
 export type GameStatRow = { game_id: string; player_id: string | null; b_pa: number; b_ab: number; b_h: number; b_2b: number; b_3b: number; b_hr: number; b_rbi: number; b_r: number; b_bb: number; b_so: number; b_sb: number; p_outs: number; p_so: number; p_r: number; p_er: number; p_bb: number; p_h: number; p_pitches: number };
 
-export function statsContext(o: { season: string; gameInnings: number; players: Player[]; lines: SeasonLine[]; games: GameRow[]; gameLines: GameStatRow[] }) {
-  const who = new Map(o.players.map((p) => [p.id, `${formatName(p)}${p.number ? ` #${p.number}` : ''}`]));
+// Players as the staff screens show them: the team's name format, with the number.
+export function statsContext(o: { season: string; gameInnings: number; players: Player[]; lines: SeasonLine[]; games: GameRow[]; gameLines: GameStatRow[]; fmt?: NameFormat }) {
+  const who = new Map(o.players.map((p) => [p.id, `${formatName(p, o.fmt ?? 'full') || 'Player'}${p.number ? ` #${p.number}` : ''}`]));
   const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }) : null);
   const games = o.games.filter((g) => g.status === 'final').map((g) => {
     const us = Number(g.is_home ? g.live?.home_score : g.live?.away_score) || 0;
