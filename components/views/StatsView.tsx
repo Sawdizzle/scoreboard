@@ -90,6 +90,7 @@ export function StatsView({ slug, seasons, season, lines, players, fmt, ask }: {
         </nav>
       )}
       {ask && season && lines.length > 0 && <AskStats teamId={ask.teamId} seasonId={season.id} />}
+      {ask && season && lines.length > 0 && <Link href={`/t/${slug}/stats/cards?s=${season.id}`} className="link">Write end-of-season player cards ›</Link>}
       {!lines.length ? (
         <div className="card empty"><b>No stats for {season?.name ?? 'this season'} yet</b>They arrive from games scored on the pad.</div>
       ) : (
