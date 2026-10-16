@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { AskStats } from '@/components/AskStats';
 import { staffName } from '@/lib/format';
 import { boards, type Board } from '@/lib/leaderboard';
 import { batting, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
@@ -12,8 +13,10 @@ type Col = { k: string; label: string; v: (s: SeasonLine) => number | null; show
 
 // Team > Stats: the season's leaders in every category, the bottom of each
 // list for the coaches, and every number in tables that sort on a tap.
-export function StatsView({ slug, seasons, season, lines, players, fmt }: {
+export function StatsView({ slug, seasons, season, lines, players, fmt, ask }: {
   slug: string; seasons: Season[]; season: Season | undefined; lines: SeasonLine[]; players: P[]; fmt: NameFormat;
+  // Ask about this season: coaches on a team with AI on.
+  ask?: { teamId: string } | null;
 }) {
   const who = new Map(players.map((p) => [p.id, p]));
   const name = (s: SeasonLine) => { const p = who.get(s.player_id); return p ? staffName(p, fmt) : 'Removed player'; };
@@ -86,6 +89,7 @@ export function StatsView({ slug, seasons, season, lines, players, fmt }: {
           ))}
         </nav>
       )}
+      {ask && season && lines.length > 0 && <AskStats teamId={ask.teamId} seasonId={season.id} />}
       {!lines.length ? (
         <div className="card empty"><b>No stats for {season?.name ?? 'this season'} yet</b>They arrive from games scored on the pad.</div>
       ) : (
