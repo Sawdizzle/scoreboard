@@ -7,7 +7,7 @@ import { ScheduleList } from '@/components/GameBits';
 import { guessSeason, shortDate } from '@/lib/format';
 import { splitSchedule } from '@/lib/schedule';
 import { batting, rate3, type SeasonLine } from '@/lib/stats';
-import { canEditTeam, canRunGames, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
+import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
 
 function SeasonFields({ s }: { s?: Season }) {
   return (
@@ -37,9 +37,11 @@ function teamLine(stats: SeasonLine[]) {
   ];
 }
 
-export function SeasonView({ team, role, seasons, selectedId, stats = [], players = [], imported, games = [] }: {
+export function SeasonView({ team, role, seasons, selectedId, stats = [], players = [], imported, games = [], added, ai = false }: {
   team: Team; role: Role; seasons: Season[]; selectedId?: string;
   stats?: SeasonLine[]; players?: Player[]; imported?: string; games?: Game[];
+  // Games just added from an imported schedule; AI on for this team (the import link).
+  added?: string; ai?: boolean;
 }) {
   const edit = canEditTeam(role);
   const base = `/t/${team.slug}/season`;
@@ -69,11 +71,15 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
           </section>
 
           {imported && <p role="status" className="note note-good">Imported {imported} players from GameChanger.</p>}
+          {added && <p role="status" className="note note-good">Added {added} game{added === '1' ? '' : 's'} to the schedule.</p>}
 
           <section className="stack" style={{ gap: 6 }}>
             <div className="h-row" style={{ padding: '0 4px', alignItems: 'center' }}>
               <h2 className="h-sec">Schedule</h2>
-              {canRunGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
+              <span style={{ display: 'flex', gap: 14 }}>
+                {ai && canWriteRecaps(role) && <Link href={`/t/${team.slug}/games/import`} className="link">Import a schedule</Link>}
+                {canRunGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
+              </span>
             </div>
             {upcoming.length ? <ScheduleList slug={team.slug} games={upcoming} />
               : <p className="sub" style={{ padding: '0 4px' }}>{completed.length ? `No games left in ${sel.name}.` : `No games in ${sel.name} yet.`}</p>}
