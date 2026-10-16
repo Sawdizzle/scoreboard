@@ -5,17 +5,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
-import type { PublicGame } from '@/lib/public';
 import { checkRecap, RECAP_MODEL, RECAP_SYSTEM, recapPrompt, RecapContent, type RecapContext } from '@/lib/recap';
 import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
-import { summarizeGame, type SummaryEvent, type SummaryStat } from '@/lib/summarize';
-import type { GameSettings } from '@/lib/broadcast';
+import { gameDate, getGameRow, loadFacts } from '@/lib/game-facts';
 
 export const maxDuration = 90;
 
 const WRITERS = new Set(['organizer', 'head_coach', 'coach']);
-const STAT_COLS = 'event_id, side, bid, b_pa, b_ab, b_h, b_2b, b_3b, b_hr, b_rbi, b_r, b_bb, b_so, b_hbp, b_sb, p_outs, p_bf, p_h, p_r, p_er, p_bb, p_so, p_pitches';
 const fail = (status: number, error: string) => NextResponse.json({ error }, { status });
 
 export async function POST(req: Request) {
@@ -31,9 +28,7 @@ export async function POST(req: Request) {
   const userId = claims?.claims?.sub as string | undefined;
   if (!userId) return fail(401, 'Sign in first.');
 
-  const { data: game } = await supabase.from('games')
-    .select('id, team_id, sport, status, is_home, live, settings, starts_at, venue').eq('id', gameId)
-    .maybeSingle<{ id: string; team_id: string; sport: string; status: string; is_home: boolean; live: Record<string, unknown>; settings: GameSettings | null; starts_at: string | null; venue: string | null }>();
+  const game = await getGameRow(supabase, gameId);
   if (!game) return fail(404, 'No such game.');
   const { data: seat } = await supabase.from('team_staff').select('role').eq('team_id', game.team_id).eq('user_id', userId).maybeSingle<{ role: string }>();
   if (!seat || !WRITERS.has(seat.role)) return fail(403, 'Only organizers and coaches write recaps.');
@@ -44,25 +39,12 @@ export async function POST(req: Request) {
 
   // The public view of the game gives the lineups under each player's public
   // name, the team names and the season; the log and the stats come as staff.
-  const [{ data: pub }, { data: events }, { data: stats }] = await Promise.all([
-    supabase.rpc('public_game', { p_game: game.id }),
-    supabase.from('game_events').select('id, seq, type, payload, prev_live').eq('game_id', game.id).order('seq'),
-    supabase.from('game_stats').select(STAT_COLS).eq('game_id', game.id),
-  ]);
-  const p = pub as PublicGame | null;
-  if (!p) return fail(404, 'No such game.');
-
-  const facts = summarizeGame({
-    game: { is_home: game.is_home, status: game.status, live: game.live, sport: game.sport },
-    teams: { us: p.team.display_name || p.team.name, them: p.opponent.display_name || p.opponent.name },
-    events: (events ?? []) as SummaryEvent[], stats: (stats ?? []) as SummaryStat[],
-    lineups: p.lineups,
-    regulationInnings: game.settings?.regulation ?? p.season?.game_innings ?? null,
-    runRule: game.settings?.run_rule ?? null,
-  });
+  const loaded = await loadFacts(supabase, game);
+  if (!loaded) return fail(404, 'No such game.');
+  const { facts, pub: p } = loaded;
   const ctx: RecapContext = {
     team: facts.teams.us, opponent: facts.teams.them,
-    date: game.starts_at ? new Date(game.starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' }) : null,
+    date: gameDate(game.starts_at),
     venue: game.venue, season: p.season?.name ?? null, ageGroup: p.team.age_group,
   };
 

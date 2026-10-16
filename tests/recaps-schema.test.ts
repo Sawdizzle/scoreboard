@@ -79,3 +79,13 @@ test('AI writes are reserved under the limit, one at a time, and settled by whoe
   await assert.rejects(t.as('rival', `select ai_reserve($1, $2, 'recap', 'm')`, [other, game]));
   await assert.rejects(t.as('stranger', `select ai_reserve($1, null, 'recap', 'm')`, [team]));
 });
+
+test('stream sessions: OBS going live opens one, stopping closes it, an unknown status changes nothing', async () => {
+  const [{ token }] = await t.db.query<{ token: string }>(`select token from channels where team_id = $1`, [team]).then((r) => r.rows);
+  const report = (streaming: boolean | null) => t.as(null, `select obs_report($1, $2::jsonb)`, [token, JSON.stringify({ streaming })]);
+  await report(false); await report(true); await report(true); await report(null); await report(false); await report(true);
+  const rows = await t.as<{ open: boolean }>('owner', `select ended_at is null as open from stream_sessions where team_id = $1 order by id`, [team]);
+  // Live, live again (same session), unknown, stopped (closes it), live (a new one).
+  assert.deepEqual(rows.map((r) => r.open), [false, true]);
+  assert.equal((await t.as('stranger', `select 1 from stream_sessions where team_id = $1`, [team])).length, 0);
+});

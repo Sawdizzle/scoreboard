@@ -7,6 +7,7 @@ import { Matchup, Readiness } from '@/components/GameBits';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
 import { RecapCard, type RecapRow } from '@/components/RecapCard';
+import { YoutubeCard } from '@/components/YoutubeCard';
 import type { Issue } from '@/lib/audit';
 import { SPORT_LABEL } from '@/lib/sports';
 import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
@@ -70,6 +71,7 @@ export function GameView({ team, role, game, lineups, seasons, recap = null, ai 
       {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && (ai || recap) && (
         <RecapCard key={`${recap?.generated_at}|${recap?.status}|${recap?.edited_at}`} slug={team.slug} gameId={game.id} initial={recap} canGenerate={ai} />
       )}
+      {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && ai && <YoutubeCard gameId={game.id} />}
 
       {run && (
         <details className="fold">

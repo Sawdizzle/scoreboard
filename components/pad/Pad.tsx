@@ -179,7 +179,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     history.current.push({ before, rows: r.rows });
     const nextStatus: Status = status ?? (before.status === 'scheduled' ? 'live' : before.status);
     show({ g: r.next, status: nextStatus, tonight: addRows(before.tonight, r.rows), last: lastPlayText(r.res, before.g, r.next) });
-    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: r.res.payload ?? {}, rows: r.rows, status });
+    // `at`: when it was tapped, so a game video's chapters line up even if the play sent later.
+    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: { ...(r.res.payload ?? {}), at: new Date().toISOString() }, rows: r.rows, status });
     if (navigator.vibrate) navigator.vibrate(12);
     setSheet(null);
     void pump();

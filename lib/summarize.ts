@@ -26,7 +26,7 @@ type Live = Record<string, unknown>;
 type Half = 'top' | 'bottom';
 type Note = { kind?: string; code?: string; inning?: number; half?: Half; runs?: number; outs?: number; pos?: string | null };
 
-export type SummaryEvent = { id: number; seq: number; type: string; payload: Record<string, unknown> | null; prev_live: Live | null };
+export type SummaryEvent = { id: number; seq: number; type: string; payload: Record<string, unknown> | null; prev_live: Live | null; created_at?: string };
 export type SummaryStat = {
   event_id: number; side: Side; bid: string;
   b_pa?: number; b_ab?: number; b_h?: number; b_2b?: number; b_3b?: number; b_hr?: number; b_rbi?: number; b_r?: number;

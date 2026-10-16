@@ -70,26 +70,34 @@ const texts = (c: RecapContent) => [c.headline, c.recap, c.social.instagram, c.s
 const PAIR = /(?<![\d.])(\d{1,2})\s*[-–—]\s*(\d{1,2})(?![\d.])/g;
 const ORDINAL = /\b(\d{1,2})(?:st|nd|rd|th)\b/gi;
 
-export function checkRecap(c: RecapContent, facts: GameFacts): string[] {
-  const problems: string[] = [];
+// Every "N-M" a writer may use: scores the game passed through (either order),
+// the end of each half from the line score, and what the facts already write
+// that way (play codes such as 6-3, batting lines such as 2-3).
+export function knownScores(facts: GameFacts) {
   const known = new Set<string>();
   const pair = (a: number, b: number) => { known.add(`${a}-${b}`); known.add(`${b}-${a}`); };
   pair(facts.score.us, facts.score.them);
   pair(0, 0);
   for (const s of facts.scoringPlays) if (!s.partial) pair(s.score.us, s.score.them);
   for (const m of JSON.stringify(facts).matchAll(PAIR)) pair(Number(m[1]), Number(m[2]));
-  // A v4 log with gaps: the score at the end of each half, from the line score.
   const run = { us: 0, them: 0 };
   const order = facts.teams.home === 'us' ? (['them', 'us'] as const) : (['us', 'them'] as const);
   for (const r of facts.lineScore.innings) for (const s of order) {
     run[s] += r[s] ?? 0;
     pair(run.us, run.them);
   }
+  return known;
+}
 
+export function scoreProblems(text: string, known: Set<string>) {
+  return [...text.matchAll(PAIR)].filter((m) => !known.has(`${Number(m[1])}-${Number(m[2])}`)).map((m) => `"${m[0]}" is not a score or play code from the facts.`);
+}
+
+export function checkRecap(c: RecapContent, facts: GameFacts): string[] {
+  const problems: string[] = [];
+  const known = knownScores(facts);
   const all = texts(c).join('\n');
-  for (const m of all.matchAll(PAIR)) {
-    if (!known.has(`${Number(m[1])}-${Number(m[2])}`)) problems.push(`"${m[0]}" is not a score or play code from the facts.`);
-  }
+  problems.push(...scoreProblems(all, known));
   const innings = Math.max(facts.inningsPlayed, facts.lineScore.innings.length);
   for (const m of all.matchAll(ORDINAL)) {
     if (Number(m[1]) > innings) problems.push(`"${m[0]}": the game had ${innings} innings.`);
