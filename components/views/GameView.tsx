@@ -10,8 +10,10 @@ import { RecapCard, type RecapRow } from '@/components/RecapCard';
 import { SPORT_LABEL } from '@/lib/sports';
 import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
-export function GameView({ team, role, game, lineups, seasons, recap = null }: {
+export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false }: {
   team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[]; recap?: RecapRow | null;
+  // AI writing is on for this team (its plan's monthly limit is above 0).
+  ai?: boolean;
 }) {
   const base = `/t/${team.slug}/games/${game.id}`;
   const run = canRunGames(role);
@@ -54,8 +56,8 @@ export function GameView({ team, role, game, lineups, seasons, recap = null }: {
         </Link>
       )}
 
-      {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && (
-        <RecapCard key={`${recap?.generated_at}|${recap?.status}|${recap?.edited_at}`} slug={team.slug} gameId={game.id} initial={recap} />
+      {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && (ai || recap) && (
+        <RecapCard key={`${recap?.generated_at}|${recap?.status}|${recap?.edited_at}`} slug={team.slug} gameId={game.id} initial={recap} canGenerate={ai} />
       )}
 
       {run && (

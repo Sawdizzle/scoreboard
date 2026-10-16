@@ -2,6 +2,8 @@ import { deleteTeam, saveNameFormat } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
+import { AiUsageCard, type UsageRow } from '@/components/AiUsageCard';
+import type { Allowance } from '@/lib/ai-limit';
 import { formatName } from '@/lib/format';
 import { canEditTeam, canManageSeats, NAME_FORMATS, type NameFormat, type Role, type Team } from '@/lib/types';
 
@@ -41,7 +43,11 @@ function NameFormatCard({ team, canEdit }: { team: Team; canEdit: boolean }) {
   );
 }
 
-export function SettingsView({ team, role, welcome, publicUrl }: { team: Team; role: Role; welcome?: boolean; publicUrl?: string }) {
+export function SettingsView({ team, role, welcome, publicUrl, ai }: {
+  team: Team; role: Role; welcome?: boolean; publicUrl?: string;
+  // Organizers and coaches: the team's AI writing this month.
+  ai?: { allowance: Allowance | null; rows: UsageRow[] } | null;
+}) {
   return (
     <div className="page">
       <BrandEditor team={team} canEdit={canEditTeam(role)} welcome={welcome} />
@@ -53,6 +59,7 @@ export function SettingsView({ team, role, welcome, publicUrl }: { team: Team; r
           <CopyLink url={publicUrl} label="Public team page link" />
         </section>
       )}
+      {ai && <AiUsageCard allowance={ai.allowance} rows={ai.rows} />}
       {canManageSeats(role) && (
         <details className="fold danger">
           <summary>Delete this team</summary>

@@ -7,6 +7,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { NextResponse } from 'next/server';
 import { BLURB_MODEL, BLURB_SYSTEM, BlurbContent, blurbPrompt, checkBlurb, matchupFacts, type PastGame } from '@/lib/blurb';
 import type { PublicGame } from '@/lib/public';
+import { getAllowance, refusal } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -33,6 +34,9 @@ export async function POST(req: Request) {
   const { data: seat } = await supabase.from('team_staff').select('role').eq('team_id', game.team_id).eq('user_id', userId).maybeSingle<{ role: string }>();
   if (!seat || !WRITERS.has(seat.role)) return fail(403, 'Only organizers and coaches write blurbs.');
   if (game.status === 'final') return fail(409, 'This game is over: blurbs are for before the first pitch.');
+  // The team's plan: AI off, or this month's writes used up. Checked before any call goes out.
+  const no = refusal(await getAllowance(supabase, game.team_id));
+  if (no) return fail(no.status, no.error);
 
   const [{ data: pub }, { data: games }] = await Promise.all([
     supabase.rpc('public_game', { p_game: game.id }),
