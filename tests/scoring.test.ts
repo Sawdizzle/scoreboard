@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as L from '../lib/rules/logic.js';
-import { engineGame, onPlay, record, type G, type Res, type StatRow } from '../lib/scoring.ts';
+import { batterBid, engineGame, onPlay, orderChange, record, type G, type Res, type StatRow } from '../lib/scoring.ts';
 import type { Lineup } from '../lib/types.ts';
 
 // Us at home. Our order a1..a9 with a9 pitching; theirs h1..h9 with h9 pitching.
@@ -169,4 +169,67 @@ test('earned runs: after an error that should have been the third out, nothing i
 test('earned runs: with no error in the half, every run is earned', () => {
   const { rows } = run(start(), walk, walk, homer);
   assert.equal(line(rows, 'a9').p_er, 3);
+});
+
+// A lineup edited on the lineup screen between plays, the way the pad then
+// sees it: the same game state with a new lineup for one side.
+const withLineup = (g: G, side: 'home' | 'away', l: Lineup): G => ({ ...g, lineups: { ...g.lineups, [side]: l } });
+const apply = (g: G, res: Res | null) => { const r = record(g, res, sides); assert.ok(r); return r.next; };
+
+test('a player dropped above the batter who is up: the same batter stays up', () => {
+  // Top 1st: they (away, h) bat. Two outs, so h3 is up.
+  let g = run(start(), L.onOut, L.onOut).g;
+  assert.equal(batterBid(g), 'h3');
+  const them = team('h');
+  g = withLineup(g, 'away', { ...them, batters: them.batters.filter((b) => b.bid !== 'h1') });
+  // Without the fix, slot 2 is now h4: h3 would be skipped.
+  assert.equal(batterBid(g), 'h4');
+  g = apply(g, orderChange(g));
+  assert.equal(batterBid(g), 'h3');
+  assert.equal(orderChange(g), null);
+});
+
+test('the order reshuffled mid-game: the batter who was up is still up', () => {
+  let g = run(start(), L.onOut).g;
+  assert.equal(batterBid(g), 'h2');
+  const them = team('h');
+  g = withLineup(g, 'away', { ...them, batters: [...them.batters].reverse() });
+  g = apply(g, orderChange(g));
+  assert.equal(batterBid(g), 'h2');
+});
+
+test('the batter who was up is subbed out in his spot: his sub is up', () => {
+  let g = run(start(), L.onOut).g;
+  const them = team('h');
+  const sub = { bid: 'x1', num: '44', name: 'Sub' };
+  g = withLineup(g, 'away', { ...them, batters: them.batters.map((b) => (b.bid === 'h2' ? sub : b)) });
+  assert.equal(orderChange(g), null);
+  assert.equal(batterBid(g), 'x1');
+});
+
+test('the order got shorter than the slot that was up: it wraps to the top', () => {
+  // The order pointed at the ninth slot: h9 up for them.
+  let g = start();
+  g = { ...g, state: { ...g.state, batIdx: { away: 8 } } };
+  g = apply(g, L.onBall(g));
+  assert.equal(batterBid(g), 'h9');
+  const them = team('h');
+  g = withLineup(g, 'away', { ...them, batters: them.batters.slice(0, 8) });
+  assert.equal(batterBid(g), null);
+  g = apply(g, orderChange(g));
+  assert.equal(batterBid(g), 'h1');
+});
+
+test('the fielding side is kept too: their leadoff man next inning stays the same', () => {
+  // Top 1st, we (home, a) field; a1 leads off our half.
+  let g = run(start(), L.onBall).g;
+  const us = team('a');
+  g = withLineup(g, 'home', { ...us, batters: [us.batters[8], ...us.batters.slice(0, 8)] });
+  g = apply(g, orderChange(g));
+  assert.equal(g.lineups.home.batters[L.currentBatterIdx(g, 'home')].bid, 'a1');
+});
+
+test('nothing to correct before the first play, or with no lineup change', () => {
+  assert.equal(orderChange(start()), null);
+  assert.equal(orderChange(run(start(), L.onBall).g), null);
 });

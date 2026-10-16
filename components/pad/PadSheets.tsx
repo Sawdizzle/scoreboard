@@ -197,7 +197,9 @@ export function Situation({ g, final, labels, extra, ending = false, onFix, onEn
         {step(labels.away, g.away_score, () => L.adjustScore(g, 'away', -1), () => L.adjustScore(g, 'away', 1))}
         {step(labels.home, g.home_score, () => L.adjustScore(g, 'home', -1), () => L.adjustScore(g, 'home', 1))}
         {step('Inning', `${g.half === 'top' ? '▲' : '▼'} ${g.inning}`, () => L.onNudgeInning(g, -1), () => L.onNudgeInning(g, 1))}
-        {step('Outs', g.outs, () => L.adjustOuts(g, -1), () => L.adjustOuts(g, 1))}
+        {/* The third out ends the half, as it does on the keys: count and bases
+            cleared, the other side up. Outs held at 3 left the next play to end it. */}
+        {step('Outs', g.outs, () => L.adjustOuts(g, -1), () => ((g.outs | 0) >= 2 ? L.onEndHalf(g) : L.adjustOuts(g, 1)))}
         {step('Balls', g.balls, () => L.adjustBalls(g, -1), () => L.adjustBalls(g, 1))}
         {step('Strikes', g.strikes, () => L.adjustStrikes(g, -1), () => L.adjustStrikes(g, 1))}
         {step('Pitch count', L.pitchCount(g), () => L.adjustPitch(g, -1), () => L.adjustPitch(g, 1))}

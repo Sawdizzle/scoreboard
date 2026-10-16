@@ -85,6 +85,23 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
     setSel({});
   }
   const add = (b: LineupBatter) => update({ ...team, batters: [...team.batters, b] });
+  // A substitute takes the selected player's place: his spot in the order and
+  // his position. The player coming out goes to the bench, from where he can
+  // come back the same way. Adding at the end and moving up would shift the
+  // order under the batter who is up during a game.
+  function subIn(b: LineupBatter, i: number) {
+    const out = team.batters[i];
+    if (!out) return;
+    const batters = team.batters.map((x, j) => (j === i ? b : x));
+    const positions = Object.fromEntries(Object.entries(team.positions).map(([pos, bid]) => [pos, bid === out.bid ? b.bid : bid]));
+    update({ ...team, batters, positions });
+    setSel({});
+  }
+  const picked = sel.idx !== undefined ? team.batters[sel.idx] : undefined;
+  const benchTap = (p: PoolPlayer) => {
+    const b = { bid: p.bid, num: p.num, name: p.name };
+    if (canEdit && sel.idx !== undefined && picked) subIn(b, sel.idx); else add(b);
+  };
   function addTyped() {
     const n = num.replace(/\D/g, '').slice(0, 3);
     if (!n && !name.trim()) return;
@@ -115,7 +132,7 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
   const hint = sel.pos
     ? `Who plays ${sel.pos}? Tap a player in the order.`
     : sel.idx !== undefined
-      ? `Tap a spot for ${team.batters[sel.idx]?.name || `#${team.batters[sel.idx]?.num}`}, or move them with the arrows.`
+      ? `Tap a spot for ${team.batters[sel.idx]?.name || `#${team.batters[sel.idx]?.num}`}, a bench player to sub in, or move them with the arrows.`
       : canEdit ? 'Tap a spot, then a player. Tap a player to move them in the order.' : 'View only for your seat.';
 
   return (
@@ -192,11 +209,14 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
 
       {canEdit && bench.length > 0 && (
         <section className="stack" style={{ gap: 8 }}>
-          <span className="legend">{side === 'us' ? 'Bench · tap to add to the order' : 'Their roster · tap to add'}</span>
+          <span className="legend">{picked
+            ? `Bench · tap to sub in for ${picked.name || `#${picked.num}`} (same spot in the order${positionOf(team, sel.idx!) ? ` and ${positionOf(team, sel.idx!)}` : ''})`
+            : side === 'us' ? 'Bench · tap to add to the end of the order' : 'Their roster · tap to add'}</span>
           <div className="chips">
             {bench.map((p) => (
-              <button key={p.bid} type="button" className="chip" onClick={() => add({ bid: p.bid, num: p.num, name: p.name })}>
-                <Plus size={13} /> {p.num && `#${p.num} `}{p.name}
+              <button key={p.bid} type="button" className="chip" onClick={() => benchTap(p)}
+                aria-label={picked ? `Sub ${p.name || `number ${p.num}`} in for ${picked.name || `number ${picked.num}`}` : undefined}>
+                {picked ? '⇄' : <Plus size={13} />} {p.num && `#${p.num} `}{p.name}
               </button>
             ))}
           </div>

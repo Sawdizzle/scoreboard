@@ -11,7 +11,7 @@ import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
-import { engineGame, lastPlayText, onPlay, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
+import { engineGame, lastPlayText, onPlay, orderChange, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { airView } from '@/lib/onair';
 import { shortName } from '@/lib/format';
@@ -22,7 +22,22 @@ import type { Game, Lineup, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
-type Item = { kind: 'play'; type: string; patch: object; payload: object; rows: StatRow[]; status: Status | null } | { kind: 'undo' };
+type Item = { kind: 'play'; type: string; patch: object; payload: { cid?: string } & Record<string, unknown>; rows: StatRow[]; status: Status | null } | { kind: 'undo' };
+// The queue as kept on the phone: the seq the first item goes on, and the items.
+type Kept = { seq: number; items: Item[] };
+const keepKey = (gameId: string) => `pad-queue:${gameId}`;
+const cid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
+const readKept = (gameId: string): Kept | null => {
+  try { const k = JSON.parse(localStorage.getItem(keepKey(gameId)) ?? 'null') as Kept | null; return k && Array.isArray(k.items) && k.items.length ? k : null; } catch { return null; }
+};
+
+// Our batters keep the names the server put in the team's format; a lineup
+// read straight from the table has the names it was saved with.
+function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
+  if (!fresh || !named) return fresh;
+  const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
+  return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
+}
 type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | { runner: 'first' | 'second' | 'third' };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
@@ -50,6 +65,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
+  // The lineups as last read. The page's own copy can be stale (a phone's Back
+  // button shows the pad from the router's cache, from before a lineup edit),
+  // so every reload reads them again.
+  const lineupsNow = useRef(lineups);
   const [view, setView] = useState(() => ({
     g: engineGame(game, lineups, regulation), status: game.status as Status,
     tonight: sumRows(tonightRows), last: '',
@@ -91,18 +110,42 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     window.setTimeout(() => setToast((x) => (x === t ? null : x)), act ? 6000 : 3500);
   };
 
-  const reload = useCallback(async () => {
-    const [{ data: row }, { data: stats }] = await Promise.all([
+  // Taps since the last reload started: a reload that answers after a tap
+  // would show the game from before it, so it stands down.
+  const taps = useRef(0);
+  const catchUp = useRef<() => void>(() => {});
+  const reload = useCallback(async (after = true): Promise<boolean> => {
+    const mark = taps.current;
+    const [{ data: row }, { data: stats }, { data: lus, error: lusError }] = await Promise.all([
       sb.from('games').select('live, status, seq').eq('id', game.id).single(),
       sb.from('game_stats').select('*').eq('game_id', game.id),
+      sb.from('game_lineups').select('side, data').eq('game_id', game.id),
     ]);
-    if (!row) return;
+    if (!row || mark !== taps.current) return false;
+    if (!lusError && lus) {
+      const got: Partial<Record<Side, Lineup>> = {};
+      for (const r of lus as { side: Side; data: Lineup }[]) got[r.side] = r.data;
+      got.us = sameNames(got.us, lineups.us);
+      lineupsNow.current = got;
+    }
     seq.current = row.seq;
     history.current = [];
-    show({ g: engineGame({ ...game, live: row.live, status: row.status }, lineups, regulation), status: row.status, tonight: sumRows((stats ?? []) as StatRow[]), last: cur.current.last });
+    show({ g: engineGame({ ...game, live: row.live, status: row.status }, lineupsNow.current, regulation), status: row.status, tonight: sumRows((stats ?? []) as StatRow[]), last: cur.current.last });
+    if (after) catchUp.current();
+    return true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sb, game, lineups, regulation]);
 
+  // The queue is kept on the phone as well, so a reload, a crash or iOS
+  // closing the tab in the background does not lose plays that had not sent.
+  const keep = useCallback(() => {
+    try {
+      if (queue.current.length) localStorage.setItem(keepKey(game.id), JSON.stringify({ seq: seq.current, items: queue.current } satisfies Kept));
+      else localStorage.removeItem(keepKey(game.id));
+    } catch { /* private mode or full: the queue still runs in memory */ }
+  }, [game.id]);
+
+  const pumpRef = useRef<() => Promise<void>>(async () => {});
   const pump = useCallback(async () => {
     if (sending.current) return;
     sending.current = true;
@@ -115,28 +158,59 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         ? await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status })
         : await sb.rpc('undo_play', { p_game: game.id, p_seq: seq.current });
       if (error) {
-        const offline = !error.code || /fetch|network/i.test(error.message);
-        if (offline) {
+        const offline = !error.code || /fetch|network|load failed/i.test(error.message);
+        // A sign-in that lapsed while the phone was asleep or offline: renew it and go again.
+        const lapsed = /PGRST30\d/.test(error.code ?? '') || /JWT/i.test(error.message);
+        if (offline || lapsed) {
           // Bad signal at the field: keep the play and try again, slower each time.
           setSync('retry');
+          if (lapsed) await sb.auth.refreshSession().catch(() => {});
           await new Promise((r) => setTimeout(r, wait));
           wait = Math.min(wait * 2, 8000);
           continue;
         }
+        // Plays of ours that saved without our hearing back (the signal dropped
+        // after the server saved one, or the tab closed mid-send) look like
+        // another phone's plays: anything newer on the server that carries our
+        // own play ids is ours, and the queue goes on after them.
+        if (error.code === 'PB409' && it.kind === 'play' && it.payload.cid) {
+          const { data: evs } = await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', seq.current).order('seq');
+          let n = 0, last = seq.current;
+          for (const ev of evs ?? []) {
+            const q = queue.current[n];
+            if (q?.kind !== 'play' || !q.payload.cid || (ev.payload as { cid?: string } | null)?.cid !== q.payload.cid) { n = -1; break; }
+            n += 1; last = ev.seq as number;
+          }
+          if (n > 0) {
+            seq.current = last;
+            queue.current.splice(0, n);
+            keep();
+            wait = 800;
+            nudge();
+            continue;
+          }
+        }
+        const lost = queue.current.length;
         queue.current = [];
+        keep();
         await reload();
-        say(error.code === 'PB409' ? 'Another phone scored a play. Reloaded the game.' : error.message || 'That play did not save. Reloaded the game.');
+        const what = lost > 1 ? `${lost} plays did not save` : 'That play did not save';
+        say(error.code === 'PB409' ? `Another phone scored a play. ${what}; reloaded the game.` : error.message || `${what}. Reloaded the game.`);
         break;
       }
       seq.current = (data as { seq: number }).seq;
       queue.current.shift();
+      keep();
       wait = 800;
       nudge();
     }
     sending.current = false;
     setSync('ok');
     setWaiting(0);
-  }, [sb, game.id, reload, nudge]);
+    // A tap made while a conflict reloaded the game: send it too.
+    if (queue.current.length) window.setTimeout(() => void pumpRef.current(), 0);
+  }, [sb, game.id, reload, nudge, keep]);
+  useEffect(() => { pumpRef.current = pump; }, [pump]);
 
   // Catch up with the server when it is safe to: nothing of ours waiting.
   const idle = () => !queue.current.length && !sending.current;
@@ -178,9 +252,12 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     if (!r) return;
     history.current.push({ before, rows: r.rows });
     const nextStatus: Status = status ?? (before.status === 'scheduled' ? 'live' : before.status);
+    taps.current += 1;
     show({ g: r.next, status: nextStatus, tonight: addRows(before.tonight, r.rows), last: lastPlayText(r.res, before.g, r.next) });
     // `at`: when it was tapped, so a game video's chapters line up even if the play sent later.
-    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: { ...(r.res.payload ?? {}), at: new Date().toISOString() }, rows: r.rows, status });
+    // `cid`: this tap's own id, to tell whether it saved when the answer was lost.
+    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: { ...(r.res.payload ?? {}), at: new Date().toISOString(), cid: cid() }, rows: r.rows, status });
+    keep();
     if (navigator.vibrate) navigator.vibrate(12);
     setSheet(null);
     void pump();
@@ -189,16 +266,20 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   function undo() {
     if (!canScore) return;
     const h = history.current.pop();
+    taps.current += 1;
     if (h) show({ ...h.before, last: `Undone: ${cur.current.last || 'last play'}` });
     queue.current.push({ kind: 'undo' });
+    keep();
     void pump().then(() => { if (!h) void reload(); });
   }
 
   function endGame(final: boolean) {
     const before = cur.current;
     history.current.push({ before, rows: [] });
+    taps.current += 1;
     show({ ...before, status: final ? 'final' : 'live', last: final ? 'Game ended' : 'Game reopened' });
-    queue.current.push({ kind: 'play', type: final ? 'end_game' : 'reopen_game', patch: {}, payload: {}, rows: [], status: final ? 'final' : 'live' });
+    queue.current.push({ kind: 'play', type: final ? 'end_game' : 'reopen_game', patch: {}, payload: { cid: cid() }, rows: [], status: final ? 'final' : 'live' });
+    keep();
     setSheet(null);
     void pump();
   }
@@ -291,16 +372,49 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     const { error } = await sb.rpc('reset_game', { p_game: game.id });
     if (error) { say(error.message || 'That did not work. Try again.'); return; }
     queue.current = [];
+    keep();
     await reload();
     show({ ...cur.current, last: 'Game started over' });
     setSheet(null);
     nudge();
   }
 
-  // A pitching change made on the lineup screen moves the pitch count over.
+  // A lineup edited since the last play: a pitching change moves the pitch
+  // count over, and the order goes back to the kid who was up. On open, and
+  // after every reload (which reads the lineups again).
+  useEffect(() => { catchUp.current = () => {
+    if (cur.current.status !== 'live') return;
+    const p = pitcherChange(cur.current.g);
+    if (p) commit(p);
+    for (let i = 0; i < 2; i++) { const o = orderChange(cur.current.g); if (!o) break; commit(o); }
+  }; });
   useEffect(() => {
-    const res = pitcherChange(cur.current.g);
-    if (res && cur.current.status === 'live') commit(res);
+    // Plays this phone kept but never sent (a reload, or iOS closing the tab):
+    // put them back on the pad and send them, before anything can be tapped.
+    // Any that had saved are found on the server by their ids and skipped
+    // (pump); if another phone scored since, they are dropped and it says so.
+    const kept = canScore ? readKept(game.id) : null;
+    if (kept) {
+      let v = cur.current;
+      const stack: (typeof view)[] = [];
+      for (const it of kept.items) {
+        if (it.kind === 'undo') { const back = stack.pop(); if (back) v = back; continue; }
+        stack.push(v);
+        v = { g: { ...v.g, ...(it.patch as object) } as typeof v.g, status: it.status ?? (v.status === 'scheduled' ? 'live' : v.status), tonight: addRows(v.tonight, it.rows), last: v.last };
+      }
+      queue.current = kept.items;
+      seq.current = kept.seq;
+      taps.current += 1;
+      const n = kept.items.length;
+      show({ ...v, last: `Sending ${n} play${n > 1 ? 's' : ''} kept on this phone` });
+      // Then read the game back: the stats, and an undo this phone could not redo on its own.
+      void pump().then(() => reload());
+    } else {
+      // The page's copy of the game can be stale (the router's cache keeps the
+      // pad from before a lineup edit), so read it fresh; the reload then runs
+      // the catch-up.
+      void reload();
+    }
     // Once, when the pad opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

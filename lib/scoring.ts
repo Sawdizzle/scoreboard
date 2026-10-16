@@ -275,7 +275,10 @@ export function record(prev: G, res: Res | null, sides: (e: EngineSide) => Side)
   // Who was pitching for each side when this was written, so a pitching
   // change made on the lineup screen can be noticed on the pad (pitcherChange).
   const pitcherBid = { home: next.lineups.home?.positions?.P ?? null, away: next.lineups.away?.positions?.P ?? null };
-  const state = { ...((next.state as object) ?? {}), runners, unearned, errOuts, pitcherBid };
+  // And who is up next for each side, by id, so a lineup edited mid-game
+  // (a sub, a drop, a reorder) keeps the same kid at the plate (orderChange).
+  const batBid = { home: slotBid(next, 'home'), away: slotBid(next, 'away') };
+  const state = { ...((next.state as object) ?? {}), runners, unearned, errOuts, pitcherBid, batBid };
   const patch = { ...stamped.patch, state };
   return { res: stamped, patch, rows, next: { ...next, state } as G };
 }
@@ -309,6 +312,36 @@ export function pitcherChange(g: G): Res | null {
       const r = L.onPitcherChange(g, side, seen[side] ?? null, now) as Res | null;
       return r ?? { type: 'pitcher', patch: { state: { ...g.state } }, payload: { inputs: { side, from: seen[side] ?? null, to: now } } };
     }
+  }
+  return null;
+}
+
+// The id in a side's batting slot right now, or null.
+function slotBid(g: G, side: EngineSide): string | null {
+  return g.lineups[side]?.batters?.[L.currentBatterIdx(g, side)]?.bid ?? null;
+}
+
+// The batting order is a slot pointer (state.batIdx), so an order edited on the
+// lineup screen since the last play can put a different kid at the plate: a
+// player dropped above him moves everyone up one, a reorder moves him. This
+// finds who was up (state.batBid) and points the order back at him. If he left
+// the order, whoever now has his slot (his sub, or the next batter) is up, and
+// a slot past the end of a shorter order wraps to the top. One side at a time;
+// null when nothing needs to move.
+export function orderChange(g: G): Res | null {
+  const seen = g.state?.batBid as Record<EngineSide, string | null> | undefined;
+  if (!seen) return null;
+  for (const side of ['home', 'away'] as const) {
+    const batters = g.lineups[side]?.batters ?? [];
+    if (!batters.length) continue;
+    const at = L.currentBatterIdx(g, side);
+    const want = seen[side] ?? null;
+    if (want && batters[at]?.bid === want) continue;
+    const found = want ? batters.findIndex((b) => b.bid === want) : -1;
+    const i = found >= 0 ? found : at < batters.length ? at : 0;
+    if (i === at) continue;
+    const batIdx = { ...((g.state?.batIdx as object) ?? {}), [side]: i };
+    return { type: 'batidx', text: 'Batting order updated', patch: { state: { ...g.state, batIdx } }, payload: { side, i } };
   }
   return null;
 }

@@ -157,8 +157,11 @@ export function ObsBridge({ token, feed, fx }: { token: string; feed: Feed | nul
   const auto = !!feed?.broadcast?.obs?.auto_clip;
   const handled = useRef(0);
   useEffect(() => {
-    if (!obs() || !auto || !fx || fx.n <= handled.current || !wantClip(fx.kind, kinds.current)) return;
+    if (!obs() || !fx || fx.n <= handled.current) return;
+    // Seen either way: a moment from while auto-clip was off is not clipped
+    // later, when it is switched on.
     handled.current = fx.n;
+    if (!auto || !wantClip(fx.kind, kinds.current)) return;
     const was = pending.current;
     const { clip: c, merged } = joinClip(was, fx.kind, fx.n);
     // A moment tapped in On Air is no play: no undo takes it back.
@@ -177,10 +180,13 @@ export function ObsBridge({ token, feed, fx }: { token: string; feed: Feed | nul
 
   // An undo takes back the play a clip was for: before the save, it never
   // saves; after, the clip is marked discarded. The file stays on disk.
+  // The feed has no newest play at all after ANY undo (a mistaken pitch taken
+  // back, too), so that says nothing about which play went: the clips stay.
+  // A stray clip of an undone play beats losing every real one.
   const lastSeq = feed?.last?.seq ?? null;
   const gameId = feed?.game?.id ?? null;
   useEffect(() => {
-    const gone = (c: { game: string | null; seq: number | null }) => c.seq != null && c.game === gameId && (lastSeq == null || lastSeq < c.seq);
+    const gone = (c: { game: string | null; seq: number | null }) => c.seq != null && c.game === gameId && lastSeq != null && lastSeq < c.seq;
     const p = pending.current;
     if (p && gone(p)) {
       window.clearTimeout(p.timer); timers.current.delete(p.n); pending.current = null;
