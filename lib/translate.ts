@@ -18,7 +18,12 @@ const fields = (c: RecapContent) => ({
   headline: c.headline, recap: c.recap, instagram: c.social.instagram, facebook: c.social.facebook, x: c.social.x,
   title: c.website_post.title, website: c.website_post.body_markdown, reason: c.player_of_the_game.reason,
 });
-const numbers = (s: string) => (s.replace(/#\w+/g, '').match(/\d+(?:[-.:]\d+)*/g) ?? []).sort();
+// Numbers as written, with Spanish separators read the English way: 2,50 is
+// 2.50 and an en dash in 10–2 is a hyphen.
+const numbers = (s: string) => (s.replace(/#\w+/g, '').replace(/(\d),(\d)/g, '$1.$2').replace(/(\d)\s*[–—]\s*(\d)/g, '$1-$2')
+  .match(/\d+(?:[-.:]\d+)*/g) ?? []).sort();
+// "No. 7", "N.º 7", "#7" and "7" are the same player.
+const who = (s: string) => s.toLowerCase().replace(/^(no\.?|n\.?º|nº|núm\.?|#)\s*/i, '').trim();
 const tags = (s: string) => (s.match(/#\w+/g) ?? []).sort();
 
 export function checkTranslation(en: RecapContent, es: RecapContent): string[] {
@@ -29,7 +34,7 @@ export function checkTranslation(en: RecapContent, es: RecapContent): string[] {
     if (tags(a[k]).join() !== tags(b[k]).join()) out.push(`The ${k} changed its hashtags.`);
     if (a[k].trim() && !b[k].trim()) out.push(`The ${k} came back empty.`);
   }
-  if (es.player_of_the_game.name_or_number !== en.player_of_the_game.name_or_number) out.push('The player of the game must keep their name as written.');
+  if (who(es.player_of_the_game.name_or_number) !== who(en.player_of_the_game.name_or_number)) out.push('The player of the game must keep their name as written.');
   if (es.social.x.length > 280) out.push(`The X post is ${es.social.x.length} characters.`);
   return out;
 }

@@ -19,6 +19,13 @@ test('a faithful translation passes', () => {
   assert.deepEqual(checkTranslation(en, es), []);
 });
 
+test('Spanish separators and number marks are the same numbers', () => {
+  const es2 = { ...es, headline: 'Blue Steel vence a Krum 10–2', player_of_the_game: { name_or_number: 'N.º 7', reason: '2 hits' } };
+  const en2 = { ...en, player_of_the_game: { name_or_number: 'No. 7', reason: '2 hits' } };
+  assert.deepEqual(checkTranslation(en2, es2), []);
+  assert.deepEqual(checkTranslation({ ...en, recap: 'ERA 2.50.\n\nWon.' }, { ...es, recap: 'ERA 2,50.\n\nGanamos.' }), []);
+});
+
 test('a changed score, a dropped hashtag, an empty field, a renamed player: all caught', () => {
   const bad = { ...es, headline: 'Blue Steel vence a Krum 10-3', social: { ...es.social, instagram: '¡Gran victoria! #BlueSteel', facebook: '' }, player_of_the_game: { name_or_number: 'Número 7', reason: '2 hits' } };
   assert.deepEqual(checkTranslation(en, bad), [
