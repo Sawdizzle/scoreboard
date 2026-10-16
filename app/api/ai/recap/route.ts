@@ -15,7 +15,7 @@ import type { GameSettings } from '@/lib/broadcast';
 export const maxDuration = 90;
 
 const WRITERS = new Set(['organizer', 'head_coach', 'coach']);
-const STAT_COLS = 'event_id, side, bid, b_pa, b_ab, b_h, b_2b, b_3b, b_hr, b_rbi, b_r, b_bb, b_so, b_hbp, b_sb, p_outs, p_h, p_r, p_er, p_bb, p_so, p_pitches';
+const STAT_COLS = 'event_id, side, bid, b_pa, b_ab, b_h, b_2b, b_3b, b_hr, b_rbi, b_r, b_bb, b_so, b_hbp, b_sb, p_outs, p_bf, p_h, p_r, p_er, p_bb, p_so, p_pitches';
 const fail = (status: number, error: string) => NextResponse.json({ error }, { status });
 
 export async function POST(req: Request) {

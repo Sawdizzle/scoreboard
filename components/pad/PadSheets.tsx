@@ -154,6 +154,26 @@ export function Runner({ g, from, who, onPick, onClose }: {
   );
 }
 
+// The scoring check at End game: what in the log looks like a slip. Fix opens
+// the Situation sheet; End anyway ends the game as it stands.
+export function EndCheck({ issues, onFix, onEnd, onClose }: {
+  issues: { level: 'fix' | 'note'; text: string }[]; onFix: () => void; onEnd: () => void; onClose: () => void;
+}) {
+  const fixes = issues.filter((i) => i.level === 'fix').length;
+  return (
+    <Sheet title={fixes ? `${fixes} thing${fixes === 1 ? '' : 's'} to fix before the end` : 'Check before the end'} onClose={onClose}>
+      <ul className="stack" style={{ gap: 8, margin: 0, paddingLeft: 18 }}>
+        {issues.map((i, n) => <li key={n} className={i.level === 'fix' ? 'note note-bad' : 'note note-plain'} style={{ listStyle: 'none', marginLeft: -18 }}>{i.text}</li>)}
+      </ul>
+      <p className="hint">Stats and recaps come from these plays. Undo back to a slip and score it again, or fix the score on the Situation sheet.</p>
+      <div className="pgrid two">
+        <button type="button" className="btn btn-quiet btn-big" onClick={onFix}>Go back and fix</button>
+        <button type="button" className="btn btn-danger btn-big" onClick={onEnd}>End anyway</button>
+      </div>
+    </Sheet>
+  );
+}
+
 // Corrections, and ending the game. Nothing here goes on anyone's stats.
 export function Situation({ g, final, labels, extra, onFix, onEnd, onStartOver, onClose }: {
   g: G; final: boolean; labels: { away: string; home: string }; extra?: React.ReactNode;

@@ -7,13 +7,16 @@ import { Matchup, Readiness } from '@/components/GameBits';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
 import { RecapCard, type RecapRow } from '@/components/RecapCard';
+import type { Issue } from '@/lib/audit';
 import { SPORT_LABEL } from '@/lib/sports';
 import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
-export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false }: {
+export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false, issues = null }: {
   team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[]; recap?: RecapRow | null;
   // AI writing is on for this team (its plan's monthly limit is above 0).
   ai?: boolean;
+  // A final game's scoring check (lib/audit): what may be a scoring slip.
+  issues?: Issue[] | null;
 }) {
   const base = `/t/${team.slug}/games/${game.id}`;
   const run = canRunGames(role);
@@ -54,6 +57,14 @@ export function GameView({ team, role, game, lineups, seasons, recap = null, ai 
         <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary btn-big">
           {game.status === 'live' ? 'Back to the pad' : game.status === 'final' ? 'Open the pad · final' : 'Open the pad'}
         </Link>
+      )}
+
+      {run && issues && issues.length > 0 && (
+        <section className="card pad">
+          <h2 className="h-sec">Scoring check</h2>
+          <p className="hint">These may be scoring slips. Stats and recaps come from the plays, so fix them on the pad (Reopen the game, then Undo or the Situation sheet) before writing a recap.</p>
+          {issues.map((i, n) => <p key={n} className={i.level === 'fix' ? 'note note-bad' : 'note note-plain'}>{i.text}</p>)}
+        </section>
       )}
 
       {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && (ai || recap) && (
