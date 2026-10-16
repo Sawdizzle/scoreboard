@@ -100,3 +100,26 @@ test('a stream OBS never reported stopping is closed at its last report, and the
   assert.deepEqual(rows.map((r) => r.open), [false, false, true]);
   assert.equal(rows[1].ended, true);
 });
+
+test('clips: the stream logs each save by token, rows only move forward, staff alone read them', async () => {
+  const [{ token }] = await t.db.query<{ token: string }>(`select token from channels where team_id = $1`, [team]).then((r) => r.rows);
+  const n = Date.now();
+  const report = (c: Record<string, unknown>) => t.as(null, `select clip_report($1, $2::jsonb)`, [token, JSON.stringify({ n, ...c })]);
+  await report({ status: 'armed', kind: 'homerun', kinds: ['homerun'], game_id: game, seq: 7, inning: 3, half: 'bottom', away: 2, home: 4 });
+  await report({ status: 'asked' });
+  await report({ status: 'saved' });
+  await report({ status: 'armed', kind: 'run' });
+  const [c] = await t.as<{ kind: string; status: string; game_id: string; inning: number; saved: boolean }>('owner',
+    `select kind, status, game_id, inning, saved_at is not null as saved from game_clips where team_id = $1 and n = $2`, [team, n]);
+  assert.deepEqual(c, { kind: 'homerun', status: 'saved', game_id: game, inning: 3, saved: true });
+  // An undo after the save discards it.
+  await report({ status: 'discarded', code: 'undone' });
+  assert.equal((await t.as<{ status: string }>('owner', `select status from game_clips where n = $1`, [n]))[0].status, 'discarded');
+  // Another team's game is not attached; a wrong token writes nothing; strangers read nothing.
+  await t.as(null, `select clip_report($1, $2::jsonb)`, [token, JSON.stringify({ n: n + 1, status: 'armed', kind: 'homerun', game_id: otherGame })]);
+  assert.equal((await t.as<{ game_id: string | null }>('owner', `select game_id from game_clips where n = $1`, [n + 1]))[0].game_id, null);
+  await t.as(null, `select clip_report('00000000-0000-0000-0000-000000000000', $1::jsonb)`, [JSON.stringify({ n: n + 2, status: 'armed', kind: 'x' })]);
+  assert.equal((await t.db.query(`select 1 from game_clips where n = $1`, [n + 2])).rows.length, 0);
+  assert.equal((await t.as('stranger', `select 1 from game_clips where team_id = $1`, [team])).length, 0);
+  await assert.rejects(t.as(null, `insert into game_clips (team_id, n, kind) values ($1, 1, 'x')`, [team]));
+});

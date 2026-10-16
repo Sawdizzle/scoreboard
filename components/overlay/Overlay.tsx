@@ -58,7 +58,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [intro, setIntro] = useState<{ n: number; kind: 'intro' | 'tribute' } | null>(null);
   const [strike, setStrike] = useState(0);
   // The last moment the stream marked (sound or stinger), for OBS auto-clip.
-  const [heard, setHeard] = useState<{ kind: string; n: number } | null>(null);
+  const [heard, setHeard] = useState<{ kind: string; n: number; play: boolean } | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
   const [mute, setMute] = useState(false);
   const first = useRef(initial);
@@ -118,7 +118,7 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     let seenCmd: number | undefined = first.current ? Number(first.current.cmd?.n) || 0 : undefined;
     let prev: Feed | null = first.current;
     const fire = (kind: string, fx: string | null, meta: Record<string, unknown> = {}) => {
-      if (kind) { try { A.play(kind); } catch { /* no audio here: the picture still plays */ } setHeard({ kind, n: Date.now() }); }
+      if (kind) { try { A.play(kind); } catch { /* no audio here: the picture still plays */ } setHeard({ kind, n: Date.now(), play: meta.type !== 'moment' }); }
       if (!fx) return;
       setShot({ kind: fx, n: Date.now(), meta });
       window.clearTimeout(fxTimer);

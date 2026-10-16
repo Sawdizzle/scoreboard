@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { GameFacts } from '@/lib/summarize';
 import { description, stamp, type Mark, type YoutubeText } from '@/lib/youtube';
 
-type Pack = { text: YoutubeText; facts: GameFacts; halves: Mark[]; scoring: Mark[]; first: string | null; streamStart: string | null; warnings: string[] };
+type Pack = { text: YoutubeText; facts: GameFacts; halves: Mark[]; scoring: Mark[]; highlights?: Mark[]; first: string | null; streamStart: string | null; warnings: string[] };
 
 // "12:34" or "1:02:03" to seconds; null if it is not a time.
 const seconds = (s: string) => {
@@ -52,7 +52,7 @@ export function YoutubeCard({ gameId }: { gameId: string }) {
     const s = seconds(offset);
     return s === null || !offset.trim() ? null : new Date(Date.parse(pack.first) - s * 1000).toISOString();
   }, [pack, offset]);
-  const text = pack ? description({ text: { ...pack.text, title }, facts: pack.facts, halves: pack.halves, scoring: pack.scoring, streamStart: start }) : '';
+  const text = pack ? description({ text: { ...pack.text, title }, facts: pack.facts, halves: pack.halves, scoring: pack.scoring, highlights: pack.highlights, streamStart: start }) : '';
 
   return (
     <section className="card pad">

@@ -4,7 +4,8 @@
 // and chapters from these, and lets the coach shift them if the times are off.
 import { NextResponse } from 'next/server';
 import { aiWrite, fail, seat } from '@/lib/ai-call';
-import { gameDate, getGameRow, loadFacts } from '@/lib/game-facts';
+import { clipMarks } from '@/lib/clips';
+import { gameDate, getGameRow, loadClips, loadFacts, streamStartFor } from '@/lib/game-facts';
 import { knownScores, scoreProblems } from '@/lib/recap';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { checkYoutube, videoMarks, YOUTUBE_MODEL, YOUTUBE_SYSTEM, youtubePrompt, YoutubeText } from '@/lib/youtube';
@@ -27,15 +28,9 @@ export async function POST(req: Request) {
   const marks = videoMarks(events, facts);
 
   // The stream session the game was played in: the last start before first pitch.
-  let streamStart: string | null = null;
-  if (marks.first) {
-    const { data } = await db.from('stream_sessions').select('started_at, ended_at').eq('team_id', game.team_id)
-      .lte('started_at', marks.first).order('started_at', { ascending: false }).limit(1).maybeSingle<{ started_at: string; ended_at: string | null }>();
-    // Still open, or closed after first pitch; and begun within 12 hours of it,
-    // so a session left open by a crash is never mistaken for this game's.
-    const near = data && Date.parse(marks.first) - Date.parse(data.started_at) < 12 * 3600000;
-    if (data && near && (!data.ended_at || data.ended_at >= marks.first)) streamStart = data.started_at;
-  }
+  const streamStart = marks.first ? await streamStartFor(db, game.team_id, marks.first) : null;
+  // Saved clips are the highlights; runs are already listed as scoring plays.
+  const highlights = clipMarks(await loadClips(db, game.id));
 
   const known = knownScores(facts);
   const r = await aiWrite({
@@ -44,5 +39,5 @@ export async function POST(req: Request) {
     check: (t) => checkYoutube(t, known, scoreProblems),
   });
   if ('error' in r) return r.error;
-  return NextResponse.json({ text: r.out, warnings: r.warnings, facts, halves: marks.halves, scoring: marks.scoring, first: marks.first, streamStart });
+  return NextResponse.json({ text: r.out, warnings: r.warnings, facts, halves: marks.halves, scoring: marks.scoring, first: marks.first, streamStart, highlights });
 }

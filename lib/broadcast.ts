@@ -47,7 +47,8 @@ export type Broadcast = {
   scene_style?: 'standard' | 'elevated';
   ticker?: { on?: boolean; text?: string; tone?: 'notice' | 'alert' };
   sponsors?: { on?: boolean; items?: { name: string; logo?: string | null }[]; every?: number };
-  obs?: { auto_clip?: boolean; replay_seconds?: number; cameras?: string[] };
+  // clip_kinds: which moments auto-clip saves (lib/clips.ts); unset is the default set.
+  obs?: { auto_clip?: boolean; clip_kinds?: string[]; replay_seconds?: number; cameras?: string[] };
   // A pregame blurb on Starting Soon: written on request (app/api/ai/blurb),
   // put up only when the operator taps Use, and shown only for its own game.
   blurb?: Blurb;

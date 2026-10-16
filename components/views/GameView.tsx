@@ -6,18 +6,22 @@ import { GameFields } from '@/components/GameFields';
 import { Matchup, Readiness } from '@/components/GameBits';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
+import { ClipsCard } from '@/components/ClipsCard';
 import { RecapCard, type RecapRow } from '@/components/RecapCard';
 import { YoutubeCard } from '@/components/YoutubeCard';
 import type { Issue } from '@/lib/audit';
+import type { ClipView } from '@/lib/clips';
 import { SPORT_LABEL } from '@/lib/sports';
 import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
-export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false, issues = null }: {
+export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false, issues = null, clips = null }: {
   team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[]; recap?: RecapRow | null;
   // AI writing is on for this team (its plan's monthly limit is above 0).
   ai?: boolean;
   // A final game's scoring check (lib/audit): what may be a scoring slip.
   issues?: Issue[] | null;
+  // The stream's replay-buffer saves for this game, placed in the stream video.
+  clips?: { list: ClipView[]; streamStart: string | null } | null;
 }) {
   const base = `/t/${team.slug}/games/${game.id}`;
   const run = canRunGames(role);
@@ -72,6 +76,8 @@ export function GameView({ team, role, game, lineups, seasons, recap = null, ai 
         <RecapCard key={`${recap?.generated_at}|${recap?.status}|${recap?.edited_at}`} slug={team.slug} gameId={game.id} initial={recap} canGenerate={ai} />
       )}
       {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && ai && <YoutubeCard gameId={game.id} />}
+
+      {run && clips && clips.list.length > 0 && <ClipsCard clips={clips.list} streamStart={clips.streamStart} />}
 
       {run && (
         <details className="fold">

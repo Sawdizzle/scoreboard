@@ -178,7 +178,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line-2); font-weight: 600; font-size: 14px; color: var(--soft); }
-.chip[aria-current="page"] { background: var(--chalk); border-color: var(--chalk); color: var(--on-steel); }
+.chip[aria-current="page"], .chips .chip.on { background: var(--chalk); border-color: var(--chalk); color: var(--on-steel); }
 .chip .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--gold); }
 
 /* ---- Today ---------------------------------------------------------------- */

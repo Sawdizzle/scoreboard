@@ -5,7 +5,9 @@ import type { RecapRow } from '@/components/RecapCard';
 import { aiOn, getAllowance } from '@/lib/ai-limit';
 import { auditGame } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
+import { viewClips } from '@/lib/clips';
 import { getGame, getLineups, listSeasons, loadTeam } from '@/lib/data';
+import { loadClips, streamStartFor } from '@/lib/game-facts';
 
 export const metadata: Metadata = { title: 'Game' };
 
@@ -32,5 +34,9 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
       regulationInnings: game.settings?.regulation ?? season?.game_innings ?? null, runRule: game.settings?.run_rule ?? null,
     });
   }
-  return <GameView team={team} role={role} game={game} lineups={lineups} seasons={seasons} recap={recap} ai={aiOn(allowance)} issues={issues} />;
+  // The stream's replay-buffer saves for this game (staff only, by RLS), placed in the stream.
+  const rows = await loadClips(supabase, game.id);
+  const streamStart = rows.length ? await streamStartFor(supabase, team.id, rows[0].moment_at) : null;
+  const clips = rows.length ? { list: viewClips(rows, streamStart), streamStart } : null;
+  return <GameView team={team} role={role} game={game} lineups={lineups} seasons={seasons} recap={recap} ai={aiOn(allowance)} issues={issues} clips={clips} />;
 }

@@ -90,8 +90,8 @@ export function chapters(marks: Mark[], streamStart: string): string[] {
   return out.length >= 3 ? out.map((c) => `${stamp(c.s)} ${c.label}`) : [];
 }
 
-// The whole description: intro, final and line score, chapters, key moments, hashtags.
-export function description(o: { text: YoutubeText; facts: GameFacts; halves: Mark[]; scoring: Mark[]; streamStart: string | null }) {
+// The whole description: intro, final and line score, chapters, key moments, clips, hashtags.
+export function description(o: { text: YoutubeText; facts: GameFacts; halves: Mark[]; scoring: Mark[]; highlights?: Mark[]; streamStart: string | null }) {
   const { facts } = o;
   const [away, home] = facts.teams.home === 'us' ? (['them', 'us'] as const) : (['us', 'them'] as const);
   const row = (s: 'us' | 'them') => `${facts.teams[s]}: ${facts.lineScore.innings.map((r) => r[s] ?? '-').join(' ')}  (R ${facts.lineScore[s].r}, H ${facts.lineScore[s].h}, E ${facts.lineScore[s].e})`;
@@ -103,6 +103,8 @@ export function description(o: { text: YoutubeText; facts: GameFacts; halves: Ma
     const t0 = Date.parse(o.streamStart);
     const key = o.scoring.map((m) => ({ s: (Date.parse(m.at) - t0) / 1000, label: m.label })).filter((m) => m.s >= 0).sort((a, b) => a.s - b.s);
     if (key.length) parts.push('', 'Scoring plays', ...key.map((m) => `${stamp(m.s)} ${m.label}`));
+    const hi = (o.highlights ?? []).map((m) => ({ s: (Date.parse(m.at) - t0) / 1000, label: m.label })).filter((m) => m.s >= 0).sort((a, b) => a.s - b.s);
+    if (hi.length) parts.push('', 'Highlights', ...hi.map((m) => `${stamp(m.s)} ${m.label}`));
   }
   const tags = o.text.hashtags.map((h) => `#${h.replace(/^#+/, '').replace(/\s+/g, '')}`).filter((h) => h.length > 1).slice(0, 5);
   if (tags.length) parts.push('', tags.join(' '));

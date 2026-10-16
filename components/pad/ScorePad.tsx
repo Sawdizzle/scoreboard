@@ -204,7 +204,7 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
     <AirFrame inline={inline} onClose={() => setAir(false)}>
       <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
       <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} blurbFor={canWrite && status !== 'final' ? game.id : null} />
-      <ObsPanel teamId={team.id} broadcast={bc} onBroadcast={bcast} onSend={send} />
+      <ObsPanel teamId={team.id} sport={sport} broadcast={bc} onBroadcast={bcast} onSend={send} />
       <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
     </AirFrame>
   );

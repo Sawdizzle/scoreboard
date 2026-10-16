@@ -2,6 +2,7 @@
 // under each player's public-name setting), its play log and stat rows, and
 // the facts worked out from them. Server only, run as the signed-in user.
 import type { GameSettings } from './broadcast';
+import type { ClipRow } from './clips';
 import type { PublicGame } from './public';
 import { summarizeGame, type GameFacts, type SummaryEvent, type SummaryStat } from './summarize';
 import type { createClient } from './supabase/server';
@@ -36,4 +37,21 @@ export async function loadFacts(db: Db, game: GameRow): Promise<{ facts: GameFac
 }
 
 // "Saturday, October 17, 2026", in the team's time zone.
+// When the stream that carried a moment went live: the last start before it,
+// still open or closed after it, and begun within 12 hours of it, so a
+// session left open by a crash is never mistaken for this game's.
+export async function streamStartFor(db: Db, teamId: string, at: string): Promise<string | null> {
+  const { data } = await db.from('stream_sessions').select('started_at, ended_at').eq('team_id', teamId)
+    .lte('started_at', at).order('started_at', { ascending: false }).limit(1).maybeSingle<{ started_at: string; ended_at: string | null }>();
+  const near = data && Date.parse(at) - Date.parse(data.started_at) < 12 * 3600000;
+  return data && near && (!data.ended_at || data.ended_at >= at) ? data.started_at : null;
+}
+
+// A game's replay-buffer saves (game_clips), oldest first.
+export const CLIP_COLS = 'id, n, kind, kinds, source, seq, inning, half, away_score, home_score, moment_at, status, code';
+export async function loadClips(db: Db, gameId: string) {
+  const { data } = await db.from('game_clips').select(CLIP_COLS).eq('game_id', gameId).order('moment_at');
+  return (data ?? []) as ClipRow[];
+}
+
 export const gameDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' }) : null);
