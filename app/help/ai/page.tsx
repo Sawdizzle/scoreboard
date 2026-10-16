@@ -39,6 +39,11 @@ export default function AiHelp() {
         </section>
 
         <section className="card pad">
+          <h2 className="h-sec">Lineup photos</h2>
+          <p>A scorer can photograph a lineup card instead of typing it. The photo goes to Claude to be read and is not kept by Scoreboard; what it read lands in the lineup screen&rsquo;s paste box for the scorer to check, and nothing is added until they tap <b>Add these</b>.</p>
+        </section>
+
+        <section className="card pad">
           <h2 className="h-sec">Limits</h2>
           <p>Each team has a number of AI writes a month, shown under Team settings. One recap or one blurb is one write. When AI writing is off, or the month&rsquo;s writes are used up, everything else in Scoreboard works exactly the same.</p>
         </section>
