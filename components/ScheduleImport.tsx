@@ -3,10 +3,20 @@
 import { useState } from 'react';
 import { importGames } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
+import { localToIso } from '@/lib/schedule-import';
 
-type Found = { date: string; time: string; opponent: string; home: 'home' | 'away' | 'unknown'; venue: string; address: string; note: string; starts_at: string; dup: boolean };
-const when = (iso: string, time: string) => new Date(iso).toLocaleString('en-US', {
-  weekday: 'short', month: 'short', day: 'numeric', ...(time ? { hour: 'numeric', minute: '2-digit' } : {}), timeZone: 'America/Chicago' });
+type Found = { date: string; time: string; opponent: string; home: 'home' | 'away' | 'unknown'; venue: string; address: string; note: string; starts_at: string | null; dup: boolean };
+// With the year, so a wrong one shows.
+const when = (date: string, iso: string | null) => new Date(iso ?? `${date}T17:00:00Z`).toLocaleString('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', ...(iso ? { hour: 'numeric', minute: '2-digit' } : {}), timeZone: 'America/Chicago' });
+// "9:45", "9:45 am", "1:15 PM", "13:15" -> "13:15"; null if it is not a time.
+function hhmm(t: string) {
+  const m = /^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?\s*$/i.exec(t);
+  if (!m) return null;
+  let h = Number(m[1]); const min = Number(m[2] ?? 0);
+  if (m[3]) { const pm = /^p/i.test(m[3]); if (h === 12) h = pm ? 12 : 0; else if (pm) h += 12; }
+  return h < 24 && min < 60 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : null;
+}
 
 // Paste a schedule or give its link; Claude picks out this team's games; the
 // coach ticks which to add. Games already on the schedule start unticked.
@@ -18,6 +28,7 @@ export function ScheduleImport({ slug, teamId }: { slug: string; teamId: string 
   const [found, setFound] = useState<Found[] | null>(null);
   const [unsure, setUnsure] = useState<string[]>([]);
   const [pick, setPick] = useState<boolean[]>([]);
+  const [times, setTimes] = useState<string[]>([]);
 
   async function read() {
     setBusy(true); setError(null);
@@ -26,14 +37,17 @@ export function ScheduleImport({ slug, teamId }: { slug: string; teamId: string 
       const body = await res.json().catch(() => ({}));
       if (!res.ok) { setError(body.error ?? 'That did not work. Try again.'); return; }
       setFound(body.games); setUnsure(body.unsure ?? []);
-      setPick((body.games as Found[]).map((g) => !g.dup));
+      setPick((body.games as Found[]).map((g) => !g.dup && !!g.starts_at));
+      setTimes((body.games as Found[]).map(() => ''));
     } catch {
       setError('No connection. Try again when you have signal.');
     } finally {
       setBusy(false);
     }
   }
-  const chosen = found?.filter((_, i) => pick[i]) ?? [];
+  // A game with no time takes the one the coach types; until then it cannot be ticked.
+  const start = (g: Found, i: number) => g.starts_at ?? (hhmm(times[i] ?? '') ? localToIso(g.date, hhmm(times[i])!) : null);
+  const chosen = found?.map((g, i) => ({ ...g, starts_at: start(g, i) })).filter((g, i) => pick[i] && g.starts_at) ?? [];
 
   return (
     <div className="stack" style={{ gap: 12 }}>
@@ -60,10 +74,14 @@ export function ScheduleImport({ slug, teamId }: { slug: string; teamId: string 
           <div className="rows">
             {found.map((g, i) => (
               <label key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-                <input type="checkbox" checked={pick[i]} onChange={(e) => setPick(pick.map((p, j) => (j === i ? e.target.checked : p)))} style={{ marginTop: 4 }} />
+                <input type="checkbox" checked={pick[i] && !!start(g, i)} disabled={!start(g, i)} onChange={(e) => setPick(pick.map((p, j) => (j === i ? e.target.checked : p)))} style={{ marginTop: 4 }} />
                 <span className="row-main" style={{ gap: 2 }}>
                   <span className="row-title">{g.home === 'away' ? 'at' : 'vs'} {g.opponent}</span>
-                  <span className="sub">{when(g.starts_at, g.time)}{g.time ? '' : ' · time not given'}{g.venue ? ` · ${g.venue}` : ''}</span>
+                  <span className="sub">{when(g.date, start(g, i))}{g.venue ? ` · ${g.venue}` : ''}</span>
+                  {!g.starts_at && (
+                    <input className="input" style={{ minHeight: 40, maxWidth: 200 }} placeholder="First pitch, e.g. 9:45 am" value={times[i] ?? ''} aria-label={`First pitch for ${g.opponent}`}
+                      onChange={(e) => { const v = e.target.value; setTimes(times.map((t, j) => (j === i ? v : t))); if (hhmm(v)) setPick(pick.map((p, j) => (j === i ? true : p))); }} />
+                  )}
                   {(g.dup || g.note || g.home === 'unknown') && <span className="sub">{[g.dup && 'Already on the schedule', g.home === 'unknown' && 'Home or away not given: added as home', g.note].filter(Boolean).join(' · ')}</span>}
                 </span>
               </label>

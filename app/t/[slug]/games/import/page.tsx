@@ -8,6 +8,8 @@ import { loadTeam } from '@/lib/data';
 import { canWriteRecaps } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Import a schedule' };
+// Adding a tournament's games looks up each field's address for the weather.
+export const maxDuration = 60;
 
 export default async function ImportSchedule({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

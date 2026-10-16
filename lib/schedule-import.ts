@@ -24,7 +24,7 @@ export type Found = ScheduleRead['games'][number];
 
 export const SCHEDULE_SYSTEM = `You pick one youth baseball team's games out of a schedule: a tournament email, a league web page's text, or a coach's message.
 - Return only games our team plays in. A tournament page lists many teams: match ours by its name, short name or abbreviation, allowing small differences ("Blue Steel 14U", "Blue Steel Baseball").
-- Dates as YYYY-MM-DD. If the year is not written, use the next date on or after today that fits. Times as 24-hour HH:MM, local to the schedule; empty if none is given or it says TBD.
+- Dates as YYYY-MM-DD. Take the year from the schedule when it is written anywhere in it (a header, a season name). If it is not, use the year that puts the date nearest today, and say so in "unsure". Times as 24-hour HH:MM, local to the schedule; empty if none is given or it says TBD.
 - Opponent exactly as written. If the opponent is not decided yet ("Winner of Game 4"), write that as the opponent and say so in "note".
 - home: "home" if our team is listed as home (often the second team, or "vs"), "away" if listed as visitor (first team, or "@"/"at"), else "unknown".
 - Never invent a game, a time or a field. Anything uncertain goes in "unsure".`;
@@ -50,25 +50,47 @@ export function localToIso(date: string, time: string, tz = TZ): string | null {
   return new Date(ms).toISOString();
 }
 
-export function checkSchedule(r: ScheduleRead, now = Date.now()): string[] {
+// What must be fixed before the answer is used (retried once): dates that are
+// not dates, games with no opponent.
+export function checkSchedule(r: ScheduleRead): string[] {
   const problems: string[] = [];
   for (const g of r.games) {
-    const iso = localToIso(g.date, g.time || '12:00');
-    if (!iso) { problems.push(`"${g.date} ${g.time}" is not a date and time.`); continue; }
-    const days = (Date.parse(iso) - now) / 86400000;
-    if (days < -60 || days > 400) problems.push(`${g.date} is far from today: check the year.`);
+    if (!localToIso(g.date, g.time || '12:00')) problems.push(`"${g.date} ${g.time}" is not a date and time.`);
     if (!g.opponent.trim()) problems.push(`A game on ${g.date} has no opponent.`);
   }
   return problems;
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-// A found game already on the schedule: the same day (in the team's zone) and an opponent whose name overlaps.
-export function alreadyThere(f: Found, existing: { starts_at: string | null; opponent_name: string }[], tz = TZ) {
+// What the coach should look at, not retried: a date far from today may be a
+// wrong year, or an old schedule on purpose.
+export function scheduleNotes(r: ScheduleRead, now = Date.now()): string[] {
+  const out: string[] = [];
+  for (const g of r.games) {
+    const iso = localToIso(g.date, g.time || '12:00');
+    if (!iso) continue;
+    const days = (Date.parse(iso) - now) / 86400000;
+    if (days < -200 || days > 300) out.push(`${g.date} vs ${g.opponent} is far from today: check the year.`);
+  }
+  return out;
+}
+
+// Accepted for saving: a real instant within a year and a half of today.
+export const plausibleStart = (iso: string, now = Date.now()) => {
+  const t = Date.parse(iso);
+  return !Number.isNaN(t) && t > now - 400 * 86400000 && t < now + 500 * 86400000;
+};
+
+const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+// The same opponent: every word of the shorter name is in the longer one
+// ("Express" and "The Express Baseball Club"), never an empty name.
+export function sameOpponent(a: string, b: string) {
+  const [x, y] = [words(a), words(b)].sort((p, q) => p.length - q.length);
+  return x.length > 0 && x.every((w) => y.includes(w));
+}
+// A found game already on the schedule: the same day in the team's zone, the same opponent.
+export function alreadyThere(f: Pick<Found, 'date' | 'opponent'>, existing: { starts_at: string | null; opponent_name: string }[], tz = TZ) {
   const day = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: tz });
-  const a = norm(f.opponent);
-  return existing.some((g) => g.starts_at && day(g.starts_at) === f.date &&
-    (norm(g.opponent_name).includes(a) || a.includes(norm(g.opponent_name)) || norm(g.opponent_name).split(' ')[0] === a.split(' ')[0]));
+  return existing.some((g) => g.starts_at && day(g.starts_at) === f.date && sameOpponent(f.opponent, g.opponent_name));
 }
 
 // A web page's text: no scripts, styles or tags, entities decoded, at most 60k characters.

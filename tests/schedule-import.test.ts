@@ -2,7 +2,7 @@
 // duplicates, and a web page's text.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { alreadyThere, checkSchedule, localToIso, pageText, type Found } from '../lib/schedule-import.ts';
+import { alreadyThere, checkSchedule, localToIso, pageText, plausibleStart, sameOpponent, scheduleNotes, type Found } from '../lib/schedule-import.ts';
 
 test('local times become instants in Central time, either side of the clock change', () => {
   assert.equal(localToIso('2026-10-17', '09:45'), '2026-10-17T14:45:00.000Z'); // CDT, UTC-5
@@ -14,11 +14,14 @@ test('local times become instants in Central time, either side of the clock chan
 
 const f = (o: Partial<Found>): Found => ({ date: '2026-10-17', time: '09:45', opponent: 'The Express', home: 'away', venue: '', address: '', note: '', ...o });
 
-test('the check: bad dates, far-off years, no opponent', () => {
+test('the check retries only what must be fixed; a far-off year is a note for the coach', () => {
   const now = Date.parse('2026-10-15T12:00:00Z');
-  assert.deepEqual(checkSchedule({ games: [f({})], unsure: [] }, now), []);
-  assert.deepEqual(checkSchedule({ games: [f({ date: '2025-10-17' }), f({ opponent: ' ' }), f({ date: 'Oct 17' })], unsure: [] }, now), [
-    '2025-10-17 is far from today: check the year.', 'A game on 2026-10-17 has no opponent.', '"Oct 17 09:45" is not a date and time.']);
+  assert.deepEqual(checkSchedule({ games: [f({})], unsure: [] }), []);
+  assert.deepEqual(checkSchedule({ games: [f({ opponent: ' ' }), f({ date: 'Oct 17' })], unsure: [] }), [
+    'A game on 2026-10-17 has no opponent.', '"Oct 17 09:45" is not a date and time.']);
+  assert.deepEqual(scheduleNotes({ games: [f({ date: '2027-09-20' }), f({ date: '2026-09-20' })], unsure: [] }, now), ['2027-09-20 vs The Express is far from today: check the year.']);
+  assert.equal(plausibleStart('2026-10-17T14:45:00Z', now), true);
+  assert.equal(plausibleStart('9999-01-01T00:00:00Z', now), false);
 });
 
 test('a game already on the schedule: same day in Central time, overlapping opponent name', () => {
@@ -27,6 +30,9 @@ test('a game already on the schedule: same day in Central time, overlapping oppo
   assert.equal(alreadyThere(f({ opponent: 'Express' }), existing), true);
   assert.equal(alreadyThere(f({ opponent: 'Lonestar' }), existing), false);
   assert.equal(alreadyThere(f({ date: '2026-10-18' }), existing), false);
+  // A shared first word is not the same team; an empty name matches nothing.
+  assert.equal(sameOpponent('Blue Sox', 'Blue Steel'), false);
+  assert.equal(alreadyThere(f({ opponent: ' - ' }), existing), false);
   // 11 pm Central on the 17th is the 18th in UTC: still the 17th here.
   assert.equal(alreadyThere(f({}), [{ starts_at: '2026-10-18T04:00:00Z', opponent_name: 'The Express' }]), true);
 });

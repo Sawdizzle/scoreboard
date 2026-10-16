@@ -15,6 +15,7 @@ import { abbrFor } from '@/lib/format';
 import { emptyCounts, padGamesBlock, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
 import { RecapContent } from '@/lib/recap';
+import { alreadyThere, plausibleStart, TZ } from '@/lib/schedule-import';
 import { SPORTS, type Sport } from '@/lib/sports';
 import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
@@ -773,10 +774,17 @@ export async function importGames(slug: string, _: FormState, fd: FormData): Pro
   const { supabase, team } = await loadTeam(slug);
   const { data: season } = await supabase.from('seasons').select('id').eq('team_id', team.id).eq('is_current', true).maybeSingle<{ id: string }>();
   const opponents = await listOpponents(supabase, team.id);
-  let added = 0;
-  for (const g of raw as { starts_at?: string; time?: string; opponent?: string; home?: string; venue?: string; address?: string }[]) {
+  const { data: existing } = await supabase.from('games').select('starts_at, opponent_name').eq('team_id', team.id);
+  const have = [...(existing ?? [])] as { starts_at: string | null; opponent_name: string }[];
+  // One lookup per address, and at most eight: a tournament repeats its fields.
+  const places = new Map<string, Record<string, unknown> | null>();
+  let added = 0, skipped = 0;
+  for (const g of raw as { starts_at?: string; opponent?: string; home?: string; venue?: string; address?: string }[]) {
     const name = String(g.opponent ?? '').trim().slice(0, 60);
-    if (!name || !g.starts_at || Number.isNaN(Date.parse(g.starts_at))) continue;
+    if (!name || !g.starts_at || !plausibleStart(g.starts_at)) { skipped += 1; continue; }
+    const startsAt = new Date(g.starts_at).toISOString();
+    const date = new Date(startsAt).toLocaleDateString('en-CA', { timeZone: TZ });
+    if (alreadyThere({ date, opponent: name }, have)) { skipped += 1; continue; }
     let known = opponents.find((o) => o.name.toLowerCase() === name.toLowerCase());
     if (!known) {
       const { data: made } = await supabase.from('opponents').insert({ team_id: team.id, name, abbr: abbrFor(name) || 'OPP', color: '#7a8794' })
@@ -784,17 +792,21 @@ export async function importGames(slug: string, _: FormState, fd: FormData): Pro
       if (made) { known = made as unknown as typeof opponents[number]; opponents.push(known); }
     }
     const address = String(g.address ?? '').trim().slice(0, 160);
-    let venueGeo: Record<string, unknown> | null = null;
-    if (address) { try { venueGeo = (await geocodeAddress(address)) ?? null; } catch { venueGeo = null; } }
+    if (address && !places.has(address) && places.size < 8) {
+      try { places.set(address, (await geocodeAddress(address)) ?? null); } catch { places.set(address, null); }
+    }
+    const venueGeo = address ? places.get(address) ?? null : null;
     const { error } = await supabase.from('games').insert({
       team_id: team.id, sport: 'baseball', season_id: season?.id ?? null, counts_for_stats: true,
       opponent_name: name, opponent_abbr: known?.abbr ?? (abbrFor(name) || 'OPP'), opponent_color: known?.color ?? '#7a8794',
-      opponent_id: known?.id ?? null, is_home: g.home !== 'away', starts_at: new Date(g.starts_at).toISOString(),
+      opponent_id: known?.id ?? null, is_home: g.home !== 'away', starts_at: startsAt,
       venue: String(g.venue ?? '').trim().slice(0, 80) || null, address: address || null, ...(venueGeo ? { venue_geo: venueGeo } : {}),
     });
     if (error) return { error: added ? `Added ${added}, then: ${say(error)}` : error.code === '42501' ? 'Your seat cannot make games.' : say(error) };
+    have.push({ starts_at: startsAt, opponent_name: name });
     added += 1;
   }
+  if (!added) return { error: skipped ? 'Those games are already on the schedule, or their dates could not be used.' : 'Tick at least one game to add.' };
   revalidatePath(`/t/${slug}`, 'layout');
   redirect(`/t/${slug}/season?added=${added}`);
 }
