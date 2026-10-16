@@ -7,6 +7,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
 import type { PublicGame } from '@/lib/public';
 import { checkRecap, RECAP_MODEL, RECAP_SYSTEM, recapPrompt, RecapContent, type RecapContext } from '@/lib/recap';
+import { getAllowance, refusal } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { summarizeGame, type SummaryEvent, type SummaryStat } from '@/lib/summarize';
 import type { GameSettings } from '@/lib/broadcast';
@@ -37,6 +38,9 @@ export async function POST(req: Request) {
   const { data: seat } = await supabase.from('team_staff').select('role').eq('team_id', game.team_id).eq('user_id', userId).maybeSingle<{ role: string }>();
   if (!seat || !WRITERS.has(seat.role)) return fail(403, 'Only organizers and coaches write recaps.');
   if (game.status !== 'final') return fail(409, 'End the game first: recaps are written for final games.');
+  // The team's plan: AI off, or this month's writes used up. Checked before any call goes out.
+  const no = refusal(await getAllowance(supabase, game.team_id));
+  if (no) return fail(no.status, no.error);
 
   // The public view of the game gives the lineups under each player's public
   // name, the team names and the season; the log and the stats come as staff.

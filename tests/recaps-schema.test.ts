@@ -46,3 +46,17 @@ test('usage rows: staff add their own team’s, and only they read them', async 
   assert.equal((await t.as('rival', `select 1 from ai_usage where team_id = $1`, [team])).length, 0);
   await assert.rejects(t.as(null, `select 1 from ai_usage`));
 });
+
+test('AI limits: off by default, staff cannot raise it, and the allowance counts this month’s calls that worked', async () => {
+  assert.deepEqual((await t.as<{ a: { limit: number; used: number; remaining: number } }>('owner', `select ai_allowance($1) a`, [team]))[0].a.limit, 0);
+  await assert.rejects(t.as('owner', `update teams set ai_monthly_limit = 999 where id = $1`, [team]));
+  await t.db.query(`update teams set ai_monthly_limit = 5 where id = $1`, [team]);
+  // One worked earlier in this file; add one that failed and one from last month.
+  await t.as('owner', `insert into ai_usage (team_id, kind, model, ok) values ($1, 'blurb', 'claude-haiku-5-5', false)`, [team]);
+  await t.db.query(`insert into ai_usage (team_id, kind, model, ok, created_at) values ($1, 'recap', 'm', true, now() - interval '40 days')`, [team]);
+  const [{ a }] = await t.as<{ a: { limit: number; used: number; remaining: number; resets: string } }>('owner', `select ai_allowance($1) a`, [team]);
+  assert.deepEqual([a.limit, a.used, a.remaining], [5, 1, 4]);
+  assert.ok(Date.parse(a.resets) > Date.now());
+  await assert.rejects(t.as('stranger', `select ai_allowance($1)`, [team]));
+  await assert.rejects(t.as(null, `select ai_allowance($1)`, [team]));
+});

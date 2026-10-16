@@ -36,7 +36,7 @@ function CopyField({ label, value, onChange, rows = 4, limit }: {
 // The post-game content pack on the staff game page: write it, check it, fix
 // it, copy the captions out, and publish the recap to the public game page.
 // Nothing here touches the stream.
-export function RecapCard({ slug, gameId, initial }: { slug: string; gameId: string; initial: RecapRow | null }) {
+export function RecapCard({ slug, gameId, initial, canGenerate = true }: { slug: string; gameId: string; initial: RecapRow | null; canGenerate?: boolean }) {
   const router = useRouter();
   const [row, setRow] = useState(initial);
   const [c, setC] = useState<RecapContent | null>(initial?.content ?? null);
@@ -69,10 +69,12 @@ export function RecapCard({ slug, gameId, initial }: { slug: string; gameId: str
         <h2 className="h-sec">Recap</h2>
         {row && <span className={`eyebrow${row.status === 'published' ? ' gold' : ''}`}>{row.status === 'published' ? 'Published' : 'Draft'}</span>}
       </div>
-      {!row && <p className="hint">Claude writes a recap, social captions and a website post from this game&rsquo;s plays. You check and edit it here; nothing goes public until you publish.</p>}
-      <button type="button" className={row ? 'btn' : 'btn btn-primary'} onClick={generate} disabled={busy} aria-busy={busy}>
-        {busy ? 'Writing… about 15 seconds' : row ? 'Write it again' : 'Write the recap'}
-      </button>
+      {!row && <p className="hint">Claude writes a recap, social captions and a website post from this game&rsquo;s plays. You check and edit it here; nothing goes public until you publish. <a className="link" href="/help/ai" target="_blank" rel="noreferrer">How it works</a></p>}
+      {canGenerate && (
+        <button type="button" className={row ? 'btn' : 'btn btn-primary'} onClick={generate} disabled={busy} aria-busy={busy}>
+          {busy ? 'Writing… about 15 seconds' : row ? 'Write it again' : 'Write the recap'}
+        </button>
+      )}
       {error && <p role="alert" className="note note-bad">{error}</p>}
 
       {row && c && (
@@ -116,7 +118,7 @@ export function RecapCard({ slug, gameId, initial }: { slug: string; gameId: str
               {row.status === 'published' ? 'Take it down' : 'Publish recap'}
             </Submit>
           </ActionForm>
-          <p className="hint">Written by {row.model ?? 'Claude'} from this game&rsquo;s plays{row.edited_at ? ', then edited' : ''}.</p>
+          <p className="hint">Written by {row.model ?? 'Claude'} from this game&rsquo;s plays{row.edited_at ? ', then edited' : ''}. <a className="link" href="/help/ai" target="_blank" rel="noreferrer">How recaps are written</a></p>
         </>
       )}
     </section>
