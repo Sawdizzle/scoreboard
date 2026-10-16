@@ -26,12 +26,12 @@ type Live = Record<string, unknown>;
 type Half = 'top' | 'bottom';
 type Note = { kind?: string; code?: string; inning?: number; half?: Half; runs?: number; outs?: number; pos?: string | null };
 
-export type SummaryEvent = { id: number; seq: number; type: string; payload: Record<string, unknown> | null; prev_live: Live | null };
+export type SummaryEvent = { id: number; seq: number; type: string; payload: Record<string, unknown> | null; prev_live: Live | null; created_at?: string };
 export type SummaryStat = {
   event_id: number; side: Side; bid: string;
   b_pa?: number; b_ab?: number; b_h?: number; b_2b?: number; b_3b?: number; b_hr?: number; b_rbi?: number; b_r?: number;
   b_bb?: number; b_so?: number; b_hbp?: number; b_sb?: number;
-  p_outs?: number; p_h?: number; p_r?: number; p_er?: number; p_bb?: number; p_so?: number; p_pitches?: number;
+  p_outs?: number; p_bf?: number; p_h?: number; p_r?: number; p_er?: number; p_bb?: number; p_so?: number; p_pitches?: number;
 };
 export type SummaryInput = {
   game: { is_home: boolean; status: string; live: Live; sport?: string | null };
@@ -95,6 +95,21 @@ function namer(lineups: SummaryInput['lineups']) {
   };
 }
 
+// One event as the facts read it: the play's note (v4 and most pad plays carry
+// one), the inning and half it happened in, and its scorebook kind.
+export function readEvent(e: SummaryEvent) {
+  const note = ((e.payload ?? {}) as { play?: Note }).play ?? {};
+  const before = e.prev_live ?? {};
+  const inning = num(note.inning) || num(before.inning) || 1;
+  const half: Half = note.half ?? (before.half === 'bottom' ? 'bottom' : 'top');
+  const kind = note.kind ?? paKind({ type: e.type, patch: {}, payload: e.payload ?? {} } as Res, {} as never) ?? e.type;
+  // Whether this play ended a plate appearance.
+  const runnerBI = ((e.payload ?? {}) as { subject?: string }).subject === 'runner@third';
+  const pa = !runnerBI && !!(note.kind ? PA_KINDS.has(note.kind) : paKind({ type: e.type, patch: {}, payload: e.payload ?? {} } as Res, {} as never));
+  return { note, inning, half, kind, pa };
+}
+const PA_KINDS = new Set(['BB', 'IBB', 'HBP', 'CI', 'K', 'KL', 'K3', 'OUT', 'HR', 'H1', 'H2', 'H3', 'GB', 'FB', 'LD', 'PU', 'E', 'FC', 'DP', 'SF', 'SAC', 'BI']);
+
 export function summarizeGame(input: SummaryInput): GameFacts {
   const { game, teams, events } = input;
   const stats = input.stats ?? [];
@@ -140,12 +155,9 @@ export function summarizeGame(input: SummaryInput): GameFacts {
   let leader: Side | null = null;
   events.forEach((e, i) => {
     const p = (e.payload ?? {}) as { play?: Note; inputs?: { side?: 'home' | 'away'; to?: string | null } };
-    const note = p.play ?? {};
     const before = e.prev_live ?? {};
-    const inning = num(note.inning) || num(before.inning) || 1;
-    const half: Half = note.half ?? (before.half === 'bottom' ? 'bottom' : 'top');
+    const { note, inning, half, kind } = readEvent(e);
     const side = batting(half);
-    const kind = note.kind ?? paKind({ type: e.type, patch: {}, payload: e.payload ?? {} } as Res, {} as never) ?? e.type;
     const mine = byEvent.get(e.id) ?? [];
     const batter = name(side, mine.find((s) => s.b_pa)?.bid);
 

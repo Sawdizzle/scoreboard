@@ -81,3 +81,7 @@ test('the prompt carries the facts; the system prompt rules out names and invent
   assert.match(BLURB_SYSTEM, /Never name a player/);
   assert.match(BLURB_SYSTEM, /Never invent/);
 });
+
+test('a record at the end of a sentence is still checked', () => {
+  assert.deepEqual(checkBlurb({ ...ok, line2: 'Steel are 4-1.' }, facts()), ['"4-1" is not a record or score from the facts.']);
+});

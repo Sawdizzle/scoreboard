@@ -7,6 +7,7 @@ import { getGame, getLineups, lastLineup, listOpponents, listPlayers, listSeason
 import { byJersey, formatName } from '@/lib/format';
 import { emptyLineup, lineupFromLast, lineupFromRoster, withRosterNames } from '@/lib/lineup';
 import { normalizeTeam } from '@/lib/rules/roster.js';
+import { aiOn, getAllowance } from '@/lib/ai-limit';
 import { batting, rate3 } from '@/lib/stats';
 import { canRunGames, type Lineup, type Side } from '@/lib/types';
 
@@ -61,7 +62,7 @@ export default async function LineupPage({ params, searchParams }: {
           <Link href="?side=them" className="seg-item" aria-current={side === 'them' ? 'page' : undefined}>{game.opponent?.display_name ?? game.opponent_name}</Link>
         </nav>
       </div>
-      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets} canEdit={canRunGames(role)} />
+      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets} canEdit={canRunGames(role)} ai={canRunGames(role) && aiOn(await getAllowance(supabase, team.id))} />
     </div>
   );
 }

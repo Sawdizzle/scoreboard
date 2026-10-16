@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
+import { PhotoLineup } from '@/components/PhotoLineup';
 import { saveLineup } from '@/app/actions';
 import { Cross, Plus } from '@/components/icons';
 import { FIELD } from '@/lib/lineup';
@@ -22,9 +23,11 @@ const SPOT: Record<string, [number, number]> = {
 // whoever was at second goes to short, the way kids actually rotate.
 // `stored` is false when `initial` is only a suggestion (last game's lineup, or
 // the roster in number order): it shows as unsaved until Save.
-export function LineupEditor({ slug, gameId, side, initial, stored, pool, presets, canEdit }: {
+export function LineupEditor({ slug, gameId, side, initial, stored, pool, presets, canEdit, ai = false }: {
   slug: string; gameId: string; side: Side; initial: Lineup; stored: boolean; pool: PoolPlayer[];
   presets: { label: string; lineup: Lineup }[]; canEdit: boolean;
+  // AI on for this team: a lineup card can be read from a photo.
+  ai?: boolean;
 }) {
   const [team, setTeam] = useState<Lineup>(() => normalizeTeam(initial));
   const [saved, setSaved] = useState(() => (stored ? JSON.stringify(normalizeTeam(initial)) : ''));
@@ -235,7 +238,8 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
               </label>
               <button type="button" className="btn btn-quiet" style={{ alignSelf: 'end' }} onClick={addTyped}>Add</button>
             </div>
-            <label className="field"><span>Or paste a list, one per line</span>
+            {ai && <PhotoLineup gameId={gameId} side={side} onLines={(t) => setPaste(paste.trim() ? `${paste.trim()}\n${t}` : t)} />}
+            <label className="field"><span>{ai ? 'Or paste a list, one per line (a photo fills this in for you to check)' : 'Or paste a list, one per line'}</span>
               <textarea className="textarea" value={paste} onChange={(e) => setPaste(e.currentTarget.value)} placeholder={'7 Ava Reyes SS\n12 Ben Ortiz P\n21'} style={{ minHeight: 110 }} />
             </label>
             <button type="button" className="btn btn-quiet" onClick={addPasted} disabled={!paste.trim()}>Add these</button>

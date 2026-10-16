@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OnAir, type Channel } from '@/components/pad/OnAir';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
-import { InPlay, More, Runner, Situation, StrikeThree } from '@/components/pad/PadSheets';
+import { EndCheck, InPlay, More, Runner, Situation, StrikeThree } from '@/components/pad/PadSheets';
+import { auditGame, type Issue } from '@/lib/audit';
+import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
@@ -21,7 +23,7 @@ import type { Game, Lineup, Side, Team } from '@/lib/types';
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
 type Item = { kind: 'play'; type: string; patch: object; payload: object; rows: StatRow[]; status: Status | null } | { kind: 'undo' };
-type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | { runner: 'first' | 'second' | 'third' };
+type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | { runner: 'first' | 'second' | 'third' };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
   const out = { ...t };
@@ -177,7 +179,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     history.current.push({ before, rows: r.rows });
     const nextStatus: Status = status ?? (before.status === 'scheduled' ? 'live' : before.status);
     show({ g: r.next, status: nextStatus, tonight: addRows(before.tonight, r.rows), last: lastPlayText(r.res, before.g, r.next) });
-    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: r.res.payload ?? {}, rows: r.rows, status });
+    // `at`: when it was tapped, so a game video's chapters line up even if the play sent later.
+    queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: { ...(r.res.payload ?? {}), at: new Date().toISOString() }, rows: r.rows, status });
     if (navigator.vibrate) navigator.vibrate(12);
     setSheet(null);
     void pump();
@@ -198,6 +201,49 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     queue.current.push({ kind: 'play', type: final ? 'end_game' : 'reopen_game', patch: {}, payload: {}, rows: [], status: final ? 'final' : 'live' });
     setSheet(null);
     void pump();
+  }
+
+  // End game, after the scoring check. The check reads the saved log, so it
+  // runs only with nothing waiting to send and an answer within 4 seconds;
+  // otherwise the game ends as it always has. It never stops the end.
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [checking, setChecking] = useState(false);
+  // Each End game tap gets a number; closing the sheet, Start over or another
+  // tap moves it on, so a check that answers late does nothing.
+  const endTry = useRef(0);
+  const dropEnd = () => { endTry.current += 1; setChecking(false); };
+  async function tryEnd() {
+    if (checking) return;
+    const my = ++endTry.current;
+    const current = () => my === endTry.current;
+    const end = () => { if (current()) { setChecking(false); endGame(true); } };
+    if (queue.current.length || (typeof navigator !== 'undefined' && !navigator.onLine)) return end();
+    setChecking(true);
+    try {
+      const load = Promise.all([
+        sb.from('games').select('live').eq('id', game.id).single(),
+        sb.from('game_events').select('id, seq, type, payload, prev_live').eq('game_id', game.id).order('seq'),
+        sb.from('game_stats').select('event_id, side, bid, b_pa, b_h, b_r, p_bf, p_outs, p_pitches').eq('game_id', game.id),
+      ]);
+      const got = await Promise.race([load, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
+      if (!current()) return;
+      if (!got || got.some((x) => x.error)) return end();
+      const gl = cur.current.g.lineups;
+      const found = auditGame({
+        game: { is_home: game.is_home, status: 'live', live: (got[0].data as { live: Record<string, unknown> }).live, sport: 'baseball' },
+        teams: { us: team.display_name || team.name, them: game.opponent_name },
+        events: (got[1].data ?? []) as SummaryEvent[], stats: (got[2].data ?? []) as SummaryStat[],
+        lineups: game.is_home ? { us: gl.home, them: gl.away } : { us: gl.away, them: gl.home },
+        regulationInnings: game.settings?.regulation ?? regulation, runRule: game.settings?.run_rule ?? null, ending: true,
+      });
+      if (!found.length) return end();
+      if (!current()) return;
+      setChecking(false);
+      setIssues(found);
+      setSheet('check');
+    } catch {
+      end();
+    }
   }
 
   // What the stream shows: here at once, then saved. Any seat can run it. A
@@ -241,6 +287,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // Start over: every play and its stats go; the game is back before the first pitch.
   async function startOver() {
     if (!window.confirm('Start this game over? Every play and its stats are cleared. Lineups stay.')) return;
+    dropEnd();
     const { error } = await sb.rpc('reset_game', { p_game: game.id });
     if (error) { say(error.message || 'That did not work. Try again.'); return; }
     queue.current = [];
@@ -451,7 +498,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
             <input type="checkbox" checked={demo} disabled={!canScore || final} onChange={(e) => setDemo(e.target.checked)} />
           </label>
         </>}
-        onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={endGame} onStartOver={startOver} />}
+        ending={checking} onClose={() => { dropEnd(); setSheet(null); }} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={(f) => (f ? void tryEnd() : endGame(false))} onStartOver={startOver} />}
+      {sheet === 'check' && <EndCheck issues={issues} onClose={() => setSheet(null)} onFix={() => setSheet('situation')} onEnd={() => endGame(true)} />}
     </div>
   );
 }

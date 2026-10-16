@@ -60,3 +60,43 @@ test('AI limits: off by default, staff cannot raise it, and the allowance counts
   await assert.rejects(t.as('stranger', `select ai_allowance($1)`, [team]));
   await assert.rejects(t.as(null, `select ai_allowance($1)`, [team]));
 });
+
+test('AI writes are reserved under the limit, one at a time, and settled by whoever reserved them', async () => {
+  await t.db.query(`update teams set ai_monthly_limit = 3 where id = $1`, [team]);
+  const reserve = () => t.as<{ r: { id: number | null } }>('owner', `select ai_reserve($1, $2, 'recap', 'm') r`, [team, game]).then((x) => x[0].r);
+  const a = await reserve();
+  assert.ok(a.id);
+  // Earlier in this file one call worked; with this reservation the month holds 2 of 3, so one more fits.
+  assert.ok((await reserve()).id);
+  assert.equal((await reserve()).id, null);
+  // A failed call gives its write back.
+  await t.as('owner', `select ai_settle($1, 'claude-sonnet-5-5', 1000, 500, false)`, [a.id]);
+  assert.ok((await reserve()).id);
+  // Nobody else can settle it, nor reserve against another team's game.
+  await t.as('rival', `select ai_settle($1, 'x', 0, 0, true)`, [a.id]);
+  const [{ ok }] = await t.db.query<{ ok: boolean }>(`select ok from ai_usage where id = $1`, [a.id]).then((r) => r.rows);
+  assert.equal(ok, false);
+  await assert.rejects(t.as('rival', `select ai_reserve($1, $2, 'recap', 'm')`, [other, game]));
+  await assert.rejects(t.as('stranger', `select ai_reserve($1, null, 'recap', 'm')`, [team]));
+});
+
+test('stream sessions: OBS going live opens one, stopping closes it, an unknown status changes nothing', async () => {
+  const [{ token }] = await t.db.query<{ token: string }>(`select token from channels where team_id = $1`, [team]).then((r) => r.rows);
+  const report = (streaming: boolean | null) => t.as(null, `select obs_report($1, $2::jsonb)`, [token, JSON.stringify({ streaming })]);
+  await report(false); await report(true); await report(true); await report(null); await report(false); await report(true);
+  const rows = await t.as<{ open: boolean }>('owner', `select ended_at is null as open from stream_sessions where team_id = $1 order by id`, [team]);
+  // Live, live again (same session), unknown, stopped (closes it), live (a new one).
+  assert.deepEqual(rows.map((r) => r.open), [false, true]);
+  assert.equal((await t.as('stranger', `select 1 from stream_sessions where team_id = $1`, [team])).length, 0);
+});
+
+test('a stream OBS never reported stopping is closed at its last report, and the next one opens', async () => {
+  const [{ token }] = await t.db.query<{ token: string }>(`select token from channels where team_id = $1`, [team]).then((r) => r.rows);
+  // One is open from the test above. OBS dies; an hour later it comes back live.
+  await t.db.query(`update channel_obs set at = now() - interval '1 hour' where team_id = $1`, [team]);
+  await t.as(null, `select obs_report($1, '{"streaming": true}'::jsonb)`, [token]);
+  const rows = await t.db.query<{ open: boolean; ended: boolean }>(
+    `select ended_at is null as open, ended_at < now() - interval '50 minutes' as ended from stream_sessions where team_id = $1 order by id`, [team]).then((r) => r.rows);
+  assert.deepEqual(rows.map((r) => r.open), [false, false, true]);
+  assert.equal(rows[1].ended, true);
+});

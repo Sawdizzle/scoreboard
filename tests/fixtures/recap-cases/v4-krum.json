@@ -1,0 +1,1182 @@
+{
+ "name": "v4 krum",
+ "note": "v4 game KRUM 2026-10-06 (us home), copied from game_events: [inning, half, kind, code, runs]. Its log is missing 2 runs in the bottom of the 1st.",
+ "input": {
+  "game": {
+   "is_home": true,
+   "status": "final",
+   "live": {
+    "half": "bottom",
+    "outs": 0,
+    "balls": 0,
+    "bases": {
+     "first": false,
+     "third": false,
+     "second": false
+    },
+    "inning": 4,
+    "strikes": 0,
+    "away_hits": 0,
+    "home_hits": 4,
+    "away_score": 2,
+    "home_score": 10,
+    "line_score": [
+     {
+      "top": 2,
+      "bottom": 4
+     },
+     {
+      "top": 0,
+      "bottom": 2
+     },
+     {
+      "top": 0,
+      "bottom": 4
+     },
+     {
+      "top": 0,
+      "bottom": 0
+     }
+    ],
+    "away_errors": 0,
+    "home_errors": 3
+   },
+   "sport": "baseball"
+  },
+  "teams": {
+   "us": "Blue Steel",
+   "them": "Krum 14u"
+  },
+  "events": [
+   {
+    "id": 1,
+    "seq": 1,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 2,
+    "seq": 2,
+    "type": "ADV",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "ADV",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 3,
+    "seq": 3,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 4,
+    "seq": 4,
+    "type": "E",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "E",
+      "code": "E4",
+      "runs": 1
+     }
+    }
+   },
+   {
+    "id": 5,
+    "seq": 5,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 6,
+    "seq": 6,
+    "type": "K",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "K",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 7,
+    "seq": 7,
+    "type": "FC",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "FC",
+      "code": "4-6",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 8,
+    "seq": 8,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 9,
+    "seq": 9,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 10,
+    "seq": 10,
+    "type": "E",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "E",
+      "code": "E6",
+      "runs": 1
+     }
+    }
+   },
+   {
+    "id": 11,
+    "seq": 11,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 12,
+    "seq": 12,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 13,
+    "seq": 13,
+    "type": "GB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "top",
+      "kind": "GB",
+      "code": "3U",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 14,
+    "seq": 14,
+    "type": "H1",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "H1",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 15,
+    "seq": 15,
+    "type": "PO",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "PO",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 16,
+    "seq": 16,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 17,
+    "seq": 17,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 18,
+    "seq": 18,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 19,
+    "seq": 19,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 20,
+    "seq": 20,
+    "type": "H1",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "H1",
+      "code": "",
+      "runs": 1
+     }
+    }
+   },
+   {
+    "id": 21,
+    "seq": 21,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 22,
+    "seq": 22,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 23,
+    "seq": 23,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 24,
+    "seq": 24,
+    "type": "CS",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "CS",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 25,
+    "seq": 25,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 26,
+    "seq": 26,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 27,
+    "seq": 27,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 1
+     }
+    }
+   },
+   {
+    "id": 28,
+    "seq": 28,
+    "type": "GB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 1,
+      "half": "bottom",
+      "kind": "GB",
+      "code": "6-3",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 29,
+    "seq": 29,
+    "type": "KL",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "KL",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 30,
+    "seq": 30,
+    "type": "E",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "E",
+      "code": "E5",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 31,
+    "seq": 31,
+    "type": "BK",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "BK",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 32,
+    "seq": 32,
+    "type": "K",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "K",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 33,
+    "seq": 33,
+    "type": "ADV",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "ADV",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 34,
+    "seq": 34,
+    "type": "CS",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "top",
+      "kind": "CS",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 35,
+    "seq": 35,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 36,
+    "seq": 36,
+    "type": "ADV",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "ADV",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 37,
+    "seq": 37,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 38,
+    "seq": 38,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 39,
+    "seq": 39,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 40,
+    "seq": 40,
+    "type": "FC",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "FC",
+      "code": "4-6",
+      "runs": 2
+     }
+    }
+   },
+   {
+    "id": 41,
+    "seq": 41,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 42,
+    "seq": 42,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 43,
+    "seq": 43,
+    "type": "PO",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "PO",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 44,
+    "seq": 44,
+    "type": "KL",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 2,
+      "half": "bottom",
+      "kind": "KL",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 45,
+    "seq": 45,
+    "type": "K",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "top",
+      "kind": "K",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 46,
+    "seq": 46,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "top",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 47,
+    "seq": 47,
+    "type": "PO",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "top",
+      "kind": "PO",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 48,
+    "seq": 48,
+    "type": "FB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "top",
+      "kind": "FB",
+      "code": "F4",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 49,
+    "seq": 49,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 50,
+    "seq": 50,
+    "type": "ADV",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "ADV",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 51,
+    "seq": 51,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 52,
+    "seq": 52,
+    "type": "K3",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "K3",
+      "code": "K",
+      "runs": 1
+     }
+    }
+   },
+   {
+    "id": 53,
+    "seq": 53,
+    "type": "H1",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "H1",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 54,
+    "seq": 54,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 55,
+    "seq": 55,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 56,
+    "seq": 56,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 57,
+    "seq": 57,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 58,
+    "seq": 58,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 59,
+    "seq": 59,
+    "type": "H1",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "H1",
+      "code": "",
+      "runs": 3
+     }
+    }
+   },
+   {
+    "id": 60,
+    "seq": 60,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 61,
+    "seq": 61,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 62,
+    "seq": 62,
+    "type": "BB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "BB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 63,
+    "seq": 63,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 64,
+    "seq": 64,
+    "type": "FB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "FB",
+      "code": "F6",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 65,
+    "seq": 65,
+    "type": "CS",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 3,
+      "half": "bottom",
+      "kind": "CS",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 66,
+    "seq": 66,
+    "type": "HBP",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 4,
+      "half": "top",
+      "kind": "HBP",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 67,
+    "seq": 67,
+    "type": "SB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 4,
+      "half": "top",
+      "kind": "SB",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 68,
+    "seq": 68,
+    "type": "K",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 4,
+      "half": "top",
+      "kind": "K",
+      "code": "",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 69,
+    "seq": 69,
+    "type": "GB",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 4,
+      "half": "top",
+      "kind": "GB",
+      "code": "3U",
+      "runs": 0
+     }
+    }
+   },
+   {
+    "id": 70,
+    "seq": 70,
+    "type": "K",
+    "prev_live": {},
+    "payload": {
+     "source": "v4",
+     "play": {
+      "inning": 4,
+      "half": "top",
+      "kind": "K",
+      "code": "",
+      "runs": 0
+     }
+    }
+   }
+  ],
+  "regulationInnings": 6
+ },
+ "ctx": {
+  "team": "Blue Steel",
+  "opponent": "Krum 14u",
+  "date": "Monday, October 5, 2026",
+  "venue": "Krum, TX",
+  "season": "Fall 2026",
+  "ageGroup": "14U"
+ }
+}

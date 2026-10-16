@@ -15,6 +15,7 @@ import { abbrFor } from '@/lib/format';
 import { emptyCounts, padGamesBlock, type ImportCounts } from '@/lib/gamechanger';
 import { cleanLineup } from '@/lib/lineup';
 import { RecapContent } from '@/lib/recap';
+import { alreadyThere, plausibleStart, TZ } from '@/lib/schedule-import';
 import { SPORTS, type Sport } from '@/lib/sports';
 import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
@@ -741,7 +742,7 @@ export async function saveRecap(slug: string, gameId: string, _: FormState, fd: 
   if (parsed.data.social.x.length > 280) return { error: `The X post is ${parsed.data.social.x.length} characters; keep it to 280.` };
   const { supabase, team, userId } = await loadTeam(slug);
   const { data, error } = await supabase.from('game_recaps')
-    .update({ content: parsed.data, edited_at: new Date().toISOString(), updated_by: userId })
+    .update({ content: parsed.data, content_es: null, edited_at: new Date().toISOString(), updated_by: userId })
     .eq('team_id', team.id).eq('game_id', gameId).select('status');
   if (error) return { error: say(error) };
   if (!data?.length) return NO_SEAT;
@@ -760,4 +761,52 @@ export async function publishRecap(slug: string, gameId: string, publish: boolea
   revalidatePath(`/t/${slug}/games/${gameId}`);
   revalidatePath(`/team/${slug}/game/${gameId}`);
   return { ok: publish ? 'Published on the public game page.' : 'Taken down. It is a draft again.' };
+}
+
+// ---- Schedule import ----------------------------------------------------------
+// The games the coach ticked on the import page, added to the current season.
+// Opponents are remembered the way New game remembers them.
+export async function importGames(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  let raw: unknown;
+  try { raw = JSON.parse(str(fd, 'games')); } catch { return { error: 'The games did not come through. Try again.' }; }
+  if (!Array.isArray(raw) || !raw.length) return { error: 'Tick at least one game to add.' };
+  if (raw.length > 40) return { error: 'Add at most 40 games at a time.' };
+  const { supabase, team } = await loadTeam(slug);
+  const { data: season } = await supabase.from('seasons').select('id').eq('team_id', team.id).eq('is_current', true).maybeSingle<{ id: string }>();
+  const opponents = await listOpponents(supabase, team.id);
+  const { data: existing } = await supabase.from('games').select('starts_at, opponent_name').eq('team_id', team.id);
+  const have = [...(existing ?? [])] as { starts_at: string | null; opponent_name: string }[];
+  // One lookup per address, and at most eight: a tournament repeats its fields.
+  const places = new Map<string, Record<string, unknown> | null>();
+  let added = 0, skipped = 0;
+  for (const g of raw as { starts_at?: string; opponent?: string; home?: string; venue?: string; address?: string }[]) {
+    const name = String(g.opponent ?? '').trim().slice(0, 60);
+    if (!name || !g.starts_at || !plausibleStart(g.starts_at)) { skipped += 1; continue; }
+    const startsAt = new Date(g.starts_at).toISOString();
+    const date = new Date(startsAt).toLocaleDateString('en-CA', { timeZone: TZ });
+    if (alreadyThere({ date, opponent: name }, have)) { skipped += 1; continue; }
+    let known = opponents.find((o) => o.name.toLowerCase() === name.toLowerCase());
+    if (!known) {
+      const { data: made } = await supabase.from('opponents').insert({ team_id: team.id, name, abbr: abbrFor(name) || 'OPP', color: '#7a8794' })
+        .select('id, name, abbr, color, color2, logo_url, roster').single();
+      if (made) { known = made as unknown as typeof opponents[number]; opponents.push(known); }
+    }
+    const address = String(g.address ?? '').trim().slice(0, 160);
+    if (address && !places.has(address) && places.size < 8) {
+      try { places.set(address, (await geocodeAddress(address)) ?? null); } catch { places.set(address, null); }
+    }
+    const venueGeo = address ? places.get(address) ?? null : null;
+    const { error } = await supabase.from('games').insert({
+      team_id: team.id, sport: 'baseball', season_id: season?.id ?? null, counts_for_stats: true,
+      opponent_name: name, opponent_abbr: known?.abbr ?? (abbrFor(name) || 'OPP'), opponent_color: known?.color ?? '#7a8794',
+      opponent_id: known?.id ?? null, is_home: g.home !== 'away', starts_at: startsAt,
+      venue: String(g.venue ?? '').trim().slice(0, 80) || null, address: address || null, ...(venueGeo ? { venue_geo: venueGeo } : {}),
+    });
+    if (error) return { error: added ? `Added ${added}, then: ${say(error)}` : error.code === '42501' ? 'Your seat cannot make games.' : say(error) };
+    have.push({ starts_at: startsAt, opponent_name: name });
+    added += 1;
+  }
+  if (!added) return { error: skipped ? 'Those games are already on the schedule, or their dates could not be used.' : 'Tick at least one game to add.' };
+  revalidatePath(`/t/${slug}`, 'layout');
+  redirect(`/t/${slug}/season?added=${added}`);
 }
