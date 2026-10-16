@@ -75,3 +75,8 @@ test('the prompt carries the facts and the rules, and the system prompt is fixed
   assert.match(RECAP_SYSTEM, /gaps/);
   assert.ok(!/\d{4}-\d{2}-\d{2}T/.test(RECAP_SYSTEM), 'nothing that changes per call in the system prompt');
 });
+
+test('a score at the end of a sentence is still checked; a decimal is not a score', () => {
+  const p = checkRecap(good({ recap: 'They led 10-2. Then it was 9-2.', headline: 'Batting .5-2 is not a score' }), factsOf('desp'));
+  assert.deepEqual(p, ['"10-2" is not a score or play code from the facts.']);
+});

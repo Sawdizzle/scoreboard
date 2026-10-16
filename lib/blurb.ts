@@ -102,7 +102,7 @@ export const blurbPrompt = (f: MatchupFacts) => `Write the pregame blurb for thi
 ${JSON.stringify(f)}
 </facts>`;
 
-const PAIR = /(?<![\d.])(\d{1,2})\s*[-–—]\s*(\d{1,2})(?:\s*[-–—]\s*(\d{1,2}))?(?![\d.])/g;
+const PAIR = /(?<!\d|\d\.)(\d{1,2})\s*[-–—]\s*(\d{1,2})(?:\s*[-–—]\s*(\d{1,2}))?(?!\d|\.\d)/g;
 
 export function checkBlurb(b: BlurbContent, f: MatchupFacts): string[] {
   const problems: string[] = [];

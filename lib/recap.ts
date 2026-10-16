@@ -48,6 +48,9 @@ You are given the game's facts as JSON. They are the only source of truth.
 - The X post is at most 280 characters including hashtags.
 - Player of the game: pick from the facts' standouts on our side when there are any, else leave both fields empty.`;
 
+// How a recap is asked for, shared by the route and scripts/recap-eval.ts.
+export const RECAP_REQUEST = { model: RECAP_MODEL, system: RECAP_SYSTEM, schema: RecapContent, effort: 'medium' as const, maxTokens: 16000 };
+
 export function recapPrompt(facts: GameFacts, ctx: RecapContext) {
   return `Write the content pack for this game.
 
@@ -67,7 +70,8 @@ const texts = (c: RecapContent) => [c.headline, c.recap, c.social.instagram, c.s
   c.website_post.title, c.website_post.body_markdown, c.player_of_the_game.reason];
 
 // "6-5" and "6–5" both; a scorebook code like "6-3" is allowed only when the facts carry it.
-const PAIR = /(?<![\d.])(\d{1,2})\s*[-–—]\s*(\d{1,2})(?![\d.])/g;
+// Not inside a longer number or a decimal ("1.5-2"), but a full stop after it is a sentence's end.
+const PAIR = /(?<!\d|\d\.)(\d{1,2})\s*[-–—]\s*(\d{1,2})(?!\d|\.\d)/g;
 const ORDINAL = /\b(\d{1,2})(?:st|nd|rd|th)\b/gi;
 
 // Every "N-M" a writer may use: scores the game passed through (either order),

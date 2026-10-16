@@ -3,9 +3,9 @@
 // it may read and write; the Anthropic key never leaves the server. Nothing
 // here is on the stream's path: the overlay and the pad never call it.
 import Anthropic from '@anthropic-ai/sdk';
-import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
+import { aiParams } from '@/lib/ai-params';
 import { NextResponse } from 'next/server';
-import { checkRecap, RECAP_MODEL, RECAP_SYSTEM, recapPrompt, RecapContent, type RecapContext } from '@/lib/recap';
+import { checkRecap, RECAP_MODEL, RECAP_REQUEST, recapPrompt, type RecapContent, type RecapContext } from '@/lib/recap';
 import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { gameDate, getGameRow, loadFacts } from '@/lib/game-facts';
@@ -58,15 +58,7 @@ export async function POST(req: Request) {
   if ('error' in held) return fail(held.status, held.error);
   const log = (ok: boolean) => settle(supabase, held.id, model, tokensIn, tokensOut, ok);
 
-  const parse = (ask: string) => client.beta.messages.parse({
-    model: RECAP_MODEL,
-    max_tokens: 16000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    system: [{ type: 'text', text: RECAP_SYSTEM, cache_control: { type: 'ephemeral' } }],
-    output_config: { effort: 'medium', format: betaZodOutputFormat(RecapContent) },
-    messages: [{ role: 'user', content: ask }],
-  });
+  const parse = (ask: string) => client.beta.messages.parse(aiParams({ ...RECAP_REQUEST, content: ask }));
 
   try {
     // One try, and one retry with what the fact check found. The retry is a

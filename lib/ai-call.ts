@@ -3,10 +3,10 @@
 // retry once with what the check found, and log the call to ai_usage. Server
 // only: the Anthropic key never leaves the server.
 import Anthropic from '@anthropic-ai/sdk';
-import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
 import type { z } from 'zod';
 import { getAllowance, refusal, reserve, settle } from './ai-limit';
+import { aiParams, type Content } from './ai-params';
 import { createClient } from './supabase/server';
 
 export type Kind = 'recap' | 'blurb' | 'lineup' | 'schedule' | 'ask' | 'card' | 'youtube' | 'translate';
@@ -25,7 +25,6 @@ export async function seat(db: Db, teamId: string, roles: string[]) {
   return { userId, role: data.role };
 }
 
-type Content = string | Anthropic.Beta.BetaContentBlockParam[];
 export async function aiWrite<S extends z.ZodType>(o: {
   db: Db; teamId: string; gameId?: string | null; kind: Kind;
   model: string; system: string; content: Content; schema: S;
@@ -35,8 +34,6 @@ export async function aiWrite<S extends z.ZodType>(o: {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) return { error: fail(503, 'AI is not switched on here yet (no ANTHROPIC_API_KEY).') };
   const client = new Anthropic({ apiKey });
-  // Sonnet and Opus fall back server-side on a refusal; Haiku has no fallback.
-  const fallback = !o.model.includes('haiku');
   let out: z.infer<S> | null = null;
   let problems: string[] = [];
   let tokensIn = 0, tokensOut = 0, model = o.model;
@@ -52,14 +49,7 @@ export async function aiWrite<S extends z.ZodType>(o: {
         : '';
       const content: Content = typeof o.content === 'string' ? o.content + retry
         : retry ? [...o.content, { type: 'text', text: retry }] : o.content;
-      const res = await client.beta.messages.parse({
-        model: o.model,
-        max_tokens: o.maxTokens ?? 8000,
-        ...(fallback ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
-        system: [{ type: 'text', text: o.system, cache_control: { type: 'ephemeral' } }],
-        output_config: { effort: o.effort ?? 'medium', format: betaZodOutputFormat(o.schema) },
-        messages: [{ role: 'user', content }],
-      });
+      const res = await client.beta.messages.parse(aiParams({ model: o.model, system: o.system, schema: o.schema, effort: o.effort, maxTokens: o.maxTokens, content }));
       tokensIn += res.usage.input_tokens + (res.usage.cache_read_input_tokens ?? 0) + (res.usage.cache_creation_input_tokens ?? 0);
       tokensOut += res.usage.output_tokens;
       model = res.model;
