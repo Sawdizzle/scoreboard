@@ -20,7 +20,7 @@ test('names as the public sees them; inactive players with no season left out', 
 
 test('the check: one card each, and only each player’s own numbers', () => {
   const card = (key: string, body: string) => ({ key, headline: 'A great season', body, highlights: [] as string[] });
-  assert.deepEqual(checkCards({ cards: [card('p1', 'Hit .360 with 9 hits and 6 steals in Fall 2026.'), card('p2', 'No. 12 was there every game.'), card('p3', 'Two big catches.')] }, data, ['Fall 2026']), []);
+  assert.deepEqual(checkCards({ cards: [card('p1', 'Hit .360 with 9 hits and 6 steals in Fall 2026.'), card('p2', 'No. 12 was there every game.'), card('p3', 'Two big catches in the 4th inning, one of our 3 players.')] }, data, ['Fall 2026']), []);
   assert.deepEqual(checkCards({ cards: [card('p1', 'Hit .400 with 9 hits.'), card('p2', 'Great.')] }, data), [
     'Cy P. has no card.', "Ava Reyes's card uses .400, not in their numbers."]);
 });

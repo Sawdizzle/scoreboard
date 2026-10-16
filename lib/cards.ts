@@ -57,8 +57,10 @@ export function checkCards(c: Cards, players: CardPlayer[], context: string[] = 
     const p = players.find((q) => q.key === x.key);
     if (!p) { out.push(`A card for an unknown player (${x.key}).`); continue; }
     const mine = new Set([...Object.values({ ...p.batting, ...p.pitching }).map(String), ...(p.name.match(/\d+/g) ?? []), ...shared]);
-    const nums = `${x.headline} ${x.body} ${x.highlights.join(' ')}`.match(/\.\d{3}|\d+\.\d+|\d+/g) ?? [];
-    const stray = nums.filter((n) => !mine.has(n) && !(Number(n) <= 3 && !n.includes('.')));
+    // Ordinals ("4th inning") are not stats; the roster's size may be named.
+    const said = `${x.headline} ${x.body} ${x.highlights.join(' ')}`.replace(/\b\d+(st|nd|rd|th)\b/gi, '');
+    const nums = said.match(/\.\d{3}|\d+\.\d+|\d+/g) ?? [];
+    const stray = nums.filter((n) => !mine.has(n) && !(Number(n) <= 3 && !n.includes('.')) && Number(n) !== players.length);
     if (stray.length) out.push(`${p.name}'s card uses ${[...new Set(stray)].join(', ')}, not in their numbers.`);
   }
   return out;
