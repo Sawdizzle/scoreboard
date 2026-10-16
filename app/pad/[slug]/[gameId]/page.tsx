@@ -7,7 +7,7 @@ import { withRosterNames } from '@/lib/lineup';
 import type { Channel } from '@/components/pad/OnAir';
 import { CHANNEL_COLS } from '@/lib/broadcast';
 import type { StatRow } from '@/lib/scoring';
-import { canRunGames, type Game } from '@/lib/types';
+import { canRunGames, canWriteRecaps, type Game } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Pad' };
 
@@ -33,11 +33,11 @@ export default async function PadPage({ params }: { params: Promise<{ slug: stri
   const { data: channel } = await supabase.from('channels').select(CHANNEL_COLS).eq('team_id', team.id).maybeSingle<Channel>();
   if (game.sport !== 'baseball') {
     return <ScorePad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
-      canScore={canRunGames(role)} channel={channel ?? null} />;
+      canScore={canRunGames(role)} canWrite={canWriteRecaps(role)} channel={channel ?? null} />;
   }
   return (
     <Pad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
       lineups={lineups} season={lines} tonightRows={(stats.data ?? []) as StatRow[]}
-      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} channel={channel ?? null} />
+      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} canWrite={canWriteRecaps(role)} channel={channel ?? null} />
   );
 }

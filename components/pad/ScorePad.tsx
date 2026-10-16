@@ -32,8 +32,8 @@ function matchClock(live: SportLive) {
 // through apply_play and undo_play, as a baseball play does. A rule that names
 // a moment (a touchdown, a three, a set won) sends it as the play's kind, so
 // the stream can play it.
-export function ScorePad({ slug, team, game, canScore, channel }: {
-  slug: string; team: Team; game: Game & { seq: number }; canScore: boolean; channel: Channel | null;
+export function ScorePad({ slug, team, game, canScore, canWrite = false, channel }: {
+  slug: string; team: Team; game: Game & { seq: number }; canScore: boolean; canWrite?: boolean; channel: Channel | null;
 }) {
   const sb = browserClient();
   const token = channel?.token ?? null;
@@ -203,7 +203,7 @@ export function ScorePad({ slug, team, game, canScore, channel }: {
   const airPanel = (inline: boolean) => channel && (
     <AirFrame inline={inline} onClose={() => setAir(false)}>
       <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
-      <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} />
+      <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} blurbFor={canWrite && status !== 'final' ? game.id : null} />
       <ObsPanel teamId={team.id} broadcast={bc} onBroadcast={bcast} onSend={send} />
       <Link href={`/t/${slug}/stream`} className="link" style={{ alignSelf: 'center' }}>Look, sound and positions: Stream setup ›</Link>
     </AirFrame>

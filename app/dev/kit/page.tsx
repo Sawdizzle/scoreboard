@@ -76,9 +76,9 @@ const schedule: Game[] = ([
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -128,7 +128,11 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       qr: qr ? { on: true, size: Number(qsize) || 18, pos: (qr as QrPos), opacity: Number(qop) || 1 } : null,
       // &theme=retro&style=scorebox&rhe=1: v4's themes and layouts on Scoreboard's own bug.
       // &scene=starting (final, paused, mid)&reason=rain&ss=standard: the full-frame scenes; &win=1 has us winning the Final.
-      broadcast: { theme, style, show: { rhe: rhe === '1' }, scene_style: ss === 'standard' ? 'standard' : undefined,
+      // &blurb=1: a pregame blurb on Starting Soon (&blurb=long: three lines at the 60-character limit).
+      broadcast: { theme,
+        blurb: blurb ? (blurb === 'long'
+          ? { game_id: 'g1', line1: 'W'.repeat(20) + ' Blue Steel meets the Hawks at Railyard Pk', line2: 'Steel are 5-2 this fall and have won three straight games', storyline: 'Last time out the Hawks won 9-2; Steel want that one back' }
+          : { game_id: 'g1', line1: 'Blue Steel host the Hawks at Railyard Park', line2: 'Steel are 5-2 this fall, winners of three straight', storyline: 'Rematch: the Hawks took the first meeting 9-2' }) : undefined, style, show: { rhe: rhe === '1' }, scene_style: ss === 'standard' ? 'standard' : undefined,
         scene: scene === 'starting' || scene === 'final' || scene === 'paused' ? { kind: scene, reason: (reason as never) ?? 'lightning', at: new Date(KIT_NOW + 24 * 60000).toISOString(), since: new Date(KIT_NOW - 6 * 60000).toISOString() } : null },
       roster: players.map((p) => ({ id: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` })),
       team, opponent: game.opponent!, season: { name: season.name, game_innings: 7 },

@@ -42,9 +42,9 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, channel }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
-  season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; channel: Channel | null;
+  season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -346,7 +346,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
   const console_ = wide && !!chan;
   const airPanel = (inline: boolean) => chan && (
-    <OnAir channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
+    <OnAir canWrite={canWrite} channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
       when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final} inline={inline}
       score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />
   );

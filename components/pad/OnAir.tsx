@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { Broadcast, BroadcastPatch, Scene } from '@/lib/broadcast';
 import { qrLayer, type AirView, type CardKind, type QrLayer } from '@/lib/onair';
+import { BlurbControl } from '@/components/pad/BlurbControl';
 
 export type Channel = { token: string; game_id: string | null; show_line: boolean; auto_card: boolean; auto_mid: boolean; card: CardKind | null; sponsor_name: string | null;
   bug_url: string | null; qr?: Partial<QrLayer> | null; spot?: { n: number; cut: 'pitch' | 'inning' } | null; broadcast?: Broadcast | null; look?: string | null };
@@ -23,8 +24,10 @@ export const MOMENT_KEYS: Record<string, [string, string][]> = {
 
 // The full-frame scenes, the ticker and the intros: v4's Broadcast cards.
 const REASONS: [NonNullable<Scene['reason']>, string][] = [['lightning', 'Lightning'], ['rain', 'Rain'], ['weather', 'Weather'], ['suspended', 'Suspended'], ['called', 'Called']];
-export function ScenesControl({ broadcast, look, onBroadcast, onSend }: {
+export function ScenesControl({ broadcast, look, onBroadcast, onSend, blurbFor }: {
   broadcast: Broadcast | null | undefined; look?: string | null;
+  // The game a pregame blurb may be written for: coaches only, before it is over.
+  blurbFor?: string | null;
   onBroadcast: (patch: BroadcastPatch) => void; onSend: (cmd: Record<string, unknown> & { type: string }) => void;
 }) {
   const scene = broadcast?.scene ?? null;
@@ -52,6 +55,7 @@ export function ScenesControl({ broadcast, look, onBroadcast, onSend }: {
         <input className="input" value={title} maxLength={60} placeholder="Game starting soon" onChange={(e) => setTitle(e.target.value)}
           onBlur={() => up('starting') && onBroadcast({ scene: { kind: 'starting', title: title.trim() || undefined } })} />
       </label>
+      {blurbFor && <BlurbControl gameId={blurbFor} broadcast={broadcast} onBroadcast={onBroadcast} />}
       <div className="chips" role="radiogroup" aria-label="Why play is paused">
         {REASONS.map(([k, label]) => <button key={k} type="button" role="radio" aria-checked={reason === k} className={`chip${reason === k ? ' on' : ''}`} onClick={() => setReason(k)}>{label}</button>)}
       </div>
@@ -123,7 +127,8 @@ export function AirFrame({ inline, onClose, children }: { inline?: boolean; onCl
   return <section className="pconsole" aria-label="On Air"><h2 className="pconsole-title">On Air</h2>{children}</section>;
 }
 
-export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose, inline }: {
+export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, live, final, score, onSet, onCmd, onSend, onBroadcast, onClose, inline, canWrite }: {
+  canWrite?: boolean;
   channel: Channel; teamId: string; gameId: string; setupHref: string; view: AirView; brand: Brand; when: string; live: boolean; final: boolean; score: string;
   onSet: (patch: Partial<Channel>) => void; onCmd: (kind: string) => void; onSend: (cmd: Record<string, unknown> & { type: string }) => void;
   onBroadcast: (patch: BroadcastPatch) => void; onClose: () => void; inline?: boolean;
@@ -190,7 +195,7 @@ export function OnAir({ channel, teamId, gameId, setupHref, view, brand, when, l
       </div>
 
       <Moments sport="baseball" rally={!!channel.broadcast?.rally} onCmd={onCmd} onBroadcast={onBroadcast} />
-      <ScenesControl broadcast={channel.broadcast} look={channel.look} onBroadcast={onBroadcast} onSend={onSend} />
+      <ScenesControl broadcast={channel.broadcast} look={channel.look} onBroadcast={onBroadcast} onSend={onSend} blurbFor={canWrite && !final ? gameId : null} />
       <ObsPanel teamId={teamId} broadcast={channel.broadcast} onBroadcast={onBroadcast} onSend={onSend} />
 
       <p className="eyebrow">Spots · play once per tap</p>

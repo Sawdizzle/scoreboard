@@ -48,7 +48,11 @@ export type Broadcast = {
   ticker?: { on?: boolean; text?: string; tone?: 'notice' | 'alert' };
   sponsors?: { on?: boolean; items?: { name: string; logo?: string | null }[]; every?: number };
   obs?: { auto_clip?: boolean; replay_seconds?: number; cameras?: string[] };
+  // A pregame blurb on Starting Soon: written on request (app/api/ai/blurb),
+  // put up only when the operator taps Use, and shown only for its own game.
+  blurb?: Blurb;
 };
+export type Blurb = { game_id: string; line1: string; line2: string; storyline: string };
 
 // A change to the broadcast settings: keys merge in, a key set to null goes.
 export type BroadcastPatch = { [K in keyof Broadcast]?: Broadcast[K] | null };
