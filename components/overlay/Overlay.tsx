@@ -28,6 +28,8 @@ const SPORT_FX = new Set(['touchdown', 'fieldgoal', 'turnover', 'goal', 'three',
 function earned(prev: Feed | null, f: Feed, runs: number): { sound: string | null; fx: string | null } {
   const last = f.last;
   if (!last) return { sound: null, fx: null };
+  // A correction on the Situation screen is no play: no run sound, no walk-off.
+  if (last.type.startsWith('adj') || last.type === 'inning' || last.type === 'half') return { sound: null, fx: null };
   if ((f.game?.sport ?? 'baseball') !== 'baseball') {
     const k = last.kind ?? '';
     return SPORT_FX.has(k) ? { sound: k, fx: k } : { sound: runs ? 'run' : null, fx: null };
@@ -133,6 +135,10 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     let have = first.current?.v ?? null;
     // undefined until the first feed: a card never pops just because the page loaded.
     let batter: string | null | undefined = first.current ? feedView(first.current)?.air.batter?.bid ?? null : undefined;
+    // The game the page is following. Each game's plays count from 1 again, so
+    // when the pad moves on to the next game (a doubleheader) the counts above
+    // start over too, or nothing in game two would sound until it passed game one.
+    let gameNow = first.current?.game?.id;
 
     const load = async () => {
       if (busy) { again = true; return; }
@@ -160,6 +166,14 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
         }
         if (seenCmd === undefined || n > seenCmd) seenCmd = n;
         const view = feedView(f);
+        if (seenPlay !== undefined && f.game?.id !== gameNow) {
+          seenPlay = f.last?.seq ?? 0;
+          runsBefore = total(f);
+          batterName = view?.air.batter?.name ?? '';
+          batter = undefined;
+          prev = null;
+        }
+        gameNow = f.game?.id;
         const now = view?.air.batter?.bid ?? null;
         const text = momentText(f.last);
         if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && f.game?.status !== 'scheduled') {
