@@ -206,8 +206,18 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // runs only with nothing waiting to send and an answer within 4 seconds;
   // otherwise the game ends as it always has. It never stops the end.
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [checking, setChecking] = useState(false);
+  // Each End game tap gets a number; closing the sheet, Start over or another
+  // tap moves it on, so a check that answers late does nothing.
+  const endTry = useRef(0);
+  const dropEnd = () => { endTry.current += 1; setChecking(false); };
   async function tryEnd() {
-    if (queue.current.length || (typeof navigator !== 'undefined' && !navigator.onLine)) return endGame(true);
+    if (checking) return;
+    const my = ++endTry.current;
+    const current = () => my === endTry.current;
+    const end = () => { if (current()) { setChecking(false); endGame(true); } };
+    if (queue.current.length || (typeof navigator !== 'undefined' && !navigator.onLine)) return end();
+    setChecking(true);
     try {
       const load = Promise.all([
         sb.from('games').select('live').eq('id', game.id).single(),
@@ -215,7 +225,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         sb.from('game_stats').select('event_id, side, bid, b_pa, b_h, b_r, p_bf, p_outs, p_pitches').eq('game_id', game.id),
       ]);
       const got = await Promise.race([load, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
-      if (!got || got.some((x) => x.error)) return endGame(true);
+      if (!current()) return;
+      if (!got || got.some((x) => x.error)) return end();
       const gl = cur.current.g.lineups;
       const found = auditGame({
         game: { is_home: game.is_home, status: 'live', live: (got[0].data as { live: Record<string, unknown> }).live, sport: 'baseball' },
@@ -224,11 +235,13 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         lineups: game.is_home ? { us: gl.home, them: gl.away } : { us: gl.away, them: gl.home },
         regulationInnings: game.settings?.regulation ?? regulation, runRule: game.settings?.run_rule ?? null, ending: true,
       });
-      if (!found.length) return endGame(true);
+      if (!found.length) return end();
+      if (!current()) return;
+      setChecking(false);
       setIssues(found);
       setSheet('check');
     } catch {
-      endGame(true);
+      end();
     }
   }
 
@@ -273,6 +286,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // Start over: every play and its stats go; the game is back before the first pitch.
   async function startOver() {
     if (!window.confirm('Start this game over? Every play and its stats are cleared. Lineups stay.')) return;
+    dropEnd();
     const { error } = await sb.rpc('reset_game', { p_game: game.id });
     if (error) { say(error.message || 'That did not work. Try again.'); return; }
     queue.current = [];
@@ -483,7 +497,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
             <input type="checkbox" checked={demo} disabled={!canScore || final} onChange={(e) => setDemo(e.target.checked)} />
           </label>
         </>}
-        onClose={() => setSheet(null)} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={(f) => (f ? void tryEnd() : endGame(false))} onStartOver={startOver} />}
+        ending={checking} onClose={() => { dropEnd(); setSheet(null); }} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={(f) => (f ? void tryEnd() : endGame(false))} onStartOver={startOver} />}
       {sheet === 'check' && <EndCheck issues={issues} onClose={() => setSheet(null)} onFix={() => setSheet('situation')} onEnd={() => endGame(true)} />}
     </div>
   );

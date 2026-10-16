@@ -99,3 +99,8 @@ test('v4 games: only missing runs, said plainly', () => {
   assert.deepEqual(krum.map((x) => x.code), ['gap']);
   assert.equal(krum[0].text, "Bottom of the 1st: 2 runs for Blue Steel with no play that scored them. Recaps give the inning's total but not how.");
 });
+
+test('no lineup for us at all: one note, not a fix per at-bat', () => {
+  const none = { batters: [], positions: {} };
+  assert.deepEqual(codes(game(clean, none, none)), ['note:no-lineup']);
+});

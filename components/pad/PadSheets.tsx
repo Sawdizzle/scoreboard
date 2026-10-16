@@ -175,8 +175,10 @@ export function EndCheck({ issues, onFix, onEnd, onClose }: {
 }
 
 // Corrections, and ending the game. Nothing here goes on anyone's stats.
-export function Situation({ g, final, labels, extra, onFix, onEnd, onStartOver, onClose }: {
+export function Situation({ g, final, labels, extra, ending = false, onFix, onEnd, onStartOver, onClose }: {
   g: G; final: boolean; labels: { away: string; home: string }; extra?: React.ReactNode;
+  // The scoring check is running: End game waits for it (4 s at most).
+  ending?: boolean;
   onFix: (res: unknown) => void; onEnd: (final: boolean) => void; onStartOver: () => void; onClose: () => void;
 }) {
   const b = L.safeBases(g.bases);
@@ -221,8 +223,8 @@ export function Situation({ g, final, labels, extra, onFix, onEnd, onStartOver, 
         <button type="button" className="btn btn-quiet" onClick={() => onFix(L.onPrevBatter(g))}>Prev batter</button>
         <button type="button" className="btn btn-quiet" onClick={() => onFix(L.onNextBatter(g))}>Next batter</button>
       </div>
-      <button type="button" className={`btn ${final ? 'btn-quiet' : 'btn-danger'} btn-big`} onClick={() => onEnd(!final)}>
-        {final ? 'Reopen the game' : 'End game'}
+      <button type="button" className={`btn ${final ? 'btn-quiet' : 'btn-danger'} btn-big`} onClick={() => onEnd(!final)} disabled={ending} aria-busy={ending}>
+        {final ? 'Reopen the game' : ending ? 'Checking the scoring…' : 'End game'}
       </button>
       <button type="button" className="btn btn-ghost" onClick={onStartOver}>Start the game over</button>
     </Sheet>

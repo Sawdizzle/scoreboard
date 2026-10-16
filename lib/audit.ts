@@ -46,7 +46,10 @@ export function auditGame(input: SummaryInput & { ending?: boolean }): Issue[] {
   const byEvent = new Map<number, SummaryStat[]>();
   for (const s of stats) byEvent.set(s.event_id, [...(byEvent.get(s.event_id) ?? []), s]);
   const lineups = input.lineups ?? {};
-  const watch = (s: Side) => s === 'us' || known(lineups[s]);
+  // A side is checked only when its lineup was filled in. No lineup for us at
+  // all is one note, not a fix per at-bat that nobody can make.
+  const watch = (s: Side) => known(lineups[s]);
+  if (!known(lineups.us)) out.push({ level: 'note', code: 'no-lineup', text: `There was no lineup for ${name('us')}, so these at-bats and pitches count for nobody.` });
 
   const noBatter: Record<Side, number> = { us: 0, them: 0 };
   const noPitcher: Record<Side, number> = { us: 0, them: 0 };
@@ -85,7 +88,7 @@ export function auditGame(input: SummaryInput & { ending?: boolean }): Issue[] {
     if (noBatter[s]) out.push({ level: s === 'us' ? 'fix' : 'note', code: 'no-batter', text: `${plural(noBatter[s], 'time')} up for ${name(s)} with an empty lineup spot. Those at-bats count for nobody.` });
   }
   for (const s of ['us', 'them'] as Side[]) {
-    if (!(s === 'us' || lineups[s]?.positions?.P)) continue;
+    if (!watch(s)) continue;
     if (noPitcher[s]) out.push({ level: s === 'us' ? 'fix' : 'note', code: 'no-pitcher', text: `${plural(noPitcher[s], 'batter')} faced ${name(s)} with no pitcher set. Those go on nobody's pitching line.` });
   }
   if (lostRunners.length) out.push({ level: 'fix', code: 'lost-runner', text: `Runs with no runner credited: ${lostRunners.join(', ')}. The runner on base was not known, so no one gets the R.` });
