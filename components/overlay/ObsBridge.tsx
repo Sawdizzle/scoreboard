@@ -79,7 +79,7 @@ export function ObsBridge({ token, feed, fx }: { token: string; feed: Feed | nul
   const chain = useRef<Promise<unknown>>(Promise.resolve());
   const clip = useRef((c: Record<string, unknown>) => {
     if (!obs()) return;
-    chain.current = chain.current.then(() => browserClient().rpc('clip_report', { p_token: token, p_clip: c })).catch(() => {});
+    chain.current = chain.current.then(() => browserClient().rpc('clip_report', { p_token: token, p_clip: c }).abortSignal(AbortSignal.timeout(8000))).catch(() => {});
   });
   const where = () => {
     const f = feedRef.current, g = f?.game;

@@ -28,7 +28,7 @@ export default async function LineupPage({ params, searchParams }: {
   const presets: { label: string; lineup: Lineup }[] = [];
 
   if (side === 'us') {
-    const [players, seasons, last] = await Promise.all([listPlayers(supabase, team.id), listSeasons(supabase, team.id), lastLineup(supabase, team.id, game.id)]);
+    const [players, seasons, last] = await Promise.all([listPlayers(supabase, team.id), listSeasons(supabase, team.id), lastLineup(supabase, team.id, game.id, game.starts_at)]);
     const seasonId = game.season_id ?? seasons.find((s) => s.is_current)?.id;
     const stats = seasonId ? await seasonStats(supabase, team.id, seasonId) : [];
     const avg = new Map(stats.filter((s) => s.b_pa > 0).map((s) => [s.player_id, rate3(batting(s).avg)]));

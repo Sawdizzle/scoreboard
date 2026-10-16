@@ -120,7 +120,16 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
     if (!list.length) return;
     let t = { ...team, batters: [...team.batters] };
     for (const p of list) {
-      const b = { bid: newBid(), num: p.number, name: `${p.first_name} ${p.last_name}`.trim() };
+      // A roster player joins as himself so his stats count for him: by name,
+      // or by jersey number when the names agree (or the line has none).
+      // Anyone else is typed in.
+      const name = `${p.first_name} ${p.last_name}`.trim();
+      const free = (x: LineupBatter) => !t.batters.some((b) => b.bid === x.bid);
+      const low = (v: string) => v.trim().toLowerCase();
+      const last = (v: string) => low(v).split(/\s+/).pop() ?? '';
+      const known = pool.find((x) => free(x) && !!name && low(x.name) === low(name))
+        ?? pool.find((x) => free(x) && !!p.number && x.num === p.number && (!name || !x.name || last(x.name) === last(name)));
+      const b = known ? { bid: known.bid, num: known.num, name: known.name } : { bid: newBid(), num: p.number, name };
       t.batters.push(b);
       const pos = p.positions.find((x) => FIELD.includes(x));
       if (pos) t = setPosition(t, t.batters.length - 1, pos).team;

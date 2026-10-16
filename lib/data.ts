@@ -135,11 +135,13 @@ export async function getLineups(db: Db, gameId: string) {
   for (const r of (data ?? []) as { side: Side; data: Lineup }[]) out[r.side] = r.data;
   return out;
 }
-// Our lineup from the most recent other game that has one, for "Same as last game".
-export async function lastLineup(db: Db, teamId: string, exceptGame: string) {
-  const { data } = await db.from('games').select('id, starts_at, game_lineups!inner(side, data)')
-    .eq('team_id', teamId).neq('id', exceptGame).eq('game_lineups.side', 'us')
-    .order('starts_at', { ascending: false, nullsFirst: false }).limit(1);
+// Our lineup from the most recent other game that has one, for "Same as last
+// game": one before this game, never a later one whose lineup was set first.
+export async function lastLineup(db: Db, teamId: string, exceptGame: string, before?: string | null) {
+  let q = db.from('games').select('id, starts_at, game_lineups!inner(side, data)')
+    .eq('team_id', teamId).neq('id', exceptGame).eq('game_lineups.side', 'us');
+  if (before) q = q.lt('starts_at', before);
+  const { data } = await q.order('starts_at', { ascending: false, nullsFirst: false }).limit(1);
   const row = (data ?? [])[0] as { game_lineups: { data: Lineup }[] } | undefined;
   return row?.game_lineups?.[0]?.data ?? null;
 }

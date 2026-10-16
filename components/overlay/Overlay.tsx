@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Fx, type FxShot } from '@/components/overlay/Fx';
+import { Keep } from '@/components/overlay/Keep';
 import { ObsBridge } from '@/components/overlay/ObsBridge';
 import { Scenes, type Weather } from '@/components/overlay/Scenes';
 import { SponsorBug } from '@/components/overlay/SponsorBug';
@@ -92,8 +93,10 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     let mine = '';
     const check = async () => {
       try {
-        const r = await fetch('/version', { cache: 'no-store' });
-        const v = (await r.text()).trim();
+        const r = await fetch('/version', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+        // Only a real answer counts: an error page from a flaky link is not a new release.
+        const v = r.ok ? (await r.text()).trim() : '';
+        if (!/^([0-9a-f]{7,40}|dpl_\w+|dev)$/i.test(v)) return;
         if (!mine) mine = v; else if (v && v !== mine && !sceneUp.current) window.location.reload();
       } catch { /* offline: next time */ }
     };
@@ -144,7 +147,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
       if (busy) { again = true; return; }
       busy = true;
       try {
-        const { data } = await sb.rpc('overlay_feed', { p_token: token, p_have: have });
+        // A request that hangs on a dead link is given up, so the next poll can run.
+        const { data } = await sb.rpc('overlay_feed', { p_token: token, p_have: have }).abortSignal(AbortSignal.timeout(6000));
         const f = data as Feed | { v: string } | null;
         if (stopped || !f || !('game' in f)) return;
         have = f.v;
@@ -229,12 +233,12 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   }, []);
   const top = feed ? layoutOf(feed.layout).bug.pos.startsWith('t') : false;
   return <>
-    <Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} />
-    <Scenes feed={feed} now={now} weather={weather} strike={strike} />
-    <Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} />
+    <Keep><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} /></Keep>
+    <Keep><Scenes feed={feed} now={now} weather={weather} strike={strike} /></Keep>
+    <Keep><Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} /></Keep>
     <ObsBridge token={token} feed={feed} fx={heard} />
-    <SponsorBug sponsors={feed?.broadcast?.sponsors} hold={!!feed?.broadcast?.scene} />
-    <Spots spot={feed?.spot ?? null} />
+    <Keep><SponsorBug sponsors={feed?.broadcast?.sponsors} hold={!!feed?.broadcast?.scene} /></Keep>
+    <Keep><Spots spot={feed?.spot ?? null} /></Keep>
     {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}
   </>;
 }

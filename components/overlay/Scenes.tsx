@@ -135,7 +135,8 @@ export function Scenes({ feed, now, weather, strike }: { feed: Feed | null; now:
   const game = feed?.game ?? null;
   let body: React.ReactNode = null;
 
-  if (scene && feed) {
+  // With no game the feed has no teams: no scene, rather than a crash.
+  if (scene && feed && feed.team && feed.opponent) {
     const us = brandOf(feed.team), them = brandOf(feed.opponent);
     const isHome = game?.is_home ?? true;
     const [away, home] = isHome ? [them, us] : [us, them];

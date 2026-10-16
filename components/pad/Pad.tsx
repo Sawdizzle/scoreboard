@@ -113,15 +113,20 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // Taps since the last reload started: a reload that answers after a tap
   // would show the game from before it, so it stands down.
   const taps = useRef(0);
+  // Saves the server confirmed: a reload that read the game before one of
+  // them landed is older than what this pad knows.
+  const acks = useRef(0);
+  const [clock, setClock] = useState(game.clock ?? null);
   const catchUp = useRef<() => void>(() => {});
   const reload = useCallback(async (after = true): Promise<boolean> => {
-    const mark = taps.current;
+    const mark = taps.current, acked = acks.current;
     const [{ data: row }, { data: stats }, { data: lus, error: lusError }] = await Promise.all([
-      sb.from('games').select('live, status, seq').eq('id', game.id).single(),
+      sb.from('games').select('live, status, seq, clock').eq('id', game.id).single(),
       sb.from('game_stats').select('*').eq('game_id', game.id),
       sb.from('game_lineups').select('side, data').eq('game_id', game.id),
     ]);
-    if (!row || mark !== taps.current) return false;
+    if (!row || mark !== taps.current || acked !== acks.current) return false;
+    setClock(row.clock ?? null);
     if (!lusError && lus) {
       const got: Partial<Record<Side, Lineup>> = {};
       for (const r of lus as { side: Side; data: Lineup }[]) got[r.side] = r.data;
@@ -146,19 +151,25 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   }, [game.id]);
 
   const pumpRef = useRef<() => Promise<void>>(async () => {});
+  // Items already sent once: a conflict on a second try may be our own lost save.
+  const sentOnce = useRef(new WeakSet<Item>());
   const pump = useCallback(async () => {
     if (sending.current) return;
     sending.current = true;
-    let wait = 800;
+    let wait = 800, resync = false;
     while (queue.current.length) {
       setSync('sending');
       setWaiting(queue.current.length);
       const it = queue.current[0];
+      const sent = !!sentOnce.current.has(it);
+      sentOnce.current.add(it);
+      // A request that hangs on bad signal is given up after 15 s and sent again.
+      const stop = AbortSignal.timeout(15000);
       const { data, error } = it.kind === 'play'
-        ? await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status })
-        : await sb.rpc('undo_play', { p_game: game.id, p_seq: seq.current });
+        ? await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status }).abortSignal(stop)
+        : await sb.rpc('undo_play', { p_game: game.id, p_seq: seq.current }).abortSignal(stop);
       if (error) {
-        const offline = !error.code || /fetch|network|load failed/i.test(error.message);
+        const offline = !error.code || /fetch|network|load failed|abort/i.test(error.message);
         // A sign-in that lapsed while the phone was asleep or offline: renew it and go again.
         const lapsed = /PGRST30\d/.test(error.code ?? '') || /JWT/i.test(error.message);
         if (offline || lapsed) {
@@ -183,10 +194,29 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
           }
           if (n > 0) {
             seq.current = last;
+            acks.current += 1;
             queue.current.splice(0, n);
             keep();
             wait = 800;
             nudge();
+            continue;
+          }
+        }
+        // An undo whose reply was lost: it saved if the game moved on by one
+        // with no play of that number (another phone's play would add one).
+        if (error.code === 'PB409' && it.kind === 'undo' && sent) {
+          const { data: g2 } = await sb.from('games').select('seq').eq('id', game.id).single();
+          const { data: other } = g2 && g2.seq === seq.current + 1
+            ? await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', g2.seq).maybeSingle()
+            : { data: { id: 0 } };
+          if (g2 && !other) {
+            seq.current = g2.seq;
+            acks.current += 1;
+            queue.current.shift();
+            keep();
+            wait = 800;
+            nudge();
+            resync = true;
             continue;
           }
         }
@@ -199,6 +229,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         break;
       }
       seq.current = (data as { seq: number }).seq;
+      acks.current += 1;
       queue.current.shift();
       keep();
       wait = 800;
@@ -209,6 +240,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     setWaiting(0);
     // A tap made while a conflict reloaded the game: send it too.
     if (queue.current.length) window.setTimeout(() => void pumpRef.current(), 0);
+    // After a lost undo the screen may not show what the server undid: catch up.
+    else if (resync) void reload();
   }, [sb, game.id, reload, nudge, keep]);
   useEffect(() => { pumpRef.current = pump; }, [pump]);
 
@@ -266,8 +299,12 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   function undo() {
     if (!canScore) return;
     const h = history.current.pop();
+    // Nothing to undo on screen (after a reload): the server undoes it, and a
+    // second tap while that is on its way would undo another play.
+    if (!h && queue.current.some((q) => q.kind === 'undo')) { say('Undoing… wait for it to save.'); return; }
     taps.current += 1;
     if (h) show({ ...h.before, last: `Undone: ${cur.current.last || 'last play'}` });
+    else say('Undoing…');
     queue.current.push({ kind: 'undo' });
     keep();
     void pump().then(() => { if (!h) void reload(); });
@@ -606,7 +643,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       {sheet === 'air' && !console_ && airPanel(false)}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
         extra={<>
-          {game.settings?.time_limit ? <GameClock gameId={game.id} initial={game.clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={nudge} /> : null}
+          {game.settings?.time_limit ? <GameClock gameId={game.id} initial={clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={(c) => { setClock(c); nudge(); }} /> : null}
           <label className="switch">
             <span className="switch-text"><b>Demo: the game plays itself</b><small>A pitch every 1.6 s, to try the stream. Every play is real: use a practice game.</small></span>
             <input type="checkbox" checked={demo} disabled={!canScore || final} onChange={(e) => setDemo(e.target.checked)} />
