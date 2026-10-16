@@ -7,7 +7,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { NextResponse } from 'next/server';
 import { BLURB_MODEL, BLURB_SYSTEM, BlurbContent, blurbPrompt, checkBlurb, matchupFacts, type PastGame } from '@/lib/blurb';
 import type { PublicGame } from '@/lib/public';
-import { getAllowance, refusal } from '@/lib/ai-limit';
+import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -55,8 +55,10 @@ export async function POST(req: Request) {
   let blurb: BlurbContent | null = null;
   let problems: string[] = [];
   let tokensIn = 0, tokensOut = 0, model = BLURB_MODEL;
-  const log = (ok: boolean) => supabase.from('ai_usage').insert({
-    team_id: game.team_id, game_id: game.id, kind: 'blurb', model, input_tokens: tokensIn, output_tokens: tokensOut, ok });
+  // One of this month's writes, taken before the call so the limit holds.
+  const held = await reserve(supabase, game.team_id, game.id, 'blurb', BLURB_MODEL);
+  if ('error' in held) return fail(held.status, held.error);
+  const log = (ok: boolean) => settle(supabase, held.id, model, tokensIn, tokensOut, ok);
   const write = (ask: string) => client.messages.parse({
     model: BLURB_MODEL,
     max_tokens: 4000,

@@ -60,3 +60,22 @@ test('AI limits: off by default, staff cannot raise it, and the allowance counts
   await assert.rejects(t.as('stranger', `select ai_allowance($1)`, [team]));
   await assert.rejects(t.as(null, `select ai_allowance($1)`, [team]));
 });
+
+test('AI writes are reserved under the limit, one at a time, and settled by whoever reserved them', async () => {
+  await t.db.query(`update teams set ai_monthly_limit = 3 where id = $1`, [team]);
+  const reserve = () => t.as<{ r: { id: number | null } }>('owner', `select ai_reserve($1, $2, 'recap', 'm') r`, [team, game]).then((x) => x[0].r);
+  const a = await reserve();
+  assert.ok(a.id);
+  // Earlier in this file one call worked; with this reservation the month holds 2 of 3, so one more fits.
+  assert.ok((await reserve()).id);
+  assert.equal((await reserve()).id, null);
+  // A failed call gives its write back.
+  await t.as('owner', `select ai_settle($1, 'claude-sonnet-5-5', 1000, 500, false)`, [a.id]);
+  assert.ok((await reserve()).id);
+  // Nobody else can settle it, nor reserve against another team's game.
+  await t.as('rival', `select ai_settle($1, 'x', 0, 0, true)`, [a.id]);
+  const [{ ok }] = await t.db.query<{ ok: boolean }>(`select ok from ai_usage where id = $1`, [a.id]).then((r) => r.rows);
+  assert.equal(ok, false);
+  await assert.rejects(t.as('rival', `select ai_reserve($1, $2, 'recap', 'm')`, [other, game]));
+  await assert.rejects(t.as('stranger', `select ai_reserve($1, null, 'recap', 'm')`, [team]));
+});

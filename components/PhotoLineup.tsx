@@ -5,13 +5,23 @@ import { useRef, useState } from 'react';
 // Shrink a photo to at most 1600 px on its longer side, as JPEG, so it sends
 // quickly on ballpark signal and stays well under the server's size limit.
 async function shrink(file: File): Promise<{ data: string; type: string }> {
-  const img = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
-  c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-  const url = c.toDataURL('image/jpeg', 0.85);
-  return { data: url.slice(url.indexOf(',') + 1), type: 'image/jpeg' };
+  // Upright as the camera held it; iPhone photos carry their turn in EXIF.
+  const img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  try {
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    // Under the server's 3 MB: step the quality down if a busy photo is large.
+    for (const q of [0.85, 0.7, 0.55]) {
+      const url = c.toDataURL('image/jpeg', q);
+      const data = url.slice(url.indexOf(',') + 1);
+      if (data.length < 3_000_000) return { data, type: 'image/jpeg' };
+    }
+    throw new Error('too big');
+  } finally {
+    img.close();
+  }
 }
 
 // Read a lineup card from a photo into the paste box: the scorer checks the
@@ -25,8 +35,17 @@ export function PhotoLineup({ gameId, side, onLines }: { gameId: string; side: '
   async function read(file: File | undefined) {
     if (!file) return;
     setBusy(true); setError(null); setUnsure([]);
+    let photo: { data: string; type: string };
     try {
-      const { data, type } = await shrink(file);
+      photo = await shrink(file);
+    } catch {
+      setError('This phone could not open that photo. Try a screenshot of it, or take the picture again.');
+      setBusy(false);
+      if (input.current) input.current.value = '';
+      return;
+    }
+    try {
+      const { data, type } = photo;
       const res = await fetch('/api/ai/lineup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ gameId, side, image: data, mediaType: type }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) { setError(body.error ?? 'Could not read that photo.'); return; }

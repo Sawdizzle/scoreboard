@@ -7,7 +7,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
 import type { PublicGame } from '@/lib/public';
 import { checkRecap, RECAP_MODEL, RECAP_SYSTEM, recapPrompt, RecapContent, type RecapContext } from '@/lib/recap';
-import { getAllowance, refusal } from '@/lib/ai-limit';
+import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { summarizeGame, type SummaryEvent, type SummaryStat } from '@/lib/summarize';
 import type { GameSettings } from '@/lib/broadcast';
@@ -71,8 +71,10 @@ export async function POST(req: Request) {
   let content: RecapContent | null = null;
   let problems: string[] = [];
   let tokensIn = 0, tokensOut = 0, model = RECAP_MODEL;
-  const log = (ok: boolean) => supabase.from('ai_usage').insert({
-    team_id: game.team_id, game_id: game.id, kind: 'recap', model, input_tokens: tokensIn, output_tokens: tokensOut, ok });
+  // One of this month's writes, taken before the call so the limit holds.
+  const held = await reserve(supabase, game.team_id, game.id, 'recap', RECAP_MODEL);
+  if ('error' in held) return fail(held.status, held.error);
+  const log = (ok: boolean) => settle(supabase, held.id, model, tokensIn, tokensOut, ok);
 
   const parse = (ask: string) => client.beta.messages.parse({
     model: RECAP_MODEL,

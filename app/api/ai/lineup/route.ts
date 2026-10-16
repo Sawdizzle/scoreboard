@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { gameId?: string; side?: string; image?: string; mediaType?: string };
   if (!body.gameId || !/^[0-9a-f-]{36}$/i.test(body.gameId)) return fail(400, 'Which game?');
   const side = body.side === 'them' ? 'them' : 'us';
-  if (!body.image || !TYPES.has(body.mediaType ?? '') || body.image.length > 6_000_000) return fail(400, 'Send one JPEG, PNG or WebP photo under 4 MB.');
+  if (!body.image || !TYPES.has(body.mediaType ?? '') || body.image.length > 3_300_000) return fail(400, 'That photo is too large. Send one JPEG, PNG or WebP under 2 MB.');
 
   const db = await createClient();
   const { data: game } = await db.from('games').select('id, team_id, opponent_name').eq('id', body.gameId)

@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
 import type { z } from 'zod';
-import { getAllowance, refusal } from './ai-limit';
+import { getAllowance, refusal, reserve, settle } from './ai-limit';
 import { createClient } from './supabase/server';
 
 export type Kind = 'recap' | 'blurb' | 'lineup' | 'schedule' | 'ask' | 'card' | 'youtube' | 'translate';
@@ -40,8 +40,9 @@ export async function aiWrite<S extends z.ZodType>(o: {
   let out: z.infer<S> | null = null;
   let problems: string[] = [];
   let tokensIn = 0, tokensOut = 0, model = o.model;
-  const log = (ok: boolean) => o.db.from('ai_usage').insert({
-    team_id: o.teamId, game_id: o.gameId ?? null, kind: o.kind, model, input_tokens: tokensIn, output_tokens: tokensOut, ok });
+  const held = await reserve(o.db, o.teamId, o.gameId ?? null, o.kind, o.model);
+  if ('error' in held) return { error: fail(held.status, held.error) };
+  const log = (ok: boolean) => settle(o.db, held.id, model, tokensIn, tokensOut, ok);
 
   try {
     for (let attempt = 0; attempt < (o.check ? 2 : 1); attempt++) {

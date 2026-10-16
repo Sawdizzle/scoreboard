@@ -23,3 +23,17 @@ export function refusal(a: Allowance | null): { status: number; error: string } 
   }
   return null;
 }
+
+// Take one of this month's writes before calling Claude, so two taps at once
+// cannot both slip under the limit; settle it with what the call used.
+export async function reserve(db: SupabaseClient, teamId: string, gameId: string | null, kind: string, model: string):
+  Promise<{ id: number } | { status: number; error: string }> {
+  const { data, error } = await db.rpc('ai_reserve', { p_team: teamId, p_game: gameId, p_kind: kind, p_model: model });
+  if (error || !data) return { status: 403, error: 'Your seat on this team cannot use AI writing.' };
+  const r = data as { id: number | null; limit: number; used: number; resets: string };
+  if (r.id) return { id: r.id };
+  return refusal({ limit: r.limit, used: r.used, remaining: 0, resets: r.resets }) ?? { status: 429, error: 'No AI writes left this month.' };
+}
+export async function settle(db: SupabaseClient, id: number, model: string, tokensIn: number, tokensOut: number, ok: boolean) {
+  await db.rpc('ai_settle', { p_id: id, p_model: model, p_in: tokensIn, p_out: tokensOut, p_ok: ok });
+}
