@@ -100,7 +100,7 @@ Write the whole pack again, fixing these and keeping what was right.`;
   if (!content) return fail(502, problems[0] ?? 'No recap came back. Try again.');
 
   // A new draft replaces the old one, published or not: the coach publishes again.
-  const row = { status: 'draft', content, facts, warnings: problems, model,
+  const row = { status: 'draft', content, content_es: null, facts, warnings: problems, model,
     generated_at: new Date().toISOString(), edited_at: null, published_at: null };
   const { data: had } = await supabase.from('game_recaps').select('game_id').eq('game_id', game.id).maybeSingle();
   const { error } = had

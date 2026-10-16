@@ -742,7 +742,7 @@ export async function saveRecap(slug: string, gameId: string, _: FormState, fd: 
   if (parsed.data.social.x.length > 280) return { error: `The X post is ${parsed.data.social.x.length} characters; keep it to 280.` };
   const { supabase, team, userId } = await loadTeam(slug);
   const { data, error } = await supabase.from('game_recaps')
-    .update({ content: parsed.data, edited_at: new Date().toISOString(), updated_by: userId })
+    .update({ content: parsed.data, content_es: null, edited_at: new Date().toISOString(), updated_by: userId })
     .eq('team_id', team.id).eq('game_id', gameId).select('status');
   if (error) return { error: say(error) };
   if (!data?.length) return NO_SEAT;

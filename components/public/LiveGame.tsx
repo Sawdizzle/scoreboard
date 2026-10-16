@@ -35,7 +35,8 @@ function BoxTable({ title, cols, rows }: { title: string; cols: string[]; rows: 
 
 // The public game page. It asks again every few seconds while the game is on;
 // an answer with nothing new is one line.
-export function LiveGame({ initial, recap = null }: { initial: PublicGame; recap?: { headline: string; recap: string } | null }) {
+type Story = { headline: string; recap: string };
+export function LiveGame({ initial, recap = null }: { initial: PublicGame; recap?: (Story & { es?: Story | null }) | null }) {
   const [game, setGame] = useState(initial);
   const first = useRef(initial);
 
@@ -123,6 +124,13 @@ export function LiveGame({ initial, recap = null }: { initial: PublicGame; recap
             <span className="eyebrow gold">Recap</span>
             <h2 className="h-sec" style={{ fontSize: 20 }}>{recap.headline}</h2>
             {recap.recap.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => <p key={i} style={{ margin: 0, lineHeight: 1.55 }}>{para.trim()}</p>)}
+            {recap.es && (
+              <details lang="es">
+                <summary className="link">Leer en español</summary>
+                <h3 className="h-sec" style={{ fontSize: 18, marginTop: 10 }}>{recap.es.headline}</h3>
+                {recap.es.recap.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => <p key={i} style={{ margin: '8px 0 0', lineHeight: 1.55 }}>{para.trim()}</p>)}
+              </details>
+            )}
           </article>
         )}
 

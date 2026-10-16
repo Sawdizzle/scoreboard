@@ -30,6 +30,7 @@ export default async function GamePage({ params }: Props) {
   const game = await load(slug, gameId);
   // A recap shows only once a coach has published it (the policy hides drafts).
   const supabase = await createClient();
-  const { data } = await supabase.from('game_recaps').select('content').eq('game_id', game.game.id).eq('status', 'published').maybeSingle<{ content: { headline: string; recap: string } }>();
-  return <LiveGame initial={game} recap={data?.content ?? null} />;
+  const { data } = await supabase.from('game_recaps').select('content, content_es').eq('game_id', game.game.id).eq('status', 'published')
+    .maybeSingle<{ content: { headline: string; recap: string }; content_es: { headline: string; recap: string } | null }>();
+  return <LiveGame initial={game} recap={data ? { ...data.content, es: data.content_es } : null} />;
 }

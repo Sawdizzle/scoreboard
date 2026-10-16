@@ -7,7 +7,7 @@ import { ActionForm, Submit } from '@/components/ActionForm';
 import type { RecapContent } from '@/lib/recap';
 
 export type RecapRow = {
-  status: 'draft' | 'published'; content: RecapContent; warnings: string[];
+  status: 'draft' | 'published'; content: RecapContent; content_es?: RecapContent | null; warnings: string[];
   model: string | null; generated_at: string; edited_at: string | null; published_at: string | null;
 };
 
@@ -36,6 +36,52 @@ function CopyField({ label, value, onChange, rows = 4, limit }: {
 // The post-game content pack on the staff game page: write it, check it, fix
 // it, copy the captions out, and publish the recap to the public game page.
 // Nothing here touches the stream.
+// The recap in Spanish: written from the saved English, read-only here (edit
+// the English and write it again), each part with its own Copy.
+function Spanish({ gameId, initial, canGenerate }: { gameId: string; initial: RecapContent | null; canGenerate: boolean }) {
+  const [es, setEs] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  async function write() {
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch('/api/ai/translate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ gameId }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(body.error ?? 'That did not work. Try again.'); return; }
+      setEs(body.content);
+      if (body.warnings?.length) setError(`Check: ${body.warnings.join(' ')}`);
+    } catch {
+      setError('No connection. Try again when you have signal.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  const copy = async (k: string, t: string) => { try { await navigator.clipboard.writeText(t); setCopied(k); setTimeout(() => setCopied(null), 2000); } catch { /* select by hand */ } };
+  const parts: [string, string][] = es ? [['Titular', es.headline], ['Resumen', es.recap], ['Instagram', es.social.instagram], ['Facebook', es.social.facebook], ['X', es.social.x], ['Sitio web', `${es.website_post.title}\n\n${es.website_post.body_markdown}`]] : [];
+  return (
+    <details className="fold" open={!!es}>
+      <summary>En español</summary>
+      <div className="fold-body stack">
+        {canGenerate && (
+          <button type="button" className="btn" onClick={write} disabled={busy} aria-busy={busy}>
+            {busy ? 'Traduciendo…' : es ? 'Write the Spanish again' : 'Write it in Spanish'}
+          </button>
+        )}
+        <p className="hint">Written from the saved English. Saving English edits clears it; write it again after. Once published, the public page offers it too.</p>
+        {error && <p role="alert" className="note note-bad">{error}</p>}
+        {parts.map(([label, text]) => text.trim() && (
+          <div key={label} className="stack" style={{ gap: 4 }}>
+            <span className="eyebrow">{label}</span>
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{text}</p>
+            <button type="button" className="btn btn-quiet" onClick={() => copy(label, text)}>{copied === label ? 'Copiado' : `Copy ${label}`}</button>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function RecapCard({ slug, gameId, initial, canGenerate = true }: { slug: string; gameId: string; initial: RecapRow | null; canGenerate?: boolean }) {
   const router = useRouter();
   const [row, setRow] = useState(initial);
@@ -118,6 +164,7 @@ export function RecapCard({ slug, gameId, initial, canGenerate = true }: { slug:
               {row.status === 'published' ? 'Take it down' : 'Publish recap'}
             </Submit>
           </ActionForm>
+          <Spanish key={`${row.generated_at}|${row.edited_at}`} gameId={gameId} initial={row.content_es ?? null} canGenerate={canGenerate} />
           <p className="hint">Written by {row.model ?? 'Claude'} from this game&rsquo;s plays{row.edited_at ? ', then edited' : ''}. <a className="link" href="/help/ai" target="_blank" rel="noreferrer">How recaps are written</a></p>
         </>
       )}

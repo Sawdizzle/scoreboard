@@ -44,6 +44,18 @@ export default function AiHelp() {
         </section>
 
         <section className="card pad">
+          <h2 className="h-sec">The other helpers</h2>
+          <p>The same rules hold for each: Claude sees only what the job needs, a check holds its answer to the facts, and a coach reads it before it goes anywhere.</p>
+          <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+            <li><b>YouTube description:</b> the title and opening lines are written; the chapters and play times come straight from the play log.</li>
+            <li><b>Schedule import:</b> picks your games out of a pasted email or a public schedule page; nothing is added until you tick them.</li>
+            <li><b>Ask your stats:</b> answers from your season&rsquo;s numbers, with the rates worked out by Scoreboard, and says when it cannot answer.</li>
+            <li><b>Season cards:</b> a warm card per player for families, using only that player&rsquo;s own numbers and their public name.</li>
+            <li><b>En español:</b> the recap and captions in Spanish, with every number and hashtag checked against the English.</li>
+          </ul>
+        </section>
+
+        <section className="card pad">
           <h2 className="h-sec">Limits</h2>
           <p>Each team has a number of AI writes a month, shown under Team settings. One recap or one blurb is one write. When AI writing is off, or the month&rsquo;s writes are used up, everything else in Scoreboard works exactly the same.</p>
         </section>
