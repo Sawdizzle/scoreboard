@@ -31,7 +31,10 @@ export async function POST(req: Request) {
   if (marks.first) {
     const { data } = await db.from('stream_sessions').select('started_at, ended_at').eq('team_id', game.team_id)
       .lte('started_at', marks.first).order('started_at', { ascending: false }).limit(1).maybeSingle<{ started_at: string; ended_at: string | null }>();
-    if (data && (!data.ended_at || data.ended_at >= marks.first)) streamStart = data.started_at;
+    // Still open, or closed after first pitch; and begun within 12 hours of it,
+    // so a session left open by a crash is never mistaken for this game's.
+    const near = data && Date.parse(marks.first) - Date.parse(data.started_at) < 12 * 3600000;
+    if (data && near && (!data.ended_at || data.ended_at >= marks.first)) streamStart = data.started_at;
   }
 
   const known = knownScores(facts);

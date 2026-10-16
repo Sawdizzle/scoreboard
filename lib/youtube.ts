@@ -80,7 +80,8 @@ export function stamp(seconds: number) {
 export function chapters(marks: Mark[], streamStart: string): string[] {
   const t0 = Date.parse(streamStart);
   const out: { s: number; label: string }[] = [{ s: 0, label: 'Pregame' }];
-  for (const m of marks) {
+  // In time order: a phone clock that jumped back must not drop later halves.
+  for (const m of [...marks].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) {
     const s = Math.round((Date.parse(m.at) - t0) / 1000);
     if (s < 10) { out[0] = { s: 0, label: m.label }; continue; }
     if (s - out[out.length - 1].s < 10) continue;
@@ -100,7 +101,7 @@ export function description(o: { text: YoutubeText; facts: GameFacts; halves: Ma
     const ch = chapters(o.halves, o.streamStart);
     if (ch.length) parts.push('', 'Chapters', ...ch);
     const t0 = Date.parse(o.streamStart);
-    const key = o.scoring.map((m) => ({ s: (Date.parse(m.at) - t0) / 1000, label: m.label })).filter((m) => m.s >= 0);
+    const key = o.scoring.map((m) => ({ s: (Date.parse(m.at) - t0) / 1000, label: m.label })).filter((m) => m.s >= 0).sort((a, b) => a.s - b.s);
     if (key.length) parts.push('', 'Scoring plays', ...key.map((m) => `${stamp(m.s)} ${m.label}`));
   }
   const tags = o.text.hashtags.map((h) => `#${h.replace(/^#+/, '').replace(/\s+/g, '')}`).filter((h) => h.length > 1).slice(0, 5);

@@ -61,3 +61,8 @@ test('the check: a score the game never had, a long title, angle brackets', () =
   assert.deepEqual(checkYoutube({ title: 'Steel win 4-0 <live>', intro: '', hashtags: [] }, known, scoreProblems),
     ['No angle brackets: YouTube rejects them.', '"4-0" is not a score or play code from the facts.']);
 });
+
+test('chapters stay in time order even when a play’s time jumped back', () => {
+  const marks = [{ at: at(5), label: 'Top 1st' }, { at: at(30), label: 'Top 2nd' }, { at: at(12), label: 'Bottom 1st' }];
+  assert.deepEqual(chapters(marks, new Date(T0).toISOString()), ['0:00 Pregame', '5:00 Top 1st', '12:00 Bottom 1st', '30:00 Top 2nd']);
+});

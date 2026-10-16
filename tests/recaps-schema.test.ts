@@ -89,3 +89,14 @@ test('stream sessions: OBS going live opens one, stopping closes it, an unknown 
   assert.deepEqual(rows.map((r) => r.open), [false, true]);
   assert.equal((await t.as('stranger', `select 1 from stream_sessions where team_id = $1`, [team])).length, 0);
 });
+
+test('a stream OBS never reported stopping is closed at its last report, and the next one opens', async () => {
+  const [{ token }] = await t.db.query<{ token: string }>(`select token from channels where team_id = $1`, [team]).then((r) => r.rows);
+  // One is open from the test above. OBS dies; an hour later it comes back live.
+  await t.db.query(`update channel_obs set at = now() - interval '1 hour' where team_id = $1`, [team]);
+  await t.as(null, `select obs_report($1, '{"streaming": true}'::jsonb)`, [token]);
+  const rows = await t.db.query<{ open: boolean; ended: boolean }>(
+    `select ended_at is null as open, ended_at < now() - interval '50 minutes' as ended from stream_sessions where team_id = $1 order by id`, [team]).then((r) => r.rows);
+  assert.deepEqual(rows.map((r) => r.open), [false, false, true]);
+  assert.equal(rows[1].ended, true);
+});
