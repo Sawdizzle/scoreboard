@@ -384,7 +384,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pad-count em { width: 10px; font-style: normal; font-size: 9px; font-weight: 800; color: var(--muted); }
 .pad-count i { width: 10px; height: 10px; border-radius: 999px; background: var(--raised); }
 .pad-edit { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--steel); }
-.pad-batter { display: flex; align-items: center; gap: 12px; padding: 2px 6px; min-height: 56px; }
+.pad-batter { display: flex; align-items: center; gap: 12px; padding: 2px 6px; min-height: 56px; width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pad-num { font-family: var(--disp); font-weight: 700; font-size: 42px; line-height: 0.9; }
 .pad-batter .row-title { font-size: 17px; }
 .pad-line { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; color: var(--soft); }
@@ -393,6 +393,23 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pad-pitcher small { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
 .pad-pitcher b { font-family: var(--disp); font-size: 26px; line-height: 1; }
 .pad-act { margin-left: auto; font-weight: 700; color: var(--gold); }
+.pad-mid { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px;
+  background: #3d1f1f; border: 1px solid var(--gold); color: #ffd9d9; font-size: 13.5px; cursor: pointer; }
+.pad-mid b { color: var(--gold); font-size: 15px; white-space: nowrap; }
+.atbat-list { display: flex; flex-direction: column; gap: 6px; }
+.atbat-row { display: flex; align-items: center; gap: 8px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.atbat-row.on { border-color: var(--gold); }
+.atbat-row .tag.live { background: #3d1f1f; color: #ffd9d9; }
+.atbat-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 4px 12px; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.atbat-pick[disabled] { cursor: default; }
+.atbat-slot { width: 16px; font-size: 11px; font-weight: 800; color: var(--muted); }
+.atbat-num { min-width: 44px; font-family: var(--disp); font-weight: 700; font-size: 22px; }
+.atbat-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 15.5px; overflow: hidden; text-overflow: ellipsis; }
+.atbat-name small { font-size: 11px; color: var(--muted); }
+.atbat-fix { padding: 0 14px; min-height: 54px; font-weight: 700; }
+.atbat-edit { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 14px; background: var(--card); border: 1px solid var(--steel); }
+.atbat-hint { font-size: 11.5px; color: var(--muted); }
+.field-row.atbat-two { grid-template-columns: 84px 1fr; }
 .pad-last { min-height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13px; color: var(--soft); }
 .pad-keys { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.5fr 1.05fr 0.8fr; gap: 10px; }
 .pkey { border: 0; border-radius: 20px; color: #fff; font-weight: 800; font-size: 24px; letter-spacing: 0.02em; cursor: pointer; }

@@ -59,6 +59,14 @@ export function qrLayer(q: Partial<QrLayer> | null | undefined): QrLayer {
 export type Pa = { side: Side; bid: string; inning: number | null; kind: string; code: string | null };
 export type FeedTeam = { name: string; display_name: string; abbr?: string; color: string; color2: string; logo_url: string | null; age_group: string | null };
 
+// Whether the mid-inning board puts itself up: it is on, the newest play ended
+// a half, and nobody took the board down for that play from the pad.
+export function autoMid(feed: Pick<Feed, 'auto_mid' | 'last' | 'broadcast' | 'game'>): boolean {
+  if (!feed.auto_mid || !feed.last?.rolled) return false;
+  const off = feed.broadcast?.mid_off;
+  return !(off && off.game === feed.game?.id && off.seq === feed.last.seq);
+}
+
 // overlay_feed(), as it arrives. With no game to show, `game` is null and the
 // rest is absent.
 export type Feed = {
