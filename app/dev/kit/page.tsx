@@ -93,7 +93,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
     return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
       season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
-      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: false, card: null, sponsor_name: 'Dairy Barn', bug_url: 'https://example.test', qr: { on: true, size: 18, pos: 'tr', opacity: 1 } }} />;
+      roster={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name }))}
+      channel={{ token: 'kit', game_id: 'g1', show_line: true, auto_card: false, auto_mid: true, card: null, sponsor_name: 'Dairy Barn', bug_url: 'https://example.test', qr: { on: true, size: 18, pos: 'tr', opacity: 1 } }} />;
   }
   if (v === 'scorepad') {
     // The score-only pad: /dev/kit?v=scorepad&sport=football (soccer, basketball, volleyball).

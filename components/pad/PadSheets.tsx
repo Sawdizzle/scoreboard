@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import * as L from '@/lib/rules/logic.js';
-import type { G } from '@/lib/scoring';
+import { positionOf } from '@/lib/rules/roster.js';
+import type { EngineSide, G } from '@/lib/scoring';
+import type { LineupBatter } from '@/lib/types';
 
 // The pad's sheets. Each one is laid out for a thumb: big targets, the common
 // answer first, and a Cancel that is always in the same place. They know the
@@ -229,6 +232,91 @@ export function Situation({ g, final, labels, extra, ending = false, onFix, onEn
         {final ? 'Reopen the game' : ending ? 'Checking the scoring…' : 'End game'}
       </button>
       <button type="button" className="btn btn-ghost" onClick={onStartOver}>Start the game over</button>
+    </Sheet>
+  );
+}
+
+// Who is at the plate, and each batter's number and name. A tap on a batter
+// puts them up (the order goes on from them); Edit fixes a wrong number or a
+// misspelt name. Our own player gets a first and last name, saved to the
+// roster; a batter typed in at the field has one name, saved to this game.
+export type BatterFix = { num: string; first?: string; last?: string; name?: string };
+export function AtBat({ g, side, labels, rosterOf, lineupHref, locked, onPick, onSave, onClose }: {
+  g: G; side: EngineSide; labels: Record<EngineSide, string>;
+  rosterOf: (side: EngineSide, bid: string) => { first: string; last: string } | null;
+  lineupHref: (side: EngineSide) => string; locked: boolean;
+  onPick: (i: number) => void;
+  onSave: (side: EngineSide, bid: string, fix: BatterFix) => Promise<string | null>;
+  onClose: () => void;
+}) {
+  const [shown, setShown] = useState<EngineSide>(side);
+  const [edit, setEdit] = useState<{ bid: string; num: string; first: string; last: string; name: string; roster: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const lineup = g.lineups[shown];
+  const batters = lineup?.batters ?? [];
+  const at = L.currentBatterIdx(g, side);
+  const open = (b: LineupBatter) => {
+    const r = rosterOf(shown, b.bid);
+    setErr('');
+    setEdit({ bid: b.bid, num: b.num ?? '', first: r?.first ?? '', last: r?.last ?? '', name: b.name ?? '', roster: !!r });
+  };
+  const save = async () => {
+    if (!edit) return;
+    setBusy(true); setErr('');
+    const e = await onSave(shown, edit.bid, edit.roster ? { num: edit.num, first: edit.first, last: edit.last } : { num: edit.num, name: edit.name });
+    setBusy(false);
+    if (e) setErr(e); else setEdit(null);
+  };
+  const set = (k: 'num' | 'first' | 'last' | 'name') => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setEdit((x) => (x ? { ...x, [k]: k === 'num' ? e.target.value.replace(/\D/g, '').slice(0, 3) : e.target.value } : x));
+  return (
+    <Sheet title="At the plate" onClose={onClose} close="Done">
+      <div className="pgrid two" role="tablist">
+        {(['away', 'home'] as const).map((s) => (
+          <button key={s} type="button" role="tab" aria-selected={shown === s} className={`pchoice${shown === s ? ' on' : ''}`} onClick={() => { setShown(s); setEdit(null); }}>
+            <b>{labels[s]}</b><small>{s === side ? 'Batting' : 'In the field'}</small>
+          </button>
+        ))}
+      </div>
+      <p className="eyebrow">{shown === side ? 'Tap a batter to put them at the plate' : 'Fix a number or a name'}</p>
+      {!batters.length && <p className="note note-plain">No lineup yet for {labels[shown]}.</p>}
+      <div className="atbat-list">
+        {batters.map((b, i) => {
+          const filled = !!(b.num || b.name);
+          const up = shown === side && i === at;
+          if (edit?.bid === b.bid) return (
+            <div key={b.bid} className="atbat-edit">
+              <div className={`field-row ${edit.roster ? 'num-first' : 'atbat-two'}`}>
+                <label className="field"><span>No.</span>
+                  <input className="input" inputMode="numeric" value={edit.num} onChange={set('num')} autoFocus /></label>
+                {edit.roster ? <>
+                  <label className="field"><span>First</span><input className="input" value={edit.first} maxLength={40} onChange={set('first')} /></label>
+                  <label className="field"><span>Last</span><input className="input" value={edit.last} maxLength={40} onChange={set('last')} /></label>
+                </> : <label className="field"><span>Name</span><input className="input" value={edit.name} maxLength={60} onChange={set('name')} /></label>}
+              </div>
+              {edit.roster && <small className="atbat-hint">Saved to the roster, so the next game has it too.</small>}
+              {err && <p className="note note-bad">{err}</p>}
+              <div className="pgrid two">
+                <button type="button" className="btn btn-quiet" onClick={() => setEdit(null)} disabled={busy}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={save} disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Save'}</button>
+              </div>
+            </div>
+          );
+          return (
+            <div key={b.bid} className={`atbat-row${up ? ' on' : ''}`}>
+              <button type="button" className="atbat-pick" disabled={locked || shown !== side || up || !filled} onClick={() => onPick(i)}>
+                <span className="atbat-slot">{i + 1}</span>
+                <span className="atbat-num">{b.num ? `#${b.num}` : '–'}</span>
+                <span className="atbat-name">{b.name || (b.num ? `No. ${b.num}` : 'Empty slot')}<small>{positionOf(lineup, i) || ''}</small></span>
+                {up && <span className="tag live">Up now</span>}
+              </button>
+              {filled && <button type="button" className="link atbat-fix" onClick={() => open(b)}>Edit</button>}
+            </div>
+          );
+        })}
+      </div>
+      <Link href={lineupHref(shown)} className="link" style={{ alignSelf: 'center' }}>Order, subs and positions: lineup ›</Link>
     </Sheet>
   );
 }

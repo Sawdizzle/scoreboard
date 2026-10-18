@@ -7,7 +7,7 @@ import { homerText, type BugProps } from '@/components/overlay/looks/types';
 import { brandOf, type Brand } from '@/components/TeamBrand';
 import { inkOn, shortName } from '@/lib/format';
 import * as L from '@/lib/rules/logic.js';
-import { boxScore, breakText, halfRecap, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
+import { autoMid, boxScore, breakText, halfRecap, feedView, leaders, type AirView, layoutOf, qrLayer, type BatterView, type CardKind, type Feed, type Leader, type PitcherView } from '@/lib/onair';
 import { qrPath } from '@/lib/qr';
 import { clockSeconds, clockText } from '@/lib/broadcast';
 import { periodText, situationText, soccerSeconds, type SportLive } from '@/lib/sports';
@@ -311,7 +311,7 @@ export function Stage({ feed, card, moment = null, now = 0, intro = null, fx = n
   const sport = feed.game!.sport ?? 'baseball';
   const ball = sport === 'baseball';
   // A card held by hand comes first; else the mid-inning board between halves, when that is on.
-  const want = card ?? (feed.auto_mid && feed.last?.rolled ? 'mid' : null);
+  const want = card ?? (autoMid(feed) ? 'mid' : null);
   // The box score and the sponsor stand after the last out; the rest are for a baseball game in play.
   // Before first pitch the lineup cards work too (the leadoff batter, the starters, the order); the
   // mid-inning board and the box score wait for a game in play.

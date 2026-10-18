@@ -13,11 +13,11 @@ import { parseRoster } from '@/lib/roster-parse';
 import { geocodeAddress, tournamentUrl } from '@/lib/geo';
 import { abbrFor } from '@/lib/format';
 import { emptyCounts, padGamesBlock, type ImportCounts } from '@/lib/gamechanger';
-import { cleanLineup } from '@/lib/lineup';
+import { batterOf, cleanLineup } from '@/lib/lineup';
 import { RecapContent } from '@/lib/recap';
 import { alreadyThere, plausibleStart, TZ } from '@/lib/schedule-import';
 import { SPORTS, type Sport } from '@/lib/sports';
-import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
+import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Lineup, type LineupBatter, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 const NOT_CONNECTED: FormState = { error: 'This app is not connected to its database yet.' };
@@ -729,6 +729,52 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   }
   revalidatePath(`/t/${slug}`, 'layout');
   return { ok: 'Lineup saved.' };
+}
+
+// One batter's number and name, fixed from the pad mid-game. Our own player is
+// fixed on the roster, so every game after this one has it right too; anyone
+// typed in at the field is fixed in this game's lineup. Either way this game's
+// lineup gets the new copy, and the pad gets it back to show at once.
+export type BatterEdit = { num: string; first?: string; last?: string; name?: string };
+export async function editBatter(slug: string, gameId: string, side: 'us' | 'them', bid: string, input: BatterEdit):
+  Promise<{ error: string } | { ok: string; batter: LineupBatter }> {
+  if (side !== 'us' && side !== 'them') return { error: 'Pick a side.' };
+  const num = String(input?.num ?? '').trim().replace(/^#/, '');
+  if (!/^\d{0,3}$/.test(num)) return { error: 'A jersey number is up to three digits.' };
+  const { supabase, team } = await loadTeam(slug);
+  const { data: game } = await supabase.from('games').select('id').eq('team_id', team.id).eq('id', gameId).maybeSingle();
+  if (!game) return { error: 'That game is gone.' };
+  const { data: row } = await supabase.from('game_lineups').select('data').eq('game_id', gameId).eq('side', side).maybeSingle<{ data: Lineup }>();
+  const at = row?.data?.batters?.findIndex((b) => b.bid === bid) ?? -1;
+  if (!row || at < 0) return { error: 'That batter is not in the lineup any more. Reload the pad.' };
+
+  let batter: LineupBatter | null = null;
+  if (side === 'us') {
+    const { data: p } = await supabase.from('players').select('id').eq('team_id', team.id).eq('id', bid).maybeSingle();
+    if (p) {
+      const first_name = String(input.first ?? '').trim(), last_name = String(input.last ?? '').trim();
+      if (!first_name && !last_name && !num) return { error: 'Enter a name or a jersey number.' };
+      if (first_name.length > 40 || last_name.length > 40) return { error: 'Keep each name to 40 characters.' };
+      const { data, error } = await supabase.from('players').update({ first_name, last_name, number: num })
+        .eq('team_id', team.id).eq('id', bid).select('id');
+      if (error) return { error: say(error) };
+      if (!data.length) return { error: 'Only an organizer or head coach can change the roster.' };
+      batter = batterOf({ id: bid, number: num, first_name, last_name }, team.name_format);
+    }
+  }
+  if (!batter) {
+    const name = String(input.name ?? '').trim().slice(0, 60);
+    if (!name && !num) return { error: 'Enter a name or a jersey number.' };
+    batter = { bid, num, name };
+  }
+
+  const lineup = cleanLineup({ ...row.data, batters: row.data.batters.map((b, i) => (i === at ? batter : b)) });
+  if (!lineup) return { error: 'Something in that lineup is not valid. Reload and try again.' };
+  const { data: saved, error } = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('side');
+  if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
+  if (!saved.length) return { error: 'Your seat cannot set lineups.' };
+  revalidatePath(`/t/${slug}`, 'layout');
+  return { ok: 'Saved.', batter };
 }
 
 // ---- Recaps -------------------------------------------------------------------

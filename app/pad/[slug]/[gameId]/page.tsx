@@ -41,6 +41,7 @@ export default async function PadPage({ params }: { params: Promise<{ slug: stri
   return (
     <Pad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
       lineups={lineups} season={lines} tonightRows={(stats.data ?? []) as StatRow[]}
-      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null} />
+      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null}
+      roster={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name }))} />
   );
 }

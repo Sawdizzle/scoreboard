@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OnAir, type Channel } from '@/components/pad/OnAir';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
-import { EndCheck, InPlay, More, Runner, Situation, StrikeThree } from '@/components/pad/PadSheets';
+import { AtBat, EndCheck, InPlay, More, Runner, Situation, StrikeThree, type BatterFix } from '@/components/pad/PadSheets';
+import { editBatter } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
@@ -38,7 +39,7 @@ function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
   const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
   return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
 }
-type Sheet = null | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | { runner: 'first' | 'second' | 'third' };
+type Sheet = null | 'atbat' | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | { runner: 'first' | 'second' | 'third' };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
   const out = { ...t };
@@ -59,9 +60,11 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [] }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
   season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
+  // Our players' first and last names, for fixing a name from the pad.
+  roster?: { id: string; first_name: string; last_name: string }[];
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -69,9 +72,14 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // button shows the pad from the router's cache, from before a lineup edit),
   // so every reload reads them again.
   const lineupsNow = useRef(lineups);
+  // Our batters under their roster names: a name fixed from the pad replaces it here.
+  const named = useRef(lineups.us);
+  const rosterBy = useRef(new Map(roster.map((p) => [p.id, { first: p.first_name ?? '', last: p.last_name ?? '' }])));
   const [view, setView] = useState(() => ({
     g: engineGame(game, lineups, regulation), status: game.status as Status,
     tonight: sumRows(tonightRows), last: '',
+    // The newest play ended a half: the stream's mid-inning board is up for it.
+    rolled: false as boolean,
   }));
   const cur = useRef(view);
   const history = useRef<{ before: typeof view; rows: StatRow[] }[]>([]);
@@ -86,6 +94,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const [waiting, setWaiting] = useState(0);
   const [online, setOnline] = useState(true);
   const [chan, setChan] = useState(channel);
+  const chanNow = useRef(chan);
+  useEffect(() => { chanNow.current = chan; }, [chan]);
   // A hit typed on the keyboard (1, 2, 3, E) opens In Play at the fielder step.
   const [startKind, setStartKind] = useState<string | null>(null);
   // The stream's page listens here: a nudge after each save, so the scorebug
@@ -118,6 +128,15 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const acks = useRef(0);
   const [clock, setClock] = useState(game.clock ?? null);
   const catchUp = useRef<() => void>(() => {});
+  // After a reload the pad has no history to tell whether the newest play ended
+  // a half, so a fresh half (no outs, no count, nobody on) stands in for it,
+  // unless the board was already taken down for this play.
+  const freshHalf = (gg: typeof view.g, at: number) => {
+    const bb = L.safeBases(gg.bases);
+    const off = chanNow.current?.broadcast?.mid_off;
+    return !(gg.outs | 0) && !(gg.balls | 0) && !(gg.strikes | 0) && !bb.first && !bb.second && !bb.third
+      && !(off?.game === game.id && off.seq === at);
+  };
   const reload = useCallback(async (after = true): Promise<boolean> => {
     const mark = taps.current, acked = acks.current;
     const [{ data: row }, { data: stats }, { data: lus, error: lusError }] = await Promise.all([
@@ -130,12 +149,13 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     if (!lusError && lus) {
       const got: Partial<Record<Side, Lineup>> = {};
       for (const r of lus as { side: Side; data: Lineup }[]) got[r.side] = r.data;
-      got.us = sameNames(got.us, lineups.us);
+      got.us = sameNames(got.us, named.current);
       lineupsNow.current = got;
     }
     seq.current = row.seq;
     history.current = [];
-    show({ g: engineGame({ ...game, live: row.live, status: row.status }, lineupsNow.current, regulation), status: row.status, tonight: sumRows((stats ?? []) as StatRow[]), last: cur.current.last });
+    const fresh = engineGame({ ...game, live: row.live, status: row.status }, lineupsNow.current, regulation);
+    show({ g: fresh, status: row.status, tonight: sumRows((stats ?? []) as StatRow[]), last: cur.current.last, rolled: freshHalf(fresh, row.seq) });
     if (after) catchUp.current();
     return true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -286,7 +306,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     history.current.push({ before, rows: r.rows });
     const nextStatus: Status = status ?? (before.status === 'scheduled' ? 'live' : before.status);
     taps.current += 1;
-    show({ g: r.next, status: nextStatus, tonight: addRows(before.tonight, r.rows), last: lastPlayText(r.res, before.g, r.next) });
+    show({ g: r.next, status: nextStatus, tonight: addRows(before.tonight, r.rows), last: lastPlayText(r.res, before.g, r.next),
+      rolled: r.next.half !== before.g.half || r.next.inning !== before.g.inning });
     // `at`: when it was tapped, so a game video's chapters line up even if the play sent later.
     // `cid`: this tap's own id, to tell whether it saved when the answer was lost.
     queue.current.push({ kind: 'play', type: r.res.type, patch: r.patch, payload: { ...(r.res.payload ?? {}), at: new Date().toISOString(), cid: cid() }, rows: r.rows, status });
@@ -308,6 +329,39 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     queue.current.push({ kind: 'undo' });
     keep();
     void pump().then(() => { if (!h) void reload(); });
+  }
+
+  // Put a batter at the plate by hand: the order was wrong (a tap that should
+  // not have ended the at-bat, a lineup set late). The count stays: this is a
+  // correction, and the order goes on from them.
+  function pickBatter(i: number) {
+    const g0 = cur.current.g;
+    const side = L.battingSide(g0) as EngineSide;
+    const b = g0.lineups[side]?.batters?.[i];
+    if (!b) return;
+    const batIdx = { ...((g0.state?.batIdx as object) ?? {}), [side]: i };
+    commit({ type: 'batidx', text: `At the plate: ${b.num ? `#${b.num} ` : ''}${b.name || ''}`.trim(), patch: { state: { ...g0.state, batIdx } }, payload: { side, i } });
+  }
+
+  // A batter's number or name fixed from the pad: saved (to the roster for our
+  // own players), then shown here and on the stream at once.
+  async function saveBatter(e: EngineSide, bid: string, fix: BatterFix): Promise<string | null> {
+    const side = sides(e);
+    let r: Awaited<ReturnType<typeof editBatter>>;
+    try { r = await editBatter(slug, game.id, side, bid, fix); } catch { return 'That did not save. Check the signal and try again.'; }
+    if ('error' in r) return r.error;
+    const nb = r.batter;
+    const swap = (l: Lineup | undefined) => l && { ...l, batters: (l.batters ?? []).map((x) => (x.bid === bid ? nb : x)) };
+    lineupsNow.current = { ...lineupsNow.current, [side]: swap(lineupsNow.current[side]) };
+    if (side === 'us') {
+      named.current = swap(named.current);
+      if (fix.first !== undefined || fix.last !== undefined) rosterBy.current.set(bid, { first: (fix.first ?? '').trim(), last: (fix.last ?? '').trim() });
+    }
+    const v = cur.current;
+    show({ ...v, g: { ...v.g, lineups: { ...v.g.lineups, [e]: swap(v.g.lineups[e]) } } as typeof v.g });
+    nudge();
+    say(`Saved: ${nb.num ? `#${nb.num} ` : ''}${nb.name}`.trim());
+    return null;
   }
 
   function endGame(final: boolean) {
@@ -402,6 +456,17 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     nudge();
   }
 
+  // Take the mid-inning board down and put the scorebug back, before the next
+  // pitch would. It stays down for this break; the next third out puts it up.
+  async function backToBug() {
+    if (queue.current.length) await pumpRef.current();
+    if (queue.current.length) { say('Plays are still sending. Try again in a moment.'); return; }
+    if (chan?.card === 'mid') await air({ card: null });
+    await bcast({ mid_off: { game: game.id, seq: seq.current } });
+    show({ ...cur.current, rolled: false });
+    say('Scorebug back on the stream');
+  }
+
   // Start over: every play and its stats go; the game is back before the first pitch.
   async function startOver() {
     if (!window.confirm('Start this game over? Every play and its stats are cleared. Lineups stay.')) return;
@@ -437,7 +502,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       for (const it of kept.items) {
         if (it.kind === 'undo') { const back = stack.pop(); if (back) v = back; continue; }
         stack.push(v);
-        v = { g: { ...v.g, ...(it.patch as object) } as typeof v.g, status: it.status ?? (v.status === 'scheduled' ? 'live' : v.status), tonight: addRows(v.tonight, it.rows), last: v.last };
+        v = { g: { ...v.g, ...(it.patch as object) } as typeof v.g, status: it.status ?? (v.status === 'scheduled' ? 'live' : v.status), tonight: addRows(v.tonight, it.rows), last: v.last, rolled: false };
       }
       queue.current = kept.items;
       seq.current = kept.seq;
@@ -479,6 +544,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const numOf = (bid: string | null, side: EngineSide) => (bid ? g.lineups[side]?.batters?.find((x) => x.bid === bid)?.num ?? '' : '');
   const seasonBy = useMemo(() => Object.fromEntries(season.map((l) => [l.player_id, l])), [season]);
   const onAir = airView(g, { tonight: view.tonight, season: seasonBy, pas: [], gameInnings: regulation });
+  // Whether the mid-inning board is on the stream now: put up by hand, or by
+  // itself after the play that ended the half, until it is taken down.
+  const midUp = status === 'live' && !!chan && (!chan.game_id || chan.game_id === game.id)
+    && (chan.card === 'mid' || (!chan.card && chan.auto_mid && view.rolled));
   const dots = (n: number, of: number, color: string) => Array.from({ length: of }, (_, i) => <i key={i} style={{ background: i < n ? color : undefined }} />);
 
   const press = {
@@ -579,7 +648,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         <span className="pad-edit">{final ? 'FINAL ›' : 'FIX ›'}</span>
       </button>
 
-      <Link href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}`} className="pad-batter">
+      <button type="button" className="pad-batter" onClick={() => setSheet('atbat')} aria-label="At the plate: pick the batter or fix a number or name">
         <span className="pad-num">{batter?.num ? `#${batter.num}` : '—'}</span>
         <span className="row-main">
           <span className="row-title">{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap to set it')}
@@ -593,7 +662,13 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
           <small>{pitcher ? `#${pitcher.num} ${shortName(pitcher.name)}` : 'Pitcher'}</small>
           <b>{L.pitchCount(g)}</b>
         </span>
-      </Link>
+      </button>
+
+      {midUp && (
+        <button type="button" className="pad-mid" onClick={() => void backToBug()}>
+          <span>Mid-inning board is on the stream</span><b>Back to scorebug ›</b>
+        </button>
+      )}
 
       <div className="pad-last" role="status">
         {toast?.text || view.last || (status === 'scheduled' ? 'First pitch starts the game.' : '')}
@@ -650,6 +725,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
           </label>
         </>}
         ending={checking} onClose={() => { dropEnd(); setSheet(null); }} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={(f) => (f ? void tryEnd() : endGame(false))} onStartOver={startOver} />}
+      {sheet === 'atbat' && <AtBat g={g} side={batSide} labels={{ away: awayB.display, home: homeB.display }} locked={locked}
+        rosterOf={(e, bid) => (sides(e) === 'us' ? rosterBy.current.get(bid) ?? null : null)}
+        lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}`}
+        onPick={(i) => { pickBatter(i); }} onSave={saveBatter} onClose={() => setSheet(null)} />}
       {sheet === 'check' && <EndCheck issues={issues} onClose={() => setSheet(null)} onFix={() => setSheet('situation')} onEnd={() => endGame(true)} />}
     </div>
   );

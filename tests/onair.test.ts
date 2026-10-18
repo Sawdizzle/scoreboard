@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, autoMid, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -161,4 +161,18 @@ test('a home run is called by how many it scored, in each look\'s voice', () => 
   assert.deepEqual([1, 2, 4].map((n) => homerText(n, 'shot')), ['Solo shot', '2-run shot', 'Grand slam']);
   assert.deepEqual([1, 3, 4].map((n) => homerText(n, 'plus')), ['SOLO SHOT', '+3 RUNS', 'GRAND SLAM']);
   assert.equal(homerText(0), '');
+});
+
+test('the mid-inning board: up after the play that ended a half, down once taken down for it', () => {
+  const game = { id: 'g1' } as never;
+  const rolled = { seq: 40, type: 'out', kind: null, rolled: true };
+  assert.equal(autoMid({ auto_mid: true, last: rolled, game }), true);
+  assert.equal(autoMid({ auto_mid: false, last: rolled, game }), false);
+  assert.equal(autoMid({ auto_mid: true, last: { ...rolled, rolled: false }, game }), false);
+  assert.equal(autoMid({ auto_mid: true, last: null, game }), false);
+  // Back to scorebug on the pad, for this play: down.
+  assert.equal(autoMid({ auto_mid: true, last: rolled, game, broadcast: { mid_off: { game: 'g1', seq: 40 } } }), false);
+  // Taken down for an earlier break, or another game: the next third out puts it back up.
+  assert.equal(autoMid({ auto_mid: true, last: { ...rolled, seq: 52 }, game, broadcast: { mid_off: { game: 'g1', seq: 40 } } }), true);
+  assert.equal(autoMid({ auto_mid: true, last: rolled, game, broadcast: { mid_off: { game: 'g2', seq: 40 } } }), true);
 });

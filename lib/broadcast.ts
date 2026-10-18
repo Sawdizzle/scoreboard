@@ -52,6 +52,9 @@ export type Broadcast = {
   // A pregame blurb on Starting Soon: written on request (app/api/ai/blurb),
   // put up only when the operator taps Use, and shown only for its own game.
   blurb?: Blurb;
+  // The mid-inning board taken down by hand ("Back to scorebug" on the pad):
+  // the game and the play it stood for. It stays down until the next half ends.
+  mid_off?: { game: string; seq: number };
 };
 export type Blurb = { game_id: string; line1: string; line2: string; storyline: string };
 
