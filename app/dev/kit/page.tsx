@@ -62,6 +62,7 @@ import { StreamSetup } from '@/components/stream/StreamSetup';
 import { StaffView } from '@/components/views/StaffView';
 import { TodayView } from '@/components/views/TodayView';
 import { OpponentEditor } from '@/components/OpponentEditor';
+import { sprayBalls } from '@/lib/spray';
 import type { SeasonLine } from '@/lib/stats';
 import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } from '@/lib/types';
 
@@ -109,12 +110,28 @@ const schedule: Game[] = ([
   ['g1', game.starts_at, 'live', 'River 14U', true], ['g-d', '2026-10-17T18:00:00Z', 'scheduled', 'Mesa Miners', false],
   ['g-e', '2026-10-24T23:30:00Z', 'scheduled', 'North Valley Storm', true],
 ] as const).map(([id, starts_at, status, opponent_name, is_home]) => ({ ...game, id, starts_at, status, opponent_name, is_home }));
+// The player card's spray chart (p2): made-up balls in play from games the
+// pad scored, at spots on the pad's fielder picker. Three singles were placed
+// by tapping the left fielder, so they share that spot; three have no spot (a
+// home run, a hit whose spot was skipped, an older play); two are from the
+// spring, which the Fall card leaves out. &spray=none: the same balls, none of
+// them with a spot.
+const sprayRows: [string, string, number | null, number | null, string?][] = [
+  ['H1', 'LD', 17, 21], ['H1', 'GB', 30, 40], ['H2', 'LD', 10, 30], ['GB', 'GB', 36, 46], ['GB', 'HGB', 24, 60], ['FB', 'FB', 52, 14],
+  ['H1', 'FB', 17, 21], ['PU', 'PU', 70, 70], ['LD', 'LD', 62, 46], ['E', 'HGB', 25, 64], ['FC', 'GB', 38, 44], ['H3', 'FB', 72, 12],
+  ['H1', 'LD', 50, 11], ['GB', 'GB', 49, 66], ['FB', 'FB', 80, 24], ['SF', 'FB', 20, 18], ['DP', 'GB', 34, 44], ['H1', 'GB', 17, 21],
+  ['HR', 'FB', null, null], ['H1', 'LD', null, null], ['GB', 'GB', null, null], ['H2', 'LD', 60, 20, 's2'], ['GB', 'GB', 40, 50, 's2'],
+];
+const kitSpray = sprayBalls(
+  sprayRows.map(([kind, bb, x, y, s], i) => ({ id: i + 1, type: kind === 'HR' ? 'homerun' : 'play', season_id: s ?? 's1',
+    payload: { play: { kind }, inputs: { kind, bb, ...(x !== null ? { loc: { x, y } } : {}) } } })),
+  sprayRows.map((_, i) => ({ event_id: i + 1, side: 'us' as const, bid: 'p2', b_pa: 1 })), 'p2');
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string; spray?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb, spray } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -206,7 +223,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       {v === 'opponent' && <>{tabs}<div className="page"><OpponentEditor slug={team.slug} opponent={{ id: 'o1', name: 'Sanger Wolf', abbr: 'SANGER', color: '#5d4ea6', color2: '#f2f6fc', logo_url: null,
         roster: { batters: [{ bid: 'w1', num: '12', name: 'Bentley Jackway' }, { bid: 'w2', num: '10', name: 'Hayden Wetli' }, { bid: 'w3', num: '5', name: 'Maddox Wolf' }], positions: { P: 'w3', SS: 'w1' } } }} /></div></>}
       {v === 'empty' && <>{tabs}<RosterView team={team} role={role} players={[]} /></>}
-      {v === 'player' && <PlayerView team={team} role={role} player={players[1]} lines={stats.filter((x) => x.player_id === 'p2')} seasons={seasons} />}
+      {v === 'player' && <PlayerView team={team} role={role} player={players[1]} lines={stats.filter((x) => x.player_id === 'p2')} seasons={seasons}
+        spray={spray === 'none' ? kitSpray.map((b) => ({ ...b, at: null })) : kitSpray} />}
       {v === 'pitcher' && <PlayerView team={team} role={role} player={players[4]} lines={stats.filter((x) => x.player_id === 'p5')} seasons={seasons} />}
       {v === 'staff' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={[]} origin="http://localhost:3000" /></>}
       {v === 'staff-link' && <>{tabs}<StaffView team={team} role={role} me="u1" staff={staff} invites={invites} origin="http://localhost:3000" /></>}

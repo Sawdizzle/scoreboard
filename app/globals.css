@@ -250,6 +250,20 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 .slash b.live { color: var(--chalk); }
 .slash b.gold { color: var(--gold); }
 
+/* A batter's spray chart (components/SprayChart.tsx): the pad's fielder
+   picker, with a mark where each ball in play went. */
+.spray { display: flex; flex-direction: column; gap: 10px; max-width: 460px; }
+.spray-field { display: block; width: 100%; height: auto; border-radius: 16px; background: #10261a; border: 1px solid #1f4a30; }
+.spray-base { fill: #f2f6fc; opacity: 0.85; }
+.spray-hit circle { fill: var(--gold); stroke: #0b1018; stroke-width: 0.5; }
+.spray-reached circle { fill: rgba(11, 16, 24, 0.5); stroke: var(--steel); stroke-width: 0.8; }
+.spray-out path { fill: none; stroke: var(--chalk); stroke-width: 0.9; stroke-linecap: round; }
+.spray-out .spray-halo { stroke: #0b1018; stroke-width: 2; }
+.spray-key { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0 4px; list-style: none; font-size: 13.5px; color: var(--body); }
+.spray-key li { display: flex; align-items: center; gap: 7px; }
+.spray-key svg { flex: 0 0 auto; width: 14px; height: 14px; }
+.spray-key b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+
 .table-box { overflow-x: auto; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
 .stat-table { width: 100%; min-width: 420px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .stat-table th { padding: 11px 8px 9px; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: 0.08em; color: var(--muted); text-align: right; white-space: nowrap; }

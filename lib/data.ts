@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient, supabaseConfigured } from './supabase/server';
 import type { PadGame } from './gamechanger';
+import { sprayBalls, type SprayEvent, type SprayStat } from './spray';
 import type { SeasonLine } from './stats';
 import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
@@ -88,6 +89,19 @@ export async function seasonStats(db: Db, teamId: string, seasonId: string) {
 export async function playerStats(db: Db, playerId: string) {
   const { data } = await db.from('season_stats').select('*').eq('player_id', playerId);
   return (data ?? []) as SeasonLine[];
+}
+// A player's balls in play in the games the pad scored that count, every
+// season, for the spray chart on the card (lib/spray). Read newest first, so a
+// read cut short at the row cap loses the oldest. Staff only, as the log is:
+// for anyone else the policy hides every play, and with it every row here.
+export async function playerSpray(db: Db, playerId: string) {
+  const { data } = await db.from('game_stats')
+    .select('event_id, side, bid, b_pa, game_events!inner(id, type, payload), games!inner(season_id)')
+    .eq('player_id', playerId).eq('side', 'us').gt('b_pa', 0)
+    .eq('games.counts_for_stats', true).not('games.season_id', 'is', null)
+    .order('event_id', { ascending: false });
+  const rows = (data ?? []) as unknown as (SprayStat & { game_events: Omit<SprayEvent, 'season_id'>; games: { season_id: string } })[];
+  return sprayBalls(rows.map((r) => ({ ...r.game_events, season_id: r.games.season_id })), rows, playerId);
 }
 
 const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, address, tournament_url, status, live, clock, settings, venue_geo, opponent_id, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS}), saved:opponents!games_opponent_id_fkey(name, abbr, color, color2, logo_url)`;

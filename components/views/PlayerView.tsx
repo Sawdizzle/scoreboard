@@ -3,14 +3,18 @@ import { deletePlayer, updatePlayer } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { ChevronLeft } from '@/components/icons';
 import { PlayerFields } from '@/components/PlayerFields';
+import { SprayChart } from '@/components/SprayChart';
 import { fullName, inkOn, publicName, shortDate } from '@/lib/format';
+import type { SprayBall } from '@/lib/spray';
 import { batting, hasPitching, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
 import { canEditTeam, type Player, type PublicName, type Role, type Season, type Team } from '@/lib/types';
 
 const PUBLIC_LABEL: Record<PublicName, string> = { full: 'Team name format', first_initial: 'First name, last initial', number: 'Number only' };
 
-export function PlayerView({ team, role, player: p, lines = [], seasons = [], seasonId }: {
+export function PlayerView({ team, role, player: p, lines = [], seasons = [], seasonId, spray = [] }: {
   team: Team; role: Role; player: Player; lines?: SeasonLine[]; seasons?: Season[]; seasonId?: string;
+  // Balls in play from the games the pad scored, every season (lib/data playerSpray).
+  spray?: SprayBall[];
 }) {
   // Seasons this player has numbers in, plus the current one; newest first.
   const shown = seasons.filter((s) => s.is_current || lines.some((l) => l.season_id === s.id));
@@ -19,6 +23,7 @@ export function PlayerView({ team, role, player: p, lines = [], seasons = [], se
   const line = sel ? lines.find((l) => l.season_id === sel.id) : undefined;
   const b = line ? batting(line) : null;
   const pi = line && hasPitching(line) ? pitching(line, sel?.game_innings) : null;
+  const balls = spray.filter((x) => x.season_id === sel?.id);
   const edit = canEditTeam(role);
   const facts = [p.number && `No. ${p.number}`, p.positions.join(' · '), p.bats && `Bats ${p.bats}`, p.throws && `Throws ${p.throws}`].filter(Boolean);
   return (
@@ -72,6 +77,8 @@ export function PlayerView({ team, role, player: p, lines = [], seasons = [], se
           )}
           {line?.imported_at && <p className="source">From GameChanger, imported {shortDate(line.imported_at)}.</p>}
         </section>
+
+        {balls.length > 0 && <section className="stack"><SprayChart balls={balls} /></section>}
 
         {edit ? (
           <>
