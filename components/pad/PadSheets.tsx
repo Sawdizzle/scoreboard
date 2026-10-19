@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
 import type { EngineSide, G } from '@/lib/scoring';
+import { FIELD_SPOT, tappedSpot } from '@/lib/spray';
 import type { Lineup, LineupBatter } from '@/lib/types';
 
 // The pad's sheets. Each one is laid out for a thumb: big targets, the common
@@ -91,7 +92,9 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
   const step = !kind ? (bb ? 'result' : 'type') : HITS.has(kind) && !whereDone ? 'where' : NEEDS_FIELDER.has(kind) && !pos ? 'fielder' : 'runners';
   const label = (k: string) => (L.PLAY_LABEL as Record<string, string>)[k] ?? k;
   const thrown = (s: string[]) => (s.length > 1 ? s : null);
-  const record = (k: string, p: string | null, d: Dest, s: string[], at = loc) => onRecord({ kind: k, pos: p, dest: d, seq: thrown(s), bb, k3: start?.k3 ?? null, loc: at });
+  // A spot dragged to, or picked for a hit, wins; a fielder only tapped gives that fielder's spot.
+  const record = (k: string, p: string | null, d: Dest, s: string[], at = loc) =>
+    onRecord({ kind: k, pos: p, dest: d, seq: thrown(s), bb, k3: start?.k3 ?? null, loc: at ?? tappedSpot(k, s[0] ?? p) });
 
   function chooseResult(r: string) {
     if (r === 'BI') return onInterference();
@@ -204,9 +207,6 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
 // standing there. Tap them in the order the ball went: the catcher then the
 // third baseman is a 2-5 pickoff. The usual sequence comes pre-filled (`value`
 // as given); the first tap starts the scorer's own.
-const FIELD_SPOT: Record<string, [number, number]> = {
-  LF: [17, 21], CF: [50, 11], RF: [83, 21], SS: [35, 43], '2B': [65, 43], '3B': [22, 63], '1B': [78, 63], P: [50, 62], C: [50, 88],
-};
 export function FielderPicker({ lineup, value, onChange, kind = '', hint, given = 'usual', loc, onLoc, codeFor }: {
   lineup?: Lineup; value: string[]; onChange: (seq: string[]) => void; kind?: string; hint?: string;
   // The code the sequence makes, when it is not the plain one (In Play: one fielder alone is his usual play).

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sprayBalls, sprayCounts, sprayLabel, sprayPlaces, type SprayBall, type SprayEvent, type SprayStat } from '../lib/spray.ts';
+import { sprayBalls, sprayCounts, sprayLabel, sprayPlaces, tappedSpot, type SprayBall, type SprayEvent, type SprayStat } from '../lib/spray.ts';
 
 // A play the pad recorded: its kind, how it was hit, and where, if anywhere.
 const E = (id: number, kind: string, bb?: string, loc?: unknown, type = 'play', season_id: string | null = 's1'): SprayEvent =>
@@ -100,4 +100,20 @@ test('spray: places stretch across, and balls on one spot ring it rather than hi
   for (const p of places) assert.ok(p.x >= 0 && p.x <= 140 && p.y >= 0 && p.y <= 100);
   // A ball with no spot has no place.
   assert.deepEqual(sprayPlaces(sprayBalls([E(1, 'H1', 'LD')], [PA(1)], 'p7'), 1.4, 4), []);
+});
+
+test('spray: a fielder tapped for a fielded ball keeps that fielder’s spot', () => {
+  // A 6-3 groundout, a fly out to center, an error on the third baseman, a sac fly to right.
+  assert.deepEqual(tappedSpot('GB', 'SS'), { x: 35, y: 43 });
+  assert.deepEqual(tappedSpot('FB', 'CF'), { x: 50, y: 11 });
+  assert.deepEqual(tappedSpot('E', '3B'), { x: 22, y: 63 });
+  assert.deepEqual(tappedSpot('SF', 'RF'), { x: 83, y: 21 });
+  // A hit asks where it went, and a dropped third strike was never in play.
+  assert.equal(tappedSpot('H1', 'LF'), null);
+  assert.equal(tappedSpot('K3', 'C'), null);
+  // No fielder, or none the picker stands anywhere.
+  assert.equal(tappedSpot('GB', null), null);
+  assert.equal(tappedSpot('GB', ''), null);
+  assert.equal(tappedSpot('GB', 'DH'), null);
+  assert.equal(tappedSpot('GB', 'toString'), null);
 });

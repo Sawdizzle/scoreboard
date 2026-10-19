@@ -1,10 +1,11 @@
 // Where a batter's balls in play went, for the spray chart on the player page.
 // The pad keeps a spot on a play when the scorer drags the fielder to where
-// the ball was fielded, or shows where a hit went (payload.inputs.loc): whole
-// numbers 0-100 across and down the pad's fielder picker, home plate at 50, 92
-// and second base at 50, 44. Older plays have none, and neither do a hit whose
-// "where did it go" was skipped or a home run. Pure: the page reads game_events
-// and game_stats and hands them in.
+// the ball was fielded, or shows where a hit went, and a tap on the fielder
+// alone keeps that fielder's own spot (payload.inputs.loc): whole numbers 0-100
+// across and down the pad's fielder picker, home plate at 50, 92 and second
+// base at 50, 44. Older plays have none, and neither do a hit whose "where did
+// it go" was skipped or a home run. Pure: the page reads game_events and
+// game_stats and hands them in.
 import * as L from './rules/logic.js';
 import type { Side } from './types.ts';
 
@@ -30,6 +31,22 @@ const BB_LABEL: Record<string, string> = { GB: 'ground ball', HGB: 'hard grounde
 
 export type Spot = { x: number; y: number };
 export type SprayBall = { event_id: number; season_id: string | null; kind: string; bb: string | null; result: SprayResult; at: Spot | null };
+
+// Where the pad's fielder picker stands each fielder, in its own frame.
+export const FIELD_SPOT: Record<string, [number, number]> = {
+  LF: [17, 21], CF: [50, 11], RF: [83, 21], SS: [35, 43], '2B': [65, 43], '3B': [22, 63], '1B': [78, 63], P: [50, 62], C: [50, 88],
+};
+// Where a fielded ball went when the scorer only tapped the fielder (the
+// first of them, for a ball thrown on): that fielder's own spot, as a tap
+// already says for a hit. An error's is the fielder charged with it, nearly
+// always the one who fielded it. A drag says better, a hit asks for its own,
+// and a dropped third strike was never in play.
+const FIELDED = new Set(['GB', 'FB', 'LD', 'PU', 'E', 'FC', 'DP', 'SF', 'SAC']);
+export function tappedSpot(kind: string, fielder: string | null | undefined): Spot | null {
+  if (!FIELDED.has(kind) || !fielder || !Object.hasOwn(FIELD_SPOT, fielder)) return null;
+  const [x, y] = FIELD_SPOT[fielder];
+  return { x, y };
+}
 
 // A spot as the rules keep it (lib/rules/logic.js): whole numbers 0-100, or nothing.
 const spot = (loc: unknown): Spot | null => {
