@@ -220,8 +220,10 @@ export function FielderPicker({ lineup, value, onChange, kind = '', hint }: {
 // strikeout to move the order on; a dropped third strike appears with two
 // strikes on the batter.
 type Other = 'hbp' | 'ci' | 'ibb' | 'balk';
-export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onInterference, onBatterOut, onDropped, onClose }: {
+export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onFoulTip, onInterference, onBatterOut, onDropped, onClose }: {
   g: G; fieldLineup?: Lineup; onInPlay: () => void; onPick: (k: Other) => void;
+  // Strike three on a foul tip the catcher held: a swinging strikeout.
+  onFoulTip: () => void;
   // Batter's interference: on a play at a runner (his base) or with no play on a runner (null).
   onInterference: (from: 'first' | 'second' | 'third' | null) => void;
   onBatterOut: (seq: string[]) => void;
@@ -283,6 +285,7 @@ export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onInterference, on
         <Choice label="Catcher’s interference" sub="Batter to 1st" onClick={() => onPick('ci')} />
         <Choice label="Batter’s interference" sub="Batter out" onClick={() => (on.length ? setStep('bi') : onInterference(null))} tone="strike" />
         <Choice label="Batter out" sub="Out of the box, illegal bat…" onClick={() => setStep('out')} tone="strike" />
+        {(g.strikes | 0) >= 2 && <Choice label="Foul tip out" sub="Strikeout, the catcher held it" onClick={onFoulTip} tone="strike" />}
         {(g.strikes | 0) >= 2 && <Choice label="Dropped 3rd strike" sub={k3 || 'Batter runs'} onClick={() => setStep('k3')} why={k3} />}
       </div>
       <span className="legend">The pitcher</span>
@@ -322,16 +325,19 @@ export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix,
 // GameChanger does it. Safe asks how he got there; out asks how he was put out,
 // then who made the play in throw order (a pickoff from the catcher to third
 // is 2-5), with the usual throw filled in. An error asks who made it.
-type RunnerKind = 'SB' | 'WP' | 'PB' | 'EA' | 'DI' | 'OBS' | 'CS' | 'PO' | 'RO';
+type RunnerKind = 'SB' | 'WP' | 'PB' | 'EA' | 'DI' | 'OBS' | 'ADV' | 'CS' | 'PO' | 'RO';
 export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference, onClose }: {
   g: G; from: 'first' | 'second' | 'third'; who: string; fieldLineup?: Lineup;
-  drop?: { to: 2 | 3 | 4; safe: boolean };
+  drop?: { to: 1 | 2 | 3 | 4; safe: boolean };
   onPick: (k: RunnerKind, opts: { seq?: string[]; to?: number; why?: string }) => void;
   onInterference: () => void;
   onClose: () => void;
 }) {
   const start = from === 'first' ? 1 : from === 'second' ? 2 : 3;
-  const [to, setTo] = useState<number>(drop?.to ?? start + 1);
+  const [to, setTo] = useState<number>(drop && drop.to > start ? drop.to : start + 1);
+  // Dropped out at his own base: picked off there. At the next base: caught stealing.
+  const atOwn = !!drop && !drop.safe && drop.to === start;
+  const atNext = !!drop && !drop.safe && drop.to > start;
   const [ask, setAsk] = useState<null | { kind: 'CS' | 'PO' | 'RO' | 'EA'; why?: string }>(null);
   const [seq, setSeq] = useState<string[]>([]);
   const baseName = (n: number) => (n >= 4 ? 'home' : n === 3 ? '3rd' : '2nd');
@@ -355,10 +361,10 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
       </Sheet>
     );
   }
-  const go = (k: RunnerKind) => onPick(k, { to });
+  const go = (k: RunnerKind, why?: string) => onPick(k, { to, ...(why ? { why } : {}) });
   const safe = !drop || drop.safe, out = !drop || !drop.safe;
   return (
-    <Sheet title={drop ? (drop.safe ? `Safe at ${baseName(to)}: how?` : 'Out: how?') : `Runner on ${fromName}${who ? ` · ${who}` : ''}`} onClose={onClose}>
+    <Sheet title={drop ? (drop.safe ? `Safe at ${baseName(to)}: how?` : `Out at ${atOwn ? fromName : baseName(drop.to)}: how?`) : `Runner on ${fromName}${who ? ` · ${who}` : ''}`} onClose={onClose}>
       {safe && start < 3 && !drop && (
         <div className="seg" role="radiogroup" aria-label="Moved up to">
           {[2, 3, 4].filter((n) => n > start).map((n) => (
@@ -374,14 +380,16 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
           <Choice label="Passed ball" onClick={() => go('PB')} why={blocked('PB')} />
           <Choice label="Error" sub="Pick the fielder" onClick={() => open('EA')} why={blocked('EA')} />
           <Choice label="Indifference" sub="No throw: no steal" onClick={() => go('DI')} why={blocked('DI')} />
+          <Choice label="On the throw" sub="Took the base on a throw" onClick={() => go('ADV', 'on the throw')} why={blocked('ADV')} />
           <Choice label="Obstruction" sub="Awarded the base" onClick={() => go('OBS')} why={blocked('OBS')} />
+          <Choice label="Other" sub="No one charged" onClick={() => go('ADV', 'other')} why={blocked('ADV')} />
         </div>
       </>}
       {out && <>
         <span className="legend">{drop ? `${who || 'The runner'} from ${fromName}` : 'Out'}</span>
         <div className="pgrid three">
-          <Choice label="Caught stealing" sub="Pick the throw" onClick={() => open('CS')} tone="strike" />
-          <Choice label="Picked off" sub="Pick the throw" onClick={() => open('PO')} tone="strike" />
+          {!atOwn && <Choice label="Caught stealing" sub="Pick the throw" onClick={() => open('CS')} tone="strike" />}
+          {!atNext && <Choice label="Picked off" sub="Pick the throw" onClick={() => open('PO')} tone="strike" />}
           <Choice label="Interference" sub="Runner’s" onClick={() => open('RO', 'runner’s interference')} tone="strike" />
           <Choice label="Out on appeal" sub="Left early, missed a base" onClick={() => open('RO', 'appeal')} tone="strike" />
           <Choice label="Other" sub="Pick who made it" onClick={() => open('RO')} tone="strike" />

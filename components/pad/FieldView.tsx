@@ -6,9 +6,10 @@ import type { Lineup } from '@/lib/types';
 
 type Base = 'first' | 'second' | 'third';
 export type Who = { num: string; name: string } | null;
-// Where a dragged runner was dropped: the base he got to (2, 3, or 4 for
-// home) and whether he was safe there or out.
-export type Drop = { to: 2 | 3 | 4; safe: boolean };
+// Where a dragged runner was dropped: the base (1-3, or 4 for home) and
+// whether he was safe there or out. Out at his own base is a pickoff there,
+// the way GameChanger scores it; out at the next base is caught stealing.
+export type Drop = { to: 1 | 2 | 3 | 4; safe: boolean };
 
 // The field the way GameChanger draws it: the side in the field at their
 // positions, the batter at the plate, the runners on their bases, and PITCH on
@@ -18,8 +19,8 @@ const SPOT: Record<string, [number, number]> = {
 };
 const BASE_AT: Record<Base | 'home', [number, number]> = { first: [73, 63], second: [50, 37], third: [27, 63], home: [50, 84] };
 const BASE_NO: Record<Base, 1 | 2 | 3> = { first: 1, second: 2, third: 3 };
-const AT: Record<2 | 3 | 4, Base | 'home'> = { 2: 'second', 3: 'third', 4: 'home' };
-const BASE_NAME: Record<2 | 3 | 4, string> = { 2: '2nd', 3: '3rd', 4: 'home' };
+const AT: Record<1 | 2 | 3 | 4, Base | 'home'> = { 1: 'first', 2: 'second', 3: 'third', 4: 'home' };
+const BASE_NAME: Record<1 | 2 | 3 | 4, string> = { 1: '1st', 2: '2nd', 3: '3rd', 4: 'home' };
 
 export function FieldView({ fieldLineup, runners, bases, batter, batColor, fieldColor, locked, onPitch, onBatter, onPitcher, onRunner, onDrop }: {
   fieldLineup?: Lineup;
@@ -63,11 +64,12 @@ export function FieldView({ fieldLineup, runners, bases, batter, batColor, field
     const hit = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-drop]');
     if (!hit) return;
     const [to, safe] = (hit.dataset.drop ?? '').split(':');
-    onDrop(from, { to: Number(to) as 2 | 3 | 4, safe: safe === 'safe' });
+    onDrop(from, { to: Number(to) as 1 | 2 | 3 | 4, safe: safe === 'safe' });
   }
 
   // While a runner is in the air: SAFE at every base he can get to (nobody in
-  // his way; move the lead runner first), and OUT at the base he was heading for.
+  // his way; move the lead runner first), OUT at the base he was heading for
+  // (caught stealing), and OUT just off his own base (picked off there).
   const order: Base[] = ['first', 'second', 'third'];
   const clear = (from: Base, n: number) => order.slice(BASE_NO[from], Math.min(n, 3)).every((k) => !bases[k]);
   const targets = drag?.moved
@@ -114,6 +116,15 @@ export function FieldView({ fieldLineup, runners, bases, batter, batColor, field
           {out && <span data-drop={`${n}:out`} className="fv-out">OUT<small>{BASE_NAME[n]}</small></span>}
         </div>
       ))}
+      {drag?.moved && (() => {
+        const [x, y] = BASE_AT[drag.from];
+        const n = BASE_NO[drag.from];
+        return (
+          <div className="fv-drop" style={place([x, Math.min(y + 11, 94)])}>
+            <span data-drop={`${n}:out`} className="fv-out">OUT<small>at {BASE_NAME[n]}</small></span>
+          </div>
+        );
+      })()}
       {drag?.moved && (
         <span className="fv-runner ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
           <b>{runners[drag.from]?.num ? `#${runners[drag.from]!.num}` : 'R'}</b>

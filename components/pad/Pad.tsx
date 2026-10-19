@@ -805,8 +805,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
       <div className={`pad-keys gc-keys${layout === 'keys' ? ' big' : ''}`}>
         <button type="button" className="pkey ball" onClick={press.ball} disabled={locked}>BALL</button>
-        <button type="button" className="pkey strike" onClick={() => press.strike()} disabled={locked}>STRIKE<small>swinging</small></button>
-        <button type="button" className="pkey strike look" onClick={() => press.strike(true)} disabled={locked}>STRIKE<small>looking</small></button>
+        <button type="button" className="pkey strike" onClick={() => press.strike()} disabled={locked} aria-label="Strike, swing and miss">STRIKE<small>swing &amp; miss</small></button>
+        <button type="button" className="pkey strike look" onClick={() => press.strike(true)} disabled={locked} aria-label="Called strike">STRIKE<small>called</small></button>
         <button type="button" className="pkey foul" onClick={press.foul} disabled={locked}>FOUL</button>
         <button type="button" className="pkey inplay" onClick={() => setSheet('inplay')} disabled={locked}>IN PLAY</button>
         {layout === 'keys' && <>
@@ -836,7 +836,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
           : startKind ? { kind: startKind, pos: '' } : undefined}
         onClose={() => { setSheet(null); setStartKind(null); setK3(null); }} onRecord={recordInPlay}
         onInterference={() => commit(L.onBatterInterference(g, null))} />}
-      {sheet === 'pitch' && <PitchMenu g={g} fieldLineup={fieldLineup} onClose={() => setSheet(null)} onInPlay={() => setSheet('inplay')} onPick={(k) => {
+      {sheet === 'pitch' && <PitchMenu g={g} fieldLineup={fieldLineup} onClose={() => setSheet(null)} onInPlay={() => setSheet('inplay')} onFoulTip={() => press.strike()} onPick={(k) => {
         commit(k === 'hbp' ? L.onHitByPitch(g) : k === 'ci' ? L.onCatcherInterference(g) : k === 'ibb' ? L.onIntentionalWalk(g) : L.onBalk(g));
       }} onInterference={(from) => commit(L.onBatterInterference(g, from))} onBatterOut={(seq) => commit(L.onBatterOut(g, { seq }))} onDropped={dropped} />}
       {sheet === 'menu' && <GameMenu final={final} lineupHref={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`} gameHref={`/t/${slug}/games/${game.id}`}

@@ -347,3 +347,12 @@ test('the scorebook\'s putouts and assists: 6-3, F8, 6-4-3, a strikeout, E6, and
   const typed = run(start(), single, (x) => onPlay(x, { kind: 'DP', pos: '3B', dest: { batter: 'out', first: 'out' }, seq: ['3B', '2B', '1B'] }));
   assert.deepEqual([line(typed.rows, 'a5'), line(typed.rows, 'a6')], [{ f_a: 1 }, {}]);
 });
+
+test('a runner who takes a base on the throw, or some other way: he moves, nobody is charged', () => {
+  const on = run(start(), single).g;
+  const { rows, g } = run(on, runnerTo('first', 'ADV', { to: 3, why: 'on the throw' } as { to: number }));
+  assert.equal(L.safeBases(g.bases).third, true);
+  assert.deepEqual(rows, []);
+  const r = L.onRunnerPlay(run(start(), single).g, 'first', 'ADV', { why: 'on the throw' }) as Res;
+  assert.equal(r.text, 'Runner advanced · on the throw');
+});
