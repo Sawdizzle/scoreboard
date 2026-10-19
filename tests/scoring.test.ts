@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as L from '../lib/rules/logic.js';
-import { batterBid, engineGame, onPlay, orderChange, record, type G, type Res, type StatRow } from '../lib/scoring.ts';
+import { batterBid, engineGame, gameOver, onPlay, orderChange, record, type G, type Res, type StatRow } from '../lib/scoring.ts';
 import type { Lineup } from '../lib/types.ts';
 
 // Us at home. Our order a1..a9 with a9 pitching; theirs h1..h9 with h9 pitching.
@@ -232,4 +232,27 @@ test('the fielding side is kept too: their leadoff man next inning stays the sam
 test('nothing to correct before the first play, or with no lineup change', () => {
   assert.equal(orderChange(start()), null);
   assert.equal(orderChange(run(start(), L.onBall).g), null);
+});
+
+// ---- Game over? ----------------------------------------------------------------
+test('game over: home ahead in the bottom of the last, a full extra inning, the run rule', () => {
+  const at = (live: Record<string, unknown>) => ({ ...engineGame({ is_home: true, live, status: 'live' }, {}, 7) }) as G;
+  // Top of the 7th just ended with home ahead.
+  assert.equal(gameOver(at({ inning: 7, half: 'bottom', home_score: 5, away_score: 3 }))?.why, 'last');
+  // Bottom of the 7th, away ahead: play on.
+  assert.equal(gameOver(at({ inning: 7, half: 'bottom', home_score: 2, away_score: 3 })), null);
+  // A tie after seven: the scorer's call.
+  assert.equal(gameOver(at({ inning: 8, half: 'top', home_score: 3, away_score: 3 })), null);
+  // The 8th ended with the away team ahead.
+  assert.deepEqual(gameOver(at({ inning: 9, half: 'top', home_score: 3, away_score: 4 }))?.leader, 'away');
+  // Run rule 10: home up 12 in the bottom of the 4th is over at once.
+  assert.equal(gameOver(at({ inning: 4, half: 'bottom', outs: 2, home_score: 12, away_score: 0 }), 10)?.why, 'runrule');
+  // Not in the 2nd: too early.
+  assert.equal(gameOver(at({ inning: 2, half: 'bottom', home_score: 12, away_score: 0 }), 10), null);
+  // Away up 10 after the top of the 5th: home still bats.
+  assert.equal(gameOver(at({ inning: 5, half: 'bottom', home_score: 0, away_score: 10 }), 10), null);
+  // ... and after the bottom it is over.
+  assert.equal(gameOver(at({ inning: 6, half: 'top', home_score: 0, away_score: 10 }), 10)?.leader, 'away');
+  // No run rule set: no run-rule ending.
+  assert.equal(gameOver(at({ inning: 4, half: 'bottom', home_score: 12, away_score: 0 })), null);
 });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanLineup, lineupFromLast, lineupFromRoster, lineupStatus } from '../lib/lineup.ts';
+import { benchFrom, cleanLineup, lineupFromLast, lineupFromRoster, lineupStatus, placeBatter, placeFromCard } from '../lib/lineup.ts';
 import type { Player, Position } from '../lib/types.ts';
 
 const P = (id: string, number: string, first: string, positions: Position[], active = true): Player =>
@@ -47,4 +47,50 @@ test('a lineup from the browser is rebuilt from what a lineup may hold', () => {
   assert.equal(cleanLineup({ batters: [{ bid: '<script>', num: '1', name: '' }] }), null);
   assert.equal(cleanLineup({ batters: Array.from({ length: 41 }, (_, i) => ({ bid: `x${i}`, num: '', name: '' })) }), null);
   assert.equal(cleanLineup('nope'), null);
+});
+
+// ---- From the card ----------------------------------------------------------
+const order = () => ({
+  batters: [{ bid: 'a', num: '7', name: 'Ava' }, { bid: 'b', num: '3', name: 'Cy' }, { bid: 'c', num: '12', name: 'Ben' }],
+  positions: { SS: 'a', CF: 'b', P: 'c' },
+});
+const benchKids = [{ bid: 'f', num: '9', name: 'Theo' }];
+
+test('card: a number already in the order moves up to the cursor, never doubles', () => {
+  const r = placeFromCard(order(), 0, '12', benchKids);
+  assert.ok(r.ok);
+  assert.deepEqual(r.team.batters.map((b) => b.bid), ['c', 'a', 'b']);
+  assert.equal(r.team.batters.length, 3);
+  assert.equal(r.at, 0);
+  // Kept his spot: no position given.
+  assert.equal(r.team.positions.P, 'c');
+});
+
+test('card: a position with the number puts the kid there, and the old holder comes out', () => {
+  const r = placeFromCard(order(), 0, '3', benchKids, 'SS');
+  assert.ok(r.ok);
+  assert.equal(r.team.positions.SS, 'b');
+  assert.equal(r.team.positions.CF, undefined);
+  assert.ok(!Object.values(r.team.positions).includes('a'));
+  // '' takes them out of the field: an extra hitter.
+  const dh = placeFromCard(order(), 0, '7', benchKids, '');
+  assert.ok(dh.ok);
+  assert.ok(!Object.values(dh.team.positions).includes('a'));
+});
+
+test('card: the bench joins at the cursor; placed and unknown numbers are said so', () => {
+  const r = placeFromCard(order(), 1, '9', benchKids);
+  assert.ok(r.ok);
+  assert.deepEqual(r.team.batters.map((b) => b.bid), ['a', 'f', 'b', 'c']);
+  assert.deepEqual(placeFromCard(order(), 2, '7', benchKids), { ok: false, why: 'placed', at: 0 });
+  assert.deepEqual(placeFromCard(order(), 0, '44', benchKids), { ok: false, why: 'unknown' });
+});
+
+test('card: a new kid goes in at the cursor; done benches whoever was not on the card', () => {
+  const t = placeBatter(order(), 1, { bid: 'n', num: '44', name: 'New Kid' }, 'C');
+  assert.deepEqual(t.batters.map((b) => b.bid), ['a', 'n', 'b', 'c']);
+  assert.equal(t.positions.C, 'n');
+  const done = benchFrom(t, 2);
+  assert.deepEqual(done.batters.map((b) => b.bid), ['a', 'n']);
+  assert.deepEqual(done.positions, { SS: 'a', C: 'n' });
 });

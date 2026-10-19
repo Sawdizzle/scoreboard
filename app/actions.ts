@@ -17,7 +17,7 @@ import { batterOf, cleanLineup } from '@/lib/lineup';
 import { RecapContent } from '@/lib/recap';
 import { alreadyThere, plausibleStart, TZ } from '@/lib/schedule-import';
 import { SPORTS, type Sport } from '@/lib/sports';
-import { NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Lineup, type LineupBatter, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
+import { canEditTeam, NAME_FORMATS, POSITIONS, PUBLIC_NAMES, ROLES, type FormState, type Lineup, type LineupBatter, type NameFormat, type Position, type PublicName, type Role } from '@/lib/types';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 const NOT_CONNECTED: FormState = { error: 'This app is not connected to its database yet.' };
@@ -250,6 +250,36 @@ export async function pastePlayers(slug: string, _: FormState, fd: FormData): Pr
   if (error) return { error: say(error) };
   revalidatePath(`/t/${slug}`, 'layout');
   return { ok: `Added ${list.length} ${list.length === 1 ? 'player' : 'players'}.` };
+}
+
+// A kid who turned up at the field, put on the roster straight from the lineup
+// card or the pad, so their at-bats count for them from the first pitch. A
+// number that belongs to someone taken off the active roster brings them back
+// when the names agree (or none was typed) rather than making a second one.
+export async function addRosterPlayer(slug: string, input: { number?: string; first?: string; last?: string }):
+  Promise<{ error: string } | { ok: true; batter: LineupBatter }> {
+  const fd = new FormData();
+  fd.set('number', String(input?.number ?? '')); fd.set('first_name', String(input?.first ?? '')); fd.set('last_name', String(input?.last ?? ''));
+  const f = playerFields(fd);
+  if ('error' in f) return { error: f.error ?? 'That did not save. Try again.' };
+  const { supabase, team, role } = await loadTeam(slug);
+  if (!canEditTeam(role)) return { error: 'Only an organizer or head coach can add to the roster.' };
+  const cols = 'id, number, first_name, last_name';
+  if (f.number) {
+    const { data: off } = await supabase.from('players').select(cols).eq('team_id', team.id).eq('number', f.number).eq('active', false);
+    const low = (s: string) => s.trim().toLowerCase();
+    const back = (off ?? []).find((p) => (!f.first_name && !f.last_name) || (low(p.first_name) === low(f.first_name) && low(p.last_name) === low(f.last_name)));
+    if (back) {
+      const { error } = await supabase.from('players').update({ active: true }).eq('team_id', team.id).eq('id', back.id);
+      if (error) return { error: say(error) };
+      revalidatePath(`/t/${slug}`, 'layout');
+      return { ok: true, batter: batterOf(back, team.name_format) };
+    }
+  }
+  const { data, error } = await supabase.from('players').insert({ team_id: team.id, ...f }).select(cols).single();
+  if (error || !data) return { error: error ? say(error) : 'That did not save. Try again.' };
+  revalidatePath(`/t/${slug}`, 'layout');
+  return { ok: true, batter: batterOf(data, team.name_format) };
 }
 
 export async function updatePlayer(slug: string, playerId: string, _: FormState, fd: FormData): Promise<FormState> {

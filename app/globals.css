@@ -171,6 +171,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .tabbar { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 560px; z-index: 5;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px 12px calc(14px + env(safe-area-inset-bottom));
   background: var(--panel); border-top: 1px solid var(--line); }
+/* No tabs under a thumb on the lineup screen (see TabBar): one stray tap left it. */
+@media (max-width: 1023px) { .tabbar.away { display: none; } .shell.has-tabs:has(.tabbar.away) { padding-bottom: 0; } }
 .tab { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--body); }
 .tab-mark { width: 22px; height: 4px; border-radius: 2px; background: transparent; }
 .tab[aria-current] { color: var(--chalk); font-weight: 700; }
@@ -267,19 +269,30 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .spot { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   border-radius: 10px; background: var(--bg); color: var(--chalk); border: 1.5px solid #3d5a48; cursor: pointer; }
 .spot b { font-family: var(--disp); font-weight: 700; font-size: 21px; line-height: 0.9; }
-.spot small { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.04em; opacity: 0.85; }
+.spot small { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; opacity: 0.9; }
 .spot.open { border-style: dashed; color: #a9c8b5; }
 .spot.on { background: var(--gold); border-color: #ffe08a; color: #1a1300; }
 .order { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.order-row { display: flex; align-items: center; gap: 6px; min-height: 50px; padding: 2px 0 2px 4px; border-top: 1px solid var(--raised); }
+.order-row { padding: 2px 0 2px 4px; border-top: 1px solid var(--raised); scroll-margin-bottom: 380px; }
+.order-line { display: flex; align-items: center; gap: 6px; min-height: 50px; }
 .order-row:first-child { border-top: 0; }
 .order-row.on { background: var(--take-bg, #1c2c40); border-radius: 12px; }
+/* From the card: who is not on it yet, and the kid just placed. */
+.order-row.later { opacity: 0.5; }
+.order-row.just { background: color-mix(in srgb, var(--gold) 16%, transparent); border-radius: 12px; }
+.order-who .row-title small { display: block; font-size: 11px; color: var(--muted); }
+/* A tapped row opens its own keys: where they play, a sub, a move. */
+.order-tools { display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 10px 22px; }
+.pos-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.pos-key { min-height: 44px; border-radius: 10px; background: #173824; border: 1px solid #2c6a45; color: var(--chalk); font-weight: 800; font-size: 15px; cursor: pointer; }
+.pos-key.on { background: var(--gold); border-color: #ffe08a; color: #1a1300; }
 .order-n { flex: 0 0 18px; font-family: var(--mono); font-size: 11px; color: var(--body); }
 .order-who { flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
 .order-who .jersey { flex-basis: 32px; font-size: 24px; }
 .order-who .row-title { flex: 1; min-width: 0; font-size: 15.5px; }
 .order-avg { font-family: var(--disp); font-weight: 600; font-size: 18px; color: var(--soft); font-variant-numeric: tabular-nums; }
-.order-ctl { flex: 0 0 auto; display: flex; gap: 4px; }
+.order-ctl { display: flex; gap: 8px; }
+.order-ctl .btn { min-height: 44px; padding: 0 14px; }
 .icon-btn.sm { width: 36px; height: 44px; border-radius: 10px; font-size: 11px; }
 .icon-btn[disabled] { opacity: 0.3; cursor: default; }
 .tag.dim { background: none; border: 1px dashed var(--line-2); color: var(--muted); }
@@ -287,6 +300,26 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .save-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px;
   padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line-2); }
 .save-bar .bad { color: var(--bad-text); }
+/* The lineup screen is the exception: a coach with a card in one hand needs
+   the save state, Undo and the way to the pad in sight all the time, and the
+   card keypad stays above them while the order scrolls behind. */
+.lineup-dock { position: sticky; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--bg) 14px); }
+.lineup-dock .save-bar { margin-top: 0; padding: 8px 8px 8px 8px; }
+.lineup-dock .save-bar .sub { flex: 1; min-width: 0; font-size: 13px; text-align: center; }
+.card-pad { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; background: var(--panel); border: 1px solid var(--steel);
+  box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.45); }
+.card-pad-top { display: flex; align-items: center; gap: 10px; }
+.card-typed { min-width: 58px; font-family: var(--disp); font-size: 36px; line-height: 1; }
+.card-what { flex: 1; min-width: 0; font-size: 13.5px; color: var(--soft); }
+.card-keys { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.card-pos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.card-key { position: relative; min-height: 48px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-2); color: var(--chalk);
+  font-family: var(--disp); font-weight: 700; font-size: 24px; cursor: pointer; }
+.card-key:active { filter: brightness(1.2); }
+.card-key.next { background: var(--steel); border-color: var(--steel); color: var(--on-steel); font-family: var(--text); font-size: 15px; font-weight: 800; }
+.card-key.pos { min-height: 44px; background: #173824; border-color: #2c6a45; font-family: var(--text); font-size: 15px; font-weight: 800; }
+.card-key small { position: absolute; top: 2px; right: 5px; font: 700 10px/1 var(--mono); color: var(--gold); }
 
 .game-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 4px; border-top: 1px solid var(--raised); }
 .rows > .game-row:first-child { border-top: 0; }
@@ -383,19 +416,34 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pad-count > span { display: flex; align-items: center; gap: 5px; }
 .pad-count em { width: 10px; font-style: normal; font-size: 9px; font-weight: 800; color: var(--muted); }
 .pad-count i { width: 10px; height: 10px; border-radius: 999px; background: var(--raised); }
-.pad-edit { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--steel); }
-.pad-batter { display: flex; align-items: center; gap: 12px; padding: 2px 6px; min-height: 56px; width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pad-edit { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; color: var(--steel); }
+.pad-batter-row { display: flex; align-items: center; gap: 6px; }
+.pad-batter { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 2px 6px; min-height: 56px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pad-num { font-family: var(--disp); font-weight: 700; font-size: 42px; line-height: 0.9; }
 .pad-batter .row-title { font-size: 17px; }
 .pad-line { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; color: var(--soft); }
 .pad-line b { font-family: var(--disp); font-size: 19px; color: var(--gold); }
-.pad-pitcher { display: flex; flex-direction: column; align-items: flex-end; }
+/* The pitcher and his count: a button, for a pitching change. */
+.pad-pitcher { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; min-height: 56px; padding: 4px 10px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line); color: inherit; font: inherit; cursor: pointer; }
+.pad-pitcher em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--steel); text-transform: uppercase; }
 .pad-pitcher small { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
 .pad-pitcher b { font-family: var(--disp); font-size: 26px; line-height: 1; }
 .pad-act { margin-left: auto; font-weight: 700; color: var(--gold); }
 .pad-mid { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px;
   background: #3d1f1f; border: 1px solid var(--gold); color: #ffd9d9; font-size: 13.5px; cursor: pointer; }
 .pad-mid b { color: var(--gold); font-size: 15px; white-space: nowrap; }
+/* The score says the game is over: End game, offered where the eye already is. */
+.pad-over { display: flex; gap: 6px; }
+.pad-over-end { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 0 14px; border-radius: 14px;
+  background: #3d1f1f; border: 1.5px solid #e5534b; color: #ffd9d9; font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.pad-over-end b { color: #fff; font-size: 16px; white-space: nowrap; }
+.pad-over-no { flex: 0 0 auto; min-height: 52px; padding: 0 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: var(--soft); font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+.end-score { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0; }
+.end-score b { font-family: var(--disp); font-size: 28px; text-align: center; }
+.end-score small { font-size: 13px; color: var(--soft); }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; color: var(--soft); cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--steel); }
 .atbat-list { display: flex; flex-direction: column; gap: 6px; }
 .atbat-row { display: flex; align-items: center; gap: 8px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
 .atbat-row.on { border-color: var(--gold); }
@@ -428,6 +476,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pbar.undo { background: #3a2b1a; border-color: #6b4e26; color: #f7d99b; }
 .pbar[disabled] { opacity: 0.4; }
 .pbar.air.on { border-color: var(--gold); color: var(--gold); }
+.pbar.end { background: #3d1f1f; border-color: #7a3431; color: #ffd9d9; }
+.pbar.end.on { background: var(--card); border-color: var(--line); color: var(--soft); }
 
 .psheet-wrap { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 .psheet { width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;

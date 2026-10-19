@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from '@/components/icons';
 import { LineupEditor, type PoolPlayer } from '@/components/LineupEditor';
 import { getGame, getLineups, lastLineup, listOpponents, listPlayers, listSeasons, loadTeam, publicRoster, seasonStats } from '@/lib/data';
 import { byJersey, formatName } from '@/lib/format';
@@ -9,15 +7,18 @@ import { emptyLineup, lineupFromLast, lineupFromRoster, withRosterNames } from '
 import { normalizeTeam } from '@/lib/rules/roster.js';
 import { aiOn, getAllowance } from '@/lib/ai-limit';
 import { batting, rate3 } from '@/lib/stats';
-import { canRunGames, type Lineup, type Side } from '@/lib/types';
+import { canEditTeam, canRunGames, type Lineup, type Side } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Lineup' };
 
 export default async function LineupPage({ params, searchParams }: {
-  params: Promise<{ slug: string; gameId: string }>; searchParams: Promise<{ side?: string }>;
+  params: Promise<{ slug: string; gameId: string }>; searchParams: Promise<{ side?: string; from?: string }>;
 }) {
   const { slug, gameId } = await params;
-  const side: Side = (await searchParams).side === 'them' ? 'them' : 'us';
+  const sp = await searchParams;
+  const side: Side = sp.side === 'them' ? 'them' : 'us';
+  // Opened from the pad: back (and on, once saved) goes to the pad.
+  const fromPad = sp.from === 'pad';
   const { supabase, team, role } = await loadTeam(slug);
   const game = await getGame(supabase, team.id, gameId);
   if (!game) notFound();
@@ -53,16 +54,21 @@ export default async function LineupPage({ params, searchParams }: {
     initial = saved ?? emptyLineup();
   }
 
+  const pad = `/pad/${slug}/${game.id}`;
+  const keep = fromPad ? '&from=pad' : '';
+  const run = canRunGames(role);
   return (
     <div className="page" style={{ paddingTop: 6 }}>
-      <div className="h-row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 2 }}>
-        <Link href={`/t/${slug}/games/${game.id}`} aria-label="Back to the game" className="icon-btn" style={{ border: 0, marginLeft: -10 }}><ChevronLeft /></Link>
-        <nav className="seg" aria-label="Side" style={{ flex: 1 }}>
-          <Link href="?side=us" className="seg-item" aria-current={side === 'us' ? 'page' : undefined}>{team.display_name}</Link>
-          <Link href="?side=them" className="seg-item" aria-current={side === 'them' ? 'page' : undefined}>{game.opponent?.display_name ?? game.opponent_name}</Link>
-        </nav>
-      </div>
-      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets} canEdit={canRunGames(role)} ai={canRunGames(role) && aiOn(await getAllowance(supabase, team.id))} />
+      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets}
+        canEdit={run} canRoster={canEditTeam(role)} ai={run && aiOn(await getAllowance(supabase, team.id))}
+        back={fromPad ? { href: pad, label: 'Back to the pad' } : { href: `/t/${slug}/games/${game.id}`, label: 'Back to the game' }}
+        sides={[
+          { href: `?side=us${keep}`, label: team.display_name, on: side === 'us' },
+          { href: `?side=them${keep}`, label: game.opponent?.display_name ?? game.opponent_name, on: side === 'them' },
+        ]}
+        next={run && game.status !== 'final'
+          ? { href: pad, label: fromPad || game.status === 'live' ? 'Back to the pad' : 'Open the pad' }
+          : { href: `/t/${slug}/games/${game.id}`, label: 'Back to the game' }} />
     </div>
   );
 }

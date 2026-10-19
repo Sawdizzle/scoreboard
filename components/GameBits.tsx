@@ -37,12 +37,3 @@ export function ScheduleList({ slug, games }: { slug: string; games: Game[] }) {
     </div>
   );
 }
-
-// The game to put on Today: one being played, else the next one not yet
-// final (a game from earlier today still counts until it is marked final).
-export function nextGame(games: Game[], now = Date.now()) {
-  const live = games.find((g) => g.status === 'live');
-  if (live) return live;
-  const dayAgo = now - 12 * 3600 * 1000;
-  return games.find((g) => g.status !== 'final' && (!g.starts_at || Date.parse(g.starts_at) >= dayAgo)) ?? null;
-}

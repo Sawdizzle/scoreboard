@@ -346,6 +346,34 @@ export function orderChange(g: G): Res | null {
   return null;
 }
 
+// Whether the game looks over as it stands, so the pad can offer End game at
+// the moment it is, instead of leaving it to be found. It never ends anything:
+// a tie, a time limit or a tournament's own rule is the scorer's call.
+//   last     the home team leads in the bottom of the last inning or later
+//            (the top just ended with them ahead, or a walk-off).
+//   after    a full extra inning ended with someone ahead.
+//   runrule  the margin reached the game's run rule: at once for a home lead
+//            in the bottom half, at the end of an inning for an away lead.
+//            Not before half the game is played, so a big first inning does
+//            not nag.
+export type Over = { why: 'last' | 'after' | 'runrule'; leader: EngineSide; key: string };
+export function gameOver(g: G, runRule = 0): Over | null {
+  const reg = Number(g.regulation_innings) | 0;
+  const inn = g.inning | 0, h = g.home_score | 0, a = g.away_score | 0;
+  const b = L.safeBases(g.bases) as Bases;
+  const fresh = !(g.outs | 0) && !(g.balls | 0) && !(g.strikes | 0) && !b.first && !b.second && !b.third;
+  const key = `${inn}${g.half}`;
+  if (g.half === 'bottom' && reg && inn >= reg && h > a) return { why: 'last', leader: 'home', key };
+  if (g.half === 'top' && fresh && reg && inn - 1 >= reg && h !== a) return { why: 'after', leader: h > a ? 'home' : 'away', key };
+  const rr = runRule | 0;
+  const floor = Math.ceil((reg || 6) / 2);
+  if (rr > 0 && Math.abs(h - a) >= rr) {
+    if (g.half === 'bottom' && h > a && inn >= floor) return { why: 'runrule', leader: 'home', key };
+    if (g.half === 'top' && fresh && inn - 1 >= floor) return { why: 'runrule', leader: h > a ? 'home' : 'away', key };
+  }
+  return null;
+}
+
 // "1-3, 2B, BB": a hitter's game so far, the way GameChanger writes it.
 export function tonight(line: Partial<Record<StatKey, number>> | undefined) {
   if (!line || !line.b_pa) return '';

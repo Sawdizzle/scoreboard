@@ -11,9 +11,10 @@ import { canEditTeam, canRunGames, type Game, type Lineup, type Player, type Rol
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
-export function TodayView({ team, role, players, opponents, season, stats = [], roster = [], game = null, lineups = {} }: {
+export function TodayView({ team, role, players, opponents, season, stats = [], roster = [], day = [] }: {
   team: Team; role: Role; players: number; opponents: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
-  game?: Game | null; lineups?: Partial<Record<Side, Lineup>>;
+  // The games to show (lib/schedule gameDay): being played, then the next game day's.
+  day?: { game: Game; stale: boolean; lineups: Partial<Record<Side, Lineup>> }[];
 }) {
   const who = new Map(roster.map((p) => [p.id, p]));
   const top = leaders(stats);
@@ -29,23 +30,25 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
   return (
     <div className="page wide today" style={{ paddingTop: 10 }}>
       <h1 className="wide-title disp">Today</h1>
-      {game ? (
-        <section className="card next-game">
+      {day.length ? day.map(({ game, stale, lineups }) => (
+        <section key={game.id} className={`card next-game${stale ? ' stale' : ''}`}>
           <div className="next-top">
-            <span className="eyebrow gold">{game.status === 'live' ? 'Live now' : <LocalTime iso={game.starts_at} />}</span>
-            <span className="sub">{game.venue}</span>
+            <span className="eyebrow gold">{stale ? 'Never ended' : game.status === 'live' ? 'Live now' : <LocalTime iso={game.starts_at} />}</span>
+            <span className="sub">{stale ? <LocalTime iso={game.starts_at} /> : game.venue}</span>
           </div>
           <Matchup team={team} game={game} />
-          <GamePlace game={game} compact />
+          {stale ? (
+            <p className="note note-bad">Still marked live. End it on the pad so the stream, the stats and the pitching decisions show it as final.</p>
+          ) : <GamePlace game={game} compact />}
           <div className="next-foot">
-            {game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
+            {stale ? <span /> : game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
             <div className="btn-row">
-              <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary">{game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
-              {game.sport === 'baseball' && <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>}
+              <Link href={`/pad/${team.slug}/${game.id}${stale ? '?end=1' : ''}`} className="btn btn-primary">{stale ? 'End it on the pad' : game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
+              {game.sport === 'baseball' && !stale && <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>}
             </div>
           </div>
         </section>
-      ) : (
+      )) : (
         <section className="card next-game">
           <div className="next-top">
             <span className="eyebrow gold">Next game</span>

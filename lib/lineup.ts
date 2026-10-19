@@ -1,7 +1,7 @@
 // Lineups on top of Scoreboard's roster rules (lib/rules/roster.js), which own
 // positions and ids: this file only builds lineups from a roster and checks
 // what the pad will need.
-import { FIELD_POSITIONS, filled, missingPositions, normalizeTeam } from './rules/roster.js';
+import { FIELD_POSITIONS, filled, missingPositions, normalizeTeam, setPosition } from './rules/roster.js';
 import { byJersey, formatName } from './format.ts';
 import type { Lineup, LineupBatter, NameFormat, Player } from './types.ts';
 
@@ -52,6 +52,53 @@ export function lineupStatus(l: Lineup | undefined) {
   const batters = (l.batters || []).filter(filled).length;
   const missing = missingPositions(l) as string[];
   return { batters, missing, ready: batters >= 9 && missing.length === 0 };
+}
+
+// ---- From the card ---------------------------------------------------------
+// The lineup card handed over at game time, typed in batting order: one jersey
+// number at a time, each optionally with where that kid plays. `cursor` is the
+// slot the next number goes to; everyone above it came off the card already.
+//
+// A number already in the order below the cursor moves up to it, so "same as
+// last game" can be re-ordered by typing the card, never doubled. A number on
+// the bench joins at the cursor. A number above the cursor is already placed.
+// Anything else is a new kid: the editor asks who, then calls placeBatter.
+// `pos`: undefined keeps the player's spot, '' takes them out of the field
+// (an extra hitter), a field position puts them there.
+export type CardStep =
+  | { ok: true; team: Lineup; at: number }
+  | { ok: false; why: 'placed'; at: number }
+  | { ok: false; why: 'unknown' };
+
+export function placeBatter(team: Lineup, cursor: number, b: LineupBatter, pos?: string): Lineup {
+  const t = normalizeTeam(team) as Lineup;
+  const batters = t.batters.filter((x) => x.bid !== b.bid);
+  const at = Math.min(Math.max(cursor, 0), batters.length);
+  batters.splice(at, 0, b);
+  const placed = normalizeTeam({ ...t, batters }) as Lineup;
+  return pos === undefined ? placed : setPosition(placed, at, pos).team as Lineup;
+}
+
+export function placeFromCard(team: Lineup, cursor: number, num: string, bench: LineupBatter[], pos?: string): CardStep {
+  const t = normalizeTeam(team) as Lineup;
+  const n = num.replace(/\D/g, '').slice(0, 3);
+  const j = n ? t.batters.findIndex((b) => b.num === n) : -1;
+  if (j >= 0 && j < cursor) return { ok: false, why: 'placed', at: j };
+  const at = Math.min(cursor, t.batters.length);
+  if (j >= 0) return { ok: true, team: placeBatter(t, at, t.batters[j], pos), at };
+  const off = bench.find((b) => b.num === n && !t.batters.some((x) => x.bid === b.bid));
+  if (off) return { ok: true, team: placeBatter(t, at, { bid: off.bid, num: off.num, name: off.name }, pos), at };
+  return { ok: false, why: 'unknown' };
+}
+
+// Done with the card: whoever was not on it (below the cursor) goes to the
+// bench, and their spots in the field with them.
+export function benchFrom(team: Lineup, cursor: number): Lineup {
+  const t = normalizeTeam(team) as Lineup;
+  const keep = t.batters.slice(0, Math.max(cursor, 0));
+  const ids = new Set(keep.map((b) => b.bid));
+  const positions = Object.fromEntries(Object.entries(t.positions).filter(([, bid]) => ids.has(bid)));
+  return normalizeTeam({ batters: keep, positions }) as Lineup;
 }
 
 // A lineup that came back from the browser, rebuilt from what is allowed in

@@ -18,8 +18,11 @@ export function TabBar({ slug, at }: { slug: string; at?: string }) {
     { href: `${base}/roster`, label: 'Team', on: ['/roster', '/stats', '/opponents', '/settings', '/stream', '/player'].some((p) => path.startsWith(base + p)), subs },
     { href: `${base}/season`, label: 'Season', on: path.startsWith(`${base}/season`) },
   ];
+  // The lineup screen keeps its own bar at the bottom (save, Undo, the pad):
+  // on a phone the tabs step aside so a thumb cannot leave it by mistake.
+  const away = /\/games\/[^/]+\/lineup/.test(path);
   return (
-    <nav className="tabbar" aria-label="Team">
+    <nav className={`tabbar${away ? ' away' : ''}`} aria-label="Team">
       {tabs.map((t) => (
         <div key={t.href} className="tab-group">
           <Link href={t.href} className="tab" aria-current={t.on && !t.subs?.some((x) => x.on) ? 'page' : t.on ? 'true' : undefined}>

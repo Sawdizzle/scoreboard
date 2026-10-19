@@ -5,21 +5,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OnAir, type Channel } from '@/components/pad/OnAir';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
-import { AtBat, EndCheck, InPlay, More, Runner, Situation, StrikeThree, type BatterFix } from '@/components/pad/PadSheets';
-import { editBatter } from '@/app/actions';
+import { AtBat, EndCheck, EndGame, InPlay, More, Pitching, Runner, Situation, StrikeThree, type BatterFix, type NewKid } from '@/components/pad/PadSheets';
+import { addRosterPlayer, editBatter, saveLineup } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
-import { positionOf } from '@/lib/rules/roster.js';
-import { engineGame, lastPlayText, onPlay, orderChange, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
+import { assignSpot, newBid, normalizeTeam, positionOf } from '@/lib/rules/roster.js';
+import { engineGame, gameOver, lastPlayText, onPlay, orderChange, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { airView } from '@/lib/onair';
 import { shortName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
 import { CONSOLE, useMedia } from '@/lib/use-media';
-import type { Game, Lineup, Side, Team } from '@/lib/types';
+import type { FormState, Game, Lineup, LineupBatter, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
@@ -39,7 +39,7 @@ function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
   const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
   return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
 }
-type Sheet = null | 'atbat' | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | { runner: 'first' | 'second' | 'third' };
+type Sheet = null | 'atbat' | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | 'end' | 'pitching' | { runner: 'first' | 'second' | 'third' };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
   const out = { ...t };
@@ -54,17 +54,26 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 
 // The scoring pad. Scoreboard's pad, rebuilt on Scoreboard's lineups: BALL,
 // STRIKE, FOUL and IN PLAY for the pitch; MORE for the rare ones; the runners
-// on the diamond for steals; the bar above for corrections and End game.
+// on the diamond for steals; the bar above for corrections; End game on the
+// bottom bar, and offered by itself when the score says the game is over.
+// The pitcher (tap his pitch count) and a sub (the At the plate sheet) change
+// here too, without leaving the pad.
 //
 // Every tap is applied here at once (the rules run in the browser) and queued
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [] }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
   season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
   // Our players' first and last names, for fixing a name from the pad.
   roster?: { id: string; first_name: string; last_name: string }[];
+  // Our active roster as batters, for a sub: whoever is not in the order is on the bench.
+  bench?: LineupBatter[];
+  // This seat can add a kid to the roster (organizer, head coach).
+  canRoster?: boolean;
+  // Open on End game (a game left live from an earlier day).
+  openEnd?: boolean;
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -87,10 +96,12 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const sending = useRef(false);
   const seq = useRef(game.seq);
   const [sync, setSync] = useState<'ok' | 'sending' | 'retry'>('ok');
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [sheet, setSheet] = useState<Sheet>(openEnd && canScore && game.status === 'live' ? 'end' : null);
   // A tablet or bigger keeps On Air open as a console beside the keys.
   const wide = useMedia(CONSOLE);
   const [toast, setToast] = useState<{ text: string; act?: { label: string; run: () => void } } | null>(null);
+  // "Not yet" on the game-over offer: hidden until the next half.
+  const [overOff, setOverOff] = useState('');
   const [waiting, setWaiting] = useState(0);
   const [online, setOnline] = useState(true);
   const [chan, setChan] = useState(channel);
@@ -364,6 +375,64 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     return null;
   }
 
+  // A lineup changed from the pad itself (a pitching change, a sub): saved
+  // whole, shown at once, then the pitch count and the order catch up the way
+  // they do after an edit on the lineup screen.
+  async function saveSide(e: EngineSide, next: Lineup): Promise<string | null> {
+    if (!canScore) return 'Your seat cannot change lineups.';
+    const side = sides(e);
+    const fd = new FormData();
+    fd.set('lineup', JSON.stringify(next));
+    let r: FormState;
+    try { r = await saveLineup(slug, game.id, side, {}, fd); } catch { return 'That did not save. Check the signal and try again.'; }
+    if (r.error) return r.error;
+    lineupsNow.current = { ...lineupsNow.current, [side]: next };
+    if (side === 'us') named.current = next;
+    const v = cur.current;
+    show({ ...v, g: { ...v.g, lineups: { ...v.g.lineups, [e]: next } } as typeof v.g });
+    catchUp.current();
+    nudge();
+    return null;
+  }
+  const lineupOf = (e: EngineSide) => normalizeTeam(cur.current.g.lineups[e] ?? { batters: [], positions: {} }) as Lineup;
+  const who = (b: LineupBatter | undefined) => (b ? `${b.num ? `#${b.num} ` : ''}${b.name || ''}`.trim() : '');
+
+  // A new pitcher: one already in the order takes the mound, and the one
+  // coming off takes his old spot (kids rotate). A number typed in (their
+  // pitcher was never on the card) joins the end of the order.
+  async function changePitcher(e: EngineSide, pick: { bid: string } | { num: string }): Promise<string | null> {
+    let t = lineupOf(e);
+    let i: number;
+    if ('bid' in pick) i = t.batters.findIndex((b) => b.bid === pick.bid);
+    else { t = normalizeTeam({ ...t, batters: [...t.batters, { bid: newBid(), num: pick.num, name: '' }] }) as Lineup; i = t.batters.length - 1; }
+    if (i < 0) return 'That player is not in the lineup any more.';
+    const err = await saveSide(e, assignSpot(t, 'P', i).team as Lineup);
+    if (!err) say(`Now pitching: ${who(t.batters[i])}`);
+    return err;
+  }
+
+  // A sub bats in the slot of the player he replaces and takes his spot in
+  // the field; the one coming out goes to the bench.
+  async function subIn(e: EngineSide, i: number, kid: LineupBatter | NewKid): Promise<string | null> {
+    let b: LineupBatter;
+    if ('bid' in kid) b = kid;
+    else if (sides(e) === 'us' && kid.roster) {
+      let r: Awaited<ReturnType<typeof addRosterPlayer>>;
+      try { r = await addRosterPlayer(slug, { number: kid.num, first: kid.first, last: kid.last }); } catch { return 'That did not save. Check the signal and try again.'; }
+      if ('error' in r) return r.error;
+      b = r.batter;
+    } else b = { bid: newBid(), num: kid.num, name: `${kid.first} ${kid.last}`.trim() };
+    const t = lineupOf(e);
+    const out = t.batters[i];
+    if (!out) return 'That spot is empty.';
+    if (t.batters.some((x) => x.bid === b.bid)) return `${who(b)} is already in the order.`;
+    const positions = Object.fromEntries(Object.entries(t.positions).map(([pos, bid]) => [pos, bid === out.bid ? b.bid : bid]));
+    const next = normalizeTeam({ ...t, batters: t.batters.map((x, j) => (j === i ? b : x)), positions }) as Lineup;
+    const err = await saveSide(e, next);
+    if (!err) say(`${who(b)} in for ${who(out)}`);
+    return err;
+  }
+
   function endGame(final: boolean) {
     const before = cur.current;
     history.current.push({ before, rows: [] });
@@ -549,6 +618,14 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const midUp = status === 'live' && !!chan && (!chan.game_id || chan.game_id === game.id)
     && (chan.card === 'mid' || (!chan.card && chan.auto_mid && view.rolled));
   const dots = (n: number, of: number, color: string) => Array.from({ length: of }, (_, i) => <i key={i} style={{ background: i < n ? color : undefined }} />);
+  // The score says the game is over: offer End game, until "Not yet" for this half.
+  const runRule = Number(game.settings?.run_rule) || 0;
+  const overNow = status === 'live' && canScore ? gameOver(g, runRule) : null;
+  const over = overNow && overNow.key !== overOff ? overNow : null;
+  const overText = (o: NonNullable<typeof over>) => {
+    const lead = (o.leader === 'home' ? homeB : awayB).display;
+    return o.why === 'runrule' ? `${lead} by the run rule (${runRule})` : `${lead} ahead ${o.why === 'after' ? 'after a full inning' : 'in the last inning'}`;
+  };
 
   const press = {
     ball: () => {
@@ -648,21 +725,34 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         <span className="pad-edit">{final ? 'FINAL ›' : 'FIX ›'}</span>
       </button>
 
-      <button type="button" className="pad-batter" onClick={() => setSheet('atbat')} aria-label="At the plate: pick the batter or fix a number or name">
-        <span className="pad-num">{batter?.num ? `#${batter.num}` : '—'}</span>
-        <span className="row-main">
-          <span className="row-title">{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap to set it')}
-            {batter && <small>{positionOf(batLineup, bIdx) || ''}</small>}</span>
-          <span className="pad-line">
-            {onAir.batter?.avg && <b>{onAir.batter.avg}</b>}
-            {batter && <span>{tonight(view.tonight[batter.bid]) || 'First time up'}</span>}
+      <div className="pad-batter-row">
+        <button type="button" className="pad-batter" onClick={() => setSheet('atbat')} aria-label="At the plate: pick the batter, sub, or fix a number or name">
+          <span className="pad-num">{batter?.num ? `#${batter.num}` : '—'}</span>
+          <span className="row-main">
+            <span className="row-title">{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap to set it')}
+              {batter && <small>{positionOf(batLineup, bIdx) || ''}</small>}</span>
+            <span className="pad-line">
+              {onAir.batter?.avg && <b>{onAir.batter.avg}</b>}
+              {batter && <span>{tonight(view.tonight[batter.bid]) || 'First time up'}</span>}
+            </span>
           </span>
-        </span>
-        <span className="pad-pitcher">
+        </button>
+        <button type="button" className="pad-pitcher" onClick={() => setSheet('pitching')}
+          aria-label={`${pitcher ? `Pitching: number ${pitcher.num} ${pitcher.name}` : 'No pitcher set'}, ${L.pitchCount(g)} pitches. Tap for a pitching change`}>
           <small>{pitcher ? `#${pitcher.num} ${shortName(pitcher.name)}` : 'Pitcher'}</small>
           <b>{L.pitchCount(g)}</b>
-        </span>
-      </button>
+          <em>Change</em>
+        </button>
+      </div>
+
+      {over && (
+        <div className="pad-over" role="status">
+          <button type="button" className="pad-over-end" onClick={() => setSheet('end')}>
+            <span>Game over? {overText(over)}</span><b>End game ›</b>
+          </button>
+          <button type="button" className="pad-over-no" onClick={() => setOverOff(over.key)} aria-label="Not over yet: keep playing">Not yet</button>
+        </div>
+      )}
 
       {midUp && (
         <button type="button" className="pad-mid" onClick={() => void backToBug()}>
@@ -693,8 +783,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
       <nav className="pad-bar">
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !view.last)}>Undo</button>
-        <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, fieldSide)}`}>Field</Link>
-        <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
+        <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`}>Lineups</Link>
+        <button type="button" className={`pbar end${final ? ' on' : ''}`} onClick={() => setSheet('end')} disabled={!canScore}>{final ? 'Final' : 'End game'}</button>
         {chan && !console_ && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
       </nav>
       </div>
@@ -717,8 +807,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
       {sheet === 'air' && !console_ && airPanel(false)}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
-        extra={<>
-          {game.settings?.time_limit ? <GameClock gameId={game.id} initial={clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={(c) => { setClock(c); nudge(); }} /> : null}
+        extra={game.settings?.time_limit ? <GameClock gameId={game.id} initial={clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={(c) => { setClock(c); nudge(); }} /> : null}
+        practice={<>
           <label className="switch">
             <span className="switch-text"><b>Demo: the game plays itself</b><small>A pitch every 1.6 s, to try the stream. Every play is real: use a practice game.</small></span>
             <input type="checkbox" checked={demo} disabled={!canScore || final} onChange={(e) => setDemo(e.target.checked)} />
@@ -727,8 +817,19 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         ending={checking} onClose={() => { dropEnd(); setSheet(null); }} onFix={(r) => { if (r) { commit(r); setSheet('situation'); } }} onEnd={(f) => (f ? void tryEnd() : endGame(false))} onStartOver={startOver} />}
       {sheet === 'atbat' && <AtBat g={g} side={batSide} labels={{ away: awayB.display, home: homeB.display }} locked={locked}
         rosterOf={(e, bid) => (sides(e) === 'us' ? rosterBy.current.get(bid) ?? null : null)}
-        lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}`}
-        onPick={(i) => { pickBatter(i); }} onSave={saveBatter} onClose={() => setSheet(null)} />}
+        benchOf={(e) => (sides(e) === 'us' ? bench.filter((p) => !(g.lineups[e]?.batters ?? []).some((b) => b.bid === p.bid)) : null)}
+        canRosterOf={(e) => sides(e) === 'us' && canRoster}
+        lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}&from=pad`}
+        onPick={(i) => { pickBatter(i); }} onSave={saveBatter} onSub={async (e, i, kid) => { const err = await subIn(e, i, kid); if (!err) setSheet(null); return err; }}
+        onClose={() => setSheet(null)} />}
+      {sheet === 'pitching' && <Pitching g={g} side={fieldSide} labels={{ away: awayB.display, home: homeB.display }} locked={locked}
+        lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}&from=pad`}
+        onPick={async (e, pick) => { const err = await changePitcher(e, pick); if (!err) setSheet(null); return err; }}
+        onClose={() => setSheet(null)} />}
+      {sheet === 'end' && <EndGame final={final} ending={checking}
+        score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`}
+        when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning} · ${g.outs | 0} out${(g.outs | 0) === 1 ? '' : 's'}`}
+        onEnd={() => void tryEnd()} onReopen={() => endGame(false)} onClose={() => { dropEnd(); setSheet(null); }} />}
       {sheet === 'check' && <EndCheck issues={issues} onClose={() => setSheet(null)} onFix={() => setSheet('situation')} onEnd={() => endGame(true)} />}
     </div>
   );
