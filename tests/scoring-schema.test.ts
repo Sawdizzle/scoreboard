@@ -162,3 +162,53 @@ test('play edits: the wrong kid credited moves to the right one; the fielders fo
   const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [g3]);
   assert.equal(seq, 1);
 });
+
+test('pitching decisions: worked out at the end, the scorer can say otherwise, and go back', async () => {
+  const [{ id: g4 }] = await t.as<{ id: string }>('owner', `insert into games (team_id, season_id, opponent_name, opponent_abbr, is_home) values ($1, $2, 'Owls', 'OWLS', true) returning id`, [team, season]);
+  const go = (seq: number, type: string, patch: object, stats: object[], status: string | null = null) =>
+    t.as('scorer', `select apply_play($1, $2, $3, $4::jsonb, '{}'::jsonb, $5::jsonb, $6)`, [g4, seq, type, JSON.stringify(patch), JSON.stringify(stats), status]);
+  // p7 starts; p12 comes in and we take the lead for good on his watch.
+  await go(0, 'ball', { balls: 1 }, [{ side: 'us', bid: p7, p_pitches: 1 }]);
+  await go(1, 'play', { home_score: 1 }, [{ side: 'us', bid: p12, p_pitches: 1, p_bf: 1, p_outs: 1 }]);
+  await go(2, 'end_game', {}, [], 'final');
+  const picks = async () => (await t.as<{ player_id: string; p_gs: number; p_w: number; p_l: number; p_sv: number }>(null,
+    `select player_id, p_gs, p_w, p_l, p_sv from game_decisions where game_id = $1 order by player_id = $2 desc`, [g4, p7]));
+  assert.deepEqual(await picks(), [{ player_id: p7, p_gs: 1, p_w: 0, p_l: 0, p_sv: 0 }, { player_id: p12, p_gs: 0, p_w: 1, p_l: 0, p_sv: 0 }]);
+
+  // The league's five-inning rule gives it to the starter: the scorer says so.
+  await t.as('scorer', `select set_game_decisions($1, $2, null, null)`, [g4, p7]);
+  assert.deepEqual(await picks(), [{ player_id: p7, p_gs: 1, p_w: 1, p_l: 0, p_sv: 0 }, { player_id: p12, p_gs: 0, p_w: 0, p_l: 0, p_sv: 0 }]);
+  // With a save for the reliever.
+  await t.as('scorer', `select set_game_decisions($1, $2, null, $3)`, [g4, p7, p12]);
+  assert.equal((await picks())[1].p_sv, 1);
+
+  // The rules a pick must keep.
+  await fails(t.as('scorer', `select set_game_decisions($1, $2, $3, null)`, [g4, p7, p12]), /both win and lose/);
+  await fails(t.as('scorer', `select set_game_decisions($1, null, null, $2)`, [g4, p12]), /save goes with a win/);
+  const [{ id: bench }] = await t.as<{ id: string }>('owner', `insert into players (team_id, first_name, number) values ($1, 'Bench', '44') returning id`, [team]);
+  await fails(t.as('scorer', `select set_game_decisions($1, $2, null, null)`, [g4, bench]), /who pitched in this game/);
+  await fails(t.as('media', `select set_game_decisions($1, $2, null, null)`, [g4, p7]), /cannot edit/);
+
+  // A reopen and a new end keep the pick (the trigger runs game_decide again).
+  await go(3, 'reopen_game', {}, [], 'live');
+  await go(4, 'end_game', {}, [], 'final');
+  assert.equal((await picks())[0].p_w, 1);
+  // Back to worked out.
+  await t.as('scorer', `select clear_game_decisions($1)`, [g4]);
+  assert.deepEqual((await picks()).map((p) => p.p_w), [0, 1]);
+  await fails(t.as('scorer', `select set_game_decisions($1, null, $2, null)`, [g4, p7]), /game we lost/);
+
+  // A pick is for the result it was made for. Given again, then the game is
+  // reopened and they come back to win: the win is not ours to give, and the
+  // loss is worked out until the scorer picks one.
+  await t.as('scorer', `select set_game_decisions($1, $2, null, null)`, [g4, p7]);
+  await go(5, 'reopen_game', {}, [], 'live');
+  // Not for a game that is not final.
+  await fails(t.as('scorer', `select set_game_decisions($1, $2, null, null)`, [g4, p7]), /final game/);
+  await go(6, 'play', { away_score: 2 }, [{ side: 'us', bid: p12, p_pitches: 1, p_bf: 1 }]);
+  await go(7, 'end_game', {}, [], 'final');
+  assert.deepEqual((await picks()).map((p) => [p.p_w, p.p_l]), [[0, 0], [0, 1]]);
+  await fails(t.as('scorer', `select set_game_decisions($1, $2, null, null)`, [g4, p7]), /game we won/);
+  await t.as('scorer', `select set_game_decisions($1, null, $2, null)`, [g4, p7]);
+  assert.deepEqual((await picks()).map((p) => [p.p_w, p.p_l]), [[0, 1], [0, 0]]);
+});

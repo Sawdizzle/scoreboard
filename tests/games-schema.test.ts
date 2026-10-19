@@ -71,3 +71,15 @@ test('deleting the opponent\'s team leaves the game, under the name it had', asy
   const [g] = await t.as(null, `select opponent_team_id, opponent_name from games where id = $1`, [id]);
   assert.deepEqual(g, { opponent_team_id: null, opponent_name: 'Hawks' });
 });
+
+test('home and away swap from the pad before the first pitch, and not after it', async () => {
+  const [{ id: g }] = await t.as<{ id: string }>('coach', `insert into games (team_id, season_id, opponent_name, opponent_abbr, is_home) values ($1, $2, 'Owls', 'OWLS', true) returning id`, [team, season]);
+  // The pad's swap: an update guarded by the game as the pad read it (scheduled, at its seq).
+  const swap = (who: string) => t.as<{ is_home: boolean }>(who,
+    `update games set is_home = not is_home where id = $1 and status = 'scheduled' and seq = 0 returning is_home`, [g]);
+  assert.deepEqual(await swap('scorer'), [{ is_home: false }]);
+  assert.deepEqual(await swap('media'), []);
+  await t.as('scorer', `select apply_play($1, 0, 'ball', '{"balls":1}'::jsonb, '{}'::jsonb, '[]'::jsonb, null)`, [g]);
+  assert.deepEqual(await swap('scorer'), []);
+  assert.equal((await t.as<{ is_home: boolean }>(null, `select is_home from games where id = $1`, [g]))[0].is_home, false);
+});

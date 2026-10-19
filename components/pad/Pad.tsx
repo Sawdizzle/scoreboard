@@ -8,6 +8,7 @@ import { GameClock } from '@/components/pad/GameClock';
 import { AtBat, EndCheck, EndGame, GameMenu, InPlay, Pitching, PitchMenu, Runner, Situation, type BatterFix, type InPlayResult, type NewKid } from '@/components/pad/PadSheets';
 import { FieldView, type Drop } from '@/components/pad/FieldView';
 import { PitchCounts, PlaysSheet, type Log } from '@/components/pad/PlaysSheet';
+import { Decisions, type Decided, type Picks } from '@/components/pad/Decisions';
 import { addRosterPlayer, editBatter, saveLineup } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
@@ -42,6 +43,43 @@ const LAYOUT_KEY = 'pad-layout';
 const readLayout = (): Layout => { try { return localStorage.getItem(LAYOUT_KEY) === 'keys' ? 'keys' : 'field'; } catch { return 'field'; } };
 const onLayout = (cb: () => void) => { window.addEventListener('storage', cb); window.addEventListener(LAYOUT_KEY, cb); return () => { window.removeEventListener('storage', cb); window.removeEventListener(LAYOUT_KEY, cb); }; };
 const setLayout = (l: Layout) => { try { localStorage.setItem(LAYOUT_KEY, l); } catch { /* private mode: this visit only */ } window.dispatchEvent(new Event(LAYOUT_KEY)); };
+// Sunlight: the pad in high contrast, black on white, for a bright day at the
+// field. Kept per phone, like the layout.
+type Theme = 'dark' | 'sun';
+const THEME_KEY = 'pad-theme';
+const readTheme = (): Theme => { try { return localStorage.getItem(THEME_KEY) === 'sun' ? 'sun' : 'dark'; } catch { return 'dark'; } };
+const onTheme = (cb: () => void) => { window.addEventListener('storage', cb); window.addEventListener(THEME_KEY, cb); return () => { window.removeEventListener('storage', cb); window.removeEventListener(THEME_KEY, cb); }; };
+const setTheme = (t: Theme) => { try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: this visit only */ } window.dispatchEvent(new Event(THEME_KEY)); };
+// Our result from the score, for the pitching decisions.
+const resultFor = (g: { home_score?: number | null; away_score?: number | null }, home: boolean) => {
+  const us = (home ? g.home_score : g.away_score) ?? 0, them = (home ? g.away_score : g.home_score) ?? 0;
+  return us > them ? 'won' as const : us < them ? 'lost' as const : 'tied' as const;
+};
+
+// A team's name in the header: the whole of it where it fits, its
+// abbreviation where it does not (two long names on a phone).
+function TeamName({ full, short }: { full: string; short: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const whole = useRef<HTMLSpanElement>(null);
+  const [tight, setTight] = useState(false);
+  const can = !!short && short.toUpperCase() !== full.toUpperCase();
+  useEffect(() => {
+    const b = box.current, w = whole.current;
+    if (!b || !w || !can) return;
+    const check = () => setTight(w.scrollWidth > b.clientWidth + 1);
+    const ro = new ResizeObserver(check);
+    ro.observe(b);
+    void document.fonts?.ready.then(check);
+    return () => ro.disconnect();
+  }, [full, can]);
+  const cut = can && tight;
+  return (
+    <span className={`pad-name${cut ? ' cut' : ''}`} ref={box}>
+      <span className="pad-name-full" ref={whole} aria-hidden={cut || undefined}>{full}</span>
+      {cut && <span className="pad-name-short">{short}</span>}
+    </span>
+  );
+}
 
 // Our batters keep the names the server put in the team's format; a lineup
 // read straight from the table has the names it was saved with.
@@ -50,7 +88,7 @@ function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
   const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
   return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
 }
-type Sheet = null | 'atbat' | 'inplay' | 'dropped' | 'pitch' | 'menu' | 'situation' | 'air' | 'check' | 'end' | 'pitching' | 'plays'
+type Sheet = null | 'atbat' | 'inplay' | 'dropped' | 'pitch' | 'menu' | 'situation' | 'air' | 'check' | 'end' | 'pitching' | 'plays' | 'decide'
   | { runner: 'first' | 'second' | 'third'; drop?: Drop };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
@@ -75,7 +113,7 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false, log }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false, log, decided }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
   season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
   // Our players' first and last names, for fixing a name from the pad.
@@ -89,6 +127,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   // The game's log, for the component sheet (/dev/kit), which has no database:
   // the pad reads it from game_events and game_stats otherwise.
   log?: Log;
+  // The pitching decisions as worked out, for the kit too (game_decisions otherwise).
+  decided?: Picks;
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -197,6 +237,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   }, [game.id]);
 
   const pumpRef = useRef<() => Promise<void>>(async () => {});
+  // When Game over was tapped (0: not asked), for the pitching decisions after it saves.
+  const askDecide = useRef(0);
   // Items already sent once: a conflict on a second try may be our own lost save.
   const sentOnce = useRef(new WeakSet<Item>());
   const pump = useCallback(async () => {
@@ -284,11 +326,18 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     sending.current = false;
     setSync('ok');
     setWaiting(0);
+    // Game over saved: ask for the pitching decisions, as GameChanger does,
+    // unless the scorer has moved on (another sheet open, or a minute gone).
+    if (!queue.current.length && askDecide.current) {
+      const asked = askDecide.current;
+      askDecide.current = 0;
+      if (Date.now() - asked < 60000 && cur.current.status === 'final' && resultFor(cur.current.g, game.is_home) !== 'tied') setSheet((s) => s ?? 'decide');
+    }
     // A tap made while a conflict reloaded the game: send it too.
     if (queue.current.length) window.setTimeout(() => void pumpRef.current(), 0);
     // After a lost undo the screen may not show what the server undid: catch up.
     else if (resync) void reload();
-  }, [sb, game.id, reload, nudge, keep]);
+  }, [sb, game.id, game.is_home, reload, nudge, keep]);
   useEffect(() => { pumpRef.current = pump; }, [pump]);
 
   // Catch up with the server when it is safe to: nothing of ours waiting.
@@ -509,8 +558,59 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     nudge();
     return null;
   }
+  // The pitching decisions: our pitchers in the order they first threw, and
+  // the picks as they stand (worked out from the plays, or the scorer's own).
+  const loadDecided = useCallback(async (): Promise<Decided | null> => {
+    const lg = await loadLog();
+    if (!lg) return null;
+    const at = new Map(lg.events.map((e) => [e.id, e.seq]));
+    const pitchers: string[] = [];
+    for (const s of [...lg.stats].sort((x, y) => (at.get(x.event_id) ?? 0) - (at.get(y.event_id) ?? 0))) {
+      if (s.side === 'us' && ((s.p_pitches ?? 0) > 0 || (s.p_bf ?? 0) > 0 || (s.p_outs ?? 0) > 0) && !pitchers.includes(s.bid)) pitchers.push(s.bid);
+    }
+    let picks: Picks = decided ?? { w: null, l: null, sv: null }, own = false;
+    if (!log) {
+      const [d, gm] = await Promise.all([
+        sb.from('game_decisions').select('player_id, p_w, p_l, p_sv').eq('game_id', game.id),
+        sb.from('games').select('decisions').eq('id', game.id).maybeSingle(),
+      ]);
+      if (d.error) return null;
+      const rows = (d.data ?? []) as { player_id: string; p_w: number; p_l: number; p_sv: number }[];
+      const who = (k: 'p_w' | 'p_l' | 'p_sv') => rows.find((r) => r[k] > 0)?.player_id ?? null;
+      picks = { w: who('p_w'), l: who('p_l'), sv: who('p_sv') };
+      // The scorer's own picks stand only for the result they were made for.
+      const mine = gm.error ? null : (gm.data as { decisions?: Picks | null } | null)?.decisions;
+      const result = resultFor(cur.current.g, game.is_home);
+      own = !!mine && (result === 'won' ? !mine.l : result === 'lost' ? !mine.w && !mine.sv : false);
+    }
+    for (const id of [picks.w, picks.l, picks.sv]) if (id && !pitchers.includes(id)) pitchers.push(id);
+    return { pitchers, picks, own };
+  }, [sb, game.id, game.is_home, loadLog, log, decided]);
+  async function saveDecided(p: Picks) {
+    const { error } = await sb.rpc('set_game_decisions', { p_game: game.id, p_w: p.w, p_l: p.l, p_sv: p.sv });
+    return error ? editError(error) : null;
+  }
+  async function clearDecided() {
+    const { error } = await sb.rpc('clear_game_decisions', { p_game: game.id });
+    return error ? editError(error) : null;
+  }
+  // Home and away the wrong way round, caught before the first pitch: swap
+  // them, then load the pad again with each side batting in its own half. A
+  // game is scheduled until its first play stands (an undo back to the start
+  // makes it scheduled again); the seq check stops a swap over another
+  // phone's first pitch.
+  async function swapSides() {
+    setSheet(null);
+    const started = 'Home and away can be swapped only before the first pitch.';
+    if (cur.current.status !== 'scheduled' || queue.current.length) { say(started); return; }
+    const { data, error } = await sb.from('games').update({ is_home: !game.is_home }).eq('id', game.id).eq('status', 'scheduled').eq('seq', seq.current).select('id');
+    if (error) { say(editError(error)); return; }
+    if (!data?.length) { say(started); void reload(); return; }
+    window.location.reload();
+  }
 
   function endGame(final: boolean) {
+    askDecide.current = final ? Date.now() : 0;
     const before = cur.current;
     history.current.push({ before, rows: [] });
     taps.current += 1;
@@ -685,6 +785,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const pitcher = fieldLineup?.batters?.find((b) => b.bid === pitcherBidNow) ?? null;
   const usB = brandOf(team), themB = opponentBrand(game);
   const [awayB, homeB] = game.is_home ? [themB, usB] : [usB, themB];
+  const usA = team.abbr, themA = game.opponent?.abbr || game.saved?.abbr || game.opponent_abbr;
+  const [awayA, homeA] = game.is_home ? [themA, usA] : [usA, themA];
   const runners = runnersOf(g);
   const b = L.safeBases(g.bases);
   const numOf = (bid: string | null, side: EngineSide) => (bid ? g.lineups[side]?.batters?.find((x) => x.bid === bid)?.num ?? '' : '');
@@ -781,6 +883,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   };
   const batB = batSide === 'home' ? homeB : awayB, fieldB = batSide === 'home' ? awayB : homeB;
   const layout = useSyncExternalStore(onLayout, readLayout, () => 'field' as Layout);
+  const theme = useSyncExternalStore(onTheme, readTheme, () => 'dark' as Theme);
   // A dropped third strike: with nobody on it is recorded at once; with
   // runners, the In Play sheet asks where they ended up.
   const [k3, setK3] = useState<{ how: 'WP' | 'PB' | 'out'; seq: string[] } | null>(null);
@@ -789,24 +892,24 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     if (anyone) { setK3({ how, seq }); setSheet('dropped'); return; }
     commit(onPlay(g, { kind: 'K3', pos: 'C', dest: { batter: how === 'out' ? 'out' : 1 }, seq: how === 'out' ? seq : null, k3: how === 'out' ? null : how }));
   }
-  const recordInPlay = ({ kind, pos, dest, seq, bb, k3: why }: InPlayResult) => {
+  const recordInPlay = ({ kind, pos, dest, seq, bb, k3: why, loc }: InPlayResult) => {
     setStartKind(null); setK3(null);
     if (kind === 'HR') {
       const runs = L.computeHomeRun(g.bases).runs;
       commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }), inputs: { bb } }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' });
-    } else commit(onPlay(g, { kind, pos: pos || null, dest, seq: seq ?? null, bb: bb ?? null, k3: why ?? null }));
+    } else commit(onPlay(g, { kind, pos: pos || null, dest, seq: seq ?? null, bb: bb ?? null, k3: why ?? null, loc: loc ?? null }));
   };
 
   return (
-    <div className={`pad gc${console_ ? ' has-console' : ''}`}>
+    <div className={`pad gc${theme === 'sun' ? ' sun' : ''}${console_ ? ' has-console' : ''}`}>
       <div className="pad-main">
       <header className="pad-head">
         <button type="button" className="icon-btn pad-menu" onClick={() => setSheet('menu')} aria-label="Game menu">☰</button>
         <div className="pad-score">
-          {[['away', awayB], ['home', homeB]].map(([side, br]) => (
-            <span key={side as string} className={`pad-team${batSide === side ? ' bat' : ''}`}>
-              <TeamMark brand={br as typeof usB} size={28} />
-              <span className="pad-name">{(br as typeof usB).display}</span>
+          {([['away', awayB, awayA], ['home', homeB, homeA]] as const).map(([side, br, ab]) => (
+            <span key={side} className={`pad-team${batSide === side ? ' bat' : ''}`}>
+              <TeamMark brand={br} size={28} />
+              <TeamName full={br.display} short={ab} />
               <b>{side === 'away' ? g.away_score : g.home_score}</b>
             </span>
           ))}
@@ -820,9 +923,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       <button type="button" className="pad-sit" onClick={() => setSheet('situation')} disabled={!canScore}>
         <span className="pad-inning">{g.half === 'top' ? '▲' : '▼'} {g.inning}</span>
         <span className="pad-count">
-          <span><em>B</em>{dots(g.balls | 0, 3, '#35d07f')}</span>
-          <span><em>S</em>{dots(g.strikes | 0, 2, '#e5534b')}</span>
-          <span><em>O</em>{dots(g.outs | 0, 2, '#e0a92a')}</span>
+          <span><em>B</em>{dots(g.balls | 0, 3, 'var(--dot-ball)')}</span>
+          <span><em>S</em>{dots(g.strikes | 0, 2, 'var(--dot-strike)')}</span>
+          <span><em>O</em>{dots(g.outs | 0, 2, 'var(--dot-out)')}</span>
         </span>
         <span className="pad-edit">{final ? 'FINAL ›' : 'FIX ›'}</span>
       </button>
@@ -873,7 +976,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       <div className={`pad-keys gc-keys${layout === 'keys' ? ' big' : ''}`}>
         <button type="button" className="pkey ball" onClick={press.ball} disabled={locked}>BALL</button>
         <button type="button" className="pkey strike" onClick={() => press.strike()} disabled={locked} aria-label="Strike, swing and miss">STRIKE<small>swing &amp; miss</small></button>
-        <button type="button" className="pkey strike look" onClick={() => press.strike(true)} disabled={locked} aria-label="Called strike">STRIKE<small>called</small></button>
+        <button type="button" className="pkey strike called" onClick={() => press.strike(true)} disabled={locked} aria-label="Called strike">STRIKE<small>called</small></button>
         <button type="button" className="pkey foul" onClick={press.foul} disabled={locked}>FOUL</button>
         <button type="button" className="pkey inplay" onClick={() => setSheet('inplay')} disabled={locked}>IN PLAY</button>
         {layout === 'keys' && <>
@@ -908,7 +1011,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         commit(k === 'hbp' ? L.onHitByPitch(g) : k === 'ci' ? L.onCatcherInterference(g) : k === 'ibb' ? L.onIntentionalWalk(g) : L.onBalk(g));
       }} onInterference={(from) => commit(L.onBatterInterference(g, from))} onBatterOut={(seq) => commit(L.onBatterOut(g, { seq }))} onDropped={dropped} />}
       {sheet === 'menu' && <GameMenu final={final} lineupHref={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`} gameHref={`/t/${slug}/games/${game.id}`}
-        layout={layout} onLayout={(l) => { setLayout(l); setSheet(null); }}
+        layout={layout} onLayout={(l) => { setLayout(l); setSheet(null); }} sun={theme === 'sun'} onSun={(on) => setTheme(on ? 'sun' : 'dark')}
+        onDecide={final && canScore ? () => setSheet('decide') : undefined}
+        home={game.is_home} onSwap={canScore && status === 'scheduled' ? () => void swapSides() : undefined}
         onFix={() => setSheet('situation')} onPlays={() => setSheet('plays')} onEndHalf={() => commit(L.onEndHalf(g))} onEnd={() => setSheet('end')} onClose={() => setSheet(null)} />}
       {sheet && typeof sheet === 'object' && <Runner key={`${sheet.runner}${sheet.drop?.to ?? ''}${sheet.drop?.safe ?? ''}`} g={g} from={sheet.runner} drop={sheet.drop}
         who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
@@ -950,6 +1055,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning} · ${g.outs | 0} out${(g.outs | 0) === 1 ? '' : 's'}`}
         onEnd={() => void tryEnd()} onReopen={() => endGame(false)} onClose={() => { dropEnd(); setSheet(null); }} />}
       {sheet === 'check' && <EndCheck issues={issues} onClose={() => setSheet(null)} onFix={() => setSheet('situation')} onEnd={() => endGame(true)} />}
+      {sheet === 'decide' && <Decisions load={loadDecided} result={resultFor(g, game.is_home)} nameOf={nameOf}
+        onSave={saveDecided} onClear={clearDecided} onClose={() => setSheet(null)} />}
     </div>
   );
 }

@@ -465,4 +465,4 @@ export function tonight(line: Partial<Record<StatKey, number>> | undefined) {
 }
 
 // The rules' onPlay, typed: a fielder may be named or not.
-export const onPlay = L.onPlay as unknown as (g: G, p: { kind: string; pos: string | null; dest: Record<string, number | 'out'>; seq?: string[] | null; bb?: string | null; k3?: string | null }) => Res | null;
+export const onPlay = L.onPlay as unknown as (g: G, p: { kind: string; pos: string | null; dest: Record<string, number | 'out'>; seq?: string[] | null; bb?: string | null; k3?: string | null; loc?: { x: number; y: number } | null }) => Res | null;

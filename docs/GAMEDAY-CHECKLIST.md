@@ -12,6 +12,8 @@ What to check before and during a live game, from the 10/15 bug-squash reviews (
 - OBS:
   - Set the Browser Source's Page permissions to Basic or higher.
   - Turn the Replay Buffer on, with a max time of 70 s or more, if you want auto-clips.
+- Home and away the wrong way round? Before the first pitch, ☰ › **Swap home and away**. It is gone once a pitch stands.
+- Bright sun: ☰ › **Sunlight** turns the pad black on white with heavier lines. This phone remembers it; **Dark** turns it back.
 - Don't deploy (merge to main) during a game. A new release reloads the stream page.
 
 ## During the game
@@ -20,6 +22,7 @@ What to check before and during a live game, from the 10/15 bug-squash reviews (
 - Start the time-limit clock once. Since v5.13, reopening the Situation sheet shows the running clock, not 1:45:00.
 - The pad is laid out like GameChanger: the field with both teams on it, the batter (AB) and pitcher (P) cards above it, the pitch keys below it (strike swinging and strike looking are separate keys), and **PITCH** on the mound for everything else: ball in play, hit by pitch, intentional walk, catcher's or batter's interference, batter out, a dropped 3rd strike (with two strikes), a balk. The Game Menu (☰) can switch this phone to **Big keys**.
 - Ball in play: how it was hit, what happened, then tap the fielders in the order the ball went (6-4-3) and say where the runners ended up. Putouts, assists and errors are credited from that.
+- Where it went (for the spray chart, as GameChanger's Tap & Drag Fielder): drag the fielder who got to the ball to the spot instead of tapping him. A hit asks for it right after the result: drag, tap the fielder nearest it, or **Skip**. The spot is kept with the play; it changes no stats.
 - Runners: drag one to a **SAFE** or **OUT** box (or tap him), as in GameChanger. Safe asks how (steal, wild pitch, passed ball, error, indifference, on the throw, obstruction, other). Out at the next base asks how (caught stealing, interference, appeal, other); out just off his own base is a pickoff there. Then tap the throw: catcher then third baseman is a 2-5 pickoff. **Foul tip out** is on the PITCH menu with two strikes.
 - Pitching change: tap the P card (or the pitcher on the field); **Pitch counts** there shows each pitcher's count by inning. Sub: tap the AB card, then **Sub** on their row. Pinch or courtesy runner: tap the runner, then **Substitute**. None of these leave the pad. After any change, glance at who's up anyway.
 - A thrown-over pickoff that missed: drag him onto **SAFE back at** his own base, then **Pickoff attempt**. A runner you forgot to move on the last play: tap him, **On the last play** (the batter gets the RBI if he scores).
@@ -27,6 +30,7 @@ What to check before and during a live game, from the 10/15 bug-squash reviews (
 - Their lineup came late or not at all: on their lineup tap **Placeholders** and pick 9 to 12 batters, then fix each number on the pad (AB card › Edit) as he comes up.
 - Undoing a pitcher change doesn't undo it in the lineup. Change the pitcher back from the pitch count too.
 - **End game** is on the pad's bottom bar and in the Game Menu (☰ › Game over), and the pad offers it by itself when the score says the game is over (last inning, extra inning, or the game's run rule). A max-runs inning: ☰ › End half inning. A game left live from an earlier day shows on Today as **Never ended**.
+- Once Game over saves, the pad asks for the **Pitching decisions**: the win and save (or the loss), filled in with what the plays worked out. **Keep these** leaves them worked out (GameChanger's Skip & finalize); pick others if your league scores it another way. Later: ☰ › Pitching decisions. Your picks stand through an undo or a reopen, unless the game then ends the other way.
 - Don't correct Game 1 while Game 2 is live. It flips the stream back to Game 1 until Game 2's next play. Corrections no longer fire sounds or stingers.
 - A run on a third-out time play (e.g. a sac fly where the trail runner is out at 3rd) isn't counted. Fix the score in Situation.
 

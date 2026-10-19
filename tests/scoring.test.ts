@@ -396,3 +396,19 @@ test('a play that credits fielders keeps who stood where', () => {
   const ball = record(start(), L.onBall(start()) as Res, sides)!;
   assert.equal((ball.res.payload as { field?: unknown } | undefined)?.field, undefined);
 });
+
+test('the spot a ball was fielded at goes with the play, held inside the field; a skipped spot leaves none', () => {
+  const at = onPlay(start(), { kind: 'H2', pos: null, dest: { batter: 2 }, loc: { x: 31.6, y: 18.2 } }) as Res;
+  assert.deepEqual((at.payload as { inputs?: { loc?: unknown } }).inputs?.loc, { x: 32, y: 18 });
+  // Dragged past the edge of the field: held to it.
+  const edge = onPlay(start(), { kind: 'FB', pos: 'LF', dest: { batter: 'out' }, loc: { x: -4, y: 130 } }) as Res;
+  assert.deepEqual((edge.payload as { inputs?: { loc?: unknown } }).inputs?.loc, { x: 0, y: 100 });
+  // Skipped, or nonsense: no spot at all.
+  for (const loc of [null, undefined, { x: Number.NaN, y: 4 }]) {
+    const r = onPlay(start(), { kind: 'H1', pos: null, dest: { batter: 1 }, loc }) as Res;
+    assert.equal('loc' in ((r.payload as { inputs?: object }).inputs ?? {}), false);
+  }
+  // Where it went says nothing about who gets credit for it.
+  const { rows } = run(start(), (g) => onPlay(g, { kind: 'FB', pos: 'CF', dest: { batter: 'out' }, loc: { x: 50, y: 5 } }));
+  assert.deepEqual(line(rows, 'a8'), { f_po: 1 });
+});

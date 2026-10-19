@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
 import type { EngineSide, G } from '@/lib/scoring';
@@ -45,7 +45,9 @@ const WHO: Record<string, string> = { batter: 'Batter', first: 'From 1st', secon
 // in the order the ball went), then where everyone ended up. A home run is two
 // taps, a hit with nobody on is two, a 6-3 groundout is four.
 type Dest = Record<string, number | 'out'>;
-export type InPlayResult = { kind: string; pos: string | null; dest: Dest; seq?: string[] | null; bb?: string | null; k3?: string | null };
+export type InPlayResult = { kind: string; pos: string | null; dest: Dest; seq?: string[] | null; bb?: string | null; k3?: string | null; loc?: { x: number; y: number } | null };
+// A hit asks where it went (for the spray chart), as GameChanger does.
+const HITS = new Set(['H1', 'H2', 'H3']);
 const HIT_TYPES: [string, string][] = [['GB', 'Ground ball'], ['HGB', 'Hard grounder'], ['LD', 'Line drive'], ['FB', 'Fly ball'], ['PU', 'Pop up'], ['BUNT', 'Bunt']];
 // What can come of each: [kind, label]. 'OUT' is the plain out for that type.
 const RESULTS: Record<string, [string, string][]> = {
@@ -75,6 +77,9 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
   const [pos, setPos] = useState<string | null>(start?.pos ?? null);
   // The fielders in throw order, when the scorer gave more than one (6-4-3).
   const [seq, setSeq] = useState<string[]>(start?.seq ?? []);
+  // Where it was fielded, and whether a hit's "where did it go" was answered.
+  const [loc, setLoc] = useState<{ x: number; y: number } | null>(null);
+  const [whereDone, setWhereDone] = useState(false);
   const [dest, setDest] = useState<Dest>(() => {
     if (!start) return {};
     const d = L.playDefaults(g, start.kind) as unknown as Dest;
@@ -83,10 +88,10 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
   });
   const b = L.safeBases(g.bases);
   const anyone = b.first || b.second || b.third;
-  const step = !kind ? (bb ? 'result' : 'type') : NEEDS_FIELDER.has(kind) && !pos ? 'fielder' : 'runners';
+  const step = !kind ? (bb ? 'result' : 'type') : HITS.has(kind) && !whereDone ? 'where' : NEEDS_FIELDER.has(kind) && !pos ? 'fielder' : 'runners';
   const label = (k: string) => (L.PLAY_LABEL as Record<string, string>)[k] ?? k;
   const thrown = (s: string[]) => (s.length > 1 ? s : null);
-  const record = (k: string, p: string | null, d: Dest, s: string[]) => onRecord({ kind: k, pos: p, dest: d, seq: thrown(s), bb, k3: start?.k3 ?? null });
+  const record = (k: string, p: string | null, d: Dest, s: string[], at = loc) => onRecord({ kind: k, pos: p, dest: d, seq: thrown(s), bb, k3: start?.k3 ?? null, loc: at });
 
   function chooseResult(r: string) {
     if (r === 'BI') return onInterference();
@@ -95,21 +100,38 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
     setKind(k);
     const d = L.playDefaults(g, k) as unknown as Dest;
     setDest(d);
-    if (!NEEDS_FIELDER.has(k) && !anyone) record(k, null, d, []);
+    if (!NEEDS_FIELDER.has(k) && !HITS.has(k) && !anyone) record(k, null, d, []);
   }
-  function chooseFielder(p: string, s: string[]) {
+  function chooseFielder(p: string, s: string[], at = loc) {
     setPos(p);
-    if (!anyone) record(kind!, p, dest, s);
+    if (!anyone) record(kind!, p, dest, s, at);
   }
   function fielders(next: string[]) {
     setSeq(next);
     if (ONE_FIELDER.has(kind!) && next.length === 1) chooseFielder(next[0], next);
   }
-  const fieldCode = kind && seq.length ? (seq.length > 1 ? L.seqCode(seq, kind) : L.playCode(kind, seq[0])) as string : '';
+  // A fielder dragged to where he fielded it: he is the first in the sequence.
+  function spotted(p: string, at: { x: number; y: number }) {
+    setLoc(at);
+    const s = seq[0] === p ? seq : [p, ...seq.slice(1).filter((x) => x !== p)];
+    setSeq(s);
+    if (ONE_FIELDER.has(kind!)) chooseFielder(p, s, at);
+  }
+  // Where a hit went: a fielder dragged there, a fielder tapped (his own spot),
+  // or skipped.
+  function where(at: { x: number; y: number } | null) {
+    setLoc(at);
+    setWhereDone(true);
+    if (!anyone) record(kind!, null, dest, [], at);
+  }
+  // One fielder alone is the usual play for him (a ground ball to short is 6-3).
+  const codeOf = (s: string[]) => (s.length > 1 ? L.seqCode(s, kind!) : L.playCode(kind!, s[0])) as string;
+  const fieldCode = kind && seq.length ? codeOf(seq) : '';
   const res = kind ? L.resolvePlay(g, dest) as { outs: number; runs: number; clash: string | null } : null;
   const title = kind === 'K3' ? 'Dropped 3rd strike: where did everyone end up?'
     : step === 'type' ? 'Ball in play: how was it hit?'
       : step === 'result' ? `${HIT_TYPES.find(([k]) => k === bb)?.[1]}: what happened?`
+        : step === 'where' ? `${label(kind!)}: where did it go?`
         : step === 'fielder' ? `${label(kind!)}: who fielded it?` : 'Where did everyone end up?';
 
   return (
@@ -132,16 +154,25 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
           <button type="button" className="link" onClick={() => setBb(null)}>‹ How it was hit</button>
         </>
       )}
+      {step === 'where' && (
+        <>
+          <FielderPicker lineup={fieldLineup} value={[]} kind={kind!} loc={loc}
+            onChange={(s) => { const [x, y] = FIELD_SPOT[s[s.length - 1]] ?? [50, 50]; where({ x, y }); }}
+            onLoc={(_, at) => where(at)} hint="Drag a fielder to where it went" />
+          <button type="button" className="btn btn-quiet" onClick={() => where(null)}>Skip</button>
+          {!start && <button type="button" className="link" onClick={() => { setKind(null); setLoc(null); }}>‹ What happened</button>}
+        </>
+      )}
       {step === 'fielder' && (
         <>
-          <FielderPicker lineup={fieldLineup} value={seq} onChange={fielders} kind={kind!}
-            hint={ONE_FIELDER.has(kind!) ? (kind === 'E' ? 'Tap who made the error' : 'Tap who caught it') : 'Tap who fielded it, then who he threw to'} />
+          <FielderPicker lineup={fieldLineup} value={seq} onChange={fielders} kind={kind!} loc={loc} onLoc={spotted} codeFor={codeOf}
+            hint={ONE_FIELDER.has(kind!) ? (kind === 'E' ? 'Who made the error? Tap or drag' : 'Who caught it? Tap or drag') : 'Who fielded it (tap or drag), then the throw'} />
           {!ONE_FIELDER.has(kind!) && seq.length > 0 && (
             <button type="button" className="btn btn-primary btn-big" onClick={() => chooseFielder(seq[0], seq)}>
               {anyone ? 'Next' : 'Record'} · {label(kind!)} {fieldCode}
             </button>
           )}
-          {!start && <button type="button" className="link" onClick={() => { setKind(null); setSeq([]); }}>‹ What happened</button>}
+          {!start && <button type="button" className="link" onClick={() => { setKind(null); setSeq([]); setLoc(null); }}>‹ What happened</button>}
         </>
       )}
       {step === 'runners' && (
@@ -176,40 +207,73 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
 const FIELD_SPOT: Record<string, [number, number]> = {
   LF: [17, 21], CF: [50, 11], RF: [83, 21], SS: [35, 43], '2B': [65, 43], '3B': [22, 63], '1B': [78, 63], P: [50, 62], C: [50, 88],
 };
-export function FielderPicker({ lineup, value, onChange, kind = '', hint, given = 'usual' }: {
+export function FielderPicker({ lineup, value, onChange, kind = '', hint, given = 'usual', loc, onLoc, codeFor }: {
   lineup?: Lineup; value: string[]; onChange: (seq: string[]) => void; kind?: string; hint?: string;
+  // The code the sequence makes, when it is not the plain one (In Play: one fielder alone is his usual play).
+  codeFor?: (seq: string[]) => string;
   // What the pre-filled sequence is: the usual throw, or the one scored.
   given?: string;
+  // Where the ball was fielded, for a spray chart: GameChanger's "Tap & Drag
+  // Fielder". Dragging a fielder to a spot says he fielded it there.
+  loc?: { x: number; y: number } | null;
+  onLoc?: (pos: string, at: { x: number; y: number }) => void;
 }) {
   const [mine, setMine] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<{ pos: string; x: number; y: number; sx: number; sy: number; moved: boolean } | null>(null);
+  // A drag ends in a click on the button it started from: that click is not a tap.
+  const dragged = useRef(false);
+  const pct = (e: React.PointerEvent) => {
+    const r = box.current!.getBoundingClientRect();
+    return { x: Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100)), y: Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100)) };
+  };
+  const down = (e: React.PointerEvent, pos: string) => {
+    if (!onLoc) return;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* the drag still works without capture */ }
+    setDrag({ pos, ...pct(e), sx: e.clientX, sy: e.clientY, moved: false });
+  };
+  const move = (e: React.PointerEvent) => {
+    if (!drag) return;
+    setDrag({ ...drag, ...pct(e), moved: drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 10 });
+  };
+  const up = () => {
+    if (!drag) return;
+    if (drag.moved && onLoc) { dragged.current = true; onLoc(drag.pos, { x: drag.x, y: drag.y }); setMine(true); }
+    setDrag(null);
+  };
   const numOf = (pos: string) => {
     const bid = lineup?.positions?.[pos];
     const b = bid ? lineup?.batters?.find((x) => x.bid === bid) : undefined;
     return b?.num ? `#${b.num}` : '';
   };
   const tap = (pos: string) => { onChange(mine ? [...value, pos].slice(0, 6) : [pos]); setMine(true); };
-  const code = L.seqCode(value, kind) as string;
+  const code = value.length ? (codeFor ? codeFor(value) : L.seqCode(value, kind) as string) : '';
   return (
     <div className="fpick">
-      <div className="fpick-field">
+      <div className={`fpick-field${onLoc ? ' can-drag' : ''}${drag?.moved ? ' dragging' : ''}`} ref={box}
+        onPointerMove={move} onPointerUp={up} onPointerCancel={() => setDrag(null)}>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M50 97 L4 34 A62 62 0 0 1 96 34 Z" fill="#173824" stroke="#2c6a45" strokeWidth="0.6" />
-          <path d="M50 92 L28 66 L50 44 L72 66 Z" fill="#3a2c1d" stroke="#6b5338" strokeWidth="0.6" />
+          <path d="M50 97 L4 34 A62 62 0 0 1 96 34 Z" className="fp-grass" />
+          <path d="M50 92 L28 66 L50 44 L72 66 Z" className="fp-dirt" />
         </svg>
         {FIELDERS.map((pos) => {
           const at = value.flatMap((p, i) => (p === pos ? [i + 1] : []));
           const [x, y] = FIELD_SPOT[pos];
           return (
-            <button key={pos} type="button" className={`fpick-spot${at.length ? ' on' : ''}${at.length && !mine ? ' guess' : ''}`} style={{ left: `${x}%`, top: `${y}%` }}
-              onClick={() => tap(pos)} aria-label={`${pos}${numOf(pos) ? `, number ${numOf(pos).slice(1)}` : ''}${at.length ? `, step ${at.join(' and ')}` : ''}`}>
+            <button key={pos} type="button" className={`fpick-spot${at.length ? ' on' : ''}${at.length && !mine ? ' guess' : ''}${drag?.pos === pos && drag.moved ? ' lifted' : ''}`} style={{ left: `${x}%`, top: `${y}%` }}
+              onPointerDown={(e) => down(e, pos)}
+              onClick={() => { if (dragged.current) { dragged.current = false; return; } tap(pos); }}
+              aria-label={`${pos}${numOf(pos) ? `, number ${numOf(pos).slice(1)}` : ''}${at.length ? `, step ${at.join(' and ')}` : ''}`}>
               <b>{(L.POS_NUM as Record<string, number>)[pos]}</b><small>{pos}</small>{numOf(pos) && <em>{numOf(pos)}</em>}
               {at.length > 0 && <i>{at.join('·')}</i>}
             </button>
           );
         })}
+        {loc && !drag?.moved && <i className="fpick-ball" style={{ left: `${loc.x}%`, top: `${loc.y}%` }} aria-hidden="true" />}
+        {drag?.moved && <i className="fpick-ball moving" style={{ left: `${drag.x}%`, top: `${drag.y}%` }} aria-hidden="true" />}
       </div>
       <div className="fpick-bar">
-        <span className="fpick-code">{code ? <>{code}{!mine && <small> · {given}, tap to change</small>}</> : (hint ?? 'Tap the fielders in the order the ball went')}</span>
+        <span className="fpick-code">{code ? <>{code}{!mine && <small> · {given}, tap to change</small>}</> : <span className="fpick-hint">{hint ?? 'Tap the fielders in the order the ball went'}</span>}</span>
         <button type="button" className="icon-btn" aria-label="Take back the last fielder" disabled={!value.length} onClick={() => { onChange(value.slice(0, -1)); setMine(true); }}>⌫</button>
       </div>
     </div>
@@ -301,8 +365,14 @@ export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onFoulTip, onInter
 
 // The Game Menu, as GameChanger keeps it top left: fixes, the end of a half or
 // of the game, the lineups, and leaving.
-export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix, onPlays, onEndHalf, onEnd, onClose }: {
+export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, sun, onSun, home, onSwap, onDecide, onFix, onPlays, onEndHalf, onEnd, onClose }: {
   final: boolean; lineupHref: string; gameHref: string; layout: 'field' | 'keys'; onLayout: (l: 'field' | 'keys') => void;
+  // Sunlight: the high-contrast pad, per phone.
+  sun: boolean; onSun: (on: boolean) => void;
+  // Swap home and away: offered only before the first pitch.
+  home: boolean; onSwap?: () => void;
+  // The pitching decisions, once the game is final.
+  onDecide?: () => void;
   onFix: () => void; onPlays: () => void; onEndHalf: () => void; onEnd: () => void; onClose: () => void;
 }) {
   return (
@@ -311,14 +381,20 @@ export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix,
         <button type="button" className="menu-row" onClick={onFix}><b>Fix the situation</b><small>Score, inning, outs, count, bases, pitch count</small></button>
         <button type="button" className="menu-row" onClick={onPlays}><b>Plays</b><small>Every play so far: fix who was credited, or the fielders</small></button>
         {!final && <button type="button" className="menu-row" onClick={onEndHalf}><b>End half inning</b><small>A max-runs rule, or a third out the keys missed</small></button>}
+        {onDecide && <button type="button" className="menu-row" onClick={onDecide}><b>Pitching decisions</b><small>Win, loss and save: worked out, or your own</small></button>}
         <button type="button" className={`menu-row${final ? '' : ' bad'}`} onClick={onEnd}><b>{final ? 'Reopen the game' : 'Game over'}</b><small>{final ? 'To fix a play' : 'End the game: stats count, the stream shows Final'}</small></button>
         <Link href={lineupHref} className="menu-row"><b>Lineups</b><small>Order, positions, subs, both teams</small></Link>
+        {onSwap && <button type="button" className="menu-row" onClick={onSwap}><b>Swap home and away</b><small>We are {home ? 'home' : 'away'}: make us {home ? 'away' : 'home'}. Before the first pitch only</small></button>}
         <Link href={gameHref} className="menu-row"><b>Leave the pad</b><small>To the game page</small></Link>
       </div>
-      <span className="legend">Layout on this phone</span>
+      <span className="legend">On this phone</span>
       <div className="seg" role="radiogroup" aria-label="Pad layout">
         <button type="button" role="radio" aria-checked={layout === 'field'} className="seg-item" aria-current={layout === 'field' ? 'page' : undefined} onClick={() => onLayout('field')}>The field</button>
         <button type="button" role="radio" aria-checked={layout === 'keys'} className="seg-item" aria-current={layout === 'keys' ? 'page' : undefined} onClick={() => onLayout('keys')}>Big keys</button>
+      </div>
+      <div className="seg" role="radiogroup" aria-label="Screen colours">
+        <button type="button" role="radio" aria-checked={!sun} className="seg-item" aria-current={!sun ? 'page' : undefined} onClick={() => onSun(false)}>Dark</button>
+        <button type="button" role="radio" aria-checked={sun} className="seg-item" aria-current={sun ? 'page' : undefined} onClick={() => onSun(true)}>☀ Sunlight</button>
       </div>
     </Sheet>
   );

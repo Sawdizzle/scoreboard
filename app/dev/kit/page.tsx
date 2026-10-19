@@ -9,8 +9,9 @@ import { SpotsDemo } from '@/components/overlay/Spots';
 import { Scenes } from '@/components/overlay/Scenes';
 import { Stage } from '@/components/overlay/Stage';
 
-// A short made-up log for the pad's Plays sheet and pitch counts: we field in
-// the top (Ortiz pitching), they field in the bottom (their #38 pitching).
+// A short made-up log for the pad's Plays sheet, pitch counts and pitching
+// decisions: we field in the top (Ortiz pitching, then a reliever in the 3rd),
+// they field in the bottom (their #38 pitching).
 const top = { inning: 1, half: 'top' as const }, bot = { inning: 1, half: 'bottom' as const };
 const ourField = { CF: 'p1', SS: 'p2', C: 'p3', '1B': 'p4', P: 'p5', '3B': 'p6', LF: 'p7', '2B': 'p8', RF: 'p9' };
 const theirField = { CF: 'o0', SS: 'o1', '1B': 'o2', C: 'o3', '3B': 'o4', '2B': 'o5', LF: 'o6', RF: 'o7', P: 'o8' };
@@ -23,6 +24,8 @@ const kitLog: Log = {
     { id: 5, seq: 5, type: 'foul', payload: {}, prev_live: bot },
     { id: 6, seq: 6, type: 'play', payload: { play: { kind: 'H2', code: '', runs: 1, ...bot }, field: theirField }, prev_live: bot },
     { id: 7, seq: 7, type: 'runner', payload: { play: { kind: 'PO', code: '2-5', outs: 1, inning: 2, half: 'bottom' }, field: theirField }, prev_live: { inning: 2, half: 'bottom' as const } },
+    { id: 8, seq: 8, type: 'ball', payload: {}, prev_live: { inning: 3, half: 'top' as const } },
+    { id: 9, seq: 9, type: 'strike', payload: {}, prev_live: { inning: 3, half: 'top' as const } },
   ],
   stats: [
     ...[1, 2, 3, 4].map((e) => ({ event_id: e, side: 'us' as const, bid: 'p5', p_pitches: 1 })),
@@ -31,6 +34,7 @@ const kitLog: Log = {
     { event_id: 5, side: 'them' as const, bid: 'o8', p_pitches: 1 }, { event_id: 6, side: 'them' as const, bid: 'o8', p_pitches: 1 },
     { event_id: 6, side: 'us' as const, bid: 'p2', b_pa: 1 }, { event_id: 6, side: 'us' as const, bid: 'p1', b_r: 1 },
     { event_id: 7, side: 'us' as const, bid: 'p9', b_pik: 1 }, { event_id: 7, side: 'them' as const, bid: 'o3', f_a: 1, c_pik: 1 }, { event_id: 7, side: 'them' as const, bid: 'o4', f_po: 1 },
+    { event_id: 8, side: 'us' as const, bid: 'p6', p_pitches: 1 }, { event_id: 9, side: 'us' as const, bid: 'p6', p_pitches: 1 },
   ],
 };
 
@@ -123,10 +127,13 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
     const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(30 + i), name: ['Ava Reyes', 'Ben Cole', 'Cal Ruiz', 'Dee Park', 'Eli Moss', 'Finn Shaw', 'Gus Hale', 'Hal Kim', 'Ike Ross'][i] })),
       positions: { CF: 'o0', SS: 'o1', '1B': 'o2', C: 'o3', '3B': 'o4', '2B': 'o5', LF: 'o6', RF: 'o7', P: 'o8' } };
     // &status=over: the bottom of the 7th with the home side ahead, so the pad offers End game.
-    const over = status === 'over';
-    const live = { inning: over ? 7 : 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: true, second: true, third: false }, home_score: over ? 5 : 2, away_score: over ? 3 : 4,
+    // &status=final: that game, ended (Game menu > Pitching decisions).
+    // &status=scheduled: before the first pitch (Game menu > Swap home and away).
+    const over = status === 'over' || status === 'final', pre = status === 'scheduled';
+    const live = pre ? {} : { inning: over ? 7 : 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: true, second: true, third: false }, home_score: over ? 5 : 2, away_score: over ? 3 : 4,
       state: { batIdx: { home: 1 }, pitches: { away: 58 }, runners: { first: 'p1', second: 'p9' } } };
-    return <Pad slug={team.slug} team={team} game={{ ...game, live, status: 'live', seq: 0 }} lineups={{ us: lineup, them }}
+    return <Pad slug={team.slug} team={team} game={{ ...game, live, status: status === 'final' ? 'final' : pre ? 'scheduled' : 'live', seq: 0 }} lineups={{ us: lineup, them }}
+      decided={{ w: 'p5', l: null, sv: 'p6' }}
       season={stats} tonightRows={[{ side: 'us', bid: 'p2', b_pa: 2, b_ab: 1, b_bb: 1 }]} regulation={7} canScore
       roster={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name }))}
       bench={players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}` }))} canRoster log={kitLog}
