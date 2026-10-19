@@ -11,6 +11,10 @@ export type SeasonLine = {
   p_sv: number; p_h: number; p_r: number; p_er: number; p_bb: number; p_so: number; p_hbp: number;
   p_wp: number; p_bk: number;
   imported_at: string | null;
+  // Fielding, and the runner's, pitcher's and catcher's pickoffs and steals.
+  // Optional: a line read before the fielding columns existed has none.
+  f_po?: number; f_a?: number; f_e?: number; b_pik?: number; p_pik?: number;
+  c_sb?: number; c_cs?: number; c_pik?: number; c_pb?: number;
 };
 
 const div = (a: number, b: number) => (b > 0 ? a / b : null);
@@ -42,5 +46,13 @@ export const rate2 = (v: number | null) => (v === null ? '–' : v.toFixed(2));
 // 29 outs is "9.2" innings.
 export const innings = (outs: number) => `${Math.floor(outs / 3)}.${outs % 3}`;
 
+// Fielding percentage: outs and assists over every chance, errors included.
+// Caught-stealing percentage: runners thrown out over runners who tried.
+export function fielding(s: SeasonLine) {
+  const po = s.f_po ?? 0, a = s.f_a ?? 0, e = s.f_e ?? 0, sb = s.c_sb ?? 0, cs = s.c_cs ?? 0;
+  return { tc: po + a + e, fpct: div(po + a, po + a + e), csPct: div(cs, sb + cs) };
+}
+
 export const hasBatting = (s: SeasonLine | undefined) => !!s && s.b_pa > 0;
+export const hasFielding = (s: SeasonLine | undefined) => !!s && ((s.f_po ?? 0) + (s.f_a ?? 0) + (s.f_e ?? 0) + (s.c_sb ?? 0) + (s.c_cs ?? 0) + (s.c_pb ?? 0)) > 0;
 export const hasPitching = (s: SeasonLine | undefined) => !!s && (s.p_outs > 0 || s.p_bf > 0);

@@ -167,6 +167,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
 .seg-item { min-height: 44px; display: grid; place-items: center; border-radius: 10px; font-weight: 600; font-size: 14.5px; color: var(--soft); white-space: nowrap; padding: 0 6px; }
 .seg-item[aria-current="page"] { background: var(--steel); color: var(--on-steel); font-weight: 700; }
+button.seg-item { background: none; border: 0; font-family: inherit; cursor: pointer; }
+button.seg-item[aria-current="page"] { background: var(--steel); }
 
 .tabbar { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 560px; z-index: 5;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px 12px calc(14px + env(safe-area-inset-bottom));
@@ -479,6 +481,59 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
 .pbar.end { background: #3d1f1f; border-color: #7a3431; color: #ffd9d9; }
 .pbar.end.on { background: var(--card); border-color: var(--line); color: var(--soft); }
 
+/* The pad's field, GameChanger's way: the defense at their positions, the
+   runners on their bases (tap one, or drag him to a SAFE or OUT box), the
+   batter at the plate, PITCH on the mound. */
+.fview { position: relative; flex: 1; min-height: 240px; border-radius: 18px; overflow: hidden; background: #0f2418; border: 1px solid #1f4a30; touch-action: none; user-select: none; -webkit-user-select: none; }
+.fview svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fv-grass { fill: #173824; stroke: #2c6a45; stroke-width: 0.5; }
+.fv-dirt { fill: #4a3522; }
+.fv-infield { fill: #1d4430; }
+.fv-bag, .fv-plate { position: absolute; transform: translate(-50%, -50%) rotate(45deg); width: 14px; height: 14px; background: #f2f6fc; border-radius: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.fv-plate { transform: translate(-50%, -50%); width: 16px; height: 14px; clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); border-radius: 0; }
+.fv-fielder { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 46px; padding: 3px 6px;
+  border-radius: 10px; background: rgba(8, 14, 20, 0.62); color: var(--chalk); border: 1px solid rgba(255, 255, 255, 0.12); font: inherit; pointer-events: none; }
+.fv-fielder b { font-family: var(--disp); font-size: 17px; line-height: 1; }
+.fv-fielder small { font-size: 10px; font-weight: 700; color: var(--soft); white-space: nowrap; max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
+.fv-fielder.fv-p { pointer-events: auto; cursor: pointer; border-color: var(--steel); }
+.fview.dragging .fv-fielder, .fview.dragging .fv-batter, .fview.dragging .fv-pitch { opacity: 0.25; }
+.fv-pitch { position: absolute; transform: translate(-50%, -50%); width: 66px; height: 66px; border-radius: 999px; border: 2px solid #c93c33;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #e9e4da 70%); color: #8a1f1a; font: 900 13px/1 var(--text); letter-spacing: 0.06em;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); cursor: pointer; }
+.fv-pitch[disabled] { opacity: 0.45; }
+.fv-batter, .fv-runner { position: absolute; transform: translate(-50%, -50%); min-width: 54px; min-height: 44px; padding: 3px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.85); color: #fff; font: inherit; cursor: pointer;
+  background: color-mix(in srgb, var(--bat, #2f63cc) 85%, #000); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+.fv-batter b, .fv-runner b { font-family: var(--disp); font-size: 19px; line-height: 1; }
+.fv-batter small, .fv-runner small { font-size: 10px; font-weight: 700; white-space: nowrap; max-width: 76px; overflow: hidden; text-overflow: ellipsis; }
+.fv-runner { touch-action: none; z-index: 2; }
+.fv-runner.lifted { opacity: 0.35; }
+.fv-runner.ghost { z-index: 5; pointer-events: none; border-color: var(--gold); transform: translate(-50%, -110%) scale(1.08); }
+.fv-drop { position: absolute; transform: translate(-50%, -50%); z-index: 4; display: flex; flex-direction: column; gap: 4px; }
+.fv-safe, .fv-out { min-width: 70px; min-height: 34px; display: grid; place-items: center; border-radius: 10px; font: 900 13px/1.05 var(--text); letter-spacing: 0.04em; border: 2px dashed; }
+.fv-safe small, .fv-out small { font-size: 9px; font-weight: 700; letter-spacing: 0; opacity: 0.85; }
+.fv-safe { background: rgba(31, 138, 76, 0.85); border-color: #8ff0b8; color: #fff; }
+.fv-out { background: rgba(201, 60, 51, 0.88); border-color: #ffb3ad; color: #fff; }
+
+/* Fielders in throw order: a small field, each position a button with the
+   kid's number; the order taps went in sits on each one. */
+.fpick { display: flex; flex-direction: column; gap: 8px; }
+.fpick-field { position: relative; height: 250px; border-radius: 16px; overflow: hidden; background: #10261a; border: 1px solid #1f4a30; }
+.fpick-field svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fpick-spot { position: absolute; transform: translate(-50%, -50%); width: 56px; height: 56px; padding: 0; border-radius: 14px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0; background: var(--bg); border: 1.5px solid #3d5a48; color: var(--chalk); cursor: pointer; }
+.fpick-spot b { font-family: var(--disp); font-size: 22px; line-height: 0.95; }
+.fpick-spot small { font: 700 9.5px/1 var(--mono); opacity: 0.85; }
+.fpick-spot em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--soft); }
+.fpick-spot i { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--gold); color: #1a1300; font: 800 12px/1 var(--text); font-style: normal; }
+.fpick-spot.on { border-color: var(--gold); background: #2a2410; }
+.fpick-spot.guess { border-style: dashed; }
+.fpick-spot.guess i { background: color-mix(in srgb, var(--gold) 55%, transparent); }
+.fpick-bar { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 6px 0 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.fpick-code { flex: 1; min-width: 0; font-family: var(--disp); font-size: 22px; }
+.fpick-code small { font-family: var(--text); font-size: 12px; color: var(--muted); }
+
 .psheet-wrap { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 .psheet { width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
   padding: 14px 14px calc(env(safe-area-inset-bottom) + 16px); border-radius: 22px 22px 0 0; background: var(--panel); border-top: 1px solid var(--line-2); }
@@ -674,6 +729,37 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
    bigger keys, and On Air open as a console under them. A tablet on its side
    or a desktop: the booth console, keys on the left and On Air on the right,
    all of it on one screen with nothing to open. */
+/* GameChanger's arrangement: the field is the screen; the batter and pitcher
+   cards above it, the common pitch results below it, PITCH on the mound for
+   the rest. */
+.pad.gc .pad-sit { min-height: 46px; padding: 4px 14px; }
+.pad.gc .pad-inning { font-size: 22px; }
+.pad-cards { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 6px; }
+.pad-card { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 52px; padding: 6px 10px; border-radius: 14px; background: var(--card);
+  border: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pad-card em { flex: 0 0 auto; font-style: normal; font: 800 11px/1 var(--mono); color: var(--steel); }
+.pad-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pad-card-main b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad-card-main small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad.gc .pad-last { min-height: 28px; }
+.gc-keys { flex: 0 0 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 60px 60px; gap: 8px; }
+.gc-keys .pkey { font-size: 19px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 16px; }
+.gc-keys .pkey small { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.9; }
+.gc-keys .pkey.strike.look { background: #9e2f28; }
+.gc-keys .pkey.inplay { grid-column: span 2; font-size: 21px; }
+/* Big keys: the keys take the room the field had. */
+.gc-keys.big { flex: 1; grid-template-columns: 1fr 1fr; grid-template-rows: 1.3fr 1fr 1fr 1fr; }
+.gc-keys.big .pkey { font-size: 22px; }
+.gc-keys.big .pkey.inplay { grid-column: auto; }
+.gc-keys.big .pkey.diamond { grid-column: span 2; }
+.pad-menu { font-size: 20px; }
+.menu-list { display: flex; flex-direction: column; gap: 6px; }
+.menu-row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 56px; padding: 8px 14px; border-radius: 14px; background: var(--card);
+  border: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.menu-row b { font-size: 16px; }
+.menu-row small { font-size: 12.5px; color: var(--muted); }
+.menu-row.bad { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-text); }
+
 .pad-main { display: contents; }
 .pconsole { display: flex; flex-direction: column; gap: 12px; }
 .pconsole-title { font-family: var(--disp); font-size: 26px; letter-spacing: 0.02em; text-transform: uppercase; }
@@ -695,6 +781,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-d
   .pad-inning { font-size: 30px; }
   .pad-keys { gap: 12px; }
   .pkey { font-size: 30px; border-radius: 24px; }
+  .gc-keys { grid-template-rows: 72px 72px; }
+  .gc-keys .pkey { font-size: 24px; }
+  .fview { min-height: 360px; }
   .pbar { min-height: 56px; font-size: 15px; }
 }
 

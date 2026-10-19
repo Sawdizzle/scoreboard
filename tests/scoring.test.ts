@@ -256,3 +256,94 @@ test('game over: home ahead in the bottom of the last, a full extra inning, the 
   // No run rule set: no run-rule ending.
   assert.equal(gameOver(at({ inning: 4, half: 'bottom', home_score: 12, away_score: 0 })), null);
 });
+
+// ---- Fielding ------------------------------------------------------------------
+// Our side is in the field in the top half: a9 pitching, a2 catching, a3 first,
+// a4 second, a5 third, a6 short, a7 left, a8 center, a1 right.
+const single = play('H1', 'LF', { batter: 1 });
+const runnerTo = (from: 'first' | 'second' | 'third', kind: string, opts: { seq?: string[]; to?: number } = {}) =>
+  (g: G) => L.onRunnerPlay(g, from, kind, opts) as Res | null;
+
+test('a pickoff 2-5: the catcher\'s assist and pickoff, the third baseman\'s putout, the pitcher\'s PIK, the runner\'s PIK', () => {
+  // h1 singles, steals second, steals third, then the catcher picks him off third.
+  const { rows, g } = run(start(), single, runnerTo('first', 'SB'), runnerTo('second', 'SB'), runnerTo('third', 'PO', { seq: ['C', '3B'] }));
+  assert.equal(g.outs, 1);
+  assert.deepEqual(line(rows, 'a2'), { f_a: 1, c_pik: 1, c_sb: 2 });
+  assert.deepEqual(line(rows, 'a5'), { f_po: 1 });
+  assert.equal(line(rows, 'a9').p_pik, 1);
+  assert.equal(line(rows, 'h1').b_pik, 1);
+  assert.equal(line(rows, 'h1').b_sb, 2);
+});
+
+test('caught stealing 2-6, a pickoff by the pitcher 1-3: who gets the putout and the assist', () => {
+  const cs = run(start(), single, runnerTo('first', 'CS', { seq: ['C', 'SS'] }));
+  assert.deepEqual(line(cs.rows, 'a2'), { f_a: 1, c_cs: 1 });
+  assert.deepEqual(line(cs.rows, 'a6'), { f_po: 1 });
+  assert.equal(line(cs.rows, 'h1').b_cs, 1);
+  const po = run(start(), single, runnerTo('first', 'PO', { seq: ['P', '1B'] }));
+  assert.equal(line(po.rows, 'a9').f_a, 1);
+  assert.equal(line(po.rows, 'a9').p_pik, 1);
+  assert.equal(line(po.rows, 'a2').c_pik, undefined);
+  assert.deepEqual(line(po.rows, 'a3'), { f_po: 1 });
+  // The play-by-play reads "Picked off 1-3".
+  const r = L.onRunnerPlay(po.g, 'first', 'PO', { seq: ['P', '1B'] });
+  assert.equal(r, null); // nobody on first any more
+});
+
+test('wild pitch, passed ball and an error each move the runner up and charge the right man', () => {
+  const wp = run(start(), single, runnerTo('first', 'WP'));
+  assert.equal(line(wp.rows, 'a9').p_wp, 1);
+  assert.equal((wp.g.state as { runners: { second: string } }).runners.second, 'h1');
+  const pb = run(start(), single, runnerTo('first', 'PB'));
+  assert.equal(line(pb.rows, 'a2').c_pb, 1);
+  // A throwing error by the catcher on the steal lets him go two bases: second to home is unearned.
+  const ea = run(start(), single, runnerTo('first', 'SB'), runnerTo('second', 'EA', { seq: ['C'], to: 4 }));
+  assert.equal(line(ea.rows, 'a2').f_e, 1);
+  assert.equal(ea.g.away_score, 1);
+  // Charged to the side in the field: home, in the top half.
+  assert.equal(ea.g.home_errors, 1);
+  assert.equal(line(ea.rows, 'a9').p_r, 1);
+  assert.equal(line(ea.rows, 'a9').p_er ?? 0, 0);
+});
+
+test('a runner cannot be moved past another; indifference and obstruction move him without a steal', () => {
+  const g = run(start(), single, play('H1', 'LF', { batter: 1, first: 2 })).g; // first and second
+  assert.equal(L.onRunnerPlay(g, 'first', 'WP', { to: 3 }), null);
+  const di = run(start(), single, runnerTo('first', 'DI'));
+  assert.equal(line(di.rows, 'h1').b_sb, undefined);
+  assert.equal(L.safeBases(di.g.bases).second, true);
+});
+
+test('batter\'s interference with nobody on: the batter is out, an at-bat, the catcher\'s putout', () => {
+  const { rows, g } = run(start(), (x) => L.onBatterInterference(x, null));
+  assert.equal(g.outs, 1);
+  assert.deepEqual(line(rows, 'h1'), { b_pa: 1, b_ab: 1 });
+  assert.deepEqual(line(rows, 'a2'), { f_po: 1 });
+  // And the next batter is up.
+  assert.equal(L.currentBatterIdx(g, 'away'), 1);
+});
+
+test('a batter out some other way: an at-bat, no pitch, the order moves on', () => {
+  const { rows, g } = run(start(), (x) => L.onBatterOut(x, { seq: ['C'] }));
+  assert.equal(g.outs, 1);
+  assert.deepEqual(line(rows, 'h1'), { b_pa: 1, b_ab: 1 });
+  assert.deepEqual(line(rows, 'a9'), { p_bf: 1, p_outs: 1 });
+  assert.deepEqual(line(rows, 'a2'), { f_po: 1 });
+  assert.equal(L.currentBatterIdx(g, 'away'), 1);
+});
+
+test('the scorebook\'s putouts and assists: 6-3, F8, 6-4-3, a strikeout, E6, and a sequence typed in', () => {
+  const gb = run(start(), play('GB', 'SS'));
+  assert.deepEqual([line(gb.rows, 'a6'), line(gb.rows, 'a3')], [{ f_a: 1 }, { f_po: 1 }]);
+  const fb = run(start(), play('FB', 'CF'));
+  assert.deepEqual(line(fb.rows, 'a8'), { f_po: 1 });
+  const dp = run(start(), single, play('DP', 'SS'));
+  assert.deepEqual([line(dp.rows, 'a6'), line(dp.rows, 'a4'), line(dp.rows, 'a3')], [{ f_a: 1 }, { f_a: 1, f_po: 1 }, { f_po: 1 }]);
+  const k = run(start(), L.onStrike, L.onStrike, L.onStrike);
+  assert.deepEqual(line(k.rows, 'a2'), { f_po: 1 });
+  const e = run(start(), play('E', 'SS'));
+  assert.deepEqual(line(e.rows, 'a6'), { f_e: 1 });
+  // 5-4-3 typed in on a ball the third baseman fielded: his assist, not the shortstop's.
+  const typed = run(start(), single, (x) => onPlay(x, { kind: 'DP', pos: '3B', dest: { batter: 'out', first: 'out' }, seq: ['3B', '2B', '1B'] }));
+  assert.deepEqual([line(typed.rows, 'a5'), line(typed.rows, 'a6')], [{ f_a: 1 }, {}]);
+});

@@ -94,7 +94,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
   if (v === 'pad') {
     // A game in the 5th: two on, 2-1, the made-up lineups on both sides. Taps
     // work on screen; they fail to save, since nothing is behind this page.
-    const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(30 + i), name: `River ${i + 1}` })), positions: { P: 'o8' } };
+    const them = { batters: players.slice(0, 9).map((p, i) => ({ bid: `o${i}`, num: String(30 + i), name: ['Ava Reyes', 'Ben Cole', 'Cal Ruiz', 'Dee Park', 'Eli Moss', 'Finn Shaw', 'Gus Hale', 'Hal Kim', 'Ike Ross'][i] })),
+      positions: { CF: 'o0', SS: 'o1', '1B': 'o2', C: 'o3', '3B': 'o4', '2B': 'o5', LF: 'o6', RF: 'o7', P: 'o8' } };
     // &status=over: the bottom of the 7th with the home side ahead, so the pad offers End game.
     const over = status === 'over';
     const live = { inning: over ? 7 : 5, half: 'bottom', balls: 2, strikes: 1, outs: 1, bases: { first: true, second: true, third: false }, home_score: over ? 5 : 2, away_score: over ? 3 : 4,

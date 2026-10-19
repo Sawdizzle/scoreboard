@@ -69,7 +69,8 @@ export function auditGame(input: SummaryInput & { ending?: boolean }): Issue[] {
       if (!rows.some((r) => r.side === field && (num(r.p_bf) || num(r.p_outs) || num(r.p_pitches)))) noPitcher[field] += 1;
     }
     if (HITS.has(kind) && pa) hits[bat] += 1;
-    if (kind === 'E' || e.type === 'error') errors[field] += 1;
+    // An error on a ball in play, an advance on an error, or one added by hand.
+    if (kind === 'E' || kind === 'EA' || e.type === 'error') errors[field] += 1;
     if (e.type === 'batter' || e.type === 'batidx') moved.push(where(inning, half));
 
     // Runs on a real play with fewer runners credited than crossed the plate.

@@ -24,6 +24,7 @@ const posLabel = (p: string) => p || 'Bats';
 const ord = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
 
 type NewKid = { num: string; first: string; last: string; roster: boolean };
+const placeholders = (n: number): Lineup => ({ batters: Array.from({ length: n }, (_, i) => ({ bid: newBid(), num: '', name: `Batter ${i + 1}` })), positions: {} });
 
 // The batting order and the field for one side, built for the minute before
 // first pitch with a card in one hand. Scoreboard's roster rules do every move.
@@ -74,6 +75,10 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
   const [adding, setAdding] = useState(false);
   const [addErr, setAddErr] = useState('');
   const [paste, setPaste] = useState('');
+  // Their lineup handed over at the last second, or not at all: GameChanger's
+  // placeholders. "Batter 1" to "Batter N", numbers filled in on the pad
+  // (At the plate › Edit) as each one comes up.
+  const [holders, setHolders] = useState(false);
 
   const json = JSON.stringify(team);
   const dirty = json !== saved;
@@ -343,6 +348,11 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
           {presets.map((p) => (
             <button key={p.label} type="button" className="chip" onClick={() => applyPreset(p)}>{p.label}</button>
           ))}
+          {side === 'them' && (holders
+            ? [9, 10, 11, 12].map((n) => (
+              <button key={n} type="button" className="chip" onClick={() => { setHolders(false); applyPreset({ label: `${n} placeholders`, lineup: placeholders(n) }); }}>{n} batters</button>
+            ))
+            : <button type="button" className="chip" onClick={() => setHolders(true)}>Placeholders</button>)}
         </div>
       )}
 

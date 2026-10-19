@@ -71,6 +71,44 @@ select '65ef3b9e-a6fe-4c6d-888c-88acde37d210', 'b8f868cc-e795-4cf5-ad05-ec424cb5
   join public.players p on p.team_id = '65ef3b9e-a6fe-4c6d-888c-88acde37d210' and p.number = gc.number
   left join pad on pad.player_id = p.id;
 
+-- Fielding, from the same export (added once the fielding columns existed,
+-- 2026-10-19): each player's gamechanger row takes the export's fielding minus
+-- whatever the pad's games already credit. Re-runnable like the rest.
+with gc (number, f_po, f_a, f_e, p_pik, c_sb, c_cs, c_pik, c_pb, b_pik) as (values
+  ('4',1,1,0,2,0,0,0,0,0),
+  ('5',20,2,2,0,34,3,0,1,0),
+  ('7',16,0,2,0,0,0,0,0,1),
+  ('9',1,2,0,0,0,0,0,0,0),
+  ('12',9,2,3,0,14,1,0,0,1),
+  ('14',1,0,0,0,0,0,0,0,0),
+  ('16',10,3,2,2,10,0,0,0,1),
+  ('21',7,3,3,0,0,0,0,0,0),
+  ('24',3,1,3,3,0,0,0,0,0),
+  ('34',7,1,3,0,8,0,0,1,0),
+  ('37',1,1,3,0,1,0,0,0,0),
+  ('99',1,0,0,0,0,0,0,0,0)),
+pad as (
+  select s.player_id, sum(s.f_po) f_po, sum(s.f_a) f_a, sum(s.f_e) f_e, sum(s.p_pik) p_pik, sum(s.c_sb) c_sb, sum(s.c_cs) c_cs, sum(s.c_pik) c_pik, sum(s.c_pb) c_pb, sum(s.b_pik) b_pik
+    from public.game_stats s join public.games g on g.id = s.game_id
+   where s.side = 'us' and s.player_id is not null and g.counts_for_stats
+     and g.season_id = 'b8f868cc-e795-4cf5-ad05-ec424cb5adc2'
+   group by 1
+)
+update public.stat_imports si
+   set f_po = greatest(gc.f_po - coalesce(pad.f_po, 0), 0),
+       f_a = greatest(gc.f_a - coalesce(pad.f_a, 0), 0),
+       f_e = greatest(gc.f_e - coalesce(pad.f_e, 0), 0),
+       p_pik = greatest(gc.p_pik - coalesce(pad.p_pik, 0), 0),
+       c_sb = greatest(gc.c_sb - coalesce(pad.c_sb, 0), 0),
+       c_cs = greatest(gc.c_cs - coalesce(pad.c_cs, 0), 0),
+       c_pik = greatest(gc.c_pik - coalesce(pad.c_pik, 0), 0),
+       c_pb = greatest(gc.c_pb - coalesce(pad.c_pb, 0), 0),
+       b_pik = greatest(gc.b_pik - coalesce(pad.b_pik, 0), 0)
+  from gc
+  join public.players p on p.team_id = '65ef3b9e-a6fe-4c6d-888c-88acde37d210' and p.number = gc.number
+  left join pad on pad.player_id = p.id
+ where si.season_id = 'b8f868cc-e795-4cf5-ad05-ec424cb5adc2' and si.source = 'gamechanger' and si.player_id = p.id;
+
 commit;
 
 -- Rollback: the gamechanger rows as they were (export of 2026-10-15, 7 games).

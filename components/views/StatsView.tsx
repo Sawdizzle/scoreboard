@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { AskStats } from '@/components/AskStats';
 import { staffName } from '@/lib/format';
 import { boards, type Board } from '@/lib/leaderboard';
-import { batting, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
+import { batting, fielding, hasFielding, innings, pitching, rate2, rate3, type SeasonLine } from '@/lib/stats';
 import type { NameFormat, Player, Season } from '@/lib/types';
 
 type P = Pick<Player, 'id' | 'number' | 'first_name' | 'last_name'>;
@@ -76,6 +76,21 @@ export function StatsView({ slug, seasons, season, lines, players, fmt, ask }: {
     { k: 'pso', label: 'K', v: (s) => s.p_so, show: (v) => String(v ?? 0), title: 'Strikeouts' },
     { k: 'phbp', label: 'HBP', v: (s) => s.p_hbp, show: (v) => String(v ?? 0), title: 'Hit batters', low: true },
     { k: 'wp', label: 'WP', v: (s) => s.p_wp, show: (v) => String(v ?? 0), title: 'Wild pitches', low: true },
+    { k: 'ppik', label: 'PIK', v: (s) => s.p_pik ?? 0, show: (v) => String(v ?? 0), title: 'Runners picked off' },
+  ];
+  // Fielding, the way GameChanger's export lays it out: chances, putouts,
+  // assists, errors, then the catcher's columns.
+  const FIELD: Col[] = [
+    { k: 'tc', label: 'TC', v: (s) => fielding(s).tc, show: (v) => String(v ?? 0), title: 'Total chances' },
+    { k: 'po', label: 'PO', v: (s) => s.f_po ?? 0, show: (v) => String(v ?? 0), title: 'Putouts' },
+    { k: 'a', label: 'A', v: (s) => s.f_a ?? 0, show: (v) => String(v ?? 0), title: 'Assists' },
+    { k: 'e', label: 'E', v: (s) => s.f_e ?? 0, show: (v) => String(v ?? 0), title: 'Errors', low: true },
+    { k: 'fpct', label: 'FPCT', v: (s) => fielding(s).fpct, show: (v) => rate3(v), title: 'Fielding percentage' },
+    { k: 'csb', label: 'SB', v: (s) => s.c_sb ?? 0, show: (v) => String(v ?? 0), title: 'Stolen bases allowed (catching)', low: true },
+    { k: 'ccs', label: 'CS', v: (s) => s.c_cs ?? 0, show: (v) => String(v ?? 0), title: 'Runners caught stealing (catching)' },
+    { k: 'cspct', label: 'CS%', v: (s) => fielding(s).csPct, show: (v) => (v === null ? '–' : `${Math.round(v * 100)}%`), title: 'Caught stealing percentage' },
+    { k: 'pb', label: 'PB', v: (s) => s.c_pb ?? 0, show: (v) => String(v ?? 0), title: 'Passed balls', low: true },
+    { k: 'cpik', label: 'PIK', v: (s) => s.c_pik ?? 0, show: (v) => String(v ?? 0), title: 'Runners picked off (catching)' },
   ];
 
   return (
@@ -106,6 +121,7 @@ export function StatsView({ slug, seasons, season, lines, players, fmt, ask }: {
 
           <SortTable title="Batting" lines={lines.filter((s) => s.b_pa > 0)} cols={BAT} first="avg" name={name} num={num} slug={slug} />
           <SortTable title="Pitching" lines={lines.filter((s) => s.p_outs > 0 || s.p_bf > 0)} cols={PITCH} first="ip" name={name} num={num} slug={slug} />
+          <SortTable title="Fielding" lines={lines.filter(hasFielding)} cols={FIELD} first="tc" name={name} num={num} slug={slug} />
         </>
       )}
     </div>

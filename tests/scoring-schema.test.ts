@@ -100,3 +100,29 @@ test('a pitcher\'s games count once per game, not once per pitch', async () => {
   const [line] = await t.as(null, `select p_g, p_pitches, p_outs from season_stats where player_id = $1`, [p12]);
   assert.deepEqual(line, { p_g: 1, p_pitches: 4, p_outs: 1 });
 });
+
+test('fielding: a pickoff 2-5 credits the catcher an assist and a pickoff, the third baseman the putout', async () => {
+  const [{ id: g2 }] = await t.as<{ id: string }>('owner', `insert into games (team_id, season_id, opponent_name, opponent_abbr) values ($1, $2, 'Owls', 'OWLS') returning id`, [team, season]);
+  // Us in the field: p12 catching, p7 at third. Their runner on third picked off.
+  const r = await play('scorer', g2, 0, 'runner', { outs: 1, bases: {} },
+    [{ side: 'us', bid: p12, f_a: 1, c_pik: 1 }, { side: 'us', bid: p7, f_po: 1 }, { side: 'them', bid: 'r3', b_cs: 0 }]);
+  assert.equal(r.seq, 1);
+  const rows = await t.as(null, `select bid, f_po, f_a, c_pik from game_stats where game_id = $1 and side = 'us' order by bid = $2 desc`, [g2, p12]);
+  assert.deepEqual(rows, [{ bid: p12, f_po: 0, f_a: 1, c_pik: 1 }, { bid: p7, f_po: 1, f_a: 0, c_pik: 0 }]);
+  // The season adds them, beside whatever an import brought.
+  const [line] = await t.as<{ f_po: number; f_a: number; c_pik: number }>(null,
+    `select f_po, f_a, c_pik from season_stats where season_id = $1 and player_id = $2`, [season, p12]);
+  assert.deepEqual(line, { f_po: 0, f_a: 1, c_pik: 1 });
+  // A play may touch up to 16 people; a 17th is refused.
+  const many = Array.from({ length: 17 }, (_, i) => ({ side: 'them', bid: `x${i}` }));
+  await fails(play('scorer', g2, 1, 'play', {}, many), /could not be read/);
+  // And a fielder cannot make four putouts on one play.
+  await fails(play('scorer', g2, 1, 'play', {}, [{ side: 'us', bid: p7, f_po: 4 }]), /check constraint/);
+});
+
+test('fielding: a GameChanger import carries its fielding columns into the season', async () => {
+  await t.as('owner', `select import_season_stats($1, $2::jsonb)`, [season, JSON.stringify([{ player_id: p7, b_g: 3, f_po: 5, f_a: 2, f_e: 1, c_sb: 4, c_cs: 1, c_pb: 2, p_pik: 1 }])]);
+  const [line] = await t.as(null, `select f_po, f_a, f_e, c_sb, c_cs, c_pb, p_pik from season_stats where season_id = $1 and player_id = $2`, [season, p7]);
+  // 5 imported + the 1 putout from the pickoff above.
+  assert.deepEqual(line, { f_po: 6, f_a: 2, f_e: 1, c_sb: 4, c_cs: 1, c_pb: 2, p_pik: 1 });
+});

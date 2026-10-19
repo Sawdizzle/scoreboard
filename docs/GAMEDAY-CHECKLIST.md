@@ -18,9 +18,13 @@ What to check before and during a live game, from the 10/15 bug-squash reviews (
 
 - Score from **one** phone. Since PR #3, the pad's reload reads lineups fresh, but a pitching change made elsewhere is only noticed when the pad opens.
 - Start the time-limit clock once. Since v5.13, reopening the Situation sheet shows the running clock, not 1:45:00.
-- Pitching change: tap the pitch count on the pad. Sub: tap the batter, then **Sub** on their row. Neither leaves the pad. After any change, glance at who's up anyway.
+- The pad is laid out like GameChanger: the field with both teams on it, the batter (AB) and pitcher (P) cards above it, the pitch keys below it (strike swinging and strike looking are separate keys), and **PITCH** on the mound for everything else: ball in play, hit by pitch, intentional walk, catcher's or batter's interference, batter out, a dropped 3rd strike (with two strikes), a balk. The Game Menu (☰) can switch this phone to **Big keys**.
+- Ball in play: how it was hit, what happened, then tap the fielders in the order the ball went (6-4-3) and say where the runners ended up. Putouts, assists and errors are credited from that.
+- Runners: drag one to a **SAFE** or **OUT** box (or tap him). Safe asks how (steal, wild pitch, passed ball, error, indifference, obstruction); out asks how (caught stealing, picked off, interference, appeal, other), then the throw: catcher then third baseman is a 2-5 pickoff.
+- Pitching change: tap the P card (or the pitcher on the field). Sub: tap the AB card, then **Sub** on their row. Neither leaves the pad. After any change, glance at who's up anyway.
+- Their lineup came late or not at all: on their lineup tap **Placeholders** and pick 9 to 12 batters, then fix each number on the pad (AB card › Edit) as he comes up.
 - Undoing a pitcher change doesn't undo it in the lineup. Change the pitcher back from the pitch count too.
-- **End game** is on the pad's bottom bar, and the pad offers it by itself when the score says the game is over (last inning, extra inning, or the game's run rule). A game left live from an earlier day shows on Today as **Never ended**.
+- **End game** is on the pad's bottom bar and in the Game Menu (☰ › Game over), and the pad offers it by itself when the score says the game is over (last inning, extra inning, or the game's run rule). A max-runs inning: ☰ › End half inning. A game left live from an earlier day shows on Today as **Never ended**.
 - Don't correct Game 1 while Game 2 is live. It flips the stream back to Game 1 until Game 2's next play. Corrections no longer fire sounds or stingers.
 - A run on a third-out time play (e.g. a sac fly where the trail runner is out at 3rd) isn't counted. Fix the score in Situation.
 

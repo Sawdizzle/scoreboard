@@ -32,8 +32,9 @@ export type Res = { type: string; patch: Record<string, unknown>; payload?: Reco
 export type StatRow = { side: Side; bid: string } & Partial<Record<StatKey, number>>;
 export type StatKey =
   | 'b_pa' | 'b_ab' | 'b_h' | 'b_2b' | 'b_3b' | 'b_hr' | 'b_rbi' | 'b_r' | 'b_bb' | 'b_so' | 'b_kl' | 'b_hbp'
-  | 'b_sac' | 'b_sf' | 'b_roe' | 'b_fc' | 'b_sb' | 'b_cs'
-  | 'p_outs' | 'p_bf' | 'p_pitches' | 'p_h' | 'p_r' | 'p_er' | 'p_bb' | 'p_so' | 'p_hbp' | 'p_wp' | 'p_bk';
+  | 'b_sac' | 'b_sf' | 'b_roe' | 'b_fc' | 'b_sb' | 'b_cs' | 'b_pik'
+  | 'p_outs' | 'p_bf' | 'p_pitches' | 'p_h' | 'p_r' | 'p_er' | 'p_bb' | 'p_so' | 'p_hbp' | 'p_wp' | 'p_bk' | 'p_pik'
+  | 'f_po' | 'f_a' | 'f_e' | 'c_sb' | 'c_cs' | 'c_pik' | 'c_pb';
 
 export const START_LIVE = {
   inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0, bases: { first: false, second: false, third: false },
@@ -90,6 +91,7 @@ export function paKind(res: Res, prev: G): string | null {
     case 'hit': return p.reached ? `H${p.reached}` : null;
     case 'play': return p.inputs?.kind ?? p.play?.kind ?? null;
     case 'bint': return p.subject === 'runner@third' ? null : 'BI';
+    case 'bout': return 'BO';
   }
   void prev;
   return null;
@@ -99,14 +101,14 @@ export function paKind(res: Res, prev: G): string | null {
 // a base. Mirrors the rules for each kind of play. Two maps ride on it: who
 // the runners are, and which of them would not be on base but for an error.
 type Src = 'batter' | keyof Runners;
-type Trace = { to: Record<keyof Runners, Src | null>; scored: Src[]; stole: Src[]; caught: Src[] };
+type Trace = { to: Record<keyof Runners, Src | null>; scored: Src[]; stole: Src[]; caught: Src[]; picked: Src[]; errored: Src[] };
 function trace(prev: G, res: Res): Trace {
   const on = bases(prev);
   const stay = (): Trace['to'] => ({ first: on.first ? 'first' : null, second: on.second ? 'second' : null, third: on.third ? 'third' : null });
   const none = (): Trace['to'] => ({ first: null, second: null, third: null });
   let to = stay();
-  const scored: Src[] = [], stole: Src[] = [], caught: Src[] = [];
-  const p = (res.payload ?? {}) as { from?: keyof Runners; kind?: string; inputs?: { dest?: Record<string, number | 'out'>; kind?: string }; reached?: number; runs?: number };
+  const scored: Src[] = [], stole: Src[] = [], caught: Src[] = [], picked: Src[] = [], errored: Src[] = [];
+  const p = (res.payload ?? {}) as { from?: keyof Runners; kind?: string; to?: number; inputs?: { dest?: Record<string, number | 'out'>; kind?: string }; reached?: number; runs?: number };
 
   const forced = () => {
     // Batter to first; each runner moves only if pushed.
@@ -145,19 +147,24 @@ function trace(prev: G, res: Res): Trace {
       const from = p.from;
       if (!from) break;
       to = { ...to, [from]: null };
-      if (p.kind === 'SB' || p.kind === 'ADV') {
-        const i = BASES.indexOf(from);
-        if (i === 2) scored.push(from); else to[BASES[i + 1]] = from;
+      if (p.kind && RUNNER_ADVANCES.has(p.kind)) {
+        // The base he ended on (2, 3, or 4 for home): the next one unless the play says further.
+        const end = Number(p.to) || BASES.indexOf(from) + 2;
+        if (end >= 4) scored.push(from); else to[BASES[end - 1]] = from;
         if (p.kind === 'SB') stole.push(from);
+        if (p.kind === 'EA') errored.push(from);
       } else if (p.kind === 'CS') caught.push(from);
+      else if (p.kind === 'PO') picked.push(from);
       break;
     }
     case 'bint':
       if (!paKind(res, prev)) to = { ...to, third: null };
       break;
   }
-  return { to, scored, stole, caught };
+  return { to, scored, stole, caught, picked, errored };
 }
+// Runner plays that move him up rather than put him out.
+const RUNNER_ADVANCES = new Set(['SB', 'ADV', 'WP', 'PB', 'EA', 'DI', 'OBS']);
 
 export type Tainted = { first: boolean; second: boolean; third: boolean };
 const CLEAN: Tainted = { first: false, second: false, third: false };
@@ -182,7 +189,8 @@ export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
   const kind = paKind(res, prev);
   const reachedOnError = kind === 'E' || kind === 'CI';
   const who = (s: Src) => (s === 'batter' ? batter : before[s]);
-  const dirty = (s: Src) => (s === 'batter' ? reachedOnError : taint[s]);
+  // A runner who moved up on an error is on base because of it, like a batter who reached on one.
+  const dirty = (s: Src) => (s === 'batter' ? reachedOnError : taint[s] || t.errored.includes(s));
   const ids = (list: Src[]) => list.map(who).filter((x): x is string => !!x);
 
   const over = next.half !== prev.half || next.inning !== prev.inning;
@@ -194,7 +202,7 @@ export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
   const past = (prev.outs | 0) + errOutsOf(prev) >= 3;
   return {
     runners: r, unearned: u, errOuts: over ? 0 : errOutsOf(prev) + (kind === 'E' ? 1 : 0),
-    scored: t.scored.map(who), stole: ids(t.stole), caught: ids(t.caught),
+    scored: t.scored.map(who), stole: ids(t.stole), caught: ids(t.caught), picked: ids(t.picked),
     // null when the half is past saving or the play was the error: no run is earned.
     earned: past || kind === 'E' ? 0 : t.scored.filter((s) => !dirty(s)).length, traced: t.scored.length,
   };
@@ -261,8 +269,65 @@ export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => 
   for (const who of moved.scored) add(batSide, who, 'b_r');
   for (const who of moved.stole) add(batSide, who, 'b_sb');
   for (const who of moved.caught) add(batSide, who, 'b_cs');
+  for (const who of moved.picked) add(batSide, who, 'b_pik');
+
+  // The fielders: the putout and the assists the play's code names, an error
+  // to whoever made it, and what the catcher and the pitcher keep for
+  // themselves. Whoever stood at a position when the play happened gets it.
+  const note = (res.payload as { play?: { kind?: string; code?: string; outs?: number } } | undefined)?.play;
+  const at = (pos: string) => prev.lineups[fieldSide]?.positions?.[pos] ?? null;
+  if (note?.kind) {
+    const credit = fieldingCredit(note.kind, note.code ?? '', note.outs ?? 0);
+    for (const pos of credit.po) add(fieldSide, at(pos), 'f_po');
+    for (const pos of credit.a) add(fieldSide, at(pos), 'f_a');
+    for (const pos of credit.e) add(fieldSide, at(pos), 'f_e');
+  }
+  const rk = res.type === 'runner' ? (res.payload as { kind?: string } | undefined)?.kind : null;
+  if (rk === 'PO') {
+    add(fieldSide, pitcher, 'p_pik');
+    if (fieldersOf(note?.code ?? '')[0] === 'C') add(fieldSide, at('C'), 'c_pik');
+  }
+  if (rk === 'CS') add(fieldSide, at('C'), 'c_cs');
+  if (rk === 'SB') add(fieldSide, at('C'), 'c_sb');
+  if (rk === 'PB') add(fieldSide, at('C'), 'c_pb');
+  if (rk === 'WP') add(fieldSide, pitcher, 'p_wp');
+  // A dropped third strike the batter beat out: the wild pitch or passed ball that let him.
+  const k3 = (res.payload as { inputs?: { k3?: string; dest?: Record<string, unknown> } } | undefined)?.inputs;
+  if (kind === 'K3' && k3?.dest?.batter !== 'out') {
+    if (k3?.k3 === 'WP') add(fieldSide, pitcher, 'p_wp');
+    if (k3?.k3 === 'PB') add(fieldSide, at('C'), 'c_pb');
+  }
 
   return { rows: [...rows.values()], ...carry };
+}
+
+// ---- Fielding ---------------------------------------------------------------
+// The scorebook code names the fielders in the order the ball went: "6-4-3",
+// "2-5", "F8", "E6", "3U". Each digit is a position (1 the pitcher ... 9 right
+// field).
+const NUM_POS = ['', 'P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+export const fieldersOf = (code: string) => (code.match(/[1-9]/g) ?? []).map((d) => NUM_POS[Number(d)]);
+const uniq = (a: string[]) => [...new Set(a)];
+
+// Who gets what on a play, by position. The scorebook's rules, as far as a
+// code can carry them:
+//   - a putout for each out, to the fielders at the end of the sequence (the
+//     last one, and on a double play the last two: 6-4-3 is putouts to the
+//     second baseman and the first baseman);
+//   - one assist to every fielder who threw before the last, once each;
+//   - on an error, the error to the last fielder named and assists to any
+//     before him (6 E3: the shortstop's throw dropped at first);
+//   - a strikeout, and batter's interference, are the catcher's putout; a
+//     dropped third strike thrown out at first is 2-3 unless the code says.
+export function fieldingCredit(kind: string, code: string, outs: number) {
+  const none = { po: [] as string[], a: [] as string[], e: [] as string[] };
+  if (kind === 'K' || kind === 'KL' || kind === 'BI') return outs ? { ...none, po: ['C'] } : none;
+  let seq = fieldersOf(code);
+  if (kind === 'E' || kind === 'EA') return seq.length ? { po: [], a: uniq(seq.slice(0, -1)), e: [seq[seq.length - 1]] } : none;
+  if (kind === 'K3' && outs && !seq.length) seq = ['C', '1B'];
+  if (!outs || !seq.length) return none;
+  const po = Array.from({ length: outs }, (_, i) => seq[Math.max(0, seq.length - outs + i)]);
+  return { po, a: uniq(seq.slice(0, -1)), e: [] };
 }
 
 // Run a tap through the rules and the stats together: the patch to store
@@ -384,4 +449,4 @@ export function tonight(line: Partial<Record<StatKey, number>> | undefined) {
 }
 
 // The rules' onPlay, typed: a fielder may be named or not.
-export const onPlay = L.onPlay as unknown as (g: G, p: { kind: string; pos: string | null; dest: Record<string, number | 'out'> }) => Res | null;
+export const onPlay = L.onPlay as unknown as (g: G, p: { kind: string; pos: string | null; dest: Record<string, number | 'out'>; seq?: string[] | null; bb?: string | null; k3?: string | null }) => Res | null;

@@ -48,6 +48,7 @@ function earned(prev: Feed | null, f: Feed, runs: number): { sound: string | nul
   return { sound: runs ? 'run' : null, fx: runs ? 'run' : null };
 }
 export const airTopic = (token: string) => `overlay:${token}`;
+const RUNNER_KINDS = new Set(Object.keys(L.RUNNER_LABEL));
 
 // The page OBS loads. It has no account: it asks for the feed by the link's
 // token, again every few seconds, and at once when the pad says something
@@ -191,7 +192,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
           if (e.sound) fire(e.sound, e.fx, meta);
         }
         if (seenPlay !== undefined && f.last && f.last.seq > seenPlay && text && f.game?.status === 'live') {
-          setMoment({ text, who: f.last.kind === 'SB' ? '' : batterName, runs: Math.max(0, Math.min(4, total(f) - runsBefore)) });
+          // A play on a runner is about the runner, not the batter at the plate: no name under it.
+          setMoment({ text, who: RUNNER_KINDS.has(f.last.kind ?? '') ? '' : batterName, runs: Math.max(0, Math.min(4, total(f) - runsBefore)) });
           window.clearTimeout(momentTimer);
           momentTimer = window.setTimeout(() => setMoment(null), MOMENT_MS);
         }

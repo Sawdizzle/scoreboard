@@ -5,7 +5,7 @@ import { useState } from 'react';
 import * as L from '@/lib/rules/logic.js';
 import { positionOf } from '@/lib/rules/roster.js';
 import type { EngineSide, G } from '@/lib/scoring';
-import type { LineupBatter } from '@/lib/types';
+import type { Lineup, LineupBatter } from '@/lib/types';
 
 // The pad's sheets. Each one is laid out for a thumb: big targets, the common
 // answer first, and a Cancel that is always in the same place. They know the
@@ -34,72 +34,115 @@ function Choice({ label, sub, onClick, why, tone }: { label: string; sub?: strin
   );
 }
 
-// Strike three.
-export function StrikeThree({ g, onPick, onClose }: { g: G; onPick: (k: 'swing' | 'look' | 'dropped') => void; onClose: () => void }) {
-  return (
-    <Sheet title="Strike three" onClose={onClose}>
-      <div className="pgrid two">
-        <Choice label="Swinging" onClick={() => onPick('swing')} tone="strike" />
-        <Choice label="Looking" onClick={() => onPick('look')} tone="strike" />
-      </div>
-      <Choice label="Dropped 3rd strike" sub="Batter runs to first" onClick={() => onPick('dropped')} why={L.playBlocked(g, 'K3')} />
-    </Sheet>
-  );
-}
-
-const KINDS: { group: string; items: [string, string][] }[] = [
-  { group: 'Hit', items: [['H1', '1B'], ['H2', '2B'], ['H3', '3B'], ['HR', 'HR']] },
-  { group: 'Out', items: [['GB', 'Ground out'], ['FB', 'Fly out'], ['LD', 'Line out'], ['PU', 'Pop up']] },
-  { group: 'Other', items: [['E', 'Error'], ['FC', "Fielder's choice"], ['DP', 'Double play'], ['SF', 'Sac fly'], ['SAC', 'Sac bunt']] },
-];
-const NEEDS_FIELDER = new Set(['GB', 'FB', 'LD', 'PU', 'E', 'FC', 'DP', 'SF', 'SAC']);
 const FIELDERS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 const DEST_LABEL: [number | 'out', string][] = [['out', 'Out'], [1, '1st'], [2, '2nd'], [3, '3rd'], [4, 'Home']];
 // A runner can stay, move up, score or be out; never go back.
 const START: Record<string, number> = { batter: 0, first: 1, second: 2, third: 3 };
 const WHO: Record<string, string> = { batter: 'Batter', first: 'From 1st', second: 'From 2nd', third: 'From 3rd' };
 
-// Ball in play: what happened, who fielded it, where everyone ended up. The
-// runner step is skipped when nobody is on, and a home run is one tap.
-export function InPlay({ g, start, onRecord, onClose }: {
-  g: G; start?: { kind: string; pos: string }; onRecord: (p: { kind: string; pos: string | null; dest: Record<string, number | 'out'> }) => void; onClose: () => void;
+// ---- Ball in play -------------------------------------------------------------
+// GameChanger's order: how it was hit, what came of it, who fielded it (tapped
+// in the order the ball went), then where everyone ended up. A home run is two
+// taps, a hit with nobody on is two, a 6-3 groundout is four.
+type Dest = Record<string, number | 'out'>;
+export type InPlayResult = { kind: string; pos: string | null; dest: Dest; seq?: string[] | null; bb?: string | null; k3?: string | null };
+const HIT_TYPES: [string, string][] = [['GB', 'Ground ball'], ['HGB', 'Hard grounder'], ['LD', 'Line drive'], ['FB', 'Fly ball'], ['PU', 'Pop up'], ['BUNT', 'Bunt']];
+// What can come of each: [kind, label]. 'OUT' is the plain out for that type.
+const RESULTS: Record<string, [string, string][]> = {
+  GB: [['OUT', 'Out at 1st'], ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['H1', 'Single'], ['H2', 'Double'], ['H3', 'Triple'], ['E', 'Error'], ['HR', 'Inside-the-park HR'], ['BI', 'B. Interference']],
+  LD: [['OUT', 'Caught: line out'], ['DP', 'Double play'], ['H1', 'Single'], ['H2', 'Double'], ['H3', 'Triple'], ['HR', 'Home run'], ['E', 'Error']],
+  FB: [['OUT', 'Caught: fly out'], ['SF', 'Sac fly'], ['DP', 'Double play'], ['H1', 'Single'], ['H2', 'Double'], ['H3', 'Triple'], ['HR', 'Home run'], ['E', 'Error']],
+  PU: [['OUT', 'Caught: pop out'], ['DP', 'Double play'], ['H1', 'Single'], ['H2', 'Double'], ['E', 'Error']],
+  BUNT: [['OUT', 'Out at 1st'], ['SAC', 'Sac bunt'], ['FC', 'Fielder’s choice'], ['DP', 'Double play'], ['H1', 'Single'], ['E', 'Error'], ['BI', 'B. Interference']],
+};
+RESULTS.HGB = RESULTS.GB;
+// The out each type makes, as the rules know it.
+const OUT_KIND: Record<string, string> = { GB: 'GB', HGB: 'GB', BUNT: 'GB', LD: 'LD', FB: 'FB', PU: 'PU' };
+const NEEDS_FIELDER = new Set(['GB', 'FB', 'LD', 'PU', 'E', 'FC', 'DP', 'SF', 'SAC', 'K3']);
+// Fielded by one player alone: a tap on him is the whole answer.
+const ONE_FIELDER = new Set(['FB', 'LD', 'PU', 'SF', 'E']);
+
+export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClose }: {
+  g: G; fieldLineup?: Lineup;
+  // Straight to a step: a key typed on a laptop (a hit), or a dropped third strike.
+  start?: { kind: string; pos: string; batter?: number | 'out'; k3?: string | null; seq?: string[] };
+  onRecord: (p: InPlayResult) => void;
+  onInterference: () => void;
+  onClose: () => void;
 }) {
+  const [bb, setBb] = useState<string | null>(null);
   const [kind, setKind] = useState<string | null>(start?.kind ?? null);
   const [pos, setPos] = useState<string | null>(start?.pos ?? null);
-  const [dest, setDest] = useState<Record<string, number | 'out'>>(() => (start ? L.playDefaults(g, start.kind) as unknown as Record<string, number | 'out'> : {}));
+  // The fielders in throw order, when the scorer gave more than one (6-4-3).
+  const [seq, setSeq] = useState<string[]>(start?.seq ?? []);
+  const [dest, setDest] = useState<Dest>(() => {
+    if (!start) return {};
+    const d = L.playDefaults(g, start.kind) as unknown as Dest;
+    if (start.batter === 'out') { for (const k of Object.keys(d)) if (k !== 'batter') d[k] = START[k]; d.batter = 'out'; }
+    return d;
+  });
   const b = L.safeBases(g.bases);
   const anyone = b.first || b.second || b.third;
-  const step = !kind ? 'kind' : NEEDS_FIELDER.has(kind) && !pos ? 'fielder' : 'runners';
+  const step = !kind ? (bb ? 'result' : 'type') : NEEDS_FIELDER.has(kind) && !pos ? 'fielder' : 'runners';
+  const label = (k: string) => (L.PLAY_LABEL as Record<string, string>)[k] ?? k;
+  const thrown = (s: string[]) => (s.length > 1 ? s : null);
+  const record = (k: string, p: string | null, d: Dest, s: string[]) => onRecord({ kind: k, pos: p, dest: d, seq: thrown(s), bb, k3: start?.k3 ?? null });
 
-  function chooseKind(k: string) {
-    if (k === 'HR') return onRecord({ kind: 'HR', pos: null, dest: {} });
+  function chooseResult(r: string) {
+    if (r === 'BI') return onInterference();
+    if (r === 'HR') return onRecord({ kind: 'HR', pos: null, dest: {}, bb });
+    const k = r === 'OUT' ? OUT_KIND[bb!] : r;
     setKind(k);
-    const d = L.playDefaults(g, k) as unknown as Record<string, number | 'out'>;
+    const d = L.playDefaults(g, k) as unknown as Dest;
     setDest(d);
-    if (!NEEDS_FIELDER.has(k) && !anyone) onRecord({ kind: k, pos: null, dest: d });
+    if (!NEEDS_FIELDER.has(k) && !anyone) record(k, null, d, []);
   }
-  function chooseFielder(p: string) {
+  function chooseFielder(p: string, s: string[]) {
     setPos(p);
-    if (!anyone) onRecord({ kind: kind!, pos: p, dest });
+    if (!anyone) record(kind!, p, dest, s);
   }
+  function fielders(next: string[]) {
+    setSeq(next);
+    if (ONE_FIELDER.has(kind!) && next.length === 1) chooseFielder(next[0], next);
+  }
+  const fieldCode = kind && seq.length ? (seq.length > 1 ? L.seqCode(seq, kind) : L.playCode(kind, seq[0])) as string : '';
   const res = kind ? L.resolvePlay(g, dest) as { outs: number; runs: number; clash: string | null } : null;
+  const title = kind === 'K3' ? 'Dropped 3rd strike: where did everyone end up?'
+    : step === 'type' ? 'Ball in play: how was it hit?'
+      : step === 'result' ? `${HIT_TYPES.find(([k]) => k === bb)?.[1]}: what happened?`
+        : step === 'fielder' ? `${label(kind!)}: who fielded it?` : 'Where did everyone end up?';
 
   return (
-    <Sheet title={kind === 'K3' ? 'Dropped 3rd strike: where did everyone end up?' : step === 'kind' ? 'Ball in play' : step === 'fielder' ? `${(L.PLAY_LABEL as Record<string, string>)[kind!]}: who fielded it?` : 'Where did everyone end up?'} onClose={onClose}>
-      {step === 'kind' && KINDS.map((grp) => (
-        <div key={grp.group} className="stack" style={{ gap: 6 }}>
-          <span className="legend">{grp.group}</span>
-          <div className={`pgrid ${grp.items.length === 4 ? 'four' : 'three'}`}>
-            {grp.items.map(([k, label]) => (
-              <Choice key={k} label={label} onClick={() => chooseKind(k)} why={L.playBlocked(g, k)} tone={grp.group === 'Hit' ? 'hit' : ''} />
-            ))}
-          </div>
-        </div>
-      ))}
-      {step === 'fielder' && (
+    <Sheet title={title} onClose={onClose}>
+      {step === 'type' && (
         <div className="pgrid three">
-          {FIELDERS.map((p) => <Choice key={p} label={p} sub={String((L.POS_NUM as Record<string, number>)[p])} onClick={() => chooseFielder(p)} />)}
+          {HIT_TYPES.map(([k, l]) => <Choice key={k} label={l} onClick={() => setBb(k)} tone={k === 'BUNT' ? '' : 'hit'} />)}
         </div>
+      )}
+      {step === 'result' && (
+        <>
+          <div className="pgrid two">
+            {RESULTS[bb!].map(([r, l]) => {
+              const k = r === 'OUT' ? OUT_KIND[bb!] : r;
+              const why = r === 'BI' || r === 'HR' ? '' : L.playBlocked(g, k) as string;
+              const tone = ['H1', 'H2', 'H3', 'HR'].includes(r) ? 'hit' : ['OUT', 'DP', 'SF', 'SAC', 'BI'].includes(r) ? 'strike' : '';
+              return <Choice key={r} label={l} onClick={() => chooseResult(r)} why={why} tone={tone} />;
+            })}
+          </div>
+          <button type="button" className="link" onClick={() => setBb(null)}>‹ How it was hit</button>
+        </>
+      )}
+      {step === 'fielder' && (
+        <>
+          <FielderPicker lineup={fieldLineup} value={seq} onChange={fielders} kind={kind!}
+            hint={ONE_FIELDER.has(kind!) ? (kind === 'E' ? 'Tap who made the error' : 'Tap who caught it') : 'Tap who fielded it, then who he threw to'} />
+          {!ONE_FIELDER.has(kind!) && seq.length > 0 && (
+            <button type="button" className="btn btn-primary btn-big" onClick={() => chooseFielder(seq[0], seq)}>
+              {anyone ? 'Next' : 'Record'} · {label(kind!)} {fieldCode}
+            </button>
+          )}
+          {!start && <button type="button" className="link" onClick={() => { setKind(null); setSeq([]); }}>‹ What happened</button>}
+        </>
       )}
       {step === 'runners' && (
         <>
@@ -107,16 +150,16 @@ export function InPlay({ g, start, onRecord, onClose }: {
             <div key={k} className="prunner">
               <span className="legend">{WHO[k]}</span>
               <div className="pgrid five">
-                {DEST_LABEL.filter(([d]) => d === 'out' || (d as number) >= Math.max(1, START[k])).map(([d, label]) => (
+                {DEST_LABEL.filter(([d]) => d === 'out' || (d as number) >= Math.max(1, START[k])).map(([d, l]) => (
                   <button key={String(d)} type="button" className={`pdest${dest[k] === d ? ' on' : ''}`} aria-pressed={dest[k] === d}
-                    onClick={() => setDest({ ...dest, [k]: d })}>{label}</button>
+                    onClick={() => setDest({ ...dest, [k]: d })}>{l}</button>
                 ))}
               </div>
             </div>
           ))}
           {res?.clash && <p className="note note-bad">Two runners end on {res.clash}. Move one of them.</p>}
           <button type="button" className="btn btn-primary btn-big" disabled={!!res?.clash}
-            onClick={() => onRecord({ kind: kind!, pos, dest })}>
+            onClick={() => record(kind!, pos, dest, seq)}>
             Record{res ? ` · ${res.outs ? `${res.outs} out${res.outs > 1 ? 's' : ''}` : 'no outs'}${res.runs ? `, ${res.runs} run${res.runs > 1 ? 's' : ''}` : ''}` : ''}
           </button>
         </>
@@ -125,34 +168,226 @@ export function InPlay({ g, start, onRecord, onClose }: {
   );
 }
 
-export function More({ g, onPick, onClose }: { g: G; onPick: (k: 'hbp' | 'ci' | 'ibb' | 'balk') => void; onClose: () => void }) {
-  const b = L.safeBases(g.bases);
+// ---- Fielders, in the order the ball went ------------------------------------
+// A small field with the nine positions on it, each with the number of the kid
+// standing there. Tap them in the order the ball went: the catcher then the
+// third baseman is a 2-5 pickoff. The usual sequence comes pre-filled (`value`
+// as given); the first tap starts the scorer's own.
+const FIELD_SPOT: Record<string, [number, number]> = {
+  LF: [17, 21], CF: [50, 11], RF: [83, 21], SS: [35, 43], '2B': [65, 43], '3B': [22, 63], '1B': [78, 63], P: [50, 62], C: [50, 88],
+};
+export function FielderPicker({ lineup, value, onChange, kind = '', hint }: {
+  lineup?: Lineup; value: string[]; onChange: (seq: string[]) => void; kind?: string; hint?: string;
+}) {
+  const [mine, setMine] = useState(false);
+  const numOf = (pos: string) => {
+    const bid = lineup?.positions?.[pos];
+    const b = bid ? lineup?.batters?.find((x) => x.bid === bid) : undefined;
+    return b?.num ? `#${b.num}` : '';
+  };
+  const tap = (pos: string) => { onChange(mine ? [...value, pos].slice(0, 6) : [pos]); setMine(true); };
+  const code = L.seqCode(value, kind) as string;
   return (
-    <Sheet title="More" onClose={onClose}>
+    <div className="fpick">
+      <div className="fpick-field">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M50 97 L4 34 A62 62 0 0 1 96 34 Z" fill="#173824" stroke="#2c6a45" strokeWidth="0.6" />
+          <path d="M50 92 L28 66 L50 44 L72 66 Z" fill="#3a2c1d" stroke="#6b5338" strokeWidth="0.6" />
+        </svg>
+        {FIELDERS.map((pos) => {
+          const at = value.flatMap((p, i) => (p === pos ? [i + 1] : []));
+          const [x, y] = FIELD_SPOT[pos];
+          return (
+            <button key={pos} type="button" className={`fpick-spot${at.length ? ' on' : ''}${at.length && !mine ? ' guess' : ''}`} style={{ left: `${x}%`, top: `${y}%` }}
+              onClick={() => tap(pos)} aria-label={`${pos}${numOf(pos) ? `, number ${numOf(pos).slice(1)}` : ''}${at.length ? `, step ${at.join(' and ')}` : ''}`}>
+              <b>{(L.POS_NUM as Record<string, number>)[pos]}</b><small>{pos}</small>{numOf(pos) && <em>{numOf(pos)}</em>}
+              {at.length > 0 && <i>{at.join('·')}</i>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="fpick-bar">
+        <span className="fpick-code">{code ? <>{code}{!mine && <small> · usual, tap to change</small>}</> : (hint ?? 'Tap the fielders in the order the ball went')}</span>
+        <button type="button" className="icon-btn" aria-label="Take back the last fielder" disabled={!value.length} onClick={() => { onChange(value.slice(0, -1)); setMine(true); }}>⌫</button>
+      </div>
+    </div>
+  );
+}
+
+// PITCH, on the mound: everything the keys below the field do not cover, the
+// way GameChanger's pitch menu does it. Ball in play leads; batter's
+// interference and "batter out" live here too, so nobody has to fake a
+// strikeout to move the order on; a dropped third strike appears with two
+// strikes on the batter.
+type Other = 'hbp' | 'ci' | 'ibb' | 'balk';
+export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onInterference, onBatterOut, onDropped, onClose }: {
+  g: G; fieldLineup?: Lineup; onInPlay: () => void; onPick: (k: Other) => void;
+  // Batter's interference: on a play at a runner (his base) or with no play on a runner (null).
+  onInterference: (from: 'first' | 'second' | 'third' | null) => void;
+  onBatterOut: (seq: string[]) => void;
+  // A dropped third strike: safe at first on a wild pitch or a passed ball, or thrown out (with the throw).
+  onDropped: (how: 'WP' | 'PB' | 'out', seq: string[]) => void;
+  onClose: () => void;
+}) {
+  const b = L.safeBases(g.bases);
+  const on = (['first', 'second', 'third'] as const).filter((k) => b[k]);
+  const [step, setStep] = useState<null | 'bi' | 'out' | 'k3' | 'k3out'>(null);
+  const [seq, setSeq] = useState<string[]>(['C']);
+  const k3 = L.playBlocked(g, 'K3') as string;
+  if (step === 'bi') return (
+    <Sheet title="Batter’s interference" onClose={onClose}>
+      <p className="hint">The batter is out. With a play on a runner, that runner goes back, unless it was a play at home with fewer than 2 outs: then the runner is out and the batter stays up.</p>
+      <div className="pgrid two">
+        <Choice label="No play on a runner" sub="Batter out, catcher’s putout" onClick={() => onInterference(null)} tone="strike" />
+        {on.map((k) => (
+          <Choice key={k} label={`Play on the runner at ${k === 'first' ? '1st' : k === 'second' ? '2nd' : '3rd'}`}
+            sub={k === 'third' && (g.outs | 0) < 2 ? 'Runner out at home' : 'Runner goes back'} onClick={() => onInterference(k)} />
+        ))}
+      </div>
+      <button type="button" className="link" onClick={() => setStep(null)}>‹ Back</button>
+    </Sheet>
+  );
+  if (step === 'out') return (
+    <Sheet title="Batter out" onClose={onClose}>
+      <p className="hint">Out of the box, hit by his own ball, an illegal bat, batting out of order: an at-bat and an out, no pitch. Who made the out?</p>
+      <FielderPicker lineup={fieldLineup} value={seq} onChange={setSeq} kind="BO" hint="Who made the out (optional)" />
+      <button type="button" className="btn btn-primary btn-big" onClick={() => onBatterOut(seq)}>Record · batter out{seq.length ? ` ${L.seqCode(seq, 'BO')}` : ''}</button>
+      <button type="button" className="link" onClick={() => setStep(null)}>‹ Back</button>
+    </Sheet>
+  );
+  if (step === 'k3') return (
+    <Sheet title="Dropped 3rd strike" onClose={onClose}>
+      <p className="hint">A strikeout for the batter and the pitcher either way.</p>
+      <div className="pgrid two">
+        <Choice label="Safe at 1st" sub="Wild pitch" onClick={() => onDropped('WP', [])} tone="hit" />
+        <Choice label="Safe at 1st" sub="Passed ball" onClick={() => onDropped('PB', [])} tone="hit" />
+      </div>
+      <Choice label="Out at 1st" sub="Pick the throw (2-3)" onClick={() => { setSeq(['C', '1B']); setStep('k3out'); }} tone="strike" />
+      <button type="button" className="link" onClick={() => setStep(null)}>‹ Back</button>
+    </Sheet>
+  );
+  if (step === 'k3out') return (
+    <Sheet title="Dropped 3rd strike: out at 1st" onClose={onClose}>
+      <FielderPicker lineup={fieldLineup} value={seq} onChange={setSeq} kind="K3" />
+      <button type="button" className="btn btn-primary btn-big" onClick={() => onDropped('out', seq)}>Record · strikeout {L.seqCode(seq, 'K3')}</button>
+      <button type="button" className="link" onClick={() => setStep('k3')}>‹ Back</button>
+    </Sheet>
+  );
+  return (
+    <Sheet title="Pitch" onClose={onClose}>
+      <button type="button" className="btn btn-primary btn-big" onClick={onInPlay}>Ball in play</button>
+      <span className="legend">The batter</span>
       <div className="pgrid two">
         <Choice label="Hit by pitch" onClick={() => onPick('hbp')} />
         <Choice label="Intentional walk" onClick={() => onPick('ibb')} />
-        <Choice label="Catcher's interference" onClick={() => onPick('ci')} />
-        <Choice label="Balk" sub="Every runner moves up" onClick={() => onPick('balk')} why={b.first || b.second || b.third ? '' : 'Nobody on: a balk is a ball'} />
+        <Choice label="Catcher’s interference" sub="Batter to 1st" onClick={() => onPick('ci')} />
+        <Choice label="Batter’s interference" sub="Batter out" onClick={() => (on.length ? setStep('bi') : onInterference(null))} tone="strike" />
+        <Choice label="Batter out" sub="Out of the box, illegal bat…" onClick={() => setStep('out')} tone="strike" />
+        {(g.strikes | 0) >= 2 && <Choice label="Dropped 3rd strike" sub={k3 || 'Batter runs'} onClick={() => setStep('k3')} why={k3} />}
+      </div>
+      <span className="legend">The pitcher</span>
+      <div className="pgrid two">
+        <Choice label="Balk" sub="Every runner moves up" onClick={() => onPick('balk')} why={on.length ? '' : 'Nobody on: a balk is a ball'} />
+      </div>
+      <p className="hint">Steals, pickoffs, wild pitches and passed balls: drag the runner to a SAFE or OUT box, or tap him.</p>
+    </Sheet>
+  );
+}
+
+// The Game Menu, as GameChanger keeps it top left: fixes, the end of a half or
+// of the game, the lineups, and leaving.
+export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix, onEndHalf, onEnd, onClose }: {
+  final: boolean; lineupHref: string; gameHref: string; layout: 'field' | 'keys'; onLayout: (l: 'field' | 'keys') => void;
+  onFix: () => void; onEndHalf: () => void; onEnd: () => void; onClose: () => void;
+}) {
+  return (
+    <Sheet title="Game menu" onClose={onClose} close="Done">
+      <div className="menu-list">
+        <button type="button" className="menu-row" onClick={onFix}><b>Fix the situation</b><small>Score, inning, outs, count, bases, pitch count</small></button>
+        {!final && <button type="button" className="menu-row" onClick={onEndHalf}><b>End half inning</b><small>A max-runs rule, or a third out the keys missed</small></button>}
+        <button type="button" className={`menu-row${final ? '' : ' bad'}`} onClick={onEnd}><b>{final ? 'Reopen the game' : 'Game over'}</b><small>{final ? 'To fix a play' : 'End the game: stats count, the stream shows Final'}</small></button>
+        <Link href={lineupHref} className="menu-row"><b>Lineups</b><small>Order, positions, subs, both teams</small></Link>
+        <Link href={gameHref} className="menu-row"><b>Leave the pad</b><small>To the game page</small></Link>
+      </div>
+      <span className="legend">Layout on this phone</span>
+      <div className="seg" role="radiogroup" aria-label="Pad layout">
+        <button type="button" role="radio" aria-checked={layout === 'field'} className="seg-item" aria-current={layout === 'field' ? 'page' : undefined} onClick={() => onLayout('field')}>The field</button>
+        <button type="button" role="radio" aria-checked={layout === 'keys'} className="seg-item" aria-current={layout === 'keys' ? 'page' : undefined} onClick={() => onLayout('keys')}>Big keys</button>
       </div>
     </Sheet>
   );
 }
 
-// A runner on base, tapped on the diamond.
-export function Runner({ g, from, who, onPick, onClose }: {
-  g: G; from: 'first' | 'second' | 'third'; who: string; onPick: (k: 'SB' | 'CS' | 'PO' | 'ADV' | 'BI') => void; onClose: () => void;
+// A runner on base: tapped, or dragged to a SAFE or OUT box (`drop`), the way
+// GameChanger does it. Safe asks how he got there; out asks how he was put out,
+// then who made the play in throw order (a pickoff from the catcher to third
+// is 2-5), with the usual throw filled in. An error asks who made it.
+type RunnerKind = 'SB' | 'WP' | 'PB' | 'EA' | 'DI' | 'OBS' | 'CS' | 'PO' | 'RO';
+export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference, onClose }: {
+  g: G; from: 'first' | 'second' | 'third'; who: string; fieldLineup?: Lineup;
+  drop?: { to: 2 | 3 | 4; safe: boolean };
+  onPick: (k: RunnerKind, opts: { seq?: string[]; to?: number; why?: string }) => void;
+  onInterference: () => void;
+  onClose: () => void;
 }) {
-  const next = from === 'third' ? 'home' : from === 'first' ? '2nd' : '3rd';
+  const start = from === 'first' ? 1 : from === 'second' ? 2 : 3;
+  const [to, setTo] = useState<number>(drop?.to ?? start + 1);
+  const [ask, setAsk] = useState<null | { kind: 'CS' | 'PO' | 'RO' | 'EA'; why?: string }>(null);
+  const [seq, setSeq] = useState<string[]>([]);
+  const baseName = (n: number) => (n >= 4 ? 'home' : n === 3 ? '3rd' : '2nd');
+  const fromName = from === 'first' ? '1st' : from === 'second' ? '2nd' : '3rd';
+  const label: Record<RunnerKind, string> = (L.RUNNER_LABEL as Record<RunnerKind, string>);
+  const blocked = (k: RunnerKind) => L.runnerBlocked(g, from, k, to) as string;
+  const open = (kind: 'CS' | 'PO' | 'RO' | 'EA', why?: string) => { setSeq(kind === 'EA' || kind === 'RO' ? [] : (L.runnerSeqGuess(kind, from) as string[])); setAsk({ kind, why }); };
+  if (ask) {
+    const k = ask.kind;
+    const code = L.seqCode(seq, k) as string;
+    const name = ask.why ? `Out · ${ask.why}` : label[k];
+    return (
+      <Sheet title={`${name}${who ? ` · ${who}` : ''}`} onClose={onClose}>
+        <FielderPicker lineup={fieldLineup} value={seq} onChange={setSeq} kind={k}
+          hint={k === 'EA' ? 'Who made the error? (a throw first, then the fielder who missed it)' : k === 'RO' ? 'Who made the out, in order (optional)' : undefined} />
+        <button type="button" className="btn btn-primary btn-big" disabled={k === 'EA' && !seq.length}
+          onClick={() => onPick(k, { seq, ...(k === 'EA' ? { to } : {}), ...(ask.why ? { why: ask.why } : {}) })}>
+          Record · {name}{code ? ` ${code}` : ''}{k === 'EA' ? `, to ${baseName(to)}` : ''}
+        </button>
+        <button type="button" className="link" onClick={() => setAsk(null)}>‹ Back</button>
+      </Sheet>
+    );
+  }
+  const go = (k: RunnerKind) => onPick(k, { to });
+  const safe = !drop || drop.safe, out = !drop || !drop.safe;
   return (
-    <Sheet title={`Runner on ${from === 'first' ? '1st' : from === 'second' ? '2nd' : '3rd'}${who ? ` · ${who}` : ''}`} onClose={onClose}>
-      <div className="pgrid two">
-        <Choice label={`Stole ${next}`} onClick={() => onPick('SB')} why={L.runnerBlocked(g, from, 'SB')} tone="hit" />
-        <Choice label="To next base" sub="Wild pitch or passed ball" onClick={() => onPick('ADV')} why={L.runnerBlocked(g, from, 'ADV')} />
-        <Choice label="Caught stealing" onClick={() => onPick('CS')} tone="strike" />
-        <Choice label="Picked off" onClick={() => onPick('PO')} tone="strike" />
-      </div>
-      <Choice label="Batter's interference" sub="On a play on this runner" onClick={() => onPick('BI')} />
+    <Sheet title={drop ? (drop.safe ? `Safe at ${baseName(to)}: how?` : 'Out: how?') : `Runner on ${fromName}${who ? ` · ${who}` : ''}`} onClose={onClose}>
+      {safe && start < 3 && !drop && (
+        <div className="seg" role="radiogroup" aria-label="Moved up to">
+          {[2, 3, 4].filter((n) => n > start).map((n) => (
+            <button key={n} type="button" role="radio" aria-checked={to === n} className="seg-item" aria-current={to === n ? 'page' : undefined} onClick={() => setTo(n)}>To {baseName(n)}</button>
+          ))}
+        </div>
+      )}
+      {safe && <>
+        <span className="legend">{drop ? `${who || 'The runner'} from ${fromName} to ${baseName(to)}` : `Moved up${start < 3 ? ` to ${baseName(to)}` : ' to score'}`}</span>
+        <div className="pgrid three">
+          <Choice label={to >= 4 ? 'Stole home' : `Stole ${baseName(to)}`} onClick={() => go('SB')} why={blocked('SB')} tone="hit" />
+          <Choice label="Wild pitch" onClick={() => go('WP')} why={blocked('WP')} />
+          <Choice label="Passed ball" onClick={() => go('PB')} why={blocked('PB')} />
+          <Choice label="Error" sub="Pick the fielder" onClick={() => open('EA')} why={blocked('EA')} />
+          <Choice label="Indifference" sub="No throw: no steal" onClick={() => go('DI')} why={blocked('DI')} />
+          <Choice label="Obstruction" sub="Awarded the base" onClick={() => go('OBS')} why={blocked('OBS')} />
+        </div>
+      </>}
+      {out && <>
+        <span className="legend">{drop ? `${who || 'The runner'} from ${fromName}` : 'Out'}</span>
+        <div className="pgrid three">
+          <Choice label="Caught stealing" sub="Pick the throw" onClick={() => open('CS')} tone="strike" />
+          <Choice label="Picked off" sub="Pick the throw" onClick={() => open('PO')} tone="strike" />
+          <Choice label="Interference" sub="Runner’s" onClick={() => open('RO', 'runner’s interference')} tone="strike" />
+          <Choice label="Out on appeal" sub="Left early, missed a base" onClick={() => open('RO', 'appeal')} tone="strike" />
+          <Choice label="Other" sub="Pick who made it" onClick={() => open('RO')} tone="strike" />
+        </div>
+        <Choice label="Batter’s interference" sub="On a play on this runner" onClick={onInterference} />
+      </>}
     </Sheet>
   );
 }

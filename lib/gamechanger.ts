@@ -16,10 +16,11 @@
 export type ImportCounts = {
   b_g: number; b_pa: number; b_ab: number; b_h: number; b_2b: number; b_3b: number; b_hr: number;
   b_rbi: number; b_r: number; b_bb: number; b_so: number; b_kl: number; b_hbp: number; b_sac: number;
-  b_sf: number; b_roe: number; b_fc: number; b_sb: number; b_cs: number;
+  b_sf: number; b_roe: number; b_fc: number; b_sb: number; b_cs: number; b_pik: number;
   p_g: number; p_gs: number; p_outs: number; p_bf: number; p_pitches: number; p_w: number; p_l: number;
   p_sv: number; p_h: number; p_r: number; p_er: number; p_bb: number; p_so: number; p_hbp: number;
-  p_wp: number; p_bk: number;
+  p_wp: number; p_bk: number; p_pik: number;
+  f_po: number; f_a: number; f_e: number; c_pb: number; c_sb: number; c_cs: number; c_pik: number;
 };
 export type ImportRow = { number: string; first_name: string; last_name: string; counts: ImportCounts };
 export type ImportResult = { rows: ImportRow[]; warnings: string[] };
@@ -28,16 +29,23 @@ export type ImportResult = { rows: ImportRow[]; warnings: string[] };
 const BATTING: [keyof ImportCounts, string][] = [
   ['b_g', 'GP'], ['b_pa', 'PA'], ['b_ab', 'AB'], ['b_h', 'H'], ['b_2b', '2B'], ['b_3b', '3B'], ['b_hr', 'HR'],
   ['b_rbi', 'RBI'], ['b_r', 'R'], ['b_bb', 'BB'], ['b_so', 'SO'], ['b_kl', 'K-L'], ['b_hbp', 'HBP'],
-  ['b_sac', 'SAC'], ['b_sf', 'SF'], ['b_roe', 'ROE'], ['b_fc', 'FC'], ['b_sb', 'SB'], ['b_cs', 'CS'],
+  ['b_sac', 'SAC'], ['b_sf', 'SF'], ['b_roe', 'ROE'], ['b_fc', 'FC'], ['b_sb', 'SB'], ['b_cs', 'CS'], ['b_pik', 'PIK'],
 ];
 const PITCHING: [keyof ImportCounts, string][] = [
   ['p_g', 'GP'], ['p_gs', 'GS'], ['p_bf', 'BF'], ['p_pitches', '#P'], ['p_w', 'W'], ['p_l', 'L'], ['p_sv', 'SV'],
   ['p_h', 'H'], ['p_r', 'R'], ['p_er', 'ER'], ['p_bb', 'BB'], ['p_so', 'SO'], ['p_hbp', 'HBP'], ['p_wp', 'WP'],
-  ['p_bk', 'BK'],
+  ['p_bk', 'BK'], ['p_pik', 'PIK'],
+];
+// The fielding section: putouts, assists and errors for everyone, and the
+// catcher's passed balls, steals allowed, runners caught and picked off.
+const FIELDING: [keyof ImportCounts, string][] = [
+  ['f_po', 'PO'], ['f_a', 'A'], ['f_e', 'E'], ['c_pb', 'PB'], ['c_sb', 'SB'], ['c_cs', 'CS'], ['c_pik', 'PIK'],
 ];
 
+const LATER = new Set<keyof ImportCounts>(['b_pik', 'p_pik', ...FIELDING.map(([k]) => k)]);
+
 export const emptyCounts = (): ImportCounts => Object.fromEntries(
-  [...BATTING, ...PITCHING, ['p_outs', 'IP'] as const].map(([k]) => [k, 0]),
+  [...BATTING, ...PITCHING, ...FIELDING, ['p_outs', 'IP'] as const].map(([k]) => [k, 0]),
 ) as ImportCounts;
 
 // RFC 4180, which is what GameChanger writes: quoted fields, "" for a quote,
@@ -98,10 +106,14 @@ export function parseGameChanger(text: string): ImportResult {
   const pitR = pit >= 0 ? range(pit) : null;
   if (!pitR) warnings.push('No pitching section in this file; only batting was read.');
 
+  const fldR = fld >= 0 ? range(fld) : null;
   const batCols = BATTING.map(([k, h]) => [k, colIn(batR, h)] as const);
   const pitCols = pitR ? PITCHING.map(([k, h]) => [k, colIn(pitR, h)] as const) : [];
+  const fldCols = fldR ? FIELDING.map(([k, h]) => [k, colIn(fldR, h)] as const) : [];
   const ipCol = pitR ? colIn(pitR, 'IP') : -1;
-  const missing = [...batCols, ...pitCols].filter(([, i]) => i < 0).map(([k]) => k);
+  // Pickoffs and the fielding section came later: an export without them reads
+  // as 0 there without a warning.
+  const missing = [...batCols, ...pitCols].filter(([k, i]) => i < 0 && !LATER.has(k)).map(([k]) => k);
   if (missing.length) warnings.push(`Columns not in this export, read as 0: ${missing.join(', ')}.`);
 
   const rows: ImportRow[] = [];
@@ -111,7 +123,7 @@ export function parseGameChanger(text: string): ImportResult {
     const last_name = (r[1] ?? '').trim(), first_name = (r[2] ?? '').trim();
     if (!first && !last_name && !first_name) continue;
     const counts = emptyCounts();
-    for (const [k, i] of [...batCols, ...pitCols]) if (i >= 0) counts[k] = count(r[i]);
+    for (const [k, i] of [...batCols, ...pitCols, ...fldCols]) if (i >= 0) counts[k] = count(r[i]);
     if (ipCol >= 0) counts.p_outs = inningsToOuts(r[ipCol] ?? '');
     rows.push({ number: /^\d{1,3}$/.test(first) ? first : '', first_name: first_name.slice(0, 40), last_name: last_name.slice(0, 40), counts });
   }

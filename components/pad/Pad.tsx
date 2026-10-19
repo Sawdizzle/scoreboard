@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { OnAir, type Channel } from '@/components/pad/OnAir';
 import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
-import { AtBat, EndCheck, EndGame, InPlay, More, Pitching, Runner, Situation, StrikeThree, type BatterFix, type NewKid } from '@/components/pad/PadSheets';
+import { AtBat, EndCheck, EndGame, GameMenu, InPlay, Pitching, PitchMenu, Runner, Situation, type BatterFix, type InPlayResult, type NewKid } from '@/components/pad/PadSheets';
+import { FieldView, type Drop } from '@/components/pad/FieldView';
 import { addRosterPlayer, editBatter, saveLineup } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
@@ -32,6 +33,14 @@ const readKept = (gameId: string): Kept | null => {
   try { const k = JSON.parse(localStorage.getItem(keepKey(gameId)) ?? 'null') as Kept | null; return k && Array.isArray(k.items) && k.items.length ? k : null; } catch { return null; }
 };
 
+// The pad's two layouts, remembered on this phone: the field (GameChanger's
+// way, the default) or big keys (the pad before it, for a scorer who wants it).
+type Layout = 'field' | 'keys';
+const LAYOUT_KEY = 'pad-layout';
+const readLayout = (): Layout => { try { return localStorage.getItem(LAYOUT_KEY) === 'keys' ? 'keys' : 'field'; } catch { return 'field'; } };
+const onLayout = (cb: () => void) => { window.addEventListener('storage', cb); window.addEventListener(LAYOUT_KEY, cb); return () => { window.removeEventListener('storage', cb); window.removeEventListener(LAYOUT_KEY, cb); }; };
+const setLayout = (l: Layout) => { try { localStorage.setItem(LAYOUT_KEY, l); } catch { /* private mode: this visit only */ } window.dispatchEvent(new Event(LAYOUT_KEY)); };
+
 // Our batters keep the names the server put in the team's format; a lineup
 // read straight from the table has the names it was saved with.
 function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
@@ -39,7 +48,8 @@ function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
   const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
   return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
 }
-type Sheet = null | 'atbat' | 'k3' | 'inplay' | 'dropped' | 'more' | 'situation' | 'air' | 'check' | 'end' | 'pitching' | { runner: 'first' | 'second' | 'third' };
+type Sheet = null | 'atbat' | 'inplay' | 'dropped' | 'pitch' | 'menu' | 'situation' | 'air' | 'check' | 'end' | 'pitching'
+  | { runner: 'first' | 'second' | 'third'; drop?: Drop };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
   const out = { ...t };
@@ -636,7 +646,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       // Forced runners only; the rare extra base is one tap away.
       say(w.runs ? `Walk · ${w.runs} run forced in` : 'Walk', { label: 'Fix runners', run: () => setSheet('situation') });
     },
-    strike: () => ((g.strikes | 0) >= 2 ? setSheet('k3') : commit(L.onStrike(g))),
+    // Swinging or looking, said on the key, as GameChanger does: strike three
+    // is then one tap. A dropped third strike is on the PITCH menu.
+    strike: (looking = false) => commit(L.onStrike(g, { looking })),
     foul: () => commit(L.onFoul(g)),
   };
 
@@ -676,7 +688,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     const k = e.key.toLowerCase();
     const direct: Record<string, string> = { 1: 'H1', 2: 'H2', 3: 'H3', e: 'E' };
     const act: Record<string, () => void> = {
-      b: press.ball, s: press.strike, f: press.foul, i: () => setSheet('inplay'), o: () => setSheet('inplay'), m: () => setSheet('more'), u: undo,
+      b: press.ball, s: () => press.strike(), l: () => press.strike(true), f: press.foul, i: () => setSheet('inplay'), o: () => setSheet('inplay'), m: () => setSheet('pitch'), p: () => setSheet('pitch'), u: undo,
       h: () => { const runs = L.computeHomeRun(g.bases).runs; commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }) }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' }); },
     };
     if (act[k]) { e.preventDefault(); act[k](); return; }
@@ -695,11 +707,34 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />
   );
 
+  // Who is on each base, by number and name, for the field.
+  const whoOn = (bid: string | null) => {
+    const x = bid ? batLineup?.batters?.find((y) => y.bid === bid) : undefined;
+    return x ? { num: x.num, name: x.name } : null;
+  };
+  const batB = batSide === 'home' ? homeB : awayB, fieldB = batSide === 'home' ? awayB : homeB;
+  const layout = useSyncExternalStore(onLayout, readLayout, () => 'field' as Layout);
+  // A dropped third strike: with nobody on it is recorded at once; with
+  // runners, the In Play sheet asks where they ended up.
+  const [k3, setK3] = useState<{ how: 'WP' | 'PB' | 'out'; seq: string[] } | null>(null);
+  function dropped(how: 'WP' | 'PB' | 'out', seq: string[]) {
+    const anyone = b.first || b.second || b.third;
+    if (anyone) { setK3({ how, seq }); setSheet('dropped'); return; }
+    commit(onPlay(g, { kind: 'K3', pos: 'C', dest: { batter: how === 'out' ? 'out' : 1 }, seq: how === 'out' ? seq : null, k3: how === 'out' ? null : how }));
+  }
+  const recordInPlay = ({ kind, pos, dest, seq, bb, k3: why }: InPlayResult) => {
+    setStartKind(null); setK3(null);
+    if (kind === 'HR') {
+      const runs = L.computeHomeRun(g.bases).runs;
+      commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }), inputs: { bb } }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' });
+    } else commit(onPlay(g, { kind, pos: pos || null, dest, seq: seq ?? null, bb: bb ?? null, k3: why ?? null }));
+  };
+
   return (
-    <div className={`pad${console_ ? ' has-console' : ''}`}>
+    <div className={`pad gc${console_ ? ' has-console' : ''}`}>
       <div className="pad-main">
       <header className="pad-head">
-        <Link href={`/t/${slug}/games/${game.id}`} aria-label="Leave the pad" className="icon-btn">‹</Link>
+        <button type="button" className="icon-btn pad-menu" onClick={() => setSheet('menu')} aria-label="Game menu">☰</button>
         <div className="pad-score">
           {[['away', awayB], ['home', homeB]].map(([side, br]) => (
             <span key={side as string} className={`pad-team${batSide === side ? ' bat' : ''}`}>
@@ -725,25 +760,28 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         <span className="pad-edit">{final ? 'FINAL ›' : 'FIX ›'}</span>
       </button>
 
-      <div className="pad-batter-row">
-        <button type="button" className="pad-batter" onClick={() => setSheet('atbat')} aria-label="At the plate: pick the batter, sub, or fix a number or name">
-          <span className="pad-num">{batter?.num ? `#${batter.num}` : '—'}</span>
-          <span className="row-main">
-            <span className="row-title">{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap to set it')}
-              {batter && <small>{positionOf(batLineup, bIdx) || ''}</small>}</span>
-            <span className="pad-line">
-              {onAir.batter?.avg && <b>{onAir.batter.avg}</b>}
-              {batter && <span>{tonight(view.tonight[batter.bid]) || 'First time up'}</span>}
-            </span>
+      <div className="pad-cards">
+        <button type="button" className="pad-card" onClick={() => setSheet('atbat')} aria-label="At the plate: pick the batter, sub, or fix a number or name">
+          <em>AB</em>
+          <span className="pad-card-main">
+            <b>{batter?.num ? `#${batter.num} ` : ''}{batter?.name || (batter ? `No. ${batter.num}` : 'No lineup: tap')}</b>
+            <small>{batter ? `${positionOf(batLineup, bIdx) ? `${positionOf(batLineup, bIdx)} · ` : ''}${onAir.batter?.avg ? `${onAir.batter.avg} · ` : ''}${tonight(view.tonight[batter.bid]) || 'First time up'}` : ''}</small>
           </span>
         </button>
-        <button type="button" className="pad-pitcher" onClick={() => setSheet('pitching')}
+        <button type="button" className="pad-card" onClick={() => setSheet('pitching')}
           aria-label={`${pitcher ? `Pitching: number ${pitcher.num} ${pitcher.name}` : 'No pitcher set'}, ${L.pitchCount(g)} pitches. Tap for a pitching change`}>
-          <small>{pitcher ? `#${pitcher.num} ${shortName(pitcher.name)}` : 'Pitcher'}</small>
-          <b>{L.pitchCount(g)}</b>
-          <em>Change</em>
+          <em>P</em>
+          <span className="pad-card-main">
+            <b>{pitcher ? `#${pitcher.num} ${shortName(pitcher.name)}` : 'Pitcher'}</b>
+            <small>#P {L.pitchCount(g)} · tap to change</small>
+          </span>
         </button>
       </div>
+
+      {layout === 'field' && <FieldView fieldLineup={fieldLineup} runners={{ first: whoOn(runners.first), second: whoOn(runners.second), third: whoOn(runners.third) }}
+        bases={b} batter={batter ? { num: batter.num, name: batter.name } : null} batColor={batB.color} fieldColor={fieldB.color} locked={locked}
+        onPitch={() => setSheet('pitch')} onBatter={() => setSheet('atbat')} onPitcher={() => setSheet('pitching')}
+        onRunner={(from) => setSheet({ runner: from })} onDrop={(from, drop) => setSheet({ runner: from, drop })} />}
 
       {over && (
         <div className="pad-over" role="status">
@@ -765,20 +803,23 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         {toast?.act && <button type="button" className="link pad-act" onClick={() => { toast.act!.run(); setToast(null); }}>{toast.act.label}</button>}
       </div>
 
-      <div className="pad-keys">
+      <div className={`pad-keys gc-keys${layout === 'keys' ? ' big' : ''}`}>
         <button type="button" className="pkey ball" onClick={press.ball} disabled={locked}>BALL</button>
-        <button type="button" className="pkey strike" onClick={press.strike} disabled={locked}>STRIKE</button>
+        <button type="button" className="pkey strike" onClick={() => press.strike()} disabled={locked}>STRIKE<small>swinging</small></button>
+        <button type="button" className="pkey strike look" onClick={() => press.strike(true)} disabled={locked}>STRIKE<small>looking</small></button>
         <button type="button" className="pkey foul" onClick={press.foul} disabled={locked}>FOUL</button>
         <button type="button" className="pkey inplay" onClick={() => setSheet('inplay')} disabled={locked}>IN PLAY</button>
-        <button type="button" className="pkey more" onClick={() => setSheet('more')} disabled={locked}>MORE ▾</button>
-        <div className="pkey diamond" aria-label="Runners">
-          {(['second', 'third', 'first'] as const).map((k) => (
-            <button key={k} type="button" className={`pbase ${k}${b[k] ? ' on' : ''}`} disabled={!b[k] || locked}
-              onClick={() => setSheet({ runner: k })} aria-label={b[k] ? `Runner on ${k}${runners[k] ? `, number ${numOf(runners[k], batSide)}` : ''}` : `${k} empty`}>
-              <i />{b[k] && <small>{numOf(runners[k], batSide)}</small>}
-            </button>
-          ))}
-        </div>
+        {layout === 'keys' && <>
+          <button type="button" className="pkey more" onClick={() => setSheet('pitch')} disabled={locked}>PITCH ▾</button>
+          <div className="pkey diamond" aria-label="Runners">
+            {(['second', 'third', 'first'] as const).map((k) => (
+              <button key={k} type="button" className={`pbase ${k}${b[k] ? ' on' : ''}`} disabled={!b[k] || locked}
+                onClick={() => setSheet({ runner: k })} aria-label={b[k] ? `Runner on ${k}${runners[k] ? `, number ${numOf(runners[k], batSide)}` : ''}` : `${k} empty`}>
+                <i />{b[k] && <small>{numOf(runners[k], batSide)}</small>}
+              </button>
+            ))}
+          </div>
+        </>}
       </div>
 
       <nav className="pad-bar">
@@ -790,21 +831,21 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       </div>
       {console_ && <aside className="pad-console">{airPanel(true)}</aside>}
 
-      {sheet === 'k3' && <StrikeThree g={g} onClose={() => setSheet(null)} onPick={(k) => {
-        // A dropped third strike is a ball in play for the runners: the batter may run.
-        if (k === 'dropped') setSheet('dropped'); else commit(L.onStrike(g, { looking: k === 'look' }));
-      }} />}
-      {(sheet === 'inplay' || sheet === 'dropped') && <InPlay g={g} start={sheet === 'dropped' ? { kind: 'K3', pos: 'C' } : startKind ? { kind: startKind, pos: '' } : undefined}
-        onClose={() => { setSheet(null); setStartKind(null); }} onRecord={({ kind, pos, dest }) => {
-        setStartKind(null);
-        if (kind === 'HR') { const runs = L.computeHomeRun(g.bases).runs; commit({ type: 'homerun', patch: L.homeRunPatch(g, runs), payload: { runs, play: L.playNote(g, 'HR', { runs }) }, text: runs > 1 ? `Home run · ${runs} runs` : 'Home run' }); }
-        else commit(onPlay(g, { kind, pos: pos || null, dest }));
-      }} />}
-      {sheet === 'more' && <More g={g} onClose={() => setSheet(null)} onPick={(k) => {
+      {(sheet === 'inplay' || sheet === 'dropped') && <InPlay g={g} fieldLineup={fieldLineup}
+        start={sheet === 'dropped' && k3 ? { kind: 'K3', pos: 'C', batter: k3.how === 'out' ? 'out' : 1, k3: k3.how === 'out' ? null : k3.how, seq: k3.how === 'out' ? k3.seq : [] }
+          : startKind ? { kind: startKind, pos: '' } : undefined}
+        onClose={() => { setSheet(null); setStartKind(null); setK3(null); }} onRecord={recordInPlay}
+        onInterference={() => commit(L.onBatterInterference(g, null))} />}
+      {sheet === 'pitch' && <PitchMenu g={g} fieldLineup={fieldLineup} onClose={() => setSheet(null)} onInPlay={() => setSheet('inplay')} onPick={(k) => {
         commit(k === 'hbp' ? L.onHitByPitch(g) : k === 'ci' ? L.onCatcherInterference(g) : k === 'ibb' ? L.onIntentionalWalk(g) : L.onBalk(g));
-      }} />}
-      {sheet && typeof sheet === 'object' && <Runner g={g} from={sheet.runner} who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
-        onClose={() => setSheet(null)} onPick={(k) => commit(k === 'BI' ? L.onBatterInterference(g, sheet.runner) : L.onRunnerPlay(g, sheet.runner, k))} />}
+      }} onInterference={(from) => commit(L.onBatterInterference(g, from))} onBatterOut={(seq) => commit(L.onBatterOut(g, { seq }))} onDropped={dropped} />}
+      {sheet === 'menu' && <GameMenu final={final} lineupHref={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`} gameHref={`/t/${slug}/games/${game.id}`}
+        layout={layout} onLayout={(l) => { setLayout(l); setSheet(null); }}
+        onFix={() => setSheet('situation')} onEndHalf={() => commit(L.onEndHalf(g))} onEnd={() => setSheet('end')} onClose={() => setSheet(null)} />}
+      {sheet && typeof sheet === 'object' && <Runner key={`${sheet.runner}${sheet.drop?.to ?? ''}${sheet.drop?.safe ?? ''}`} g={g} from={sheet.runner} drop={sheet.drop}
+        who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
+        fieldLineup={fieldLineup} onClose={() => setSheet(null)} onInterference={() => commit(L.onBatterInterference(g, sheet.runner))}
+        onPick={(k, opts) => commit(L.onRunnerPlay(g, sheet.runner, k, opts))} />}
       {sheet === 'air' && !console_ && airPanel(false)}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
         extra={game.settings?.time_limit ? <GameClock gameId={game.id} initial={clock} fullSeconds={game.settings.time_limit} canRun={canScore} label="Time limit" onChange={(c) => { setClock(c); nudge(); }} /> : null}
