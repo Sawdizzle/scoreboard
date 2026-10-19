@@ -7,9 +7,11 @@ import { airTopic } from '@/components/overlay/Overlay';
 import { GameClock } from '@/components/pad/GameClock';
 import { AtBat, EndCheck, EndGame, GameMenu, InPlay, Pitching, PitchMenu, Runner, Situation, type BatterFix, type InPlayResult, type NewKid } from '@/components/pad/PadSheets';
 import { FieldView, type Drop } from '@/components/pad/FieldView';
+import { PitchCounts, PlaysSheet, type Log } from '@/components/pad/PlaysSheet';
 import { addRosterPlayer, editBatter, saveLineup } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
+import type { LogEvent, LogStat } from '@/lib/plays';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { assignSpot, newBid, normalizeTeam, positionOf } from '@/lib/rules/roster.js';
@@ -48,7 +50,7 @@ function sameNames(fresh: Lineup | undefined, named: Lineup | undefined) {
   const by = new Map((named.batters ?? []).map((b) => [b.bid, b]));
   return { ...fresh, batters: (fresh.batters ?? []).map((b) => { const n = by.get(b.bid); return n ? { ...b, num: n.num, name: n.name } : b; }) };
 }
-type Sheet = null | 'atbat' | 'inplay' | 'dropped' | 'pitch' | 'menu' | 'situation' | 'air' | 'check' | 'end' | 'pitching'
+type Sheet = null | 'atbat' | 'inplay' | 'dropped' | 'pitch' | 'menu' | 'situation' | 'air' | 'check' | 'end' | 'pitching' | 'plays'
   | { runner: 'first' | 'second' | 'third'; drop?: Drop };
 
 const addRows = (t: Record<string, Line>, rows: StatRow[], sign = 1) => {
@@ -73,7 +75,7 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false, log }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
   season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
   // Our players' first and last names, for fixing a name from the pad.
@@ -84,6 +86,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   canRoster?: boolean;
   // Open on End game (a game left live from an earlier day).
   openEnd?: boolean;
+  // The game's log, for the component sheet (/dev/kit), which has no database:
+  // the pad reads it from game_events and game_stats otherwise.
+  log?: Log;
 }) {
   const sb = browserClient();
   const sides = useCallback((e: EngineSide) => sideOf(game, e), [game]);
@@ -441,6 +446,68 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     const err = await saveSide(e, next);
     if (!err) say(`${who(b)} in for ${who(out)}`);
     return err;
+  }
+
+  // A pinch runner (who also takes the runner's place in the order) or a
+  // courtesy runner (only on the bases), on the base that was tapped.
+  async function runnerSub(from: 'first' | 'second' | 'third', kind: 'PR' | 'CR', kid: LineupBatter | { num: string; name: string }) {
+    const e = L.battingSide(cur.current.g) as EngineSide;
+    const b: LineupBatter = 'bid' in kid ? kid : { bid: newBid(), num: kid.num, name: kid.name };
+    if (kind === 'PR') {
+      const outBid = runnersOf(cur.current.g)[from];
+      const i = outBid ? lineupOf(e).batters.findIndex((x) => x.bid === outBid) : -1;
+      if (i >= 0) {
+        const err = await subIn(e, i, b);
+        if (err) { say(err); return; }
+      }
+    }
+    commit(L.onRunnerSub(cur.current.g, from, kind, b.bid));
+    setSheet(null);
+  }
+
+  // The log, read when the Plays sheet or the pitch counts open: each event's
+  // inning and play note, and the stat rows that say who got what.
+  const loadLog = useCallback(async (): Promise<Log | null> => {
+    if (log) return log;
+    const [ev, st] = await Promise.all([
+      sb.from('game_events').select('id, seq, type, payload, inning:prev_live->inning, half:prev_live->>half').eq('game_id', game.id).order('seq'),
+      sb.from('game_stats').select('event_id, side, bid, b_pa, b_r, b_sb, b_cs, b_pik, b_rbi, p_pitches, p_bf, p_outs, f_po, f_a, f_e, c_pik').eq('game_id', game.id),
+    ]);
+    if (ev.error || st.error) return null;
+    const events = (ev.data ?? []) as unknown as (Omit<LogEvent, 'prev_live'> & { inning: number | null; half: 'top' | 'bottom' | null })[];
+    return {
+      events: events.map(({ inning, half, ...e }) => ({ ...e, prev_live: { inning: inning ?? undefined, half: half ?? undefined } })),
+      stats: (st.data ?? []) as LogStat[],
+    };
+  }, [sb, game.id, log]);
+  // A fix that did not save, said the way the rest of the pad says it.
+  const editError = (error: { message?: string; code?: string }) =>
+    !error.code || /fetch|network|load failed/i.test(error.message ?? '') ? 'No signal: that did not save. Try again.' : error.message || 'That did not save. Try again.';
+  // Anyone's name by id: either lineup, or our bench.
+  const nameOf = (bid: string | null) => {
+    if (!bid) return '';
+    const all = [...(lineupsNow.current.us?.batters ?? []), ...(lineupsNow.current.them?.batters ?? []), ...bench];
+    const b = all.find((x) => x.bid === bid);
+    return b ? `${b.num ? `#${b.num} ` : ''}${b.name || ''}`.trim() || 'Player' : 'Player';
+  };
+  // Who can be credited instead on a side: its order, and ours the bench too.
+  const choicesFor = (side: Side) => {
+    const order = lineupsNow.current[side]?.batters ?? [];
+    return side === 'us' ? [...order, ...bench.filter((p) => !order.some((x) => x.bid === p.bid))] : order;
+  };
+  async function editCredit(event: number, side: Side, from: string, to: string) {
+    const { error } = await sb.rpc('edit_play_credit', { p_game: game.id, p_event: event, p_side: side, p_from: from, p_to: to });
+    if (error) return editError(error);
+    await reload(false);
+    nudge();
+    return null;
+  }
+  async function editFielding(event: number, side: Side, code: string, rows: { bid: string; f_po: number; f_a: number; f_e: number; c_pik: number }[]) {
+    const { error } = await sb.rpc('edit_play_fielding', { p_game: game.id, p_event: event, p_side: side, p_code: code, p_rows: rows });
+    if (error) return editError(error);
+    await reload(false);
+    nudge();
+    return null;
   }
 
   function endGame(final: boolean) {
@@ -825,6 +892,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       <nav className="pad-bar">
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !view.last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`}>Lineups</Link>
+        <button type="button" className="pbar" onClick={() => setSheet('plays')}>Plays</button>
         <button type="button" className={`pbar end${final ? ' on' : ''}`} onClick={() => setSheet('end')} disabled={!canScore}>{final ? 'Final' : 'End game'}</button>
         {chan && !console_ && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
       </nav>
@@ -841,10 +909,15 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       }} onInterference={(from) => commit(L.onBatterInterference(g, from))} onBatterOut={(seq) => commit(L.onBatterOut(g, { seq }))} onDropped={dropped} />}
       {sheet === 'menu' && <GameMenu final={final} lineupHref={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`} gameHref={`/t/${slug}/games/${game.id}`}
         layout={layout} onLayout={(l) => { setLayout(l); setSheet(null); }}
-        onFix={() => setSheet('situation')} onEndHalf={() => commit(L.onEndHalf(g))} onEnd={() => setSheet('end')} onClose={() => setSheet(null)} />}
+        onFix={() => setSheet('situation')} onPlays={() => setSheet('plays')} onEndHalf={() => commit(L.onEndHalf(g))} onEnd={() => setSheet('end')} onClose={() => setSheet(null)} />}
       {sheet && typeof sheet === 'object' && <Runner key={`${sheet.runner}${sheet.drop?.to ?? ''}${sheet.drop?.safe ?? ''}`} g={g} from={sheet.runner} drop={sheet.drop}
         who={numOf(runners[sheet.runner], batSide) ? `#${numOf(runners[sheet.runner], batSide)}` : ''}
         fieldLineup={fieldLineup} onClose={() => setSheet(null)} onInterference={() => commit(L.onBatterInterference(g, sheet.runner))}
+        subs={{
+          bench: sides(batSide) === 'us' ? bench.filter((p) => !(batLineup?.batters ?? []).some((x) => x.bid === p.bid)) : null,
+          order: (batLineup?.batters ?? []).filter((x) => x.bid !== runners[sheet.runner] && x.bid !== batter?.bid),
+        }}
+        onSub={(kind, kid) => void runnerSub(sheet.runner, kind, kid)}
         onPick={(k, opts) => commit(L.onRunnerPlay(g, sheet.runner, k, opts))} />}
       {sheet === 'air' && !console_ && airPanel(false)}
       {sheet === 'situation' && <Situation g={g} final={final} labels={{ away: awayB.display, home: homeB.display }}
@@ -863,7 +936,12 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}&from=pad`}
         onPick={(i) => { pickBatter(i); }} onSave={saveBatter} onSub={async (e, i, kid) => { const err = await subIn(e, i, kid); if (!err) setSheet(null); return err; }}
         onClose={() => setSheet(null)} />}
+      {sheet === 'plays' && <PlaysSheet load={loadLog} battingSide={(half) => sides(half === 'top' ? 'away' : 'home')}
+        labels={{ us: brandOf(team).display, them: themB.display }} nameOf={nameOf} choices={choicesFor}
+        positionsNow={(side) => lineupsNow.current[side]?.positions ?? {}}
+        onCredit={editCredit} onRefield={editFielding} onClose={() => setSheet(null)} />}
       {sheet === 'pitching' && <Pitching g={g} side={fieldSide} labels={{ away: awayB.display, home: homeB.display }} locked={locked}
+        counts={<PitchCounts load={loadLog} labels={{ us: brandOf(team).display, them: themB.display }} nameOf={nameOf} />}
         lineupHref={(e) => `/t/${slug}/games/${game.id}/lineup?side=${sides(e)}&from=pad`}
         onPick={async (e, pick) => { const err = await changePitcher(e, pick); if (!err) setSheet(null); return err; }}
         onClose={() => setSheet(null)} />}

@@ -126,3 +126,39 @@ test('fielding: a GameChanger import carries its fielding columns into the seaso
   // 5 imported + the 1 putout from the pickoff above.
   assert.deepEqual(line, { f_po: 6, f_a: 2, f_e: 1, c_sb: 4, c_cs: 1, c_pb: 2, p_pik: 1 });
 });
+
+test('play edits: the wrong kid credited moves to the right one; the fielders follow a new code', async () => {
+  const [{ id: g3 }] = await t.as<{ id: string }>('owner', `insert into games (team_id, season_id, opponent_name, opponent_abbr) values ($1, $2, 'Bees', 'BEES') returning id`, [team, season]);
+  // We bat; p7 is credited with a 6-3 groundout that p12 hit. Their 9 pitching, their 6 and 3 fielding.
+  await t.as('scorer', `select apply_play($1, 0, 'play', '{"outs":1}'::jsonb, $2::jsonb, $3::jsonb, null)`, [g3,
+    JSON.stringify({ play: { kind: 'GB', code: '6-3', outs: 1, inning: 1, half: 'bottom' } }),
+    JSON.stringify([{ side: 'us', bid: p7, b_pa: 1, b_ab: 1 }, { side: 'them', bid: 'x9', p_bf: 1, p_outs: 1, p_pitches: 1 },
+      { side: 'them', bid: 'x6', f_a: 1 }, { side: 'them', bid: 'x3', f_po: 1 }])]);
+  const [{ id: ev }] = await t.as<{ id: number }>('owner', `select id from game_events where game_id = $1`, [g3]);
+  const before = (await t.as<{ b_pa: number }>(null, `select b_pa from season_stats where season_id = $1 and player_id = $2`, [season, p12]))[0]?.b_pa ?? 0;
+
+  // Media cannot; a stranger cannot.
+  await fails(t.as('media', `select edit_play_credit($1, $2, 'us', $3, $4)`, [g3, ev, p7, p12]), /cannot edit/);
+  await fails(t.as('stranger', `select edit_play_credit($1, $2, 'us', $3, $4)`, [g3, ev, p7, p12]), /cannot edit/);
+  // The scorer moves the at-bat to p12: the row, its player, and the season with it.
+  const [{ edit_play_credit: moved }] = await t.as<{ edit_play_credit: number }>('scorer', `select edit_play_credit($1, $2, 'us', $3, $4)`, [g3, ev, p7, p12]);
+  assert.equal(moved, 1);
+  const [row] = await t.as(null, `select bid, player_id, b_pa from game_stats where event_id = $1 and side = 'us'`, [ev]);
+  assert.deepEqual(row, { bid: p12, player_id: p12, b_pa: 1 });
+  const [after] = await t.as<{ b_pa: number }>(null, `select b_pa from season_stats where season_id = $1 and player_id = $2`, [season, p12]);
+  assert.equal(after.b_pa, before + 1);
+  // A kid already in the play cannot take another's part; nobody can be moved who is not in it.
+  await fails(t.as('scorer', `select edit_play_credit($1, $2, 'them', 'x9', 'x6')`, [g3, ev]), /already has a part/);
+  await fails(t.as('scorer', `select edit_play_credit($1, $2, 'them', 'nobody', 'x7')`, [g3, ev]), /Nobody by that name/);
+
+  // The fielders: it was 5-3, not 6-3. The shortstop's assist goes, the third baseman gets one, the code changes.
+  await t.as('scorer', `select edit_play_fielding($1, $2, 'them', '5-3', $3::jsonb)`, [g3, ev,
+    JSON.stringify([{ bid: 'x5', f_a: 1 }, { bid: 'x3', f_po: 1 }])]);
+  const field = await t.as(null, `select bid, f_po, f_a from game_stats where event_id = $1 and side = 'them' and (f_po > 0 or f_a > 0) order by bid`, [ev]);
+  assert.deepEqual(field, [{ bid: 'x3', f_po: 1, f_a: 0 }, { bid: 'x5', f_po: 0, f_a: 1 }]);
+  const [{ code }] = await t.as<{ code: string }>('owner', `select payload->'play'->>'code' code from game_events where id = $1`, [ev]);
+  assert.equal(code, '5-3');
+  // The game itself did not move: no new seq, nobody else's phone stopped.
+  const [{ seq }] = await t.as<{ seq: number }>(null, `select seq from games where id = $1`, [g3]);
+  assert.equal(seq, 1);
+});

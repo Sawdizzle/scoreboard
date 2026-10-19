@@ -75,7 +75,7 @@ export function pitcherBid(g: G): string | null {
 // Types that are corrections, not plays: they move the game but put nothing
 // on anyone's line.
 const NO_STATS = new Set(['adj-score', 'adj-hits', 'adj-errors', 'adj-outs', 'adj-balls', 'adj-strikes', 'base', 'clear',
-  'inning', 'half', 'batter', 'batidx', 'count', 'endhalf', 'pitcher', 'pitchadj', 'run', 'end_game', 'reopen_game', 'error']);
+  'inning', 'half', 'batter', 'batidx', 'count', 'endhalf', 'pitcher', 'pitchadj', 'run', 'end_game', 'reopen_game', 'error', 'runnersub']);
 
 // The scorebook kind of a play that ended a plate appearance, or null.
 export function paKind(res: Res, prev: G): string | null {
@@ -145,7 +145,8 @@ function trace(prev: G, res: Res): Trace {
     }
     case 'runner': {
       const from = p.from;
-      if (!from) break;
+      // A pickoff attempt leaves him where he was.
+      if (!from || p.kind === 'APO') break;
       to = { ...to, [from]: null };
       if (p.kind && RUNNER_ADVANCES.has(p.kind)) {
         // The base he ended on (2, 3, or 4 for home): the next one unless the play says further.
@@ -164,7 +165,7 @@ function trace(prev: G, res: Res): Trace {
   return { to, scored, stole, caught, picked, errored };
 }
 // Runner plays that move him up rather than put him out.
-const RUNNER_ADVANCES = new Set(['SB', 'ADV', 'WP', 'PB', 'EA', 'DI', 'OBS']);
+const RUNNER_ADVANCES = new Set(['SB', 'ADV', 'WP', 'PB', 'EA', 'DI', 'OBS', 'OLP']);
 
 export type Tainted = { first: boolean; second: boolean; third: boolean };
 const CLEAN: Tainted = { first: false, second: false, third: false };
@@ -198,6 +199,9 @@ export function moveRunners(prev: G, res: Res, next: G, batter: string | null) {
   const r: Runners = { ...EMPTY }, u: Tainted = { ...CLEAN };
   // A new half starts with nobody on; and the rules' bases are the truth.
   if (!over) for (const k of BASES) { const s = t.to[k]; if (s && truth[k]) { r[k] = who(s); u[k] = dirty(s); } }
+  // A pinch or courtesy runner: the base is his from here, earned or not as it was.
+  const sub = res.type === 'runnersub' ? (res.payload as { from?: keyof Runners; in?: string } | undefined) : undefined;
+  if (sub?.from && sub.in && truth[sub.from]) r[sub.from] = sub.in;
 
   const past = (prev.outs | 0) + errOutsOf(prev) >= 3;
   return {
@@ -291,6 +295,13 @@ export function scorePlay(prev: G, res: Res, next: G, sides: (e: EngineSide) => 
   if (rk === 'SB') add(fieldSide, at('C'), 'c_sb');
   if (rk === 'PB') add(fieldSide, at('C'), 'c_pb');
   if (rk === 'WP') add(fieldSide, pitcher, 'p_wp');
+  // A runner who scored on the last play, moved after the fact: the batter of
+  // that play (the one before the batter up now) gets the RBI, as he would have.
+  if (rk === 'OLP' && runs) {
+    const order = prev.lineups[batSide]?.batters ?? [];
+    const was = order.length ? order[(L.currentBatterIdx(prev, batSide) - 1 + order.length) % order.length] : null;
+    add(batSide, was?.bid ?? null, 'b_rbi', Math.min(4, runs));
+  }
   // A dropped third strike the batter beat out: the wild pitch or passed ball that let him.
   const k3 = (res.payload as { inputs?: { k3?: string; dest?: Record<string, unknown> } } | undefined)?.inputs;
   if (kind === 'K3' && k3?.dest?.batter !== 'out') {
@@ -334,7 +345,12 @@ export function fieldingCredit(kind: string, code: string, outs: number) {
 // (with the runner map folded into its state) and the rows to add.
 export function record(prev: G, res: Res | null, sides: (e: EngineSide) => Side) {
   if (!res || !res.patch || !Object.keys(res.patch).length) return null;
-  const stamped = L.stamp(res, prev) as Res;
+  let stamped = L.stamp(res, prev) as Res;
+  // Who stood where for a play that credits fielders, so a fielding edit later
+  // credits the kids who were there, not whoever plays the spot now.
+  const note = (stamped.payload as { play?: { kind?: string } } | undefined)?.play;
+  const field = prev.lineups[L.fieldingSide(prev) as EngineSide]?.positions;
+  if (note?.kind && field && Object.keys(field).length) stamped = { ...stamped, payload: { ...stamped.payload, field } };
   const next = { ...prev, ...stamped.patch } as G;
   const { rows, runners, unearned, errOuts } = scorePlay(prev, stamped, next, sides);
   // Who was pitching for each side when this was written, so a pitching

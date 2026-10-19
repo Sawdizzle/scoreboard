@@ -176,8 +176,10 @@ export function InPlay({ g, start, fieldLineup, onRecord, onInterference, onClos
 const FIELD_SPOT: Record<string, [number, number]> = {
   LF: [17, 21], CF: [50, 11], RF: [83, 21], SS: [35, 43], '2B': [65, 43], '3B': [22, 63], '1B': [78, 63], P: [50, 62], C: [50, 88],
 };
-export function FielderPicker({ lineup, value, onChange, kind = '', hint }: {
+export function FielderPicker({ lineup, value, onChange, kind = '', hint, given = 'usual' }: {
   lineup?: Lineup; value: string[]; onChange: (seq: string[]) => void; kind?: string; hint?: string;
+  // What the pre-filled sequence is: the usual throw, or the one scored.
+  given?: string;
 }) {
   const [mine, setMine] = useState(false);
   const numOf = (pos: string) => {
@@ -207,7 +209,7 @@ export function FielderPicker({ lineup, value, onChange, kind = '', hint }: {
         })}
       </div>
       <div className="fpick-bar">
-        <span className="fpick-code">{code ? <>{code}{!mine && <small> · usual, tap to change</small>}</> : (hint ?? 'Tap the fielders in the order the ball went')}</span>
+        <span className="fpick-code">{code ? <>{code}{!mine && <small> · {given}, tap to change</small>}</> : (hint ?? 'Tap the fielders in the order the ball went')}</span>
         <button type="button" className="icon-btn" aria-label="Take back the last fielder" disabled={!value.length} onClick={() => { onChange(value.slice(0, -1)); setMine(true); }}>⌫</button>
       </div>
     </div>
@@ -299,14 +301,15 @@ export function PitchMenu({ g, fieldLineup, onInPlay, onPick, onFoulTip, onInter
 
 // The Game Menu, as GameChanger keeps it top left: fixes, the end of a half or
 // of the game, the lineups, and leaving.
-export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix, onEndHalf, onEnd, onClose }: {
+export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix, onPlays, onEndHalf, onEnd, onClose }: {
   final: boolean; lineupHref: string; gameHref: string; layout: 'field' | 'keys'; onLayout: (l: 'field' | 'keys') => void;
-  onFix: () => void; onEndHalf: () => void; onEnd: () => void; onClose: () => void;
+  onFix: () => void; onPlays: () => void; onEndHalf: () => void; onEnd: () => void; onClose: () => void;
 }) {
   return (
     <Sheet title="Game menu" onClose={onClose} close="Done">
       <div className="menu-list">
         <button type="button" className="menu-row" onClick={onFix}><b>Fix the situation</b><small>Score, inning, outs, count, bases, pitch count</small></button>
+        <button type="button" className="menu-row" onClick={onPlays}><b>Plays</b><small>Every play so far: fix who was credited, or the fielders</small></button>
         {!final && <button type="button" className="menu-row" onClick={onEndHalf}><b>End half inning</b><small>A max-runs rule, or a third out the keys missed</small></button>}
         <button type="button" className={`menu-row${final ? '' : ' bad'}`} onClick={onEnd}><b>{final ? 'Reopen the game' : 'Game over'}</b><small>{final ? 'To fix a play' : 'End the game: stats count, the stream shows Final'}</small></button>
         <Link href={lineupHref} className="menu-row"><b>Lineups</b><small>Order, positions, subs, both teams</small></Link>
@@ -325,11 +328,16 @@ export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, onFix,
 // GameChanger does it. Safe asks how he got there; out asks how he was put out,
 // then who made the play in throw order (a pickoff from the catcher to third
 // is 2-5), with the usual throw filled in. An error asks who made it.
-type RunnerKind = 'SB' | 'WP' | 'PB' | 'EA' | 'DI' | 'OBS' | 'ADV' | 'CS' | 'PO' | 'RO';
-export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference, onClose }: {
+type RunnerKind = 'SB' | 'WP' | 'PB' | 'EA' | 'DI' | 'OBS' | 'ADV' | 'OLP' | 'APO' | 'CS' | 'PO' | 'RO';
+// Who can come in for a runner: the bench (ours), or anyone typed in (theirs);
+// a courtesy runner may also be someone in the order (often the last out).
+export type RunnerSubs = { bench: LineupBatter[] | null; order: LineupBatter[] };
+export function Runner({ g, from, who, drop, fieldLineup, subs, onPick, onSub, onInterference, onClose }: {
   g: G; from: 'first' | 'second' | 'third'; who: string; fieldLineup?: Lineup;
   drop?: { to: 1 | 2 | 3 | 4; safe: boolean };
+  subs?: RunnerSubs;
   onPick: (k: RunnerKind, opts: { seq?: string[]; to?: number; why?: string }) => void;
+  onSub?: (kind: 'PR' | 'CR', kid: LineupBatter | { num: string; name: string }) => void;
   onInterference: () => void;
   onClose: () => void;
 }) {
@@ -340,6 +348,9 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
   const atNext = !!drop && !drop.safe && drop.to > start;
   const [ask, setAsk] = useState<null | { kind: 'CS' | 'PO' | 'RO' | 'EA'; why?: string }>(null);
   const [seq, setSeq] = useState<string[]>([]);
+  const [subKind, setSubKind] = useState<null | 'PR' | 'CR'>(null);
+  const [typed, setTyped] = useState({ num: '', name: '' });
+  const backOnOwn = !!drop && drop.safe && drop.to === start;
   const baseName = (n: number) => (n >= 4 ? 'home' : n === 3 ? '3rd' : '2nd');
   const fromName = from === 'first' ? '1st' : from === 'second' ? '2nd' : '3rd';
   const label: Record<RunnerKind, string> = (L.RUNNER_LABEL as Record<RunnerKind, string>);
@@ -361,6 +372,43 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
       </Sheet>
     );
   }
+  if (subKind && subs && onSub) {
+    const pinch = subKind === 'PR';
+    // Not the runner himself, nor the batter at the plate.
+    const order = subs.order.filter((b) => b.name || b.num);
+    const pick = (b: LineupBatter) => onSub(subKind, b);
+    return (
+      <Sheet title={`${pinch ? 'Pinch runner' : 'Courtesy runner'} for ${who || `the runner on ${fromName}`}`} onClose={onClose}>
+        <p className="hint">{pinch ? 'He takes this runner’s place in the order too; the runner leaves the game.' : 'Only on the bases: the runner stays in the game and in the order.'}</p>
+        {subs.bench && !subs.bench.length && pinch && <p className="note note-plain">Nobody on the bench. Add a player on the lineup screen first, or use a courtesy runner.</p>}
+        {subs.bench && subs.bench.length > 0 && <>
+          <span className="legend">Bench</span>
+          <div className="chips">{subs.bench.map((b) => <button key={b.bid} type="button" className="chip" onClick={() => pick(b)}>{b.num && `#${b.num} `}{b.name}</button>)}</div>
+        </>}
+        {!pinch && order.length > 0 && <>
+          <span className="legend">In the order</span>
+          <div className="chips">{order.map((b) => <button key={b.bid} type="button" className="chip" onClick={() => pick(b)}>{b.num && `#${b.num} `}{b.name}</button>)}</div>
+        </>}
+        {!subs.bench && (
+          <div className="field-row atbat-two" style={{ gridTemplateColumns: '84px 1fr auto' }}>
+            <label className="field"><span>No.</span><input className="input" inputMode="numeric" value={typed.num} maxLength={3}
+              onChange={(e) => setTyped({ ...typed, num: e.target.value.replace(/\D/g, '').slice(0, 3) })} /></label>
+            <label className="field"><span>Name</span><input className="input" value={typed.name} maxLength={60} onChange={(e) => setTyped({ ...typed, name: e.target.value })} /></label>
+            <button type="button" className="btn btn-quiet" style={{ alignSelf: 'end' }} disabled={!typed.num && !typed.name.trim()} onClick={() => onSub(subKind, { num: typed.num, name: typed.name.trim() })}>Run</button>
+          </div>
+        )}
+        <button type="button" className="link" onClick={() => setSubKind(null)}>‹ Back</button>
+      </Sheet>
+    );
+  }
+  if (backOnOwn) return (
+    <Sheet title={`Safe at ${fromName}: how?`} onClose={onClose}>
+      <div className="pgrid two">
+        <Choice label="Pickoff attempt" sub="Thrown over, safe back" onClick={() => onPick('APO', {})} />
+        <Choice label="Nothing happened" sub="Leave him there" onClick={onClose} />
+      </div>
+    </Sheet>
+  );
   const go = (k: RunnerKind, why?: string) => onPick(k, { to, ...(why ? { why } : {}) });
   const safe = !drop || drop.safe, out = !drop || !drop.safe;
   return (
@@ -381,6 +429,7 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
           <Choice label="Error" sub="Pick the fielder" onClick={() => open('EA')} why={blocked('EA')} />
           <Choice label="Indifference" sub="No throw: no steal" onClick={() => go('DI')} why={blocked('DI')} />
           <Choice label="On the throw" sub="Took the base on a throw" onClick={() => go('ADV', 'on the throw')} why={blocked('ADV')} />
+          <Choice label="On the last play" sub="RBI to that batter if he scores" onClick={() => go('OLP')} why={blocked('OLP')} />
           <Choice label="Obstruction" sub="Awarded the base" onClick={() => go('OBS')} why={blocked('OBS')} />
           <Choice label="Other" sub="No one charged" onClick={() => go('ADV', 'other')} why={blocked('ADV')} />
         </div>
@@ -395,6 +444,13 @@ export function Runner({ g, from, who, drop, fieldLineup, onPick, onInterference
           <Choice label="Other" sub="Pick who made it" onClick={() => open('RO')} tone="strike" />
         </div>
         <Choice label="Batter’s interference" sub="On a play on this runner" onClick={onInterference} />
+      </>}
+      {!drop && subs && onSub && <>
+        <span className="legend">Substitute</span>
+        <div className="pgrid two">
+          <Choice label="Pinch runner" sub="Replaces him in the order" onClick={() => setSubKind('PR')} />
+          <Choice label="Courtesy runner" sub="He stays in the game" onClick={() => setSubKind('CR')} />
+        </div>
       </>}
     </Sheet>
   );
@@ -449,8 +505,10 @@ export function EndGame({ final, score, when, ending, onEnd, onReopen, onClose }
 // pitcher now marked in it. A tap puts that player on the mound and sends the
 // one coming off to his old spot. Their pitcher may not be on the card at all:
 // type his number.
-export function Pitching({ g, side, labels, locked, lineupHref, onPick, onClose }: {
+export function Pitching({ g, side, labels, locked, lineupHref, counts, onPick, onClose }: {
   g: G; side: EngineSide; labels: Record<EngineSide, string>; locked: boolean;
+  // Pitch counts by inning, GameChanger's other choice on the pitcher's card.
+  counts?: React.ReactNode;
   lineupHref: (side: EngineSide) => string;
   onPick: (side: EngineSide, pick: { bid: string } | { num: string }) => Promise<string | null>;
   onClose: () => void;
@@ -459,6 +517,7 @@ export function Pitching({ g, side, labels, locked, lineupHref, onPick, onClose 
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [num, setNum] = useState('');
+  const [view, setView] = useState<'change' | 'counts'>('change');
   const lineup = g.lineups[shown];
   const batters = lineup?.batters ?? [];
   const now = lineup?.positions?.P ?? null;
@@ -469,7 +528,14 @@ export function Pitching({ g, side, labels, locked, lineupHref, onPick, onClose 
     if (e) setErr(e);
   };
   return (
-    <Sheet title="Pitching change" onClose={onClose} close="Done">
+    <Sheet title={view === 'counts' ? 'Pitch counts' : 'Pitching change'} onClose={onClose} close="Done">
+      {counts && (
+        <div className="seg" role="tablist" aria-label="Pitcher">
+          <button type="button" role="tab" aria-selected={view === 'change'} className="seg-item" aria-current={view === 'change' ? 'page' : undefined} onClick={() => setView('change')}>Pitching change</button>
+          <button type="button" role="tab" aria-selected={view === 'counts'} className="seg-item" aria-current={view === 'counts' ? 'page' : undefined} onClick={() => setView('counts')}>Pitch counts</button>
+        </div>
+      )}
+      {view === 'counts' ? counts : <>
       <div className="pgrid two" role="tablist">
         {(['away', 'home'] as const).map((s) => (
           <button key={s} type="button" role="tab" aria-selected={shown === s} className={`pchoice${shown === s ? ' on' : ''}`} onClick={() => { setShown(s); setErr(''); }}>
@@ -504,6 +570,7 @@ export function Pitching({ g, side, labels, locked, lineupHref, onPick, onClose 
         </div>
       )}
       <Link href={lineupHref(shown)} className="link" style={{ alignSelf: 'center' }}>Order, subs and positions: lineup ›</Link>
+      </>}
     </Sheet>
   );
 }

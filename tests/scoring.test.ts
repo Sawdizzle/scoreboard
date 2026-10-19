@@ -356,3 +356,43 @@ test('a runner who takes a base on the throw, or some other way: he moves, nobod
   const r = L.onRunnerPlay(run(start(), single).g, 'first', 'ADV', { why: 'on the throw' }) as Res;
   assert.equal(r.text, 'Runner advanced · on the throw');
 });
+
+// ---- Runner subs, pickoff attempts, the last play --------------------------------
+test('a pinch runner takes the base: his run is his, and a courtesy runner\'s is his too', () => {
+  const on = run(start(), single).g; // h1 on first
+  const pr = run(on, (x) => L.onRunnerSub(x, 'first', 'PR', 'h10') as Res | null, runnerTo('first', 'SB'), runnerTo('second', 'SB'), runnerTo('third', 'SB'));
+  assert.equal(line(pr.rows, 'h10').b_r, 1);
+  assert.equal(line(pr.rows, 'h10').b_sb, 3);
+  assert.equal(line(pr.rows, 'h1').b_r, undefined);
+  const cr = run(on, (x) => L.onRunnerSub(x, 'first', 'CR', 'h7') as Res | null);
+  assert.equal((cr.g.state as { runners: { first: string } }).runners.first, 'h7');
+  // Nobody on second: no sub there.
+  assert.equal(L.onRunnerSub(on, 'second', 'PR', 'h10'), null);
+});
+
+test('a pickoff attempt leaves him there and charges nobody; the play-by-play keeps it', () => {
+  const on = run(start(), single, play('H1', 'LF', { batter: 1, first: 2 })).g; // first and second
+  const r = L.onRunnerPlay(on, 'first', 'APO') as Res;
+  assert.ok(r, 'second being taken does not block a throw over to first');
+  const { rows, g } = run(on, () => r);
+  assert.deepEqual(rows, []);
+  assert.deepEqual(L.safeBases(g.bases), L.safeBases(on.bases));
+  // He is still himself on the base.
+  assert.deepEqual((g.state as { runners: unknown }).runners, (on.state as { runners: unknown }).runners);
+  assert.equal(r.text, 'Pickoff attempt at 1st');
+});
+
+test('on the last play: the runner moved after the fact, the batter of that play gets the RBI', () => {
+  // h1 on second, h2 singles (h1 held at third), then h1 is moved home "on the last play".
+  const g = run(start(), play('H2', 'LF', { batter: 2 }), play('H1', 'LF', { batter: 1, second: 3 })).g;
+  const { rows } = run(g, runnerTo('third', 'OLP'));
+  assert.equal(line(rows, 'h2').b_rbi, 1);
+  assert.equal(line(rows, 'h1').b_r, 1);
+});
+
+test('a play that credits fielders keeps who stood where', () => {
+  const r = record(start(), play('GB', 'SS')(start()), sides)!;
+  assert.equal((r.res.payload as { field?: Record<string, string> }).field?.SS, 'a6');
+  const ball = record(start(), L.onBall(start()) as Res, sides)!;
+  assert.equal((ball.res.payload as { field?: unknown } | undefined)?.field, undefined);
+});

@@ -479,6 +479,7 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 .pbar[disabled] { opacity: 0.4; }
 .pbar.air.on { border-color: var(--gold); color: var(--gold); }
 .pbar.end { background: #3d1f1f; border-color: #7a3431; color: #ffd9d9; }
+.pad.gc .pbar { font-size: 13px; white-space: nowrap; padding: 0 4px; }
 .pbar.end.on { background: var(--card); border-color: var(--line); color: var(--soft); }
 
 /* The pad's field, GameChanger's way: the defense at their positions, the
@@ -514,6 +515,15 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 .fv-safe small, .fv-out small { font-size: 9px; font-weight: 700; letter-spacing: 0; opacity: 0.85; }
 .fv-safe { background: rgba(31, 138, 76, 0.85); border-color: #8ff0b8; color: #fff; }
 .fv-out { background: rgba(201, 60, 51, 0.88); border-color: #ffb3ad; color: #fff; }
+
+/* Pitch counts by inning, from the pitcher's card. */
+.pc-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.pc-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pc-who b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-who small { font-size: 12px; color: var(--muted); }
+.pc-inn { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pc-inn > span { display: flex; flex-direction: column; align-items: center; min-width: 28px; font-family: var(--disp); font-size: 18px; line-height: 1; }
+.pc-inn small { font: 700 9.5px/1.2 var(--mono); color: var(--muted); }
 
 /* Fielders in throw order: a small field, each position a button with the
    kid's number; the order taps went in sits on each one. */

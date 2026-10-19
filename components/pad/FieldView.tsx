@@ -119,11 +119,14 @@ export function FieldView({ fieldLineup, runners, bases, batter, batColor, field
       {drag?.moved && (() => {
         const [x, y] = BASE_AT[drag.from];
         const n = BASE_NO[drag.from];
-        return (
+        return <>
+          <div className="fv-drop" style={place([x, Math.max(y - 11, 6)])}>
+            <span data-drop={`${n}:safe`} className="fv-safe">SAFE<small>back at {BASE_NAME[n]}</small></span>
+          </div>
           <div className="fv-drop" style={place([x, Math.min(y + 11, 94)])}>
             <span data-drop={`${n}:out`} className="fv-out">OUT<small>at {BASE_NAME[n]}</small></span>
           </div>
-        );
+        </>;
       })()}
       {drag?.moved && (
         <span className="fv-runner ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
