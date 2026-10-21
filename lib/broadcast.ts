@@ -48,7 +48,12 @@ export type Broadcast = {
   ticker?: { on?: boolean; text?: string; tone?: 'notice' | 'alert' };
   sponsors?: { on?: boolean; items?: { name: string; logo?: string | null }[]; every?: number };
   // clip_kinds: which moments auto-clip saves (lib/clips.ts); unset is the default set.
-  obs?: { auto_clip?: boolean; clip_kinds?: string[]; replay_seconds?: number; cameras?: string[] };
+  // mic: mute OBS's mic inputs while a break scene is up, over obs-websocket
+  // (components/overlay/BreakAudio). inputs unset is every mic OBS has.
+  obs?: { auto_clip?: boolean; clip_kinds?: string[]; replay_seconds?: number; cameras?: string[]; mic?: { on?: boolean; inputs?: string[] } };
+  // The quiet music bed under Starting Soon, the mid-inning board, Game paused
+  // and Final: a track for each (lib/music.ts), and its own volume.
+  music?: { on?: boolean; volume?: number; tracks?: Partial<Record<BreakKind, string>> };
   // A pregame blurb on Starting Soon: written on request (app/api/ai/blurb),
   // put up only when the operator taps Use, and shown only for its own game.
   blurb?: Blurb;
@@ -56,6 +61,8 @@ export type Broadcast = {
   // the game and the play it stood for. It stays down until the next half ends.
   mid_off?: { game: string; seq: number };
 };
+// The full-frame moments that are a break in play, when the music plays and the mic is muted.
+export type BreakKind = 'starting' | 'mid' | 'paused' | 'final';
 export type Blurb = { game_id: string; line1: string; line2: string; storyline: string };
 
 // A change to the broadcast settings: keys merge in, a key set to null goes.
