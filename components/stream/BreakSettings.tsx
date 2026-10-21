@@ -108,8 +108,10 @@ export function BreakSettings({ teamId, streamUrl, bc, setB }: { teamId: string;
           <CopyLink url={`${streamUrl}#obs=${encodeURIComponent(pw)}`} label="Browser Source link with the OBS password" />
           {rep?.ws === 'ok' && rep.inputs.length > 0 && (
             <>
-              <span className="legend">Mics to mute{picked.length ? '' : ' · none picked mutes them all'}</span>
-              <div className="chips" aria-label="Mics to mute">
+              <span className="legend">Sources to mute</span>
+              <p className="hint">{picked.length ? 'Only the ones picked are muted.'
+                : rep.mics?.length ? `None picked: the mics and cameras are muted (${rep.mics.join(', ')}). Pick any to choose for yourself.` : 'Pick the sources to mute.'}</p>
+              <div className="chips" aria-label="Sources to mute">
                 {rep.inputs.map((name) => (
                   <button key={name} type="button" className={`chip${picked.includes(name) ? ' on' : ''}`} aria-pressed={picked.includes(name)} onClick={() => pickInput(name)}>{name}</button>
                 ))}
