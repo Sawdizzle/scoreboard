@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { MIC_EVENT, micReport } from '@/components/overlay/BreakAudio';
 import type { Feed } from '@/lib/onair';
 import { browserClient } from '@/lib/supabase/browser';
 import { joinClip, mainKind, wantClip, MAX_DELAY_MS, type Pending } from '@/lib/clips';
@@ -57,16 +58,16 @@ export function ObsBridge({ token, feed, fx }: { token: string; feed: Feed | nul
       await sb.rpc('obs_report', { p_token: token, p_obs: {
         level: level.current, streaming: st ? !!st.streaming : null, recording: st ? !!st.recording : null,
         paused: st ? !!st.recordingPaused : null, buffer: st ? !!st.replaybuffer : null,
-        scenes: Array.isArray(list) ? list.map(sceneName).filter(Boolean).slice(0, 60) : [], current: sceneName(cur), replay: replay.current,
+        scenes: Array.isArray(list) ? list.map(sceneName).filter(Boolean).slice(0, 60) : [], current: sceneName(cur), replay: replay.current, mic: micReport(),
       } });
     };
     void report.current();
     const on = () => void report.current();
     const saved = () => { if (replay.current) { replay.current = { ...replay.current, ok: true, code: 'saved' }; } void report.current(); };
-    for (const e of EVENTS) window.addEventListener(e, on);
+    for (const e of [...EVENTS, MIC_EVENT]) window.addEventListener(e, on);
     window.addEventListener('obsReplaybufferSaved', saved);
     const t = window.setInterval(on, 60000);
-    return () => { for (const e of EVENTS) window.removeEventListener(e, on); window.removeEventListener('obsReplaybufferSaved', saved); window.clearInterval(t); };
+    return () => { for (const e of [...EVENTS, MIC_EVENT]) window.removeEventListener(e, on); window.removeEventListener('obsReplaybufferSaved', saved); window.clearInterval(t); };
   }, [token]);
 
   // Every save is logged (clip_report → game_clips) with the game as it stood

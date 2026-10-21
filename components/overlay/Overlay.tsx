@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { BreakAudio } from '@/components/overlay/BreakAudio';
 import { Fx, type FxShot } from '@/components/overlay/Fx';
 import { Keep } from '@/components/overlay/Keep';
 import { ObsBridge } from '@/components/overlay/ObsBridge';
@@ -10,6 +11,7 @@ import * as WX from '@/lib/fx/weather.js';
 import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
 import * as A from '@/lib/fx/audio.js';
+import * as M from '@/lib/fx/music';
 import { feedView, layoutOf, momentText, type Feed } from '@/lib/onair';
 import * as L from '@/lib/rules/logic.js';
 import { browserClient } from '@/lib/supabase/browser';
@@ -239,8 +241,9 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
     <Keep><Scenes feed={feed} now={now} weather={weather} strike={strike} /></Keep>
     <Keep><Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} /></Keep>
     <ObsBridge token={token} feed={feed} fx={heard} />
+    <BreakAudio feed={feed} />
     <Keep><SponsorBug sponsors={feed?.broadcast?.sponsors} hold={!!feed?.broadcast?.scene} /></Keep>
     <Keep><Spots spot={feed?.spot ?? null} /></Keep>
-    {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); setMute(false); }}>Tap for sound</button>}
+    {mute && !feed?.broadcast?.sound?.muted && <button type="button" className="fx-sound" onClick={() => { void A.resume(); M.resume(); setMute(false); }}>Tap for sound</button>}
   </>;
 }

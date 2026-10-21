@@ -5,6 +5,7 @@ import { ImportFlow } from '@/components/ImportFlow';
 import { LineupEditor } from '@/components/LineupEditor';
 import { Pad } from '@/components/pad/Pad';
 import type { Log } from '@/components/pad/PlaysSheet';
+import { BreakAudio } from '@/components/overlay/BreakAudio';
 import { SpotsDemo } from '@/components/overlay/Spots';
 import { Scenes } from '@/components/overlay/Scenes';
 import { Stage } from '@/components/overlay/Stage';
@@ -129,9 +130,9 @@ const kitSpray = sprayBalls(
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
 
-export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string; spray?: string }> }) {
+export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string; spray?: string; music?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
-  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb, spray } = await searchParams;
+  const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb, spray, music } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
   const role = (r ?? 'organizer') as Role;
@@ -190,7 +191,8 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       // &theme=retro&style=scorebox&rhe=1: v4's themes and layouts on Scoreboard's own bug.
       // &scene=starting (final, paused, mid)&reason=rain&ss=standard: the full-frame scenes; &win=1 has us winning the Final.
       // &blurb=1: a pregame blurb on Starting Soon (&blurb=long: three lines at the 60-character limit).
-      broadcast: { theme,
+      // &music=1: the break music under the scene (tap the page once for sound).
+      broadcast: { theme, music: music ? { on: true } : undefined,
         blurb: blurb ? (blurb === 'long'
           ? { game_id: 'g1', line1: 'W'.repeat(20) + ' Blue Steel meets the Hawks at Railyard Pk', line2: 'Steel are 5-2 this fall and have won three straight games', storyline: 'Last time out the Hawks won 9-2; Steel want that one back' }
           : { game_id: 'g1', line1: 'Blue Steel host the Hawks at Railyard Park', line2: 'Steel are 5-2 this fall, winners of three straight', storyline: 'Rematch: the Hawks took the first meeting 9-2' }) : undefined, style, show: { rhe: rhe === '1' }, scene_style: ss === 'standard' ? 'standard' : undefined,
@@ -207,7 +209,7 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       pas: [{ side: 'us', bid: 'p1', inning: 1, kind: 'BB', code: null }, { side: 'us', bid: 'p1', inning: 3, kind: 'FB', code: 'F8' }],
       season_stats: stats,
     };
-    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}><Stage feed={feed} card={scene === 'mid' ? 'mid' : (card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park', runs: Number(moment) || 0 } : null} />
+    return <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(160deg, #2f5a34 0%, #23452a 38%, #6b4f35 70%, #3d2c1e 100%)' }}>{music && <BreakAudio feed={{ ...feed, card: scene === 'mid' ? 'mid' : null }} />}<Stage feed={feed} card={scene === 'mid' ? 'mid' : (card as CardKind) ?? null} moment={moment ? { text: 'Home run', who: 'Cy Park', runs: Number(moment) || 0 } : null} />
       <Scenes feed={feed} now={KIT_NOW} weather={{ temp: 72, text: 'Clear', icon: '☀️', wind: 8, dir: 'SW', pop: 10 }} strike={0} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
   }
   return (

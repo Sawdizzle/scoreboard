@@ -6,6 +6,7 @@ import { resetStreamLink, saveSponsor, saveStreamBug } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { CopyLink } from '@/components/CopyLink';
 import { BugPreview, brandOf } from '@/components/TeamBrand';
+import { BreakSettings } from '@/components/stream/BreakSettings';
 import { demoFeed } from '@/lib/demo-feed';
 import { BUG_SCALE, CARD_SCALE, QR_OPACITY, QR_SIZE, layoutOf, qrLayer, type BugPos, type CardKind, type CardPos, type Feed, type Layout, type Look, type QrLayer, type QrPos } from '@/lib/onair';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch, type Scene } from '@/lib/broadcast';
@@ -332,6 +333,8 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
           <button type="button" className="btn btn-quiet" disabled={running} onClick={() => void runThrough()}>{running ? 'Playing every moment…' : 'Play every moment on the stream'}</button>
         </div>
       </section>
+
+      <BreakSettings teamId={team.id} streamUrl={streamUrl} bc={bc} setB={setB} />
 
       <section className="card pad">
         <h2>Scenes</h2>
