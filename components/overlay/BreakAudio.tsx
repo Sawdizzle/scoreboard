@@ -12,7 +12,9 @@ import type { Feed } from '@/lib/onair';
 // inputs are muted; both come back when play does. Only the mics this page
 // muted are unmuted, so one muted by hand stays muted. Outside OBS the mic is
 // never touched, so a preview tab cannot mute the real stream.
-export type MicReport = { ws: 'ok' | 'auth' | 'refused' | 'nopass'; muted: boolean; inputs: string[] };
+// inputs: every OBS input that carries audio, for the Stream screen to pick
+// from; mics: the ones muted when none is picked (MIC_KINDS).
+export type MicReport = { ws: 'ok' | 'auth' | 'refused' | 'nopass'; muted: boolean; inputs: string[]; mics?: string[] };
 export const MIC_EVENT = 'sb-mic';
 const KEPT = 'sb-mic-muted';
 let report: MicReport | null = null;
@@ -49,15 +51,18 @@ export function BreakAudio({ feed }: { feed: Feed | null }) {
       const ws = sock.current;
       if (!ws) return;
       const { inputs } = await ws.call<{ inputs: Input[] }>('GetInputList');
-      const mics = inputs.filter((i) => MIC_KINDS.has(i.unversionedInputKind || i.inputKind || '')).map((i) => i.inputName);
+      // Which inputs carry audio: OBS answers GetInputMute only for those.
+      // Browser Sources are left out: one of them is this page, playing the music.
+      const heard = await Promise.all(inputs.filter((i) => (i.unversionedInputKind || i.inputKind) !== 'browser_source').slice(0, 60).map((i) =>
+        ws.call<{ inputMuted: boolean }>('GetInputMute', { inputName: i.inputName }).then((r) => ({ ...i, muted: r.inputMuted }), () => null)));
+      const audio = heard.filter((i) => i !== null);
+      const mics = audio.filter((i) => MIC_KINDS.has(i.unversionedInputKind || i.inputKind || '')).map((i) => i.inputName);
       const ours = kept();
       if (want.current) {
-        const names = new Set(inputs.map((i) => i.inputName));
+        const names = new Set(audio.map((i) => i.inputName));
         for (const name of picked.current?.filter((n) => names.has(n)) ?? mics) {
-          if (ours.includes(name)) continue;
-          const { inputMuted } = await ws.call<{ inputMuted: boolean }>('GetInputMute', { inputName: name });
-          if (inputMuted) continue;
-          await ws.call('SetInputMute', { inputName: name, inputMuted: true });
+          if (ours.includes(name) || audio.find((i) => i.inputName === name)?.muted) continue;
+          try { await ws.call('SetInputMute', { inputName: name, inputMuted: true }); } catch { continue; }
           ours.push(name); keep(ours);
         }
       } else {
@@ -66,7 +71,7 @@ export function BreakAudio({ feed }: { feed: Feed | null }) {
           ours.splice(ours.indexOf(name), 1); keep(ours);
         }
       }
-      say({ ws: 'ok', muted: ours.length > 0, inputs: mics.slice(0, 40) });
+      say({ ws: 'ok', muted: ours.length > 0, inputs: audio.map((i) => i.inputName).slice(0, 40), mics });
     }).catch(() => {});
   });
 
@@ -84,7 +89,10 @@ export function BreakAudio({ feed }: { feed: Feed | null }) {
         if (stop) { ws.close(); return; }
         sock.current = ws;
         resync();
+        // A source added or renamed in OBS shows up on the Stream screen within half a minute.
+        const fresh = window.setInterval(resync, 30000);
         await ws.closed;
+        window.clearInterval(fresh);
         sock.current = null;
         if (!stop) { say({ ws: 'refused', muted: false, inputs: [] }); retry = window.setTimeout(open, 5000); }
       } catch (e) {
