@@ -1,5 +1,8 @@
 # Switching prod to v5.0
 
+> **Archived.** v5 is merged into `main` and is what prod runs. This page is
+> kept as a record of how the switch was done; nothing in it is still to do.
+
 v5 is built and tested on the `v5` branch's preview. Prod
 (scoreboard-ashen-rho.vercel.app) runs v4.47 until `v5` is merged into `main`.
 Pick a day with no game; a switch mid-weekend means scoring a game on a pad

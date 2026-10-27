@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { signOut, updateProfile } from '@/app/actions';
+import { deleteAccount, signOut, updateProfile } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { createClient } from '@/lib/supabase/server';
 import { ChevronRight, Plus } from '@/components/icons';
@@ -54,6 +54,19 @@ export default async function Teams() {
             </ActionForm>
           </div>
         </details>
+        <details className="fold danger">
+          <summary>Delete your account</summary>
+          <div className="fold-body">
+            <ActionForm action={deleteAccount} className="form">
+              <p className="hint">This deletes your account and your seat on every team. Teams, games and players stay with their other staff. If you are a team&rsquo;s only organizer, make someone else one (or delete the team) first.</p>
+              <label className="field"><span>Type DELETE to confirm</span>
+                <input className="input" name="confirm" autoComplete="off" placeholder="DELETE" required />
+              </label>
+              <Submit busy="Deleting…">Delete my account</Submit>
+            </ActionForm>
+          </div>
+        </details>
+        <p className="sub" style={{ textAlign: 'center' }}><Link href="/privacy" className="link">Privacy</Link></p>
       </div>
     </main>
   );

@@ -228,7 +228,7 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 
 /* ---- Signed-out pages ----------------------------------------------------- */
 .front { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 40px 20px; }
-.front .mark { font-family: var(--disp); font-weight: 700; font-size: 22px; letter-spacing: 0.14em; }
+.wordmark { font-family: var(--disp); font-weight: 700; font-size: 22px; letter-spacing: 0.14em; }
 .front .disp { font-size: clamp(54px, 17vw, 88px); }
 .front .lede { font-size: 17px; max-width: 34ch; }
 .band { height: 10px; border-radius: 3px; background: var(--hatch), #2857b5; width: 120px; }

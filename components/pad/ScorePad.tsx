@@ -11,11 +11,11 @@ import { clockSet, clockText, mergeBroadcast, type Broadcast, type BroadcastPatc
 import { Basketball as B, Football as F, PERIOD_MINUTES, periodName, Soccer as S, soccerSeconds, sportGame, sportSaid, situationText, Volleyball as V,
   type SideKey, type SportLive, type SportRes } from '@/lib/sports';
 import { browserClient } from '@/lib/supabase/browser';
+import { keep as keepQueue, newCid, pumpQueue, readKept, type QueueItem } from '@/lib/play-queue';
 import type { Game, Team } from '@/lib/types';
 import { CONSOLE, useMedia } from '@/lib/use-media';
 
 type Status = Game['status'];
-type Item = { type: string; patch: object; payload: object; status: Status | null } | 'undo';
 type Sport = Exclude<Game['sport'], 'baseball'>;
 
 // Soccer's match clock runs inside the play state: starting or stopping it is
@@ -49,9 +49,11 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
   const [waiting, setWaiting] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const cur = useRef({ live, status });
-  const queue = useRef<Item[]>([]);
+  const queue = useRef<QueueItem[]>([]);
   const sending = useRef(false);
   const seq = useRef(game.seq);
+  const sentOnce = useRef(new WeakSet<QueueItem>());
+  const pumpRef = useRef<() => Promise<void>>(async () => {});
   const wire = useRef<ReturnType<typeof sb.channel> | null>(null);
   const follow = useRef<() => void>(() => {});
   const nudge = () => void wire.current?.send({ type: 'broadcast', event: 'tick', payload: {} });
@@ -72,7 +74,10 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
   // Another phone's save, or coming back to the app: take the game as it is now.
   useEffect(() => { follow.current = () => { if (!queue.current.length && !sending.current) void reload(); }; });
   useEffect(() => {
-    const back = () => { if (!document.hidden && !queue.current.length && !sending.current) void reload(); };
+    const back = () => {
+      if (document.hidden) return;
+      if (!queue.current.length && !sending.current) void reload(); else void pumpRef.current();
+    };
     document.addEventListener('visibilitychange', back);
     window.addEventListener('online', back);
     return () => { document.removeEventListener('visibilitychange', back); window.removeEventListener('online', back); };
@@ -85,42 +90,69 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
     return () => window.clearInterval(t);
   }, [running]);
 
+  // Plays wait in order on the phone (lib/play-queue) until each one saves:
+  // bad signal retries, a lost reply is found by its play id, and a reload or
+  // a closed tab picks the queue back up.
   const pump = useCallback(async () => {
     if (sending.current) return;
     sending.current = true;
-    let wait = 800;
-    while (queue.current.length) {
-      setSync('sending');
-      setWaiting(queue.current.length);
-      const it = queue.current[0];
-      const { data, error } = it === 'undo'
-        ? await sb.rpc('undo_play', { p_game: game.id, p_seq: seq.current })
-        : await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: [], p_status: it.status });
-      if (error) {
-        if (!error.code || /fetch|network/i.test(error.message)) {
-          setSync('retry');
-          await new Promise((r) => setTimeout(r, wait));
-          wait = Math.min(wait * 2, 8000);
-          continue;
-        }
-        // Another phone got there first, or the play was refused: take the game as the database has it.
-        queue.current = [];
-        await reload();
-        setLast(error.code === 'PB409' ? 'Another phone scored. Reloaded the game.' : error.message || 'That did not save. Reloaded the game.');
-        break;
-      }
-      const res = data as { seq: number; live: SportLive; status: Status };
-      seq.current = res.seq;
-      queue.current.shift();
-      wait = 800;
-      // An undo is the database's answer; a play was already on screen.
-      if (it === 'undo' && !queue.current.length) show(res.live, res.status);
-      nudge();
+    const st = {
+      get items() { return queue.current; },
+      get seq() { return seq.current; }, set seq(v: number) { seq.current = v; },
+      sentOnce: sentOnce.current,
+    };
+    const keep = () => keepQueue(game.id, { items: queue.current, seq: seq.current });
+    const { resync, failed } = await pumpQueue(st, {
+      send: (it, at, stop) => it.kind === 'play'
+        ? sb.rpc('apply_play', { p_game: game.id, p_seq: at, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: [], p_status: it.status }).abortSignal(stop)
+        : sb.rpc('undo_play', { p_game: game.id, p_seq: at }).abortSignal(stop),
+      eventsAfter: async (at) => ((await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', at).order('seq')).data ?? []) as { seq: number; payload: unknown }[],
+      gameSeq: async () => ((await sb.from('games').select('seq').eq('id', game.id).single()).data?.seq as number | undefined) ?? null,
+      hasEvent: async (at) => !!(await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', at).maybeSingle()).data,
+      refresh: async () => { await sb.auth.refreshSession(); },
+    }, {
+      status: (s, n) => { setSync(s); setWaiting(n); },
+      saved: (it, data) => {
+        keep();
+        // An undo is the database's answer; a play was already on screen.
+        const res = data as { live: SportLive; status: Status } | null;
+        if (it.kind === 'undo' && res && !queue.current.length) show(res.live, res.status);
+        nudge();
+      },
+    });
+    if (failed) {
+      keep();
+      await reload();
+      setLast(failed.error.code === 'PB409' ? 'Another phone scored. Reloaded the game.' : failed.error.message || 'That did not save. Reloaded the game.');
     }
     sending.current = false;
     setSync('ok');
     setWaiting(0);
+    if (queue.current.length) window.setTimeout(() => void pumpRef.current(), 0);
+    else if (resync) void reload();
   }, [sb, game.id, reload]);
+  useEffect(() => { pumpRef.current = pump; }, [pump]);
+
+  // Plays this phone kept but never sent (a reload, or iOS closing the tab):
+  // send them first, then read the game back.
+  useEffect(() => {
+    const kept = canScore ? readKept(game.id) : null;
+    if (!kept) return;
+    queue.current = kept.items;
+    seq.current = kept.seq;
+    const n = kept.items.length;
+    void Promise.resolve().then(() => setLast(`Sending ${n} play${n > 1 ? 's' : ''} kept on this phone`));
+    void pump().then(() => reload());
+    // Once, when the pad opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Leaving with plays still waiting would lose them: ask first.
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => { if (queue.current.length) e.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, []);
 
   // A quarter's clock, kept on games.clock, reloads when a rule says so.
   const periodSeconds = Math.round((game.settings?.period_minutes ?? PERIOD_MINUTES[sport]) * 60);
@@ -141,7 +173,8 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
     show({ ...before.live, ...patch } as SportLive, next ?? (before.status === 'scheduled' ? 'live' : before.status));
     setLast(sportSaid(res));
     const payload = { ...(res.payload ?? {}), ...(res.anim ? { play: { kind: res.anim }, animMeta: res.animMeta ?? {} } : {}) };
-    queue.current.push({ type: res.type, patch, payload, status: next });
+    queue.current.push({ kind: 'play', type: res.type, patch, payload: { ...payload, cid: newCid() }, rows: [], status: next });
+    keepQueue(game.id, { items: queue.current, seq: seq.current });
     if (navigator.vibrate) navigator.vibrate(12);
     if (reload_s !== undefined) void reloadClock(Number(reload_s) || periodSeconds);
     void pump();
@@ -169,7 +202,8 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
   function undo() {
     if (!canScore) return;
     setLast('Undone');
-    queue.current.push('undo');
+    queue.current.push({ kind: 'undo' });
+    keepQueue(game.id, { items: queue.current, seq: seq.current });
     void pump();
   }
 

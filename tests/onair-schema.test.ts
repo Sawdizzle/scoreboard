@@ -16,6 +16,8 @@ before(async () => {
   for (const [k, n] of [['owner', 'Olive'], ['scorer', 'Sam'], ['media', 'Mel'], ['stranger', 'Stan']]) await t.signUp(k, n);
   [{ id: team }] = await t.as<{ id: string }>('owner', `select id from create_team('Blue Steel', 'STEEL', '#2f63cc', '14U', 'Fall 2026')`);
   [{ id: season }] = await t.as<{ id: string }>(null, `select id from seasons where team_id = $1`, [team]);
+  // New teams start on "Alex R."; this file checks the full-name cap rules.
+  await t.db.query(`update teams set name_format = 'full' where id = $1`, [team]);
   for (const role of ['scorer', 'media']) {
     const [{ token: inv }] = await t.as<{ token: string }>('owner', `insert into staff_invites (team_id, role) values ($1, $2) returning token`, [team, role]);
     await t.as(role, `select accept_invite($1)`, [inv]);
@@ -69,13 +71,13 @@ test('a wrong link shows nothing; before any play the feed is the next game up',
   assert.equal(f.season.name, 'Fall 2026');
 });
 
-test('the feed names our players as the public may see them, and guests as typed', async () => {
+test('the feed names our players as the public may see them, and guests by number only', async () => {
   const f = (await feed(token))!;
   assert.deepEqual(f.lineups.us.batters, [
     { bid: p7, num: '7', name: 'Johnny Vance' }, { bid: p12, num: '12', name: 'Ben O.' }, { bid: p3, num: '3', name: '' }]);
   assert.deepEqual(f.lineups.us.positions, { P: p12, SS: p7 });
   assert.equal('secret' in f.lineups.us, false);
-  assert.deepEqual(f.lineups.them.batters, [{ bid: 'x1', num: '19', name: 'Dane Kell' }]);
+  assert.deepEqual(f.lineups.them.batters, [{ bid: 'x1', num: '19', name: '' }]);
 });
 
 test('scoring a play puts that game on the stream, with tonight, the at-bats and the season', async () => {
@@ -148,8 +150,8 @@ test('the public game: our players under their public names, typed-in guests by 
   assert.equal(f.opponent.slug, null);
   assert.equal(f.game.id, game);
   assert.deepEqual(await pg(f.v), { v: f.v });
-  // The stream still names the guest: the scorer put him on it.
-  assert.equal((await feed(token))!.lineups.them.batters[0].name, 'Dane Kell');
+  // The stream doesn't name a typed-in guest either.
+  assert.equal((await feed(token))!.lineups.them.batters[0].name, '');
   assert.equal((await t.as(null, `select public_game('00000000-0000-4000-8000-000000000000') f`))[0].f, null);
 });
 

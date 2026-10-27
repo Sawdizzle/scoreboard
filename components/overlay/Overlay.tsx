@@ -12,7 +12,7 @@ import { Spots } from '@/components/overlay/Spots';
 import { Stage } from '@/components/overlay/Stage';
 import * as A from '@/lib/fx/audio.js';
 import * as M from '@/lib/fx/music';
-import { feedView, layoutOf, momentText, type Feed } from '@/lib/onair';
+import { feedView, layoutOf, momentText, safeToReload, type Feed } from '@/lib/onair';
 import * as L from '@/lib/rules/logic.js';
 import { browserClient } from '@/lib/supabase/browser';
 
@@ -88,24 +88,38 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   }, [wxKey]);
 
   // A new release reloads the page, so a Browser Source left running all
-  // season does not keep last month's code. Checked every five minutes, and
-  // never while a full-frame scene is up.
+  // season does not keep last month's code. Checked every five minutes; the
+  // reload waits for a quiet moment (safeToReload: not mid-half) and never
+  // happens while a full-frame scene is up.
   const sceneUp = useRef(false);
   useEffect(() => { sceneUp.current = !!scene; }, [scene]);
+  const feedNow = useRef<Feed | null>(initial);
+  // When the newest play arrived (from when the page opened, until one does).
+  const playAt = useRef(0);
+  useEffect(() => { playAt.current = Date.now(); }, []);
+  useEffect(() => {
+    if (feed?.last?.seq !== feedNow.current?.last?.seq) playAt.current = Date.now();
+    feedNow.current = feed;
+  }, [feed]);
   useEffect(() => {
     let mine = '';
+    let waiting = false;
+    const settle = () => {
+      if (waiting && !sceneUp.current && safeToReload(feedNow.current, playAt.current, Date.now())) window.location.reload();
+    };
     const check = async () => {
       try {
         const r = await fetch('/version', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
         // Only a real answer counts: an error page from a flaky link is not a new release.
         const v = r.ok ? (await r.text()).trim() : '';
         if (!/^([0-9a-f]{7,40}|dpl_\w+|dev)$/i.test(v)) return;
-        if (!mine) mine = v; else if (v && v !== mine && !sceneUp.current) window.location.reload();
+        if (!mine) mine = v; else if (v && v !== mine) { waiting = true; settle(); }
       } catch { /* offline: next time */ }
     };
     void check();
     const t = window.setInterval(check, 5 * 60 * 1000);
-    return () => window.clearInterval(t);
+    const s = window.setInterval(settle, 10 * 1000);
+    return () => { window.clearInterval(t); window.clearInterval(s); };
   }, []);
 
   // A running clock redraws each second; the rest of the page waits for the feed.

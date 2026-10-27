@@ -34,6 +34,10 @@ export async function reserve(db: SupabaseClient, teamId: string, gameId: string
   if (r.id) return { id: r.id };
   return refusal({ limit: r.limit, used: r.used, remaining: 0, resets: r.resets }) ?? { status: 429, error: 'No AI writes left this month.' };
 }
-export async function settle(db: SupabaseClient, id: number, model: string, tokensIn: number, tokensOut: number, ok: boolean) {
+// Settling is the server's job (the secret key's client): a signed-in user
+// cannot touch it. Without the key the reservation simply stays as it is,
+// counted either way, with its tokens unrecorded.
+export async function settle(db: SupabaseClient | null, id: number, model: string, tokensIn: number, tokensOut: number, ok: boolean) {
+  if (!db) return;
   await db.rpc('ai_settle', { p_id: id, p_model: model, p_in: tokensIn, p_out: tokensOut, p_ok: ok });
 }

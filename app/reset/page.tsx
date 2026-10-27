@@ -12,7 +12,7 @@ export default async function Reset() {
   return (
     <main className="shell">
       <div className="front">
-        <Link href="/" className="mark">SCOREBOARD</Link>
+        <Link href="/" className="wordmark">SCOREBOARD</Link>
         <h1 className="disp h1">Choose a new password</h1>
         {signedIn ? (
           <ActionForm action={setPassword} className="form">

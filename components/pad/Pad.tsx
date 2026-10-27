@@ -22,19 +22,14 @@ import { airView } from '@/lib/onair';
 import { shortName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
+import { keep as keepQueue, newCid, pumpQueue, readKept, type QueueItem } from '@/lib/play-queue';
 import { CONSOLE, useMedia } from '@/lib/use-media';
 import type { FormState, Game, Lineup, LineupBatter, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
 type Item = { kind: 'play'; type: string; patch: object; payload: { cid?: string } & Record<string, unknown>; rows: StatRow[]; status: Status | null } | { kind: 'undo' };
-// The queue as kept on the phone: the seq the first item goes on, and the items.
-type Kept = { seq: number; items: Item[] };
-const keepKey = (gameId: string) => `pad-queue:${gameId}`;
-const cid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
-const readKept = (gameId: string): Kept | null => {
-  try { const k = JSON.parse(localStorage.getItem(keepKey(gameId)) ?? 'null') as Kept | null; return k && Array.isArray(k.items) && k.items.length ? k : null; } catch { return null; }
-};
+const cid = newCid;
 
 // The pad's two layouts, remembered on this phone: the field (GameChanger's
 // way, the default) or big keys (the pad before it, for a scorer who wants it).
@@ -229,12 +224,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
   // The queue is kept on the phone as well, so a reload, a crash or iOS
   // closing the tab in the background does not lose plays that had not sent.
-  const keep = useCallback(() => {
-    try {
-      if (queue.current.length) localStorage.setItem(keepKey(game.id), JSON.stringify({ seq: seq.current, items: queue.current } satisfies Kept));
-      else localStorage.removeItem(keepKey(game.id));
-    } catch { /* private mode or full: the queue still runs in memory */ }
-  }, [game.id]);
+  const keep = useCallback(() => keepQueue(game.id, { items: queue.current, seq: seq.current }), [game.id]);
 
   const pumpRef = useRef<() => Promise<void>>(async () => {});
   // When Game over was tapped (0: not asked), for the pitching decisions after it saves.
@@ -244,84 +234,28 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   const pump = useCallback(async () => {
     if (sending.current) return;
     sending.current = true;
-    let wait = 800, resync = false;
-    while (queue.current.length) {
-      setSync('sending');
-      setWaiting(queue.current.length);
-      const it = queue.current[0];
-      const sent = !!sentOnce.current.has(it);
-      sentOnce.current.add(it);
-      // A request that hangs on bad signal is given up after 15 s and sent again.
-      const stop = AbortSignal.timeout(15000);
-      const { data, error } = it.kind === 'play'
-        ? await sb.rpc('apply_play', { p_game: game.id, p_seq: seq.current, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status }).abortSignal(stop)
-        : await sb.rpc('undo_play', { p_game: game.id, p_seq: seq.current }).abortSignal(stop);
-      if (error) {
-        const offline = !error.code || /fetch|network|load failed|abort/i.test(error.message);
-        // A sign-in that lapsed while the phone was asleep or offline: renew it and go again.
-        const lapsed = /PGRST30\d/.test(error.code ?? '') || /JWT/i.test(error.message);
-        if (offline || lapsed) {
-          // Bad signal at the field: keep the play and try again, slower each time.
-          setSync('retry');
-          if (lapsed) await sb.auth.refreshSession().catch(() => {});
-          await new Promise((r) => setTimeout(r, wait));
-          wait = Math.min(wait * 2, 8000);
-          continue;
-        }
-        // Plays of ours that saved without our hearing back (the signal dropped
-        // after the server saved one, or the tab closed mid-send) look like
-        // another phone's plays: anything newer on the server that carries our
-        // own play ids is ours, and the queue goes on after them.
-        if (error.code === 'PB409' && it.kind === 'play' && it.payload.cid) {
-          const { data: evs } = await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', seq.current).order('seq');
-          let n = 0, last = seq.current;
-          for (const ev of evs ?? []) {
-            const q = queue.current[n];
-            if (q?.kind !== 'play' || !q.payload.cid || (ev.payload as { cid?: string } | null)?.cid !== q.payload.cid) { n = -1; break; }
-            n += 1; last = ev.seq as number;
-          }
-          if (n > 0) {
-            seq.current = last;
-            acks.current += 1;
-            queue.current.splice(0, n);
-            keep();
-            wait = 800;
-            nudge();
-            continue;
-          }
-        }
-        // An undo whose reply was lost: it saved if the game moved on by one
-        // with no play of that number (another phone's play would add one).
-        if (error.code === 'PB409' && it.kind === 'undo' && sent) {
-          const { data: g2 } = await sb.from('games').select('seq').eq('id', game.id).single();
-          const { data: other } = g2 && g2.seq === seq.current + 1
-            ? await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', g2.seq).maybeSingle()
-            : { data: { id: 0 } };
-          if (g2 && !other) {
-            seq.current = g2.seq;
-            acks.current += 1;
-            queue.current.shift();
-            keep();
-            wait = 800;
-            nudge();
-            resync = true;
-            continue;
-          }
-        }
-        const lost = queue.current.length;
-        queue.current = [];
-        keep();
-        await reload();
-        const what = lost > 1 ? `${lost} plays did not save` : 'That play did not save';
-        say(error.code === 'PB409' ? `Another phone scored a play. ${what}; reloaded the game.` : error.message || `${what}. Reloaded the game.`);
-        break;
-      }
-      seq.current = (data as { seq: number }).seq;
-      acks.current += 1;
-      queue.current.shift();
+    const st = {
+      get items() { return queue.current as QueueItem[]; },
+      get seq() { return seq.current; }, set seq(v: number) { seq.current = v; },
+      sentOnce: sentOnce.current,
+    };
+    const { resync, failed } = await pumpQueue(st, {
+      send: (it, at, stop) => it.kind === 'play'
+        ? sb.rpc('apply_play', { p_game: game.id, p_seq: at, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status }).abortSignal(stop)
+        : sb.rpc('undo_play', { p_game: game.id, p_seq: at }).abortSignal(stop),
+      eventsAfter: async (at) => ((await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', at).order('seq')).data ?? []) as { seq: number; payload: unknown }[],
+      gameSeq: async () => ((await sb.from('games').select('seq').eq('id', game.id).single()).data?.seq as number | undefined) ?? null,
+      hasEvent: async (at) => !!(await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', at).maybeSingle()).data,
+      refresh: async () => { await sb.auth.refreshSession(); },
+    }, {
+      status: (s, n) => { setSync(s); setWaiting(n); },
+      saved: () => { acks.current += 1; keep(); nudge(); },
+    });
+    if (failed) {
       keep();
-      wait = 800;
-      nudge();
+      await reload();
+      const what = failed.lost > 1 ? `${failed.lost} plays did not save` : 'That play did not save';
+      say(failed.error.code === 'PB409' ? `Another phone scored a play. ${what}; reloaded the game.` : failed.error.message || `${what}. Reloaded the game.`);
     }
     sending.current = false;
     setSync('ok');
@@ -741,7 +675,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     // put them back on the pad and send them, before anything can be tapped.
     // Any that had saved are found on the server by their ids and skipped
     // (pump); if another phone scored since, they are dropped and it says so.
-    const kept = canScore ? readKept(game.id) : null;
+    const kept = canScore ? readKept<Item>(game.id) : null;
     if (kept) {
       let v = cur.current;
       const stack: (typeof view)[] = [];

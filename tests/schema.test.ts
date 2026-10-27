@@ -26,7 +26,7 @@ before(async () => {
 });
 
 test('sign-up makes a profile with the name from the form', async () => {
-  const rows = await as(null, `select display_name from profiles where id = $1`, [users.owner]);
+  const rows = await as('owner', `select display_name from profiles where id = $1`, [users.owner]);
   assert.equal(rows[0].display_name, 'Olive Owner');
 });
 
@@ -36,7 +36,7 @@ test('create_team makes the team, the organizer seat and the current season', as
   teamId = team.id;
   assert.equal(team.slug, 'blue-steel-14u');
   assert.equal(team.abbr, 'STEEL');
-  const staff = await as(null, `select role from team_staff where team_id = $1`, [teamId]);
+  const staff = await as('owner', `select role from team_staff where team_id = $1`, [teamId]);
   assert.deepEqual(staff.map((r) => r.role), ['organizer']);
   const seasons = await as(null, `select name, is_current from seasons where team_id = $1`, [teamId]);
   assert.deepEqual(seasons, [{ name: 'Fall 2026', is_current: true }]);
@@ -77,7 +77,7 @@ test('five seats: links hold seats, and the sixth person is refused', async () =
   await as('scorer', `select accept_invite($1)`, [tScorer]);
   await fails(as('scorer', `select accept_invite($1)`, [tMedia]), /already on this team/);
   await as('media', `select accept_invite($1)`, [tMedia]);
-  assert.equal((await as(null, `select 1 from team_staff where team_id = $1`, [teamId])).length, 5);
+  assert.equal((await as('owner', `select 1 from team_staff where team_id = $1`, [teamId])).length, 5);
 
   // Past the link check, the way a race would arrive: the seat trigger still refuses.
   await fails(db.query(`insert into team_staff (team_id, user_id, role) values ($1, $2, 'coach')`, [teamId, users.sixth]), /five staff/);
@@ -101,6 +101,7 @@ test('roles: who can touch the roster', async () => {
 });
 
 test('public_roster applies each player\'s public name', async () => {
+  await db.query(`update teams set name_format = 'full' where id = $1`, [teamId]);
   await as('owner', `insert into players (team_id, first_name, last_name, number, public_name, positions, active) values
     ($1, 'Johnny', 'Vance', '7', 'full', '{SS,2B}', true),
     ($1, 'Cy', 'Park', '3', 'first_initial', '{CF}', true),
@@ -143,7 +144,7 @@ test('the last organizer cannot leave or step down, until there is another', asy
   await fails(as('owner', `update team_staff set role = 'coach' where team_id = $1 and user_id = $2`, [teamId, users.owner]), /needs an organizer/);
   await as('owner', `update team_staff set role = 'organizer' where team_id = $1 and user_id = $2`, [teamId, users.head]);
   await as('owner', `update team_staff set role = 'coach' where team_id = $1 and user_id = $2`, [teamId, users.owner]);
-  const rows = await as(null, `select role from team_staff where team_id = $1 and user_id = $2`, [teamId, users.owner]);
+  const rows = await as('owner', `select role from team_staff where team_id = $1 and user_id = $2`, [teamId, users.owner]);
   assert.equal(rows[0].role, 'coach');
 });
 

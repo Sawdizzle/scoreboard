@@ -1,6 +1,6 @@
 // An in-process Postgres (PGlite) with every migration applied and the few
 // Supabase pieces they lean on stubbed in: auth.users, auth.uid(), and the
-// anon / authenticated roles. `as(who, sql)` runs a query the way a request
+// anon / authenticated / service_role roles. `as(who, sql)` runs a query the way a request
 // from that signed-in user (or anon, for null) would arrive.
 import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
@@ -8,6 +8,7 @@ import { PGlite } from '@electric-sql/pglite';
 const SUPABASE_STUB = `
   create role anon nologin;
   create role authenticated nologin;
+  create role service_role nologin bypassrls;
   create schema auth;
   create table auth.users (
     id uuid primary key default gen_random_uuid(),

@@ -67,6 +67,16 @@ export function autoMid(feed: Pick<Feed, 'auto_mid' | 'last' | 'broadcast' | 'ga
   return !(off && off.game === feed.game?.id && off.seq === feed.last.seq);
 }
 
+// Whether a waiting new release may reload the overlay now: never mid-half
+// on a live game, only before it, after the final, between halves (the
+// newest play ended one), or once nothing has been scored for a while.
+export const RELOAD_QUIET_MS = 3 * 60 * 1000;
+export function safeToReload(feed: Pick<Feed, 'last' | 'game'> | null, lastPlayAt: number, now: number): boolean {
+  if (!feed?.game || feed.game.status !== 'live') return true;
+  if (feed.last?.rolled) return true;
+  return now - lastPlayAt >= RELOAD_QUIET_MS;
+}
+
 // overlay_feed(), as it arrives. With no game to show, `game` is null and the
 // rest is absent.
 export type Feed = {

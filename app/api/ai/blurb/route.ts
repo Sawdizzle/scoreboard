@@ -9,6 +9,7 @@ import { BLURB_MODEL, BLURB_SYSTEM, BlurbContent, blurbPrompt, checkBlurb, match
 import type { PublicGame } from '@/lib/public';
 import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
+import { adminClient } from '@/lib/supabase/admin';
 
 export const maxDuration = 60;
 
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
   // One of this month's writes, taken before the call so the limit holds.
   const held = await reserve(supabase, game.team_id, game.id, 'blurb', BLURB_MODEL);
   if ('error' in held) return fail(held.status, held.error);
-  const log = (ok: boolean) => settle(supabase, held.id, model, tokensIn, tokensOut, ok);
+  const log = (ok: boolean) => settle(adminClient(), held.id, model, tokensIn, tokensOut, ok);
   const write = (ask: string) => client.messages.parse({
     model: BLURB_MODEL,
     max_tokens: 4000,

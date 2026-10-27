@@ -32,9 +32,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function TeamPage({ params }: Props) {
   const { supabase, team } = await load((await params).slug);
   const [seasons, roster] = await Promise.all([listSeasons(supabase, team.id), publicRoster(supabase, team.id)]);
+  // A private team shows its name and nothing else to anyone off its staff.
+  if (team.private && !seasons.length) {
+    return (
+      <main className="shell" style={{ '--team': team.color, paddingBottom: 32 } as React.CSSProperties}>
+        <div className="page" style={{ paddingTop: 16 }}>
+          <Slab brand={brandOf(team)} sub={team.age_group ?? ''} />
+          <p className="note note-plain">This team keeps its schedule, scores and roster private.</p>
+          <p className="pub-foot">Scored on <Link href="/" className="link">Scoreboard</Link></p>
+        </div>
+      </main>
+    );
+  }
   const season = seasons.find((s) => s.is_current) ?? seasons[0];
   const [games, lines] = await Promise.all([
-    listGames(supabase, team.id, season?.id),
+    listGames(supabase, team.id, season?.id, { public: true }),
     season ? seasonStats(supabase, team.id, season.id) : [],
   ]);
   const live = games.find((g) => g.status === 'live');
