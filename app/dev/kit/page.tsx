@@ -61,11 +61,16 @@ import { SeasonView } from '@/components/views/SeasonView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { StreamSetup } from '@/components/stream/StreamSetup';
 import { StaffView } from '@/components/views/StaffView';
+import { PeopleView } from '@/components/views/PeopleView';
+import { MemberHome } from '@/components/views/MemberHome';
+import { CalendarList } from '@/components/hub/CalendarList';
+import { ChatView } from '@/components/hub/ChatView';
+import { calendarItems } from '@/lib/calendar';
 import { TodayView } from '@/components/views/TodayView';
 import { OpponentEditor } from '@/components/OpponentEditor';
 import { sprayBalls } from '@/lib/spray';
 import type { SeasonLine } from '@/lib/stats';
-import type { Game, Invite, Player, Position, Role, Season, StaffMember, Team } from '@/lib/types';
+import { isStaff, type Game, type Invite, type Member, type Message, type Player, type Position, type Role, type Rsvp, type Season, type Seat, type StaffMember, type Team, type TeamEvent } from '@/lib/types';
 
 // Every team screen, drawn from made-up data with no database behind it:
 // /dev/kit?v=roster (today, roster, player, staff, season, settings), and
@@ -129,13 +134,35 @@ const kitSpray = sprayBalls(
   sprayRows.map((_, i) => ({ event_id: i + 1, side: 'us' as const, bid: 'p2', b_pa: 1 })), 'p2');
 const pool = players.filter((p) => p.active).map((p) => ({ bid: p.id, num: p.number, name: `${p.first_name} ${p.last_name}`, avg: '.300' }));
 const invites: Invite[] = [{ token: '5f0c2c1e-0000-4000-8000-000000000000', role: 'media', expires_at: '2026-10-09T00:00:00Z' }];
+// Families, the calendar and the chat (v=people, calendar, chat, home; &role=guardian or fan for a parent's or fan's view).
+const members: Member[] = [
+  { user_id: 'm1', role: 'guardian', status: 'pending', display_name: 'Dana Park', players: ['p1'] },
+  { user_id: 'm2', role: 'guardian', status: 'active', display_name: 'Luis Vance', players: ['p2'] },
+  { user_id: 'm3', role: 'guardian', status: 'active', display_name: 'Ana Moore', players: ['p3', 'p11'] },
+  { user_id: 'm4', role: 'fan', status: 'active', display_name: 'Grandpa Joe', players: [] },
+];
+const kitEvents = (now: number): TeamEvent[] => [
+  { id: 'e1', team_id: 't1', kind: 'practice', title: 'Practice', starts_at: new Date(now + 26 * 3600e3).toISOString(), ends_at: new Date(now + 28 * 3600e3).toISOString(), location: 'Kerman Park, Field 2', address: null, notes: 'Bring water.', canceled: false },
+  { id: 'e2', team_id: 't1', kind: 'meeting', title: 'Parent meeting', starts_at: new Date(now + 50 * 3600e3).toISOString(), ends_at: null, location: 'Dugout', address: null, notes: null, canceled: true },
+];
+const kitGames = (now: number): Game[] => [{ ...game, id: 'g7', starts_at: new Date(now + 72 * 3600e3).toISOString(), status: 'scheduled' }];
+const rsvps: Rsvp[] = [
+  { game_id: 'g7', event_id: null, player_id: 'p1', status: 'yes', note: null }, { game_id: 'g7', event_id: null, player_id: 'p3', status: 'maybe', note: null },
+  { game_id: null, event_id: 'e1', player_id: 'p2', status: 'yes', note: null }, { game_id: null, event_id: 'e1', player_id: 'p4', status: 'no', note: null },
+];
+const msgs: Message[] = [
+  { id: 1, channel: 'families', user_id: 'm2', body: 'Anyone have room for one more in the carpool Saturday?', created_at: '2026-10-26T15:00:00Z', author: 'Luis Vance' },
+  { id: 2, channel: 'families', user_id: 'u1', body: 'Team photos are after practice Thursday. Full uniform please.', created_at: '2026-10-26T16:10:00Z', author: 'Shawn W.' },
+  { id: 3, channel: 'families', user_id: 'm3', body: 'We can take two.', created_at: '2026-10-26T16:30:00Z', author: 'Ana Moore' },
+];
 
 export default async function Kit({ searchParams }: { searchParams: Promise<{ v?: string; role?: string; logo?: string; card?: string; line?: string; status?: string; look?: string; sport?: string; moment?: string; spot?: string; qr?: string; qsize?: string; qop?: string; bs?: string; bpos?: string; cs?: string; theme?: string; style?: string; rhe?: string; scene?: string; reason?: string; ss?: string; win?: string; cpos?: string; blurb?: string; spray?: string; music?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound();
   const { v = 'today', role: r, logo, card, line, status, look, sport, moment, spot, qr, qsize, qop, bs, bpos, cs, theme, style, rhe, scene, reason, ss, win, cpos, blurb, spray, music } = await searchParams;
   // &logo=1 gives the team a made-up crest, to see every screen with a logo.
   const team: Team = logo ? { ...baseTeam, logo_url: '/dev/sample-logo.svg' } : baseTeam;
-  const role = (r ?? 'organizer') as Role;
+  const seat = (r ?? 'organizer') as Seat;
+  const role = (isStaff(seat) ? seat : 'organizer') as Role;
   const base = `/t/${team.slug}`;
   const at = v === 'today' ? base : v.startsWith('lineup') ? `${base}/games/g1/lineup` : `${base}/${v}`;
   const tabs = <div className="page-top team-tabs" style={{ paddingTop: 10 }}><TeamTabs slug={team.slug} players={11} opponents={6} at={at} /></div>;
@@ -213,7 +240,19 @@ export default async function Kit({ searchParams }: { searchParams: Promise<{ v?
       <Scenes feed={feed} now={KIT_NOW} weather={{ temp: 72, text: 'Clear', icon: '☀️', wind: 8, dir: 'SW', pop: 10 }} strike={0} />{spot && <SpotsDemo cut={spot === 'inning' ? 'inning' : 'pitch'} />}</div>;
   }
   return (
-    <TeamFrame team={team} role={role} season={season} at={at}>
+    <TeamFrame team={team} role={seat} season={season} at={at}>
+      {v === 'people' && <>{tabs}<PeopleView team={team} role={role} me="u1" staff={staff} invites={invites} members={members} players={players}
+        link={{ token: '5f0c2c1e-0000-4000-8000-00000000000f', require_approval: true }} org={null} origin="http://localhost:3000" /></>}
+      {v === 'calendar' && <div className="page" style={{ paddingTop: 16 }}><h1 className="disp h1">Calendar</h1>
+        <CalendarList team={team} seat={seat} items={calendarItems(kitGames(KIT_NOW), kitEvents(KIT_NOW), KIT_NOW)} rsvps={rsvps}
+          roster={isStaff(seat) ? players : players.slice(2, 3)} mine={seat === 'guardian' ? [players[2], players[10]] : []} scorers={{ g7: [{ name: 'Kev Oliver' }] }} /></div>}
+      {v === 'home' && <MemberHome team={team} seat={seat} items={calendarItems(kitGames(KIT_NOW), kitEvents(KIT_NOW), KIT_NOW)} rsvps={rsvps}
+        mine={seat === 'guardian' ? [players[2], players[10]] : []} news={[{ ...msgs[1], id: 9, channel: 'announcements' }]}
+        league={[{ id: 1, body: 'Opening ceremony Saturday 9am at Kerman Park. All teams in uniform.', created_at: '2026-10-25T12:00:00Z', author: 'Lee' }]}
+        prefs={{ announcements: true, chat: true, schedule: true, games: true }} scorers={{}} />}
+      {v === 'chat' && <div className="page" style={{ paddingTop: 16 }}><h1 className="disp h1">Chat</h1>
+        <ChatView slug={team.slug} teamId="t1" me="u1" channel="families" channels={isStaff(seat) ? ['announcements', 'families', 'staff'] : ['announcements', 'families']}
+          initial={msgs} canPost moderate={isStaff(seat)} /></div>}
       {v === 'today' && <TodayView team={team} role={role} players={11} opponents={6} season={season} stats={stats} roster={players}
         day={[{ game: { ...game, id: 'g0', status: 'live', opponent_name: 'Calvary Baseball' }, stale: true, lineups: {} }, { game, stale: false, lineups: { us: lineup } },
           { game: { ...game, id: 'g2', starts_at: '2026-10-03T21:45:00Z' }, stale: false, lineups: {} }]} />}

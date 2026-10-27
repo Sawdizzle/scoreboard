@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { GamePlace } from '@/components/GamePlace';
 import { Check, ChevronRight } from '@/components/icons';
+import { NotifyCard, type NotifyPrefs } from '@/components/hub/NotifyCard';
 import { leaders } from '@/components/StatTables';
 import { Matchup, Readiness } from '@/components/GameBits';
 import { Slab, brandOf } from '@/components/TeamBrand';
@@ -11,10 +12,12 @@ import { canEditTeam, canRunGames, type Game, type Lineup, type Player, type Rol
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
-export function TodayView({ team, role, players, opponents, season, stats = [], roster = [], day = [] }: {
+export function TodayView({ team, role, players, opponents, season, stats = [], roster = [], day = [], prefs, me }: {
   team: Team; role: Role; players: number; opponents: number; season?: Season; stats?: SeasonLine[]; roster?: Player[];
-  // The games to show (lib/schedule gameDay): being played, then the next game day's.
-  day?: { game: Game; stale: boolean; lineups: Partial<Record<Side, Lineup>> }[];
+  // The games to show (lib/schedule gameDay): being played, then the next game day's, with who is down to score each.
+  day?: { game: Game; stale: boolean; lineups: Partial<Record<Side, Lineup>>; scorers?: { user_id: string; name: string }[] }[];
+  // This person's notification settings for the team, and who they are (to say "you are scoring").
+  prefs?: NotifyPrefs; me?: string;
 }) {
   const who = new Map(roster.map((p) => [p.id, p]));
   const top = leaders(stats);
@@ -30,7 +33,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
   return (
     <div className="page wide today" style={{ paddingTop: 10 }}>
       <h1 className="wide-title disp">Today</h1>
-      {day.length ? day.map(({ game, stale, lineups }) => (
+      {day.length ? day.map(({ game, stale, lineups, scorers = [] }) => (
         <section key={game.id} className={`card next-game${stale ? ' stale' : ''}`}>
           <div className="next-top">
             <span className="eyebrow gold">{stale ? 'Never ended' : game.status === 'live' ? 'Live now' : <LocalTime iso={game.starts_at} />}</span>
@@ -40,6 +43,11 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
           {stale ? (
             <p className="note note-bad">Still marked live. End it on the pad so the stream, the stats and the pitching decisions show it as final.</p>
           ) : <GamePlace game={game} compact />}
+          {scorers.length > 0 && (
+            <p className={`note ${scorers.some((x) => x.user_id === me) ? 'note-good' : 'note-plain'}`}>
+              {scorers.some((x) => x.user_id === me) ? 'You are scoring this game.' : 'Scoring:'} {scorers.filter((x) => x.user_id !== me).map((x) => x.name).join(', ')}
+            </p>
+          )}
           <div className="next-foot">
             {stale ? <span /> : game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
             <div className="btn-row">
@@ -83,6 +91,8 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
           </div>
         </section>
       )}
+
+      {prefs && <NotifyCard slug={team.slug} prefs={prefs} />}
 
       <section className="setup">
         <div className="h-row" style={{ padding: '2px 4px 6px' }}>

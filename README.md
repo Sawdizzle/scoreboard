@@ -43,6 +43,30 @@ Scoreboard runs on a free Supabase project and Vercel. Setup takes about twenty 
    ```
    then Authentication → Hooks → Before User Created → Postgres function `public.hook_before_user_created`. Staff invite links always get through.
 
+## Families, fans and leagues
+
+A team is run by its staff and followed by everyone else:
+
+| Who | How they join | What they get |
+| --- | --- | --- |
+| League admin | Creates a league at `/org/new`, or takes an admin link | Acts as team admin on every team in the league, posts to every family, sees the league calendar |
+| Team admin, head coach, coach, media | A staff invite link (five seats) | The team, as today |
+| Scorer | A scorer invite link (up to twenty, apart from the five) | Scores the games; coaches put scorers on each game |
+| Parent/Guardian | The team's family link (Team > People), then a coach approves | Calendar, one-tap RSVP for their own players, announcements, the parents' chat, their child's card |
+| Fan | Follow on the public team page | Game times in their calendar, game start and final notifications |
+
+Players have no accounts, and there are no private messages: every conversation sits in a channel the coaches can see and moderate (Announcements, Parents, Staff). A removed message leaves every screen and stays in the database for the league to review.
+
+**Calendar.** Practices, meetings and events sit beside the games. Everyone gets a private subscription link (Calendar > Add to my calendar) for Apple, Google or Outlook; it checks they are still on the team every time it is fetched.
+
+**Notifications.** Set the VAPID keys and `SUPABASE_SECRET_KEY` (see `.env.example`). On iPhone, notifications work for Scoreboard on the Home Screen (iOS 16.4 and later), turned on from the card on Home or Today. For game start and final pushes, enable `pg_net` (Database > Extensions) and set:
+
+```sql
+insert into private.settings (key, value) values
+  ('site_url', 'https://your-site'), ('push_hook_secret', 'the PUSH_HOOK_SECRET value')
+on conflict (key) do update set value = excluded.value;
+```
+
 ## Your first game
 
 1. **Create an account** at `/sign-up` and confirm the email. On a phone, Share → **Add to Home Screen** opens Scoreboard full screen.

@@ -3,7 +3,7 @@ import { ActionForm, AutoSelect, Submit } from '@/components/ActionForm';
 import { CopyLink } from '@/components/CopyLink';
 import { Cross, Plus } from '@/components/icons';
 import { shortDate } from '@/lib/format';
-import { ROLES, ROLE_CAN, ROLE_LABEL, SEATS, canManageSeats, type Invite, type Role, type StaffMember, type Team } from '@/lib/types';
+import { ROLES, ROLE_CAN, ROLE_LABEL, SCORER_SEATS, SEATS, canManageSeats, type Invite, type Role, type StaffMember, type Team } from '@/lib/types';
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 // Organizer last: it is the seat that can do everything, and the least often handed out.
@@ -14,14 +14,19 @@ export function StaffView({ team, role, me, staff, invites, origin }: {
   team: Team; role: Role; me: string; staff: StaffMember[]; invites: Invite[]; origin: string;
 }) {
   const manage = canManageSeats(role);
-  const open = SEATS - staff.length - invites.length;
-  const bars = [...staff.map(() => 'on'), ...invites.map(() => 'held'), ...Array(Math.max(open, 0)).fill('')];
+  // Five coaching seats; scorers are counted apart, so a parent who scores never takes a coach's seat.
+  const coaching = staff.filter((m) => m.role !== 'scorer'), coachLinks = invites.filter((i) => i.role !== 'scorer');
+  const scorers = staff.length - coaching.length, scorerLinks = invites.length - coachLinks.length;
+  const open = SEATS - coaching.length - coachLinks.length;
+  const scorerOpen = SCORER_SEATS - scorers - scorerLinks;
+  const bars = [...coaching.map(() => 'on'), ...coachLinks.map(() => 'held'), ...Array(Math.max(open, 0)).fill('')];
   return (
     <div className="page">
       <div className="seats">
         <div className="seat-bars" aria-hidden="true">{bars.map((b, i) => <span key={i} className={`seat-bar ${b}`} />)}</div>
         <span className="sub">
-          {staff.length} of {SEATS} seats filled{invites.length > 0 && `, ${invites.length} with a link out`}.
+          {coaching.length} of {SEATS} staff seats filled{coachLinks.length > 0 && `, ${coachLinks.length} with a link out`}.
+          {' '}{scorers} {scorers === 1 ? 'scorer' : 'scorers'}, counted apart (up to {SCORER_SEATS}).
         </span>
       </div>
 
@@ -68,22 +73,22 @@ export function StaffView({ team, role, me, staff, invites, origin }: {
           </div>
         ))}
 
-        {manage && open > 0 && (
+        {manage && (open > 0 || scorerOpen > 0) && (
           <div className="card open pad">
             <div className="seat" style={{ padding: 0 }}>
               <span className="seat-face open"><Plus size={18} /></span>
               <span className="row-main">
-                <span className="row-title">{open === 1 ? 'One seat is open' : `${open} seats are open`}</span>
-                <span className="row-meta">Pick a role, then send the link.</span>
+                <span className="row-title">{open <= 0 ? 'Staff seats are full' : open === 1 ? 'One staff seat is open' : `${open} staff seats are open`}</span>
+                <span className="row-meta">Pick a role, then send the link. Scorers, often parents, are put on the games they score.</span>
               </span>
             </div>
             <ActionForm action={createInvite.bind(null, team.slug)} className="form">
               <fieldset>
                 <legend className="legend">Role</legend>
                 <div className="pills">
-                  {INVITE_ROLES.map((r) => (
+                  {INVITE_ROLES.filter((r) => (r === 'scorer' ? scorerOpen > 0 : open > 0)).map((r) => (
                     <label key={r} className="pill">
-                      <input type="radio" name="role" value={r} defaultChecked={r === 'coach'} />
+                      <input type="radio" name="role" value={r} defaultChecked={r === (open > 0 ? 'coach' : 'scorer')} />
                       <span>{ROLE_LABEL[r]}</span>
                     </label>
                   ))}
@@ -95,7 +100,7 @@ export function StaffView({ team, role, me, staff, invites, origin }: {
         )}
 
         {!manage && open > 0 && <p className="note note-plain">{open === 1 ? 'One seat is' : `${open} seats are`} open. An organizer sends the invite links.</p>}
-        {open <= 0 && staff.length >= SEATS && <p className="note note-plain">All five seats are filled.</p>}
+        {open <= 0 && coaching.length >= SEATS && <p className="note note-plain">All five staff seats are filled. Scorer seats are still open.</p>}
       </div>
     </div>
   );

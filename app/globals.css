@@ -171,7 +171,7 @@ button.seg-item { background: none; border: 0; font-family: inherit; cursor: poi
 button.seg-item[aria-current="page"] { background: var(--steel); }
 
 .tabbar { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 560px; z-index: 5;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px 12px calc(14px + env(safe-area-inset-bottom));
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 12px calc(14px + env(safe-area-inset-bottom));
   background: var(--panel); border-top: 1px solid var(--line); }
 /* No tabs under a thumb on the lineup screen (see TabBar): one stray tap left it. */
 @media (max-width: 1023px) { .tabbar.away { display: none; } .shell.has-tabs:has(.tabbar.away) { padding-bottom: 0; } }
@@ -975,3 +975,27 @@ html:has(.pad.sun), html:has(.pad.sun) body { background: #ffffff; }
 .pad.sun .fpick-spot i { background: #f2b52c; color: #000000; }
 .pad.sun .fpick-spot.guess i { background: #f9dc8f; }
 .pad.sun .pad-sync:not(:empty) { color: #ffffff; }
+
+/* ---- Calendar, RSVP, chat ------------------------------------------------ */
+.cal-item { gap: 10px; }
+.cal-item.canceled .row-title { text-decoration: line-through; color: var(--body); }
+.cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal-link { color: inherit; }
+.cal-count summary { font-size: 13.5px; color: var(--body); }
+.cal-names p { margin: 0 0 4px; font-size: 14px; color: var(--soft); }
+.rsvp { display: flex; flex-direction: column; gap: 4px; }
+.rsvp-btn { min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line-2); color: var(--soft); font-weight: 700; font-size: 14px; cursor: pointer; }
+.rsvp-btn.yes.on { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
+.rsvp-btn.maybe.on { background: var(--gold); border-color: var(--gold); color: #1b1404; }
+.rsvp-btn.no.on { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-text); }
+.chat { display: flex; flex-direction: column; gap: 10px; }
+.chat-log { display: flex; flex-direction: column; gap: 10px; }
+.msg { display: flex; flex-direction: column; gap: 3px; max-width: 88%; }
+.msg.mine { align-self: flex-end; align-items: flex-end; }
+.msg-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.msg-body { padding: 9px 13px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.4; }
+.msg.mine .msg-body { background: var(--steel); border-color: var(--steel); color: var(--on-steel); }
+.msg.notice .msg-body { background: var(--panel); border: 1px solid var(--gold); }
+.chat-send { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; padding: 8px 0; background: var(--bg); }
+.chat-send textarea { flex: 1; min-height: 48px; max-height: 160px; resize: vertical; }
+@media (min-width: 1024px) { .chat-send { bottom: 0; } }

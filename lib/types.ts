@@ -7,7 +7,7 @@ export const ROLES = ['organizer', 'head_coach', 'coach', 'scorer', 'media'] as 
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABEL: Record<Role, string> = {
-  organizer: 'Organizer',
+  organizer: 'Team admin',
   head_coach: 'Head coach',
   coach: 'Coach',
   scorer: 'Scorer',
@@ -18,10 +18,38 @@ export const ROLE_CAN: Record<Role, string> = {
   organizer: 'Owns the team and its seats',
   head_coach: 'Team, roster and seasons',
   coach: 'Lineups and scoring',
-  scorer: 'Scores games',
+  scorer: 'Scores the games they are put on',
   media: 'Runs the broadcast',
 };
+// Five coaching seats. Scorers are counted apart, up to twenty.
 export const SEATS = 5;
+export const SCORER_SEATS = 20;
+
+// Everyone else on a team (team_members). A guardian is a parent of players on
+// the roster, approved by staff; a fan follows the team's games.
+export type MemberRole = 'guardian' | 'fan';
+export const MEMBER_LABEL: Record<MemberRole, string> = { guardian: 'Parent/Guardian', fan: 'Fan' };
+// What a screen is opened as: a staff seat, or a membership.
+export type Seat = Role | MemberRole;
+export const SEAT_LABEL: Record<Seat, string> = { ...ROLE_LABEL, ...MEMBER_LABEL };
+export const isStaff = (seat: Seat | null): seat is Role => !!seat && seat !== 'guardian' && seat !== 'fan';
+// Coaches run the calendar, the announcements and the families.
+export const canCoach = (seat: Seat | null) => seat === 'organizer' || seat === 'head_coach' || seat === 'coach';
+
+export type Channel = 'announcements' | 'families' | 'staff';
+export const CHANNEL_LABEL: Record<Channel, string> = { announcements: 'Announcements', families: 'Parents', staff: 'Staff' };
+export type Message = { id: number; channel: Channel; user_id: string | null; body: string; created_at: string; author?: string };
+
+export type EventKind = 'practice' | 'meeting' | 'event';
+export const EVENT_LABEL: Record<EventKind, string> = { practice: 'Practice', meeting: 'Meeting', event: 'Team event' };
+export type TeamEvent = {
+  id: string; team_id: string; kind: EventKind; title: string; starts_at: string; ends_at: string | null;
+  location: string | null; address: string | null; notes: string | null; canceled: boolean;
+};
+export type RsvpStatus = 'yes' | 'maybe' | 'no';
+export type Rsvp = { game_id: string | null; event_id: string | null; player_id: string; status: RsvpStatus; note: string | null };
+export type Member = { user_id: string; role: MemberRole; status: 'pending' | 'active'; display_name: string; players: string[] };
+export type Org = { id: string; slug: string; name: string; color: string; logo_url: string | null };
 
 // What the database lets each role write in this stage (see the policies).
 export const canEditTeam = (role: Role | null) => role === 'organizer' || role === 'head_coach';
@@ -59,6 +87,8 @@ export type Team = {
   name_format: NameFormat;
   // True hides the roster, games and stats from everyone not on the staff.
   private: boolean;
+  // The league (organizations) the team plays in, if any.
+  org_id?: string | null;
 };
 
 export type Player = {

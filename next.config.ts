@@ -3,7 +3,7 @@ import type { NextConfig } from 'next';
 // Staff, pad and sign-in pages may never sit in someone else's frame. The
 // stream overlay, the bugs and the spots stay frameable: OBS loads them as a
 // Browser Source. The public team pages stay embeddable on a league's site.
-const NO_FRAME = ['/', '/t', '/t/:path*', '/pad/:path*', '/sign-in', '/sign-up', '/forgot', '/reset', '/invite/:path*', '/auth/:path*', '/privacy'];
+const NO_FRAME = ['/', '/t', '/t/:path*', '/pad/:path*', '/sign-in', '/sign-up', '/forgot', '/reset', '/invite/:path*', '/join/:path*', '/org/:path*', '/auth/:path*', '/privacy'];
 const NO_FRAME_HEADERS = [
   { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
         ],
       },
       ...NO_FRAME.map((source) => ({ source, headers: NO_FRAME_HEADERS })),
+      // The service worker that shows push notifications: always the newest copy.
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+        ],
+      },
     ];
   },
   // v4's pages, on the phone's home screen and in OBS. The query string comes

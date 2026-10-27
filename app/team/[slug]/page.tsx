@@ -5,7 +5,9 @@ import { ChevronRight } from '@/components/icons';
 import { LocalTime } from '@/components/LocalTime';
 import { StatTables } from '@/components/StatTables';
 import { Slab, brandOf } from '@/components/TeamBrand';
-import { TEAM_COLS, listGames, listSeasons, publicRoster, seasonStats } from '@/lib/data';
+import { TEAM_COLS, getUserId, listGames, listSeasons, publicRoster, seasonStats } from '@/lib/data';
+import { followTeam } from '@/app/hub-actions';
+import { ActionForm, Submit } from '@/components/ActionForm';
 import { result } from '@/lib/public';
 import { splitSchedule } from '@/lib/schedule';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
@@ -60,6 +62,7 @@ export default async function TeamPage({ params }: Props) {
     <main className="shell has-tabs" style={{ '--team': team.color, paddingBottom: 32 } as React.CSSProperties}>
       <div className="page" style={{ paddingTop: 16 }}>
         <Slab brand={brandOf(team)} sub={[team.age_group, season?.name, record].filter(Boolean).join(' · ')} />
+        <Follow team={team} />
 
         {live && (
           <Link href={`${base}/game/${live.id}`} className="card pub-live">
@@ -127,5 +130,26 @@ function GameRows({ base, games }: { base: string; games: Game[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// Follow the team: game times in your calendar, a notification when a game
+// starts and ends. Someone already on the team gets a way into the app instead.
+async function Follow({ team }: { team: Team }) {
+  const me = await getUserId();
+  const next = encodeURIComponent(`/team/${team.slug}`);
+  if (!me) {
+    return <Link href={`/sign-up?next=${next}`} className="btn btn-quiet btn-block">Follow the team · free account</Link>;
+  }
+  const supabase = await createClient();
+  const [{ data: seat }, { data: member }] = await Promise.all([
+    supabase.from('team_staff').select('role').eq('team_id', team.id).eq('user_id', me).maybeSingle(),
+    supabase.from('team_members').select('role').eq('team_id', team.id).eq('user_id', me).maybeSingle(),
+  ]);
+  if (seat || member) return <Link href={`/t/${team.slug}`} className="btn btn-quiet btn-block">Open in your teams</Link>;
+  return (
+    <ActionForm action={followTeam.bind(null, team.slug, team.id)}>
+      <Submit className="btn btn-primary btn-block" busy="Following…">Follow the team</Submit>
+    </ActionForm>
   );
 }
