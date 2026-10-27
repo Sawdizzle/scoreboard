@@ -1,4 +1,4 @@
-import { deleteTeam, saveNameFormat } from '@/app/actions';
+import { deleteTeam, saveNameFormat, savePrivacy } from '@/app/actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { BrandEditor } from '@/components/BrandEditor';
 import { CopyLink } from '@/components/CopyLink';
@@ -56,7 +56,15 @@ export function SettingsView({ team, role, welcome, publicUrl, ai }: {
         <section className="card pad">
           <h2>Public team page</h2>
           <p className="hint">Schedule, live scores, box scores, roster and season stats, for families and fans. No account needed. Players appear under the team&rsquo;s name format, or less where their player screen says so.</p>
-          <CopyLink url={publicUrl} label="Public team page link" />
+          {team.private
+            ? <p className="note note-plain">This team is <b>private</b>: the public page shows only its name, and the stream names no players.</p>
+            : <CopyLink url={publicUrl} label="Public team page link" />}
+          {canEditTeam(role) && (
+            <ActionForm action={savePrivacy.bind(null, team.slug)} className="form">
+              <label className="check"><input type="checkbox" name="private" defaultChecked={team.private} /> <span>Private team: hide the schedule, scores, stats and roster from anyone not on the staff</span></label>
+              <Submit busy="Saving…">Save</Submit>
+            </ActionForm>
+          )}
         </section>
       )}
       {ai && <AiUsageCard allowance={ai.allowance} rows={ai.rows} />}

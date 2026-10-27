@@ -55,8 +55,10 @@ export type Team = {
   palette: string[];
   logo_url: string | null;
   age_group: string | null;
-  // How the team's players are named; 'full' until the team picks another.
+  // How the team's players are named; 'first_initial' until the team picks another.
   name_format: NameFormat;
+  // True hides the roster, games and stats from everyone not on the staff.
+  private: boolean;
 };
 
 export type Player = {

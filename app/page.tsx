@@ -8,7 +8,7 @@ export default async function Home() {
   return (
     <main className="shell">
       <div className="front">
-        <span className="mark">SCOREBOARD</span>
+        <span className="wordmark">SCOREBOARD</span>
         <span className="band" />
         <h1 className="disp">Score it once.</h1>
         <p className="lede">

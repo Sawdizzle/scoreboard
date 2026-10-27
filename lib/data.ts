@@ -6,14 +6,11 @@ import { sprayBalls, type SprayEvent, type SprayStat } from './spray';
 import type { SeasonLine } from './stats';
 import type { Game, Invite, Lineup, Player, Role, Season, Side, StaffMember, Team } from './types';
 
-export const TEAM_COLS = 'id, slug, name, display_name, abbr, color, color2, palette, logo_url, age_group, name_format';
+export const TEAM_COLS = 'id, slug, name, display_name, abbr, color, color2, palette, logo_url, age_group, name_format, private';
 const PLAYER_COLS = 'id, team_id, first_name, last_name, number, bats, throws, positions, public_name, active';
 const SEASON_COLS = 'id, team_id, name, starts_on, ends_on, is_current, game_innings';
 
-// Only ever a path on this site: "/t/steel", never "//evil.example" or a URL.
-export function safeNext(next: string | null | undefined, fallback = '/t') {
-  return next && /^\/(?!\/)[^\\]*$/.test(next) ? next : fallback;
-}
+export { safeNext } from './safe-next';
 
 // Who is signed in, verified against the project's signing keys. Cached for
 // the request, so a layout and its page ask once.
@@ -105,6 +102,8 @@ export async function playerSpray(db: Db, playerId: string) {
 }
 
 const GAME_COLS = `id, sport, team_id, season_id, counts_for_stats, opponent_team_id, opponent_name, opponent_abbr, opponent_color, is_home, starts_at, venue, address, tournament_url, status, live, clock, settings, venue_geo, opponent_id, opponent:teams!games_opponent_team_id_fkey(${TEAM_COLS}), saved:opponents!games_opponent_id_fkey(name, abbr, color, color2, logo_url)`;
+// The same, for a signed-out visitor: anon may not read where a game is.
+const PUBLIC_GAME_COLS = GAME_COLS.replace('address, ', '').replace('venue_geo, ', '');
 
 // A tournament weekend: the next game is usually at the same field, in the same
 // tournament, so a new game starts with the place of a game within three days.
@@ -117,12 +116,14 @@ export async function recentPlace(db: Db, teamId: string) {
   return data;
 }
 
-// A team's games, soonest first; games with no time yet sort last.
-export async function listGames(db: Db, teamId: string, seasonId?: string) {
-  let q = db.from('games').select(GAME_COLS).eq('team_id', teamId);
+// A team's games, soonest first; games with no time yet sort last. The public
+// page asks without the address and coordinates, which anon cannot read.
+export async function listGames(db: Db, teamId: string, seasonId?: string, opts: { public?: boolean } = {}) {
+  let q = db.from('games').select(opts.public ? PUBLIC_GAME_COLS : GAME_COLS).eq('team_id', teamId);
   if (seasonId) q = q.eq('season_id', seasonId);
   const { data } = await q.order('starts_at', { ascending: true, nullsFirst: false });
-  return (data ?? []) as unknown as Game[];
+  const rows = (data ?? []) as unknown as Game[];
+  return opts.public ? rows.map((g) => ({ ...g, address: null, venue_geo: null })) : rows;
 }
 // Games the pad has scored for us that count for stats, by season if given:
 // season stats already hold them, so their season takes no GameChanger import.

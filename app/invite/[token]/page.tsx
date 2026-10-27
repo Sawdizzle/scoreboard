@@ -29,7 +29,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <main className="shell">
       <div className="front">
-        <Link href="/" className="mark">SCOREBOARD</Link>
+        <Link href="/" className="wordmark">SCOREBOARD</Link>
         {!pv ? (
           <>
             <h1 className="disp h1">Invite not found</h1>

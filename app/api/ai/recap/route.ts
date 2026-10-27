@@ -9,6 +9,7 @@ import { checkRecap, RECAP_MODEL, RECAP_REQUEST, recapPrompt, type RecapContent,
 import { getAllowance, refusal, reserve, settle } from '@/lib/ai-limit';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { gameDate, getGameRow, loadFacts } from '@/lib/game-facts';
+import { adminClient } from '@/lib/supabase/admin';
 
 export const maxDuration = 90;
 
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
   // One of this month's writes, taken before the call so the limit holds.
   const held = await reserve(supabase, game.team_id, game.id, 'recap', RECAP_MODEL);
   if ('error' in held) return fail(held.status, held.error);
-  const log = (ok: boolean) => settle(supabase, held.id, model, tokensIn, tokensOut, ok);
+  const log = (ok: boolean) => settle(adminClient(), held.id, model, tokensIn, tokensOut, ok);
 
   const parse = (ask: string) => client.beta.messages.parse(aiParams({ ...RECAP_REQUEST, content: ask }));
 

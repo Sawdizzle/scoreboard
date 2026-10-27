@@ -1,6 +1,28 @@
 import type { NextConfig } from 'next';
 
+// Staff, pad and sign-in pages may never sit in someone else's frame. The
+// stream overlay, the bugs and the spots stay frameable: OBS loads them as a
+// Browser Source. The public team pages stay embeddable on a league's site.
+const NO_FRAME = ['/', '/t', '/t/:path*', '/pad/:path*', '/sign-in', '/sign-up', '/forgot', '/reset', '/invite/:path*', '/auth/:path*', '/privacy'];
+const NO_FRAME_HEADERS = [
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+  { key: 'X-Frame-Options', value: 'DENY' },
+];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+      ...NO_FRAME.map((source) => ({ source, headers: NO_FRAME_HEADERS })),
+    ];
+  },
   // v4's pages, on the phone's home screen and in OBS. The query string comes
   // along, so /overlay.html?ch=... reaches the /overlay page that maps it.
   async redirects() {

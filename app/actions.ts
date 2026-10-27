@@ -7,6 +7,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
+import { adminClient } from '@/lib/supabase/admin';
 import { listOpponents, loadTeam, padScoredGames, safeNext } from '@/lib/data';
 import { origin } from '@/lib/origin';
 import { parseRoster } from '@/lib/roster-parse';
@@ -111,6 +112,31 @@ export async function signOut() {
   redirect('/');
 }
 
+// Deleting your own account: your seats on every team go with it. Refused
+// while you are the only organizer of a team (it would have nobody to run
+// it), and done by the server's secret key, since only that may remove an
+// account.
+export async function deleteAccount(_: FormState, fd: FormData): Promise<FormState> {
+  if (!supabaseConfigured) return NOT_CONNECTED;
+  if (str(fd, 'confirm').toLowerCase() !== 'delete') return { error: 'Type DELETE to confirm.' };
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims?.sub as string | undefined;
+  if (!me) return { error: 'Sign in again first.' };
+  const { data: blockers, error } = await supabase.rpc('account_blockers');
+  if (error) return { error: say(error) };
+  const sole = (blockers ?? []) as { name: string }[];
+  if (sole.length) {
+    return { error: `You are the only organizer of ${sole.map((t) => t.name).join(', ')}. Make someone else an organizer, or delete the team, first.` };
+  }
+  const admin = adminClient();
+  if (!admin) return { error: 'Account deletion is not switched on here yet (no SUPABASE_SECRET_KEY). Email the address in the privacy policy instead.' };
+  const { error: gone } = await admin.auth.admin.deleteUser(me);
+  if (gone) return { error: 'Could not delete the account. Try again.' };
+  await supabase.auth.signOut();
+  redirect('/');
+}
+
 // ---- Teams ------------------------------------------------------------------
 // A new team needs only a name: the look comes next, on the brand screen,
 // where the logo can set it.
@@ -196,6 +222,19 @@ export async function saveNameFormat(slug: string, _: FormState, fd: FormData): 
   return { ok: 'Saved. Every screen now names players this way.' };
 }
 
+// A private team: everyone off its staff sees its name and nothing else (in
+// the database: team_visible()).
+export async function savePrivacy(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const priv = fd.get('private') === 'on';
+  const { supabase, team } = await loadTeam(slug);
+  const { data, error } = await supabase.from('teams').update({ private: priv }).eq('id', team.id).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return NO_SEAT;
+  revalidatePath(`/t/${slug}`, 'layout');
+  revalidatePath(`/team/${slug}`, 'layout');
+  return { ok: priv ? 'Saved. The team is private.' : 'Saved. The public team page is open.' };
+}
+
 // The storage path inside our bucket, only for this team's own folder.
 function logoPath(url: string, teamId: string) {
   const marker = `/storage/v1/object/public/${LOGO_BUCKET}/`;
@@ -227,7 +266,7 @@ function playerFields(fd: FormData) {
     bats: (['R', 'L', 'S'].includes(bats) ? bats : null) as 'R' | 'L' | 'S' | null,
     throws: (['R', 'L'].includes(throws_) ? throws_ : null) as 'R' | 'L' | null,
     positions: fd.getAll('positions').map(String).filter((p): p is Position => (POSITIONS as readonly string[]).includes(p)),
-    public_name: ((PUBLIC_NAMES as readonly string[]).includes(pub) ? pub : 'full') as PublicName,
+    public_name: ((PUBLIC_NAMES as readonly string[]).includes(pub) ? pub : 'first_initial') as PublicName,
   } as const;
 }
 
@@ -294,11 +333,14 @@ export async function updatePlayer(slug: string, playerId: string, _: FormState,
   return { ok: 'Saved.' };
 }
 
+// Deleting a player also takes their name out of every lineup, play, recap
+// and saved opponent roster it was copied into (forget_player in the database).
 export async function deletePlayer(slug: string, playerId: string, _: FormState): Promise<FormState> {
   const { supabase, team } = await loadTeam(slug);
-  const { data, error } = await supabase.from('players').delete().eq('team_id', team.id).eq('id', playerId).select('id');
+  const { data: p } = await supabase.from('players').select('id').eq('team_id', team.id).eq('id', playerId).maybeSingle();
+  if (!p) return NO_SEAT;
+  const { error } = await supabase.rpc('forget_player', { p_player: playerId });
   if (error) return { error: say(error) };
-  if (!data.length) return NO_SEAT;
   revalidatePath(`/t/${slug}`, 'layout');
   redirect(`/t/${slug}/roster`);
 }

@@ -11,7 +11,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
   return (
     <main className="shell">
       <div className="front">
-        <Link href="/" className="mark">SCOREBOARD</Link>
+        <Link href="/" className="wordmark">SCOREBOARD</Link>
         <h1 className="disp h1">Sign in</h1>
         <ActionForm action={signIn} className="form">
           <input type="hidden" name="next" value={next} />

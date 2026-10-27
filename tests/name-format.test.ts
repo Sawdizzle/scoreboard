@@ -65,8 +65,8 @@ before(async () => {
     ($1, 'Alex', 'Raney', '12', 'full'), ($1, 'Cy', 'Park', '3', 'first_initial'), ($1, 'Finn', 'Moore', '21', 'number')`, [team]);
 });
 
-test('a team starts on full names; only a team lead changes the format', async () => {
-  assert.deepEqual(await t.as(null, `select name_format from teams where id = $1`, [team]), [{ name_format: 'full' }]);
+test('a team starts on first name and last initial; only a team lead changes the format', async () => {
+  assert.deepEqual(await t.as(null, `select name_format from teams where id = $1`, [team]), [{ name_format: 'first_initial' }]);
   await assert.rejects(t.as('owner', `update teams set name_format = 'nickname' where id = $1`, [team]), /name_format_check/);
   assert.equal((await t.as('coach', `update teams set name_format = 'last' where id = $1 returning id`, [team])).length, 0);
   assert.equal((await t.as('stranger', `update teams set name_format = 'last' where id = $1 returning id`, [team])).length, 0);

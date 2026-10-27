@@ -9,7 +9,7 @@ export default function Forgot() {
   return (
     <main className="shell">
       <div className="front">
-        <Link href="/" className="mark">SCOREBOARD</Link>
+        <Link href="/" className="wordmark">SCOREBOARD</Link>
         <h1 className="disp h1">Reset your password</h1>
         <ActionForm action={requestReset} className="form">
           <label className="field"><span>Email</span>

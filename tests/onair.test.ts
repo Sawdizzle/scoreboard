@@ -1,7 +1,7 @@
 // What the stream says about the batter, the pitcher and who is due up.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airView, autoMid, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, type AirCtx, type Feed } from '../lib/onair.ts';
+import { airView, autoMid, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, RELOAD_QUIET_MS, safeToReload, type AirCtx, type Feed } from '../lib/onair.ts';
 import { engineGame } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
@@ -175,4 +175,15 @@ test('the mid-inning board: up after the play that ended a half, down once taken
   // Taken down for an earlier break, or another game: the next third out puts it back up.
   assert.equal(autoMid({ auto_mid: true, last: { ...rolled, seq: 52 }, game, broadcast: { mid_off: { game: 'g1', seq: 40 } } }), true);
   assert.equal(autoMid({ auto_mid: true, last: rolled, game, broadcast: { mid_off: { game: 'g2', seq: 40 } } }), true);
+});
+
+test('a new release reloads the overlay only between halves, before or after the game, or after a quiet spell', () => {
+  const live = { status: 'live' } as Feed['game'];
+  const t0 = 1_000_000;
+  assert.equal(safeToReload(null, t0, t0), true);
+  assert.equal(safeToReload({ game: { status: 'scheduled' } as Feed['game'], last: null }, t0, t0), true);
+  assert.equal(safeToReload({ game: { status: 'final' } as Feed['game'], last: null }, t0, t0), true);
+  assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K' } }, t0, t0 + 1000), false, 'mid-half');
+  assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K', rolled: true } }, t0, t0 + 1000), true, 'half just ended');
+  assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K' } }, t0, t0 + RELOAD_QUIET_MS), true, 'quiet spell');
 });

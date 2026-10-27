@@ -20,7 +20,7 @@ test('signup gate', async () => {
   assert.ok('error' in await hook({}), 'no code: refused');
   assert.ok('error' in await hook({ invite_code: 'wrong' }), 'wrong code: refused');
   assert.deepEqual(await hook({ invite_code: 'steel' }), {}, 'right code: in');
-  assert.deepEqual(await hook({}, 'shawn@users.scoreboard.app'), {}, 'v4 account: in');
+  assert.ok('error' in await hook({}, 'anything@users.scoreboard.app'), 'old v4 domain, no code: refused');
 
   await db.exec(`
     insert into public.teams (id, slug, name, abbr) values ('00000000-0000-0000-0000-0000000000aa', 'gate-team', 'Gate', 'GT');

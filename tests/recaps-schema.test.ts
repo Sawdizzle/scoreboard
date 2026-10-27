@@ -47,7 +47,7 @@ test('usage rows: staff add their own team’s, and only they read them', async 
   await assert.rejects(t.as(null, `select 1 from ai_usage`));
 });
 
-test('AI limits: off by default, staff cannot raise it, and the allowance counts this month’s calls that worked', async () => {
+test('AI limits: off by default, staff cannot raise it, and the allowance counts every call this month, failed ones too', async () => {
   assert.deepEqual((await t.as<{ a: { limit: number; used: number; remaining: number } }>('owner', `select ai_allowance($1) a`, [team]))[0].a.limit, 0);
   await assert.rejects(t.as('owner', `update teams set ai_monthly_limit = 999 where id = $1`, [team]));
   await t.db.query(`update teams set ai_monthly_limit = 5 where id = $1`, [team]);
@@ -55,27 +55,29 @@ test('AI limits: off by default, staff cannot raise it, and the allowance counts
   await t.as('owner', `insert into ai_usage (team_id, kind, model, ok) values ($1, 'blurb', 'claude-haiku-5-5', false)`, [team]);
   await t.db.query(`insert into ai_usage (team_id, kind, model, ok, created_at) values ($1, 'recap', 'm', true, now() - interval '40 days')`, [team]);
   const [{ a }] = await t.as<{ a: { limit: number; used: number; remaining: number; resets: string } }>('owner', `select ai_allowance($1) a`, [team]);
-  assert.deepEqual([a.limit, a.used, a.remaining], [5, 1, 4]);
+  assert.deepEqual([a.limit, a.used, a.remaining], [5, 2, 3]);
   assert.ok(Date.parse(a.resets) > Date.now());
   await assert.rejects(t.as('stranger', `select ai_allowance($1)`, [team]));
   await assert.rejects(t.as(null, `select ai_allowance($1)`, [team]));
 });
 
-test('AI writes are reserved under the limit, one at a time, and settled by whoever reserved them', async () => {
-  await t.db.query(`update teams set ai_monthly_limit = 3 where id = $1`, [team]);
+test('AI writes are reserved under the limit, one at a time, and only the server settles them', async () => {
+  await t.db.query(`update teams set ai_monthly_limit = 4 where id = $1`, [team]);
   const reserve = () => t.as<{ r: { id: number | null } }>('owner', `select ai_reserve($1, $2, 'recap', 'm') r`, [team, game]).then((x) => x[0].r);
   const a = await reserve();
   assert.ok(a.id);
-  // Earlier in this file one call worked; with this reservation the month holds 2 of 3, so one more fits.
+  // Earlier in this file one call worked and one failed; with this reservation the month holds 3 of 4, so one more fits.
   assert.ok((await reserve()).id);
   assert.equal((await reserve()).id, null);
-  // A failed call gives its write back.
-  await t.as('owner', `select ai_settle($1, 'claude-sonnet-5-5', 1000, 500, false)`, [a.id]);
-  assert.ok((await reserve()).id);
-  // Nobody else can settle it, nor reserve against another team's game.
-  await t.as('rival', `select ai_settle($1, 'x', 0, 0, true)`, [a.id]);
-  const [{ ok }] = await t.db.query<{ ok: boolean }>(`select ok from ai_usage where id = $1`, [a.id]).then((r) => r.rows);
-  assert.equal(ok, false);
+  // A signed-in user cannot settle (and so cannot mark a write failed to win it back).
+  await assert.rejects(t.as('owner', `select ai_settle($1, 'claude-sonnet-5-5', 1000, 500, false)`, [a.id]), /permission denied/);
+  await assert.rejects(t.as('rival', `select ai_settle($1, 'x', 0, 0, false)`, [a.id]), /permission denied/);
+  // The server settles it; a failed call still counts toward the month.
+  await t.db.exec(`set role service_role`);
+  try { await t.db.query(`select ai_settle($1, 'claude-sonnet-5-5', 1000, 500, false)`, [a.id]); } finally { await t.db.exec('reset role'); }
+  const [{ ok, input_tokens }] = await t.db.query<{ ok: boolean; input_tokens: number }>(`select ok, input_tokens from ai_usage where id = $1`, [a.id]).then((r) => r.rows);
+  assert.deepEqual([ok, input_tokens], [false, 1000]);
+  assert.equal((await reserve()).id, null);
   await assert.rejects(t.as('rival', `select ai_reserve($1, $2, 'recap', 'm')`, [other, game]));
   await assert.rejects(t.as('stranger', `select ai_reserve($1, null, 'recap', 'm')`, [team]));
 });
