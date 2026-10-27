@@ -108,9 +108,11 @@ export const sumRows = (rows: StatRow[]) => addRows({}, rows);
 // for the database in order. A dropped connection only delays the queue; a
 // play from another phone in between makes this pad reload rather than write
 // over it.
-export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, roster = [], bench = [], canRoster = false, openEnd = false, log, decided }: {
+export function Pad({ slug, team, game, lineups, season, tonightRows, regulation, canScore, canWrite = false, channel, canAir = true, roster = [], bench = [], canRoster = false, openEnd = false, log, decided }: {
   slug: string; team: Team; game: Game & { seq: number }; lineups: Partial<Record<Side, Lineup>>;
   season: SeasonLine[]; tonightRows: StatRow[]; regulation: number; canScore: boolean; canWrite?: boolean; channel: Channel | null;
+  // On Air (scenes, cards, moments): coaches and the broadcaster. A scorer's pad scores; the stream follows on its own.
+  canAir?: boolean;
   // Our players' first and last names, for fixing a name from the pad.
   roster?: { id: string; first_name: string; last_name: string }[];
   // Our active roster as batters, for a sub: whoever is not in the order is on the bench.
@@ -803,8 +805,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     return () => document.removeEventListener('keydown', on);
   }, []);
 
-  const console_ = wide && !!chan;
-  const airPanel = (inline: boolean) => chan && (
+  const showAir = !!chan && canAir;
+  const console_ = wide && showAir;
+  const airPanel = (inline: boolean) => showAir && chan && (
     <OnAir canWrite={canWrite} channel={chan} teamId={team.id} gameId={game.id} setupHref={`/t/${slug}/stream`} view={onAir} brand={batSide === 'home' ? homeB : awayB}
       when={`${g.half === 'top' ? 'Top' : 'Bottom'} ${g.inning}`} live={status === 'live'} final={final} inline={inline}
       score={`${awayB.display} ${g.away_score | 0} · ${homeB.display} ${g.home_score | 0}`} onSet={air} onCmd={cmd} onSend={send} onBroadcast={bcast} onClose={() => setSheet(null)} />
@@ -896,7 +899,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         </div>
       )}
 
-      {midUp && (
+      {midUp && showAir && (
         <button type="button" className="pad-mid" onClick={() => void backToBug()}>
           <span>Mid-inning board is on the stream</span><b>Back to scorebug ›</b>
         </button>
@@ -931,7 +934,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
         <Link className="pbar" href={`/t/${slug}/games/${game.id}/lineup?side=${sideOf(game, batSide)}&from=pad`}>Lineups</Link>
         <button type="button" className="pbar" onClick={() => setSheet('plays')}>Plays</button>
         <button type="button" className={`pbar end${final ? ' on' : ''}`} onClick={() => setSheet('end')} disabled={!canScore}>{final ? 'Final' : 'End game'}</button>
-        {chan && !console_ && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
+        {showAir && !console_ && <button type="button" className={`pbar air${chan.card ? ' on' : ''}`} onClick={() => setSheet('air')}>On Air</button>}
       </nav>
       </div>
       {console_ && <aside className="pad-console">{airPanel(true)}</aside>}

@@ -7,7 +7,7 @@ import { ScheduleList } from '@/components/GameBits';
 import { guessSeason, shortDate } from '@/lib/format';
 import { splitSchedule } from '@/lib/schedule';
 import { batting, rate3, type SeasonLine } from '@/lib/stats';
-import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
+import { canEditTeam, canMakeGames, canWriteRecaps, type Game, type Player, type Role, type Season, type Team } from '@/lib/types';
 
 function SeasonFields({ s }: { s?: Season }) {
   return (
@@ -78,7 +78,7 @@ export function SeasonView({ team, role, seasons, selectedId, stats = [], player
               <h2 className="h-sec">Schedule</h2>
               <span style={{ display: 'flex', gap: 14 }}>
                 {ai && canWriteRecaps(role) && <Link href={`/t/${team.slug}/games/import`} className="link">Import a schedule</Link>}
-                {canRunGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
+                {canMakeGames(role) && <Link href={`/t/${team.slug}/games/new`} className="link"><Plus /> New game</Link>}
               </span>
             </div>
             {upcoming.length ? <ScheduleList slug={team.slug} games={upcoming} />

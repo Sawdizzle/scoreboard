@@ -50,8 +50,9 @@ A team is run by its staff and followed by everyone else:
 | Who | How they join | What they get |
 | --- | --- | --- |
 | League admin | Creates a league at `/org/new`, or takes an admin link | Acts as team admin on every team in the league, posts to every family, sees the league calendar |
-| Team admin, head coach, coach, media | A staff invite link (five seats) | The team, as today |
-| Scorer | A scorer invite link (up to twenty, apart from the five) | Scores the games; coaches put scorers on each game |
+| Team admin, head coach, coach | A staff invite link (five seats) | The team: roster, schedule, people, stream and scoring |
+| Scorer | A scorer invite link (a volunteer seat, apart from the five) | Lineups and batting order, a game's start time, and the pad. Coaches put scorers on each game |
+| Broadcaster | A broadcaster invite link (a volunteer seat) | The stream: the scorebug link, looks, sponsor and On Air during the game, with an OBS and Mevo setup guide (Stream > OBS and Mevo setup) |
 | Parent/Guardian | The team's family link (Team > People), then a coach approves | Calendar, one-tap RSVP for their own players, announcements, the parents' chat, their child's card |
 | Fan | Follow on the public team page | Game times in their calendar, game start and final notifications |
 
@@ -78,6 +79,8 @@ on conflict (key) do update set value = excluded.value;
 7. **Score** from the pad. It keeps the screen awake, saves every tap in order through a weak signal, and a second phone on the same game stays in step.
 
 ## OBS setup
+
+The broadcaster's full walkthrough, with OBS and Mevo, is in the app under Stream > OBS and Mevo setup. In short:
 
 1. **Sources → + → Browser**, URL the Stream screen's link, **1920 × 1080, 30 FPS**. The page is already transparent.
 2. Uncheck **Shutdown source when not visible**, and check **Control audio via OBS** so the sounds reach the stream.

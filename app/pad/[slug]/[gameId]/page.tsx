@@ -8,7 +8,7 @@ import { byJersey } from '@/lib/format';
 import type { Channel } from '@/components/pad/OnAir';
 import { CHANNEL_COLS } from '@/lib/broadcast';
 import type { StatRow } from '@/lib/scoring';
-import { canEditTeam, canRunGames, canWriteRecaps, type Game } from '@/lib/types';
+import { canBroadcast, canEditTeam, canRunGames, canWriteRecaps, type Game } from '@/lib/types';
 import { aiOn, getAllowance } from '@/lib/ai-limit';
 
 export const metadata: Metadata = { title: 'Pad' };
@@ -39,12 +39,12 @@ export default async function PadPage({ params, searchParams }: { params: Promis
   const canWrite = canWriteRecaps(role) && aiOn(await getAllowance(supabase, team.id));
   if (game.sport !== 'baseball') {
     return <ScorePad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
-      canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null} />;
+      canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null} canAir={canBroadcast(role)} />;
   }
   return (
     <Pad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
       lineups={lineups} season={lines} tonightRows={(stats.data ?? []) as StatRow[]}
-      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null}
+      regulation={season?.game_innings ?? 7} canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null} canAir={canBroadcast(role)}
       roster={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name }))}
       bench={players.filter((p) => p.active).sort(byJersey).map((p) => batterOf(p, team.name_format))} canRoster={canEditTeam(role)} openEnd={openEnd} />
   );

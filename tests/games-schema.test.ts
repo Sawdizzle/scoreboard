@@ -26,9 +26,9 @@ const newGame = (who: string, extra = '') => t.as<{ id: string }>(who,
    values ($1, $2, $3, 'Hawks', 'HAWKS', '#aa2222', true, now() + interval '1 day', 'Field 3'${extra ? ', ' + extra.split('=')[1] : ''}) returning id`,
   [team, season, hawks]);
 
-test('coaches and scorers make games; media and strangers cannot', async () => {
-  [{ id: game }] = await newGame('scorer');
-  await newGame('coach');
+test('coaches make games; scorers, broadcasters and strangers cannot', async () => {
+  [{ id: game }] = await newGame('coach');
+  await fails(newGame('scorer'), /row-level security/);
   await fails(newGame('media'), /row-level security/);
   await fails(newGame('stranger'), /row-level security/);
   await fails(t.as(null, `insert into games (team_id, opponent_name, opponent_abbr) values ($1, 'X', 'X')`, [team]), /permission denied/);
@@ -51,7 +51,8 @@ test('the live state and status are not plain edits', async () => {
   await fails(t.as('owner', `update games set live = '{"home_score": 9}' where id = $1`, [game]), /permission denied/);
   await fails(t.as('owner', `update games set status = 'final' where id = $1`, [game]), /permission denied/);
   await fails(t.as('owner', `update games set team_id = $2 where id = $1`, [game, hawks]), /permission denied/);
-  await t.as('scorer', `update games set venue = 'Field 4', is_home = false where id = $1`, [game]);
+  await t.as('coach', `update games set venue = 'Field 4' where id = $1`, [game]);
+  await t.as('scorer', `update games set is_home = false where id = $1`, [game]);
 });
 
 test('a game counts toward its own team\'s season only, and never against itself', async () => {
@@ -82,4 +83,14 @@ test('home and away swap from the pad before the first pitch, and not after it',
   await t.as('scorer', `select apply_play($1, 0, 'ball', '{"balls":1}'::jsonb, '{}'::jsonb, '[]'::jsonb, null)`, [g]);
   assert.deepEqual(await swap('scorer'), []);
   assert.equal((await t.as<{ is_home: boolean }>(null, `select is_home from games where id = $1`, [g]))[0].is_home, false);
+});
+
+test('a scorer changes the start time and sides, nothing else about the game', async () => {
+  const [{ id: g }] = await t.as<{ id: string }>('coach', `insert into games (team_id, opponent_name, opponent_abbr) values ($1, 'River', 'RIV') returning id`, [team]);
+  await t.as('scorer', `update games set starts_at = '2026-11-01T17:00:00Z', is_home = false where id = $1`, [g]);
+  for (const set of [`venue = 'Elsewhere'`, `opponent_name = 'Nope'`, `counts_for_stats = false`, `address = '1 Main'`]) {
+    await fails(t.as('scorer', `update games set ${set} where id = $1`, [g]), /scorer can change the start time/);
+  }
+  await t.as('coach', `update games set venue = 'Field 2' where id = $1`, [g]);
+  await fails(t.as('scorer', `delete from games where id = $1 returning 1`, [g]).then((r) => { if (r.length) throw new Error('deleted'); throw new Error('row-level security: no row'); }), /row-level security/);
 });

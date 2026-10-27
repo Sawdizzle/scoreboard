@@ -155,8 +155,9 @@ test('the public game: our players under their public names, typed-in guests by 
   assert.equal((await t.as(null, `select public_game('00000000-0000-4000-8000-000000000000') f`))[0].f, null);
 });
 
-test('the sponsor and a new link are for the team\'s leads; the old link dies at once', async () => {
-  await fails(t.as('media', `select set_sponsor($1, 'Dairy Barn', 'Cold treats', null)`, [team]), /organizer or head coach/);
+test('the sponsor and a new link are for the leads and the broadcaster; the old link dies at once', async () => {
+  await fails(t.as('scorer', `select set_sponsor($1, 'Dairy Barn', 'Cold treats', null)`, [team]), /broadcaster can set the sponsor/);
+  await t.as('media', `select set_sponsor($1, 'Dairy Barn', 'Cold treats', null)`, [team]);
   await t.as('owner', `select set_sponsor($1, ' Dairy Barn ', 'Cold treats on Elm', 'https://example.test/logo.png')`, [team]);
   await t.as('media', `update channels set card = 'sponsor', auto_mid = true where team_id = $1`, [team]);
   const f = (await feed(token))!;
@@ -166,7 +167,7 @@ test('the sponsor and a new link are for the team\'s leads; the old link dies at
   await t.as('owner', `select set_sponsor($1, '', '', '')`, [team]);
   const g = (await feed(token))!;
   assert.deepEqual([g.sponsor, g.card], [null, null]);
-  await fails(t.as('scorer', `select reset_stream_link($1)`, [team]), /organizer or head coach/);
+  await fails(t.as('scorer', `select reset_stream_link($1)`, [team]), /broadcaster can change the stream link/);
   const [{ reset_stream_link: fresh }] = await t.as<{ reset_stream_link: string }>('owner', `select reset_stream_link($1)`, [team]);
   assert.equal(await feed(token), null);
   assert.equal((await feed(fresh))!.game.id, game);
@@ -181,10 +182,12 @@ test('the newest play says whether it ended a half', async () => {
   assert.equal((await feed(token))!.last.rolled, true);
 });
 
-test('a spot is a tap by any seat; the channel bug is set by the leads', async () => {
+test('the stream is run by coaches and the broadcaster, not the scorer', async () => {
   await t.as('media', `update channels set spot = '{"n":1,"cut":"pitch"}' where team_id = $1`, [team]);
-  await fails(t.as('media', `select set_stream_bug($1, 'Streamed by Sam', 'https://example.test')`, [team]), /organizer or head coach/);
-  await t.as('owner', `select set_stream_bug($1, ' Streamed by Sam ', 'https://example.test')`, [team]);
+  assert.equal((await t.as('scorer', `update channels set spot = '{"n":2,"cut":"pitch"}' where team_id = $1 returning 1`, [team])).length, 0);
+  await fails(t.as('scorer', `select send_cmd($1, '{"type":"moment","kind":"hr"}'::jsonb)`, [team]), /cannot run this stream/);
+  await fails(t.as('scorer', `select set_stream_bug($1, 'Streamed by Sam', 'https://example.test')`, [team]), /broadcaster can set the channel bug/);
+  await t.as('media', `select set_stream_bug($1, ' Streamed by Sam ', 'https://example.test')`, [team]);
   await t.as('media', `update channels set qr = '{"on":true,"size":12,"pos":"br","opacity":0.6}' where team_id = $1`, [team]);
   const f = (await feed(token))!;
   assert.deepEqual([f.spot, f.bug, f.qr], [{ n: 1, cut: 'pitch' }, { text: 'Streamed by Sam', url: 'https://example.test' }, { on: true, size: 12, pos: 'br', opacity: 0.6 }]);
