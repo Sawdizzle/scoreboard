@@ -6,7 +6,8 @@ import { aiOn, getAllowance } from '@/lib/ai-limit';
 import { auditGame } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import { viewClips } from '@/lib/clips';
-import { getGame, getLineups, listSeasons, loadTeam } from '@/lib/data';
+import { getGame, getLineups, listGameScorers, listSeasons, listStaff, loadTeam } from '@/lib/data';
+import { ScorersCard } from '@/components/hub/ScorersCard';
 import { loadClips, streamStartFor } from '@/lib/game-facts';
 
 export const metadata: Metadata = { title: 'Game' };
@@ -38,5 +39,11 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
   const rows = await loadClips(supabase, game.id);
   const streamStart = rows.length ? await streamStartFor(supabase, team.id, rows[0].moment_at) : null;
   const clips = rows.length ? { list: viewClips(rows, streamStart), streamStart } : null;
-  return <GameView team={team} role={role} game={game} lineups={lineups} seasons={seasons} recap={recap} ai={aiOn(allowance)} issues={issues} clips={clips} />;
+  const [staff, scorers] = await Promise.all([listStaff(supabase, team.id), listGameScorers(supabase, [game.id])]);
+  return (
+    <>
+      <GameView team={team} role={role} game={game} lineups={lineups} seasons={seasons} recap={recap} ai={aiOn(allowance)} issues={issues} clips={clips} />
+      <div className="page"><ScorersCard slug={slug} gameId={game.id} role={role} staff={staff} scorers={scorers[game.id] ?? []} /></div>
+    </>
+  );
 }

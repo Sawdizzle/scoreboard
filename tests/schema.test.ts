@@ -71,16 +71,25 @@ test('five seats: links hold seats, and the sixth person is refused', async () =
   const link = async (role: string) =>
     (await as<{ token: string }>('owner', `insert into staff_invites (team_id, role) values ($1, $2) returning token`, [teamId, role]))[0].token;
   const tCoach = await link('coach'), tScorer = await link('scorer'), tMedia = await link('media');
-  // 2 seated + 3 links out = 5: no sixth link.
+  // Scorers are counted apart: 2 seated + coach, media and one more link = 5 coaching seats, no sixth.
+  const tSpare = await link('head_coach');
   await fails(link('coach'), /five seats/i);
+  await link('scorer');
+  await db.query(`delete from staff_invites where token = $1 or (role = 'scorer' and token <> $2)`, [tSpare, tScorer]);
   await as('coach', `select accept_invite($1)`, [tCoach]);
   await as('scorer', `select accept_invite($1)`, [tScorer]);
   await fails(as('scorer', `select accept_invite($1)`, [tMedia]), /already on this team/);
   await as('media', `select accept_invite($1)`, [tMedia]);
   assert.equal((await as('owner', `select 1 from team_staff where team_id = $1`, [teamId])).length, 5);
 
-  // Past the link check, the way a race would arrive: the seat trigger still refuses.
-  await fails(db.query(`insert into team_staff (team_id, user_id, role) values ($1, $2, 'coach')`, [teamId, users.sixth]), /five staff/);
+  // Past the link check, the way a race would arrive: the seat trigger still refuses a sixth coaching seat.
+  await signUp('seventh', 'Vi Seventh');
+  await db.query(`insert into team_staff (team_id, user_id, role) values ($1, $2, 'coach')`, [teamId, users.sixth]);
+  await fails(db.query(`insert into team_staff (team_id, user_id, role) values ($1, $2, 'coach')`, [teamId, users.seventh]), /five staff/);
+  // ...nor a scorer turned coach.
+  await db.query(`insert into team_staff (team_id, user_id, role) values ($1, $2, 'scorer')`, [teamId, users.seventh]);
+  await fails(db.query(`update team_staff set role = 'coach' where team_id = $1 and user_id = $2`, [teamId, users.seventh]), /five staff/);
+  await db.query(`delete from team_staff where team_id = $1 and user_id in ($2, $3)`, [teamId, users.sixth, users.seventh]);
 });
 
 test('roles: who can touch the roster', async () => {

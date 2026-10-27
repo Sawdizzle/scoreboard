@@ -53,18 +53,21 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   if (!supabaseConfigured) return NOT_CONNECTED;
   const name = str(fd, 'name'), email = str(fd, 'email'), password = String(fd.get('password') ?? '');
   const next = safeNext(str(fd, 'next'));
-  if (!name) return { error: 'Enter your name. It is shown on your team\'s staff list.' };
+  if (!name) return { error: 'Enter your name. Your team sees it beside your messages.' };
   if (name.length > 60) return { error: 'Keep your name to 60 characters.' };
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: 'Enter a valid email address.' };
   if (password.length < 8) return { error: 'Use a password of at least 8 characters.' };
   // When the project asks for an invite code (signup_gate), the gate in the
-  // database checks it, or a staff invite the sign-up is on its way to accept.
+  // database checks it, or a staff invite, family link or league invite the
+  // sign-up is on its way to accept.
   const invite = /^\/invite\/([0-9a-f-]{36})$/i.exec(next)?.[1];
+  const family = /^\/join\/([0-9a-f-]{36})$/i.exec(next)?.[1];
+  const league = /^\/org\/join\/([0-9a-f-]{36})$/i.exec(next)?.[1];
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email, password,
     options: {
-      data: { display_name: name, invite_code: str(fd, 'code') || undefined, staff_invite: invite },
+      data: { display_name: name, invite_code: str(fd, 'code') || undefined, staff_invite: invite, family_invite: family, org_invite: league },
       emailRedirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
@@ -406,8 +409,8 @@ export async function createInvite(slug: string, _: FormState, fd: FormData): Pr
   if (!role) return { error: 'Pick a role for the seat.' };
   const { supabase, team } = await loadTeam(slug);
   const { error } = await supabase.from('staff_invites').insert({ team_id: team.id, role });
-  if (error) return { error: error.code === '42501' ? 'Only an organizer can invite staff.' : say(error) };
-  revalidatePath(`/t/${slug}/staff`);
+  if (error) return { error: error.code === '42501' ? 'Only a team admin can invite staff.' : say(error) };
+  revalidatePath(`/t/${slug}/people`);
   return {};
 }
 
@@ -415,7 +418,7 @@ export async function revokeInvite(slug: string, token: string, _: FormState): P
   const { supabase, team } = await loadTeam(slug);
   const { error } = await supabase.from('staff_invites').delete().eq('team_id', team.id).eq('token', token);
   if (error) return { error: say(error) };
-  revalidatePath(`/t/${slug}/staff`);
+  revalidatePath(`/t/${slug}/people`);
   return {};
 }
 
