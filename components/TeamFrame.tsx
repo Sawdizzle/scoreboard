@@ -1,3 +1,4 @@
+import { SiteCredit } from '@/components/SiteCredit';
 import { TabBar } from '@/components/TabBar';
 import { TeamHeader } from '@/components/TeamHeader';
 import type { Seat, Season, Team } from '@/lib/types';
@@ -13,7 +14,10 @@ export function TeamFrame({ team, role, season, at, children }: { team: Team; ro
         <TeamHeader team={team} role={role} season={season} />
         <TabBar slug={team.slug} at={at} role={role} />
       </aside>
-      <div className="frame-main">{children}</div>
+      <div className="frame-main">
+        {children}
+        <SiteCredit />
+      </div>
     </div>
   );
 }

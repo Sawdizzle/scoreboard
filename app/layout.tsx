@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Barlow, Barlow_Condensed, Martian_Mono } from 'next/font/google';
+import { RootCredit } from '@/components/SiteCredit';
 import './globals.css';
 
 // Three faces, self-hosted by next/font so nothing reaches a font CDN at
@@ -20,7 +21,10 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, view
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${cond.variable} ${body.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <RootCredit />
+      </body>
     </html>
   );
 }
