@@ -11,19 +11,20 @@ export const ROLE_LABEL: Record<Role, string> = {
   head_coach: 'Head coach',
   coach: 'Coach',
   scorer: 'Scorer',
-  media: 'Media',
+  media: 'Broadcaster',
 };
 // One line per role, shown beside a seat and on the invite screen.
 export const ROLE_CAN: Record<Role, string> = {
   organizer: 'Owns the team and its seats',
   head_coach: 'Team, roster and seasons',
   coach: 'Lineups and scoring',
-  scorer: 'Scores the games they are put on',
-  media: 'Runs the broadcast',
+  scorer: 'Lineups, game times and scoring',
+  media: 'Runs the stream: OBS or Mevo, looks, scenes and sponsors',
 };
-// Five coaching seats. Scorers are counted apart, up to twenty.
+// Five coaching seats. Scorers and broadcasters are volunteers, counted apart, up to twenty.
 export const SEATS = 5;
-export const SCORER_SEATS = 20;
+export const VOLUNTEER_SEATS = 20;
+export const isVolunteer = (role: Role) => role === 'scorer' || role === 'media';
 
 // Everyone else on a team (team_members). A guardian is a parent of players on
 // the roster, approved by staff; a fan follows the team's games.
@@ -54,8 +55,14 @@ export type Org = { id: string; slug: string; name: string; color: string; logo_
 // What the database lets each role write in this stage (see the policies).
 export const canEditTeam = (role: Role | null) => role === 'organizer' || role === 'head_coach';
 export const canManageSeats = (role: Role | null) => role === 'organizer';
-// Games and lineups: anyone who coaches or scores. Media watches.
+// Scoring, lineups and a game's start time: anyone who coaches or scores. The broadcaster runs the stream instead.
 export const canRunGames = (role: Role | null) => role !== null && role !== 'media';
+// Adding a game to the schedule: coaches. A scorer scores the games there are.
+export const canMakeGames = (role: Role | null) => role === 'organizer' || role === 'head_coach' || role === 'coach';
+// The stream: its setup screen and On Air. Coaches and the broadcaster.
+export const canBroadcast = (role: Role | null) => role === 'organizer' || role === 'head_coach' || role === 'coach' || role === 'media';
+// The Team section (roster, people, opponents, settings): coaches. The broadcaster gets Stream from it.
+export const canSeeTeam = (role: Role | null) => canMakeGames(role);
 // AI recaps: organizers and coaches write and publish them.
 export const canWriteRecaps = (role: Role | null) => role === 'organizer' || role === 'head_coach' || role === 'coach';
 

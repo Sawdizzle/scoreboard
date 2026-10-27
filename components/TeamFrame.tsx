@@ -1,6 +1,6 @@
 import { TabBar } from '@/components/TabBar';
 import { TeamHeader } from '@/components/TeamHeader';
-import { isStaff, type Seat, type Season, type Team } from '@/lib/types';
+import type { Seat, Season, Team } from '@/lib/types';
 
 // A team's screens, framed for the device. On a phone: the team at the top
 // and the three tabs along the bottom. From an iPad on its side up: a sidebar
@@ -11,7 +11,7 @@ export function TeamFrame({ team, role, season, at, children }: { team: Team; ro
     <div className="shell has-tabs framed" style={{ '--team': team.color } as React.CSSProperties}>
       <aside className="frame-side">
         <TeamHeader team={team} role={role} season={season} />
-        <TabBar slug={team.slug} at={at} member={!isStaff(role)} />
+        <TabBar slug={team.slug} at={at} role={role} />
       </aside>
       <div className="frame-main">{children}</div>
     </div>

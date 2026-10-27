@@ -8,7 +8,7 @@ import { Slab, brandOf } from '@/components/TeamBrand';
 import { LocalTime } from '@/components/LocalTime';
 import { staffName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
-import { canEditTeam, canRunGames, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
+import { canBroadcast, canEditTeam, canMakeGames, canRunGames, canSeeTeam, type Game, type Lineup, type Player, type Role, type Season, type Side, type Team } from '@/lib/types';
 
 // Today, before there is a game to put on it: what the team has, and what it
 // still needs. The Tonight card takes the top of this screen once games exist.
@@ -51,8 +51,10 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
           <div className="next-foot">
             {stale ? <span /> : game.sport === 'baseball' ? <Readiness lineup={lineups.us} /> : <span className="sub">Score only</span>}
             <div className="btn-row">
-              <Link href={`/pad/${team.slug}/${game.id}${stale ? '?end=1' : ''}`} className="btn btn-primary">{stale ? 'End it on the pad' : game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
-              {game.sport === 'baseball' && !stale && <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>}
+              {canRunGames(role)
+                ? <Link href={`/pad/${team.slug}/${game.id}${stale ? '?end=1' : ''}`} className="btn btn-primary">{stale ? 'End it on the pad' : game.status === 'live' ? 'Back to the pad' : 'Open the pad'}</Link>
+                : canBroadcast(role) && <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary">Open On Air</Link>}
+              {game.sport === 'baseball' && !stale && canRunGames(role) && <Link href={`${base}/games/${game.id}/lineup`} className="btn btn-quiet">Lineup</Link>}
             </div>
           </div>
         </section>
@@ -65,7 +67,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
           <Slab brand={brandOf(team)} sub={`${team.name}${team.age_group ? ` ${team.age_group}` : ''}`} />
           <div className="next-foot">
             <p className="sub">Nothing on the schedule.</p>
-            {canRunGames(role) && <Link href={`${base}/games/new`} className="btn btn-primary">New game</Link>}
+            {canMakeGames(role) && <Link href={`${base}/games/new`} className="btn btn-primary">New game</Link>}
           </div>
         </section>
       )}
@@ -74,7 +76,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
         <section className="leaders">
           <div className="h-row" style={{ padding: '2px 4px 2px' }}>
             <h2 className="h-sec">Team leaders</h2>
-            <Link href={`${base}/stats`} className="link">Full stats</Link>
+            {canBroadcast(role) && <Link href={`${base}/stats`} className="link">Full stats</Link>}
           </div>
           <div className="rows">
             {top.map(({ k, best, show }) => {
@@ -94,7 +96,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
 
       {prefs && <NotifyCard slug={team.slug} prefs={prefs} />}
 
-      <section className="setup">
+      {canSeeTeam(role) && <section className="setup">
         <div className="h-row" style={{ padding: '2px 4px 6px' }}>
           <h2 className="h-sec">Team setup</h2>
           {!canEditTeam(role) && <span className="sub">View only for your seat</span>}
@@ -111,7 +113,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
             </Link>
           ))}
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

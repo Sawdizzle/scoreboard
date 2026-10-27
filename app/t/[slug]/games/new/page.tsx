@@ -6,7 +6,7 @@ import { GameFields } from '@/components/GameFields';
 import { ChevronLeft } from '@/components/icons';
 import { TEAM_COLS, findTeams, listOpponents, listSeasons, loadTeam, recentPlace, type SavedOpponent } from '@/lib/data';
 import { TeamMark, brandOf } from '@/components/TeamBrand';
-import { canRunGames, type Team } from '@/lib/types';
+import { canMakeGames, type Team } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'New game' };
 
@@ -25,7 +25,7 @@ export default async function NewGame({ params, searchParams }: {
     const { data } = await supabase.from('teams').select(TEAM_COLS).eq('id', opp).maybeSingle<Team>();
     opponent = data;
   }
-  const opponents = canRunGames(role) ? await listOpponents(supabase, team.id) : [];
+  const opponents = canMakeGames(role) ? await listOpponents(supabase, team.id) : [];
   const saved = opponents.find((o) => o.id === savedId) ?? null;
   const recent = await recentPlace(supabase, team.id);
   const filled = (o: SavedOpponent) => (o.roster?.batters ?? []).filter((b) => b.num || b.name).length;
@@ -37,8 +37,8 @@ export default async function NewGame({ params, searchParams }: {
         <Link href={`/t/${slug}`} aria-label="Back" className="icon-btn" style={{ border: 0, marginLeft: -10 }}><ChevronLeft /></Link>
         <h1 className="disp h1">New game</h1>
       </div>
-      {!canRunGames(role) ? (
-        <p className="note note-plain">Coaches, scorers and organizers make games.</p>
+      {!canMakeGames(role) ? (
+        <p className="note note-plain">Coaches and team admins add games. A scorer scores the games on the schedule.</p>
       ) : picking ? (
         <>
           <form className="form" action={base} method="get">

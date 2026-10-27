@@ -42,7 +42,7 @@ export function ScorersCard({ slug, gameId, role, staff, scorers }: {
           <Submit className="btn btn-quiet btn-sm" busy="Adding…">Add scorer</Submit>
         </ActionForm>
       )}
-      {coach && <p className="hint">A parent who scores needs a scorer seat first: Team &gt; People &gt; invite as Scorer. Scorer seats do not use the five staff seats.</p>}
+      {coach && <p className="hint">A parent who scores needs a scorer seat first: Team &gt; People &gt; invite as Scorer. Scorer seats do not use the five staff seats. Broadcasters run the stream and are not put on games.</p>}
     </section>
   );
 }

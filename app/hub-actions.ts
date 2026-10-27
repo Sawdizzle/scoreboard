@@ -132,6 +132,20 @@ export async function unassignScorer(slug: string, gameId: string, userId: strin
   return {};
 }
 
+// A scorer's one change to a game: when it starts. The rest is the coaches'
+// (the database refuses a scorer anything else on a game).
+export async function setGameTime(slug: string, gameId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase, team } = await loadTeam(slug);
+  const at = str(fd, 'starts_at');
+  if (at && Number.isNaN(Date.parse(at))) return { error: 'Set a date and time.' };
+  const { data, error } = await supabase.from('games').update({ starts_at: at ? new Date(at).toISOString() : null })
+    .eq('team_id', team.id).eq('id', gameId).select('id');
+  if (error) return { error: say(error) };
+  if (!data.length) return { error: 'Your seat cannot change this game.' };
+  revalidatePath(`/t/${slug}`, 'layout');
+  return { ok: 'Saved.' };
+}
+
 // ---- Calendar ---------------------------------------------------------------
 const KINDS: EventKind[] = ['practice', 'meeting', 'event'];
 function eventFields(fd: FormData) {

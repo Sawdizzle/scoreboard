@@ -32,8 +32,10 @@ function matchClock(live: SportLive) {
 // through apply_play and undo_play, as a baseball play does. A rule that names
 // a moment (a touchdown, a three, a set won) sends it as the play's kind, so
 // the stream can play it.
-export function ScorePad({ slug, team, game, canScore, canWrite = false, channel }: {
+export function ScorePad({ slug, team, game, canScore, canWrite = false, channel, canAir = true }: {
   slug: string; team: Team; game: Game & { seq: number }; canScore: boolean; canWrite?: boolean; channel: Channel | null;
+  // On Air: coaches and the broadcaster (see Pad).
+  canAir?: boolean;
 }) {
   const sb = browserClient();
   const token = channel?.token ?? null;
@@ -233,8 +235,9 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
   const sc = S.scState(g) as { half: number; stoppage: number; cards: Record<SideKey, { y: number; r: number }>; clock: { running: boolean } };
   const vb = V.vbState(g) as { set: number; sets: Record<SideKey, number>; serve: SideKey | null; target: number };
 
-  const console_ = wide && !!channel;
-  const airPanel = (inline: boolean) => channel && (
+  const showAir = !!channel && canAir;
+  const console_ = wide && showAir;
+  const airPanel = (inline: boolean) => showAir && channel && (
     <AirFrame inline={inline} onClose={() => setAir(false)}>
       <Moments sport={sport} rally={!!bc.rally} onCmd={cmd} onBroadcast={bcast} />
       <ScenesControl broadcast={bc} look={channel.look} onBroadcast={bcast} onSend={send} blurbFor={canWrite && status !== 'final' ? game.id : null} />
@@ -398,7 +401,7 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
       <nav className="pad-bar">
         <button type="button" className="pbar undo" onClick={undo} disabled={!canScore || (status === 'scheduled' && !last)}>Undo</button>
         <Link className="pbar" href={`/t/${slug}/games/${game.id}`}>Game</Link>
-        {channel && !console_ && <button type="button" className={`pbar air${bc.rally || bc.scene ? ' on' : ''}`} onClick={() => setAir(true)}>On Air</button>}
+        {showAir && !console_ && <button type="button" className={`pbar air${bc.rally || bc.scene ? ' on' : ''}`} onClick={() => setAir(true)}>On Air</button>}
         <button type="button" className="pbar" disabled={!canScore}
           onClick={() => commit({ type: final ? 'reopen_game' : 'end_game', patch: {} }, final ? 'live' : 'final')}>
           {final ? 'Reopen' : 'End game'}

@@ -999,3 +999,8 @@ html:has(.pad.sun), html:has(.pad.sun) body { background: #ffffff; }
 .chat-send { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; padding: 8px 0; background: var(--bg); }
 .chat-send textarea { flex: 1; min-height: 48px; max-height: 160px; resize: vertical; }
 @media (min-width: 1024px) { .chat-send { bottom: 0; } }
+
+/* ---- Stream setup guide ---------------------------------------------- */
+.guide .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.5; color: var(--soft); }
+.guide .steps b { color: var(--chalk); }
+.guide code { font: 600 13.5px/1 var(--mono); padding: 2px 6px; border-radius: 6px; background: var(--raised); color: var(--chalk); }

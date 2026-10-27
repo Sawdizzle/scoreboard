@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { GamePlace } from '@/components/GamePlace';
 import { deleteGame, updateGame } from '@/app/actions';
+import { setGameTime } from '@/app/hub-actions';
+import { DateTimeField } from '@/components/LocalTime';
 import { ActionForm, Submit } from '@/components/ActionForm';
 import { GameFields } from '@/components/GameFields';
 import { Matchup, Readiness } from '@/components/GameBits';
@@ -12,7 +14,7 @@ import { YoutubeCard } from '@/components/YoutubeCard';
 import type { Issue } from '@/lib/audit';
 import type { ClipView } from '@/lib/clips';
 import { SPORT_LABEL } from '@/lib/sports';
-import { canEditTeam, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
+import { canBroadcast, canEditTeam, canMakeGames, canRunGames, canWriteRecaps, type Game, type Lineup, type Role, type Season, type Side, type Team } from '@/lib/types';
 
 export function GameView({ team, role, game, lineups, seasons, recap = null, ai = false, issues = null, clips = null }: {
   team: Team; role: Role; game: Game; lineups: Partial<Record<Side, Lineup>>; seasons: Season[]; recap?: RecapRow | null;
@@ -63,6 +65,9 @@ export function GameView({ team, role, game, lineups, seasons, recap = null, ai 
           {game.status === 'live' ? 'Back to the pad' : game.status === 'final' ? 'Open the pad · final' : 'Open the pad'}
         </Link>
       )}
+      {!run && canBroadcast(role) && (
+        <Link href={`/pad/${team.slug}/${game.id}`} className="btn btn-primary btn-big">Open On Air</Link>
+      )}
 
       {run && issues && issues.length > 0 && (
         <section className="card pad">
@@ -77,9 +82,21 @@ export function GameView({ team, role, game, lineups, seasons, recap = null, ai 
       )}
       {game.status === 'final' && game.sport === 'baseball' && canWriteRecaps(role) && ai && <YoutubeCard gameId={game.id} />}
 
-      {run && clips && clips.list.length > 0 && <ClipsCard clips={clips.list} streamStart={clips.streamStart} />}
+      {(run || canBroadcast(role)) && clips && clips.list.length > 0 && <ClipsCard clips={clips.list} streamStart={clips.streamStart} />}
 
-      {run && (
+      {run && !canMakeGames(role) && (
+        <details className="fold">
+          <summary>Change the start time</summary>
+          <div className="fold-body">
+            <ActionForm action={setGameTime.bind(null, team.slug, game.id)} className="form">
+              <DateTimeField name="starts_at" value={game.starts_at} label="First pitch" />
+              <p className="hint">The opponent, place and rules are the coaches&rsquo; to change.</p>
+              <Submit busy="Saving…">Save time</Submit>
+            </ActionForm>
+          </div>
+        </details>
+      )}
+      {canMakeGames(role) && (
         <details className="fold">
           <summary>Edit game</summary>
           <div className="fold-body">
