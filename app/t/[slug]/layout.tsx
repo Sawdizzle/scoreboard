@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { leaveTeam } from '@/app/hub-actions';
 import { ActionForm, Submit } from '@/components/ActionForm';
-import { SiteCredit } from '@/components/SiteCredit';
 import { Slab, brandOf } from '@/components/TeamBrand';
 import { TeamFrame } from '@/components/TeamFrame';
 import { listSeasons, loadMember } from '@/lib/data';
@@ -22,7 +21,6 @@ export default async function TeamLayout({ children, params }: { children: React
             <Submit className="link" busy="Withdrawing…">Withdraw my request</Submit>
           </ActionForm>
         </div>
-        <SiteCredit />
       </main>
     );
   }

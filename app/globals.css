@@ -642,7 +642,6 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 .pub-foot { text-align: center; font-size: 13px; color: var(--muted); }
 /* The maker's line at the foot of a page, in the page flow (never over the tab bar). */
 .site-credit { margin-top: auto; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); text-align: center; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
-.shell .site-credit { padding-bottom: 16px; }
 .site-credit a { color: inherit; text-decoration: none; }
 .site-credit a:hover, .site-credit a:focus-visible { text-decoration: underline; }
 .stat-table .who > span { display: flex; align-items: center; gap: 8px; }

@@ -12,12 +12,11 @@ export function SiteCredit() {
   );
 }
 
-// Screens that stay clean: the OBS overlay, the pad, a game as it is followed
-// live, and the component sheet. A team's own screens (/t/<slug>/...) carry the
-// line inside their frame instead, clear of the tab bar.
-const BARE = /^\/(overlay|pad|dev)(\/|$)|^\/team\/[^/]+\/game\/|^\/t\/(?!new(\/|$))[^/]+(\/|$)/;
+// Only the public website pages carry the line: the front page and the
+// privacy page. The app itself (sign-in, teams, the pad, overlays) stays clean.
+const SITE = /^\/(privacy)?$/;
 
 export function RootCredit() {
   const path = usePathname() ?? '';
-  return BARE.test(path) ? null : <SiteCredit />;
+  return SITE.test(path) ? <SiteCredit /> : null;
 }
