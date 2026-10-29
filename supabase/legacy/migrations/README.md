@@ -2,10 +2,10 @@
 
 The database side of the app, in the repo rather than only in the hosted
 project. Before this existed, the schema, the RLS policies and the RPCs
-lived exclusively in Supabase — the one part of a deliberately no-build app that
+lived exclusively in Supabase: the one part of a deliberately no-build app that
 could not be recovered from the files you can see.
 
-- **`00000000000000_scoreboard_baseline.sql`** — the whole schema as one runnable
+- **`00000000000000_scoreboard_baseline.sql`**: the whole schema as one runnable
   file: tables, constraints, indexes, comments, functions, the trigger, RLS and
   its policies, grants, and the Realtime publication. Stand up a new project, a
   staging branch or a local stack from this and the app works.

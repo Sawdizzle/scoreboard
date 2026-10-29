@@ -210,7 +210,7 @@
         ["Next quarter", "period", false, (n) => { n.sit.periodNo++; n.sit.period = n.sit.periodNo > 4 ? "OT" : `${["", "1ST", "2ND", "3RD", "4TH"][n.sit.periodNo]} QTR`; return null; }],
       ] },
     soccer: { clock: 23 * 60 + 12, down: false,
-      sit: { period: "1ST HALF", periodNo: 1, line: "", poss: null, markLabel: "CARDS", marks: { away: "—", home: "—" } },
+      sit: { period: "1ST HALF", periodNo: 1, line: "", poss: null, markLabel: "CARDS", marks: { away: "-", home: "-" } },
       buttons: [
         ["Hawks goal", "goala", true, (n) => { n.away.r += 1; return "goal"; }], ["Steel goal", "goalh", true, (n) => { n.home.r += 1; return "goal"; }],
         ["Yellow card", "card", false, (n) => { n.sit.marks.away = "1Y"; return null; }],

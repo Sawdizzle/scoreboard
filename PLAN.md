@@ -1,4 +1,4 @@
-# Scoreboard v5.0 — plan
+# Scoreboard v5.0: plan
 
 Pressbox (built Oct 2-4 2026 as Scoreboard's next generation, `github.com/Sawdizzle/pressbox`)
 becomes Scoreboard v5.0. Its history is merged into this repo; the static v4 app is kept at tag
@@ -108,8 +108,8 @@ carry a `bid` that lives only inside one game. Here the `bid` becomes the player
 
 Each stage ends with a checklist to run before the next one starts.
 
-0. **Design** — the canvas above. Approved.
-1. **Team HQ** — app shell, accounts, the schema, teams, five staff seats with invite
+0. **Design:** the canvas above. Approved.
+1. **Team HQ:** app shell, accounts, the schema, teams, five staff seats with invite
    links, roster, seasons. No scoring yet. **Built.**
 2. **Game night**, in three parts:
    - **2a, built:** GameChanger season import, season stats, stats on Player, Season, Roster and Today.
@@ -120,7 +120,7 @@ Each stage ends with a checklist to run before the next one starts.
    - **2c, built:** the pad (/pad/<team>/<game>) on Scoreboard's rules; every play writes a log entry and
      per-player stat rows; undo takes both back; season stats add scored games to the import.
 
-   Original scope — New Game picks two teams and their rosters load; lineup and field
+   Original scope: New Game picks two teams and their rosters load; lineup and field
    screen; the pad on the ported rules; every play writes a plate appearance; player
    and season screens show real numbers.
 3. **On stream**, in two parts:
@@ -131,10 +131,10 @@ Each stage ends with a checklist to run before the next one starts.
    - **3b, built:** Scoreboard's eleven animated bugs as looks (Team look screen), fed the game and the
      stinger for each big play; team leaders and box score cards. Still to come from the canvas's On Air:
      lineup, defense, matchup, sponsor, mid-inning, moments.
-4. **Public, built** — /team/<slug> (schedule and results, season stats, roster) and
+4. **Public, built:** /team/<slug> (schedule and results, season stats, roster) and
    /team/<slug>/game/<id> (live score, line score, both box scores, each time up). No account.
    Players typed in at the field show by number only.
-5. **Bring it over, built** — Scoreboard's saved teams are other clubs, so they came over as
+5. **Bring it over, built:** Scoreboard's saved teams are other clubs, so they came over as
    *opponents*: a private list per team (name, short code, colour, last lineup) offered in New Game
    as "Teams you have played". Picking one loads its lineup; saving the other side's lineup in a game
    updates it. Six came over on 2026-10-03; the two Blue Steel copies and Krum (both already teams

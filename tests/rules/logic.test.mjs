@@ -197,7 +197,7 @@ test('caught stealing leaves the batter and the count exactly where they were', 
   assert.deepEqual(r.patch.bases, bases(0, 0, 0));
 });
 
-test('an out on the batter does move the order — the two are not the same tap', () => {
+test('an out on the batter does move the order; the two are not the same tap', () => {
   const g = G({ bases: bases(1, 0, 0), lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 1 } } });
   assert.equal(L.onOut(g).patch.state.batIdx.away, 2);
 });
@@ -285,7 +285,7 @@ test('the Due Up card with no lineup is empty rather than invented', () => {
   assert.deepEqual(L.dueUpCard(G()), []);
 });
 
-test('the strip still reads who follows — the hitter is already on the line above it', () => {
+test('the strip still reads who follows: the hitter is already on the line above it', () => {
   const g = G({ lineups: { away: order([1, 1, 1, 1]) }, state: { batIdx: { away: 1 } } });
   assert.deepEqual(L.dueUp(g, 2).map((b) => b.name), ['B2', 'B3']);
 });
@@ -295,7 +295,7 @@ test('a strikeout carries the hitter so the overlay can name him', () => {
   const r = L.onStrike(g, { looking: true });
   assert.equal(r.anim, 'strikeoutlooking');
   assert.deepEqual(r.animMeta, { side: 'away', idx: 1 });
-  assert.ok(!JSON.stringify(r.animMeta).includes('B1'), 'and only the slot, never the name — the row is public');
+  assert.ok(!JSON.stringify(r.animMeta).includes('B1'), 'and only the slot, never the name, since the row is public');
 });
 
 test('due up lists the next hitters, wrapping and skipping the empties', () => {
@@ -405,7 +405,7 @@ test('undoes repeatedly, one play at a time', () => {
   assert.equal(L.undoPending(base, r.rest), null);
 });
 
-test('keeps settings writes queued — they are not plays', () => {
+test('keeps settings writes queued; they are not plays', () => {
   const base = { id: 'g1', balls: 0, theme: 'nightgame' };
   const r = L.undoPending(base, [ev({ balls: 1 }), field({ theme: 'chalkboard' }), ev({ balls: 2 })]);
   assert.equal(r.state.balls, 1);
@@ -519,7 +519,7 @@ test('a newer row is not stale', () => {
   assert.equal(L.rowIsStale(at('2026-09-08T13:27:04.0Z'), Date.parse('2026-09-08T13:27:03.6Z')), false);
 });
 
-test('the same row again is not stale — adopting it twice is harmless', () => {
+test('the same row again is not stale; adopting it twice is harmless', () => {
   const t = '2026-09-08T13:27:03.6Z';
   assert.equal(L.rowIsStale(at(t), Date.parse(t)), false);
 });
@@ -748,7 +748,7 @@ test('a runner thrown out on a hit is an out, and the hit still counts', () => {
   assert.deepEqual(r.patch.bases, bases(1, 0, 0));
 });
 
-test('the stinger carries the batter’s slot, never a name — the row is public', () => {
+test('the stinger carries the batter’s slot, never a name, since the row is public', () => {
   const g = G({ lineups: { away: order([1, 1, 1]) }, state: { batIdx: { away: 2 } } });
   const r = playOf(g, 'GB', 'SS');
   assert.deepEqual(r.animMeta, { text: 'Groundout 6-3', side: 'away', idx: 2, runs: 0 });

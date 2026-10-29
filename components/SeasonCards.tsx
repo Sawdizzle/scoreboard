@@ -40,7 +40,7 @@ export function SeasonCards({ teamId, seasonId, season }: { teamId: string; seas
         </button>
         {error && <p role="alert" className="note note-bad">{error}</p>}
         {warnings.length > 0 && <p role="alert" className="note note-bad">Check before sending: {warnings.join(' ')}</p>}
-        {cards && <button type="button" className="btn" onClick={() => copy(-1, cards.map(text).join('\n\n———\n\n'))}>{copied === -1 ? 'Copied' : 'Copy all'}</button>}
+        {cards && <button type="button" className="btn" onClick={() => copy(-1, cards.map(text).join('\n\n* * *\n\n'))}>{copied === -1 ? 'Copied' : 'Copy all'}</button>}
       </section>
       {cards?.map((c, i) => (
         <section key={i} className="card pad">
