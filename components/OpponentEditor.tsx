@@ -17,7 +17,7 @@ type Row = { bid: string; num: string; name: string; pos: string };
 const NEUTRALS = ['#ffffff', '#0b1018', '#9aa8c2', '#7a8794'];
 
 // One opponent, the way the stream and the pad will show them: the logo (its
-// colours are read from it), the two colours, the name and short code, and the
+// colors are read from it), the two colors, the name and short code, and the
 // roster that loads into their lineup for each game against them. A position
 // here is where they usually play; the lineup screen can move anyone on the day.
 export function OpponentEditor({ slug, opponent }: { slug: string; opponent: SavedOpponent }) {
@@ -102,7 +102,7 @@ export function OpponentEditor({ slug, opponent }: { slug: string; opponent: Sav
           {shownLogo ? <img src={shownLogo} alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} /> : <TeamMark brand={brand} size={64} />}
           <span className="row-main">
             <span className="row-title">{shownLogo ? 'Change the logo' : 'Upload their logo'}</span>
-            <span className="row-meta">A PNG with a clear background looks best. Its colours fill in below.</span>
+            <span className="row-meta">A PNG with a clear background looks best. Its colors fill in below.</span>
           </span>
         </label>
         {readError && <p role="alert" className="note note-bad">{readError}</p>}
@@ -110,17 +110,17 @@ export function OpponentEditor({ slug, opponent }: { slug: string; opponent: Sav
       </section>
 
       <section className="stack" style={{ gap: 10 }}>
-        <span className="legend">Colours{palette.length ? ' · from the logo' : ''}</span>
+        <span className="legend">Colors{palette.length ? ' · from the logo' : ''}</span>
         <div className="slots">
           <button type="button" className="slot" aria-pressed={slot === 'color'} onClick={() => setSlot('color')}><i style={{ background: color }} /><span>Primary<b>{color}</b></span></button>
           <button type="button" className="slot" aria-pressed={slot === 'color2'} onClick={() => setSlot('color2')}><i style={{ background: color2 }} /><span>Accent<b>{color2}</b></span></button>
         </div>
-        <div className="swatches" role="group" aria-label={`Pick the ${slot === 'color' ? 'primary' : 'accent'} colour`}>
+        <div className="swatches" role="group" aria-label={`Pick the ${slot === 'color' ? 'primary' : 'accent'} color`}>
           {swatches.map((hex) => (
             <button key={hex} type="button" className={`swatch${current.toLowerCase() === hex.toLowerCase() ? ' on' : ''}`} style={{ background: hex }} aria-label={hex} onClick={() => setSlotColor(hex)} />
           ))}
-          <label className="swatch" style={{ position: 'relative', overflow: 'hidden', background: 'conic-gradient(#e5534b, #e0a92a, #35d07f, #6ea8f0, #a06ef0, #e5534b)' }} title="Any colour">
-            <input type="color" value={current} onChange={(e) => setSlotColor(e.currentTarget.value)} aria-label="Any colour" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+          <label className="swatch" style={{ position: 'relative', overflow: 'hidden', background: 'conic-gradient(#e5534b, #e0a92a, #35d07f, #6ea8f0, #a06ef0, #e5534b)' }} title="Any color">
+            <input type="color" value={current} onChange={(e) => setSlotColor(e.currentTarget.value)} aria-label="Any color" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
           </label>
         </div>
       </section>

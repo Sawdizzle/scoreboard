@@ -139,7 +139,7 @@ body.rally .board[data-bat="home"] #rowB .seg-st .fc{animation:chase 2s linear v
   0%,40%,100%{box-shadow:0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(0,0,0,.55)}
   12%{box-shadow:0 0 0 2px var(--yellow),0 0 12px 2px rgba(255,201,51,.6)}}
 
-/* ---------- Walk-off: the housing glows in the winners' colour ---------- */
+/* ---------- Walk-off: the housing glows in the winners' color ---------- */
 .woglow{position:absolute;inset:-3px;border-radius:9px;pointer-events:none;opacity:0;
   box-shadow:0 0 0 3px var(--yellow),0 0 34px 6px var(--wc,var(--yellow))}
 .woglow.on{animation:woGlow 5.9s ease-out forwards}
@@ -366,7 +366,7 @@ body.rally .board[data-bat="home"] #rowB .seg-st .fc{animation:chase 2s linear v
   /* A full-width team-row message: swatch + 12-cell line (spans team/R/H/E) + 10-cell status. */
   const msgRow = (sw, text, col, st = "", stCol = col, stFl = false) =>
     [{ ch: sw || " ", col: "W" }, ...cells(padL(text, 12), col), ...cells(padL(st, 10), stCol, stFl)];
-  /* A row whose 22 cells after the swatch read as one line, in coloured parts. */
+  /* A row whose 22 cells after the swatch read as one line, in colored parts. */
   const spanRow = (sw, parts) => {
     const out = parts.flatMap(([t, col]) => cells(up(t), col)).slice(0, 22);
     while (out.length < 22) out.push({ ch: " ", col: "W" });

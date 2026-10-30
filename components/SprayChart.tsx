@@ -3,7 +3,7 @@ import { sprayCounts, sprayLabel, sprayPlaces, type SprayBall, type SprayResult 
 // Where a batter's balls in play went, on the pad's own field: the fielder
 // picker's drawing (components/pad/PadSheets.tsx), in the shape it has on a
 // phone, so a mark sits where the scorer dropped the fielder. Hits, outs and
-// the rest differ in shape as well as colour: a disc, a cross, a ring.
+// the rest differ in shape as well as color: a disc, a cross, a ring.
 const ASPECT = 1.4; // the picker on a 375-pixel phone is about 347 by 250
 const W = 100 * ASPECT;
 const R = 2.1; // a mark's radius, in the chart's units (a hundredth of its height)

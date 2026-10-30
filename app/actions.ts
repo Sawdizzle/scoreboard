@@ -163,8 +163,8 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const LOGO_TYPES: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' };
 const LOGO_BUCKET = 'team-logos';
 
-// The brand screen: names, colours, palette, and the logo. The browser has
-// already shrunk the logo and read its colours; this checks all of it again,
+// The brand screen: names, colors, palette, and the logo. The browser has
+// already shrunk the logo and read its colors; this checks all of it again,
 // stores the file under the team's own folder, and removes the one it replaces.
 export async function saveBrand(slug: string, _: FormState, fd: FormData): Promise<FormState> {
   const name = str(fd, 'name'), display = str(fd, 'display_name'), age = str(fd, 'age_group');
@@ -175,7 +175,7 @@ export async function saveBrand(slug: string, _: FormState, fd: FormData): Promi
   if (!abbr) abbr = abbrFor(display) || 'TEAM';
   if (abbr.length > 6) return { error: 'The short code is up to 6 characters.' };
   if (age.length > 12) return { error: 'Keep the age group to 12 characters, like 14U.' };
-  if (!HEX.test(color) || !HEX.test(color2)) return { error: 'Pick a primary and an accent colour.' };
+  if (!HEX.test(color) || !HEX.test(color2)) return { error: 'Pick a primary and an accent color.' };
   let palette: string[] = [];
   try { const p = JSON.parse(String(fd.get('palette') ?? '[]')); if (Array.isArray(p)) palette = p.filter((x) => typeof x === 'string' && HEX.test(x)).slice(0, 8); } catch { /* keep [] */ }
 
@@ -699,7 +699,7 @@ export async function resetStreamLink(slug: string, _: FormState): Promise<FormS
 
 // ---- Opponents: the teams you play, kept on your own list ---------------------
 // One person runs Scoreboard for their own team, so the other side of a game is
-// an opponent here: name, short code, two colours, a logo, and a roster that
+// an opponent here: name, short code, two colors, a logo, and a roster that
 // loads into their lineup for each game.
 export async function createOpponent(slug: string, _: FormState, fd: FormData): Promise<FormState> {
   const name = str(fd, 'name');
@@ -718,7 +718,7 @@ export async function saveOpponent(slug: string, id: string, _: FormState, fd: F
   if (!name || name.length > 60) return { error: 'The name is 1 to 60 characters.' };
   if (!abbr) abbr = abbrFor(name) || 'OPP';
   if (abbr.length > 6) return { error: 'The short code is up to 6 characters.' };
-  if (!HEX.test(color) || !HEX.test(color2)) return { error: 'Pick a primary and an accent colour.' };
+  if (!HEX.test(color) || !HEX.test(color2)) return { error: 'Pick a primary and an accent color.' };
   let raw: unknown;
   try { raw = JSON.parse(String(fd.get('roster') ?? '')); } catch { return { error: 'The roster did not come through. Try Save again.' }; }
   const roster = cleanLineup(raw);
@@ -750,7 +750,7 @@ export async function saveOpponent(slug: string, id: string, _: FormState, fd: F
   }
   const old = before.logo_url && before.logo_url !== logo_url ? logoPath(before.logo_url, team.id) : null;
   if (old) await supabase.storage.from(LOGO_BUCKET).remove([old]);
-  // Games still to be played against them take the new name, code and colour.
+  // Games still to be played against them take the new name, code and color.
   await supabase.from('games').update({ opponent_name: name, opponent_abbr: abbr, opponent_color: color })
     .eq('team_id', team.id).eq('opponent_id', id).neq('status', 'final');
   revalidatePath(`/t/${slug}`, 'layout');

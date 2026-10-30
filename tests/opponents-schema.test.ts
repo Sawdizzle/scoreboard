@@ -41,7 +41,7 @@ test('media reads but cannot change; outsiders and the public see nothing', asyn
   assert.equal((await t.as<{ name: string }>('owner', `select name from opponents where team_id = $1`, [team]))[0].name, 'Sanger Wolves');
 });
 
-test('a game against a listed opponent shows its logo and colours on the stream', async () => {
+test('a game against a listed opponent shows its logo and colors on the stream', async () => {
   const [{ id: opp }] = await t.as<{ id: string }>('owner', `select id from opponents where team_id = $1`, [team]);
   await t.as('owner', `update opponents set logo_url = 'https://example.test/k.png', color2 = '#123456' where id = $1`, [opp]);
   const [{ id: game }] = await t.as<{ id: string }>('owner',

@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
-// The maker's line at the foot of the page, small and in the label colour.
+// The maker's line at the foot of the page, small and in the label color.
 export function SiteCredit() {
   return (
     <footer className="site-credit">

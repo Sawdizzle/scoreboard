@@ -25,7 +25,7 @@
 .lk-mn .sky .shoot::after{content:"";position:absolute;right:-0.3rem;top:-0.3rem;width:0.8rem;height:0.8rem;border-radius:50%;background:#fff;box-shadow:0 0 0.8rem 0.3rem rgba(255,236,190,.8)}
 .lk-mn .sky .shoot.idle{animation:lkmnShootIdle 23s 9s cubic-bezier(.3,0,.7,1) infinite}
 @keyframes lkmnShootIdle{0%{transform:translate(34rem,0.6rem) rotate(166deg);opacity:0}.9%{opacity:1}3.6%,100%{transform:translate(2rem,8.6rem) rotate(166deg);opacity:0}}
-/* rally: an aurora of the park's own colours moves through the sky */
+/* rally: an aurora of the park's own colors moves through the sky */
 .lk-mn .sky .aur{position:absolute;left:-40%;top:-60%;width:180%;height:220%;opacity:0;transition:opacity 1.2s;
   -webkit-mask:linear-gradient(180deg,#000 30%,transparent 62%);mask:linear-gradient(180deg,#000 30%,transparent 62%);
   background:repeating-linear-gradient(90deg,transparent 0 1.4rem,rgba(255,255,255,.035) 1.4rem 1.7rem),
@@ -73,7 +73,7 @@
   background:linear-gradient(100deg,transparent 36%,rgba(255,246,220,.07) 44%,rgba(255,246,220,.22) 50%,rgba(255,246,220,.07) 56%,transparent 64%)}
 @keyframes lkmnSweep{to{transform:translateX(120%)}}
 
-/* team block: a team-colour light, the abbreviation, the score in its well */
+/* team block: a team-color light, the abbreviation, the score in its well */
 .lk-mn .team{display:flex;align-items:center}
 .lk-mn .team + .team{margin-left:1.4rem}
 .lk-mn .pip{width:0.6rem;height:3.8rem;border-radius:0.3rem;background:var(--tc);margin-right:1.2rem;flex:0 0 auto;

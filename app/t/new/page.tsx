@@ -8,7 +8,7 @@ import { guessSeason } from '@/lib/format';
 
 export const metadata: Metadata = { title: 'New team' };
 
-// A name to start; the logo, colours and display name come on the next screen.
+// A name to start; the logo, colors and display name come on the next screen.
 export default async function NewTeam() {
   await requireUserId('/t/new');
   return (
@@ -32,7 +32,7 @@ export default async function NewTeam() {
               <input className="input" name="season" defaultValue={guessSeason()} maxLength={40} autoComplete="off" />
             </label>
           </div>
-          <p className="hint">Next: your logo and colours.</p>
+          <p className="hint">Next: your logo and colors.</p>
           <Submit className="btn btn-primary btn-big" busy="Creating…">Create team</Submit>
         </ActionForm>
       </div>

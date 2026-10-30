@@ -14,7 +14,7 @@
 <style>
 /* ============================================================
    MLBFOX — the national-TV playoff bug, kept simple.
-   A navy pitcher bar, a blue batter bar, two team-colour score
+   A navy pitcher bar, a blue batter bar, two team-color score
    blocks either side of a black count box, and three bevelled
    bases hung underneath. Nothing moves unless the game does.
    ============================================================ */
@@ -239,8 +239,8 @@ body.rally .feet i:last-child{animation-delay:-.6s}
     setTimeout(() => cur.remove(), 340);
   }
 
-  /* A team colour as a block: mid tones darken a touch so white reads; pale ones keep
-     their colour and take dark numerals instead (mixing yellow toward navy goes olive). */
+  /* A team color as a block: mid tones darken a touch so white reads; pale ones keep
+     their color and take dark numerals instead (mixing yellow toward navy goes olive). */
   function shade(hex){
     const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || "").trim());
     if (!m) return { block: "#2a5ab0", foot: "#c9d3e6", ink: "#fff" };

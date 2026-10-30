@@ -37,7 +37,7 @@ function Team({ brand, score, bat, he }: { brand: Brand; score: number; bat: boo
   );
 }
 
-// v4's Custom theme: its colours and type, as the bug's variables.
+// v4's Custom theme: its colors and type, as the bug's variables.
 const FONTS: Record<string, string> = {
   condensed: 'var(--font-cond), "Arial Narrow", system-ui, sans-serif', clean: '"Helvetica Neue", Arial, system-ui, sans-serif',
   mono: 'ui-monospace, Menlo, Consolas, monospace', serif: '"Times New Roman", Georgia, serif',

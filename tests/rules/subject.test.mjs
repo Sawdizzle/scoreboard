@@ -131,7 +131,7 @@ test('an action that names its own subject keeps it', () => {
   assert.equal(out.payload.subject, 'runner@third');
 });
 
-test('a subject nobody recognises is replaced, not trusted', () => {
+test('a subject nobody recognizes is replaced, not trusted', () => {
   const out = L.stamp({ type: 'out', patch: { outs: 1 }, payload: { subject: 'the umpire' } }, G());
   assert.equal(out.payload.subject, 'batter');
 });

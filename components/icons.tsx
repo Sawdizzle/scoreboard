@@ -1,5 +1,5 @@
 // Stroke icons, drawn at the size they are used. `currentColor`, so each takes
-// the colour of the text around it.
+// the color of the text around it.
 type P = { size?: number };
 const svg = (size: number, d: string, width = 2.6) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width}

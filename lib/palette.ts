@@ -1,15 +1,15 @@
-// A team's colours, read out of its logo.
+// A team's colors, read out of its logo.
 //
 // The logo is drawn small (about 96 px) and every opaque pixel is dropped into
 // one of 4096 buckets (4 bits per channel). The busiest buckets become
-// candidate colours, and candidates too close to one already taken are merged
+// candidate colors, and candidates too close to one already taken are merged
 // away, so a gradient or an anti-aliased edge does not fill the palette with
 // five shades of the same blue.
 //
-// The suggested primary is the colour a person would call "the team colour":
+// The suggested primary is the color a person would call "the team color":
 // common and saturated, so a logo on white or with a black outline still
 // picks its blue rather than the white or the black. The accent is the next
-// colour that stands apart from it, which can be white, black or a second hue.
+// color that stands apart from it, which can be white, black or a second hue.
 
 export type Rgb = [number, number, number];
 export type Palette = { swatches: string[]; primary: string; accent: string };
@@ -21,7 +21,7 @@ export function fromHex(hex: string): Rgb {
 }
 
 // Lightness, chroma and hue: enough of a perceptual model to rank and to
-// tell colours apart without pulling in a colour library.
+// tell colors apart without pulling in a color library.
 function lch([r, g, b]: Rgb) {
   const max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255;
   const l = (max + min) / 2;
@@ -36,7 +36,7 @@ function lch([r, g, b]: Rgb) {
   return { l, c, h };
 }
 // Distance that weighs how people see: a hue change at high chroma matters
-// more than one between two greys.
+// more than one between two grays.
 function distance(a: Rgb, b: Rgb) {
   const rm = (a[0] + b[0]) / 2;
   const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
@@ -62,7 +62,7 @@ export function extractPalette(rgba: ArrayLike<number>, max = 6): Palette | null
     .filter((c) => c.share >= 0.004)
     .sort((a, b) => b.share - a.share);
 
-  // Merge near-duplicates into the busier colour they resemble.
+  // Merge near-duplicates into the busier color they resemble.
   const taken: { rgb: Rgb; share: number }[] = [];
   for (const c of cands) {
     const near = taken.find((t) => distance(t.rgb, c.rgb) < 90);
@@ -70,20 +70,20 @@ export function extractPalette(rgba: ArrayLike<number>, max = 6): Palette | null
     else if (taken.length < 12) taken.push({ ...c });
   }
   taken.sort((a, b) => b.share - a.share);
-  // Edge pixels blend two colours (navy into gold makes a muddy olive); a
-  // colour that small is a blend, not a choice, and stays off the palette.
+  // Edge pixels blend two colors (navy into gold makes a muddy olive); a
+  // color that small is a blend, not a choice, and stays off the palette.
   const swatches = taken.filter((s, i) => i === 0 || s.share >= 0.02).slice(0, max);
 
-  // Primary: common and colourful. Near-white and near-black only win when
+  // Primary: common and colorful. Near-white and near-black only win when
   // the logo has nothing else.
   const score = (s: { rgb: Rgb; share: number }) => {
     const { l, c } = lch(s.rgb);
     const extreme = l > 0.9 || l < 0.08;
     return s.share * (extreme ? 0.15 : 0.35 + c * 1.6);
   };
-  // A logo drawn in two shades of one colour (a navy ring around a darker navy
-  // field) is one colour to the eye: shades of a hue add up before they are
-  // weighed against a second colour.
+  // A logo drawn in two shades of one color (a navy ring around a darker navy
+  // field) is one color to the eye: shades of a hue add up before they are
+  // weighed against a second color.
   const family = (a: Rgb, b: Rgb) => {
     const x = lch(a), y = lch(b);
     if (x.c < 0.15 || y.c < 0.15) return distance(a, b) < 90;
@@ -95,7 +95,7 @@ export function extractPalette(rgba: ArrayLike<number>, max = 6): Palette | null
   const bestFamily = [...swatches].sort((a, b) => weight(b) - weight(a))[0];
   // Within the winning family, the shade that covers the most.
   const primary = swatches.filter((s) => family(s.rgb, bestFamily.rgb)).sort((a, b) => b.share - a.share)[0];
-  // Accent: the busiest colour that is clearly not the primary.
+  // Accent: the busiest color that is clearly not the primary.
   const accent = swatches.find((s) => s !== primary && !family(s.rgb, primary.rgb) && distance(s.rgb, primary.rgb) > 160)
     ?? swatches.find((s) => s !== primary)
     ?? { rgb: (lch(primary.rgb).l > 0.5 ? [11, 16, 24] : [242, 246, 252]) as Rgb, share: 0 };
@@ -103,8 +103,8 @@ export function extractPalette(rgba: ArrayLike<number>, max = 6): Palette | null
   return { swatches: swatches.map((s) => toHex(s.rgb)), primary: toHex(primary.rgb), accent: toHex(accent.rgb) };
 }
 
-// A team colour behind white text needs to be dark enough to read. This is
-// the slab's colour; the stored primary stays exactly what the logo has.
+// A team color behind white text needs to be dark enough to read. This is
+// the slab's color; the stored primary stays exactly what the logo has.
 export function readableOnWhite(hex: string) {
   const { l } = lch(fromHex(hex));
   return l <= 0.62;

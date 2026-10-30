@@ -54,7 +54,7 @@
 .ov[data-theme="forever20"] { --sb-panel1: #5a3787; --sb-panel2: #281246; --sb-well: #1a0a2e; --sb-chalk: #fbf3dc; --sb-accent: #f4c84a; --sb-line: rgba(201, 162, 74, 0.55); --sb-radius: 0.5rem; }
 .ov[data-theme="forever20"] .ov-bug { border: 0.13rem solid #c9a24a; box-shadow: 0 0 0 0.13rem rgba(26, 10, 46, 0.9); }
 .ov[data-theme="forever20"] .ov-score { color: #f2d27a; }
-/* Custom: the variables come inline from the Stream screen's colours. */
+/* Custom: the variables come inline from the Stream screen's colors. */
 .ov[data-theme="custom"].team-fill .ov-score { background: linear-gradient(180deg, color-mix(in srgb, var(--c, #888) 55%, var(--sb-well)), var(--sb-well)); }
 
 /* ---- Layouts --------------------------------------------------------------- */
@@ -64,7 +64,7 @@
 .ov[data-style="bug"] .ov-slab, .ov[data-style="scorebox"] .ov-slab { flex: 1; justify-content: flex-start; min-width: 22rem; max-width: none; }
 .ov[data-style="bug"] .ov-sit, .ov[data-style="scorebox"] .ov-sit { border-left: 0; justify-content: center; height: 6.2rem; }
 .ov[data-style="bug"] .ov-team.bat::after, .ov[data-style="scorebox"] .ov-team.bat::after { top: 0; bottom: 0; left: auto; right: 0; width: 0.5rem; height: auto; }
-/* Scorebox: the traditional box, with a big diamond and labelled B / S / O. */
+/* Scorebox: the traditional box, with a big diamond and labeled B / S / O. */
 .ov-bso { display: none; flex-direction: column; gap: 0.3rem; font-size: 1.5rem; }
 .ov-bso span { display: flex; align-items: center; gap: 0.5rem; }
 .ov-bso em { width: 1.4rem; color: var(--sb-chalk); opacity: 0.7; }

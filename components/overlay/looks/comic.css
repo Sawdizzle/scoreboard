@@ -28,7 +28,7 @@
 .lk-comic .panel.home{--q:.4% 2%,99.7% 0,100% 97%,0 100%}
 .lk-comic .panel.situ{grid-row:1/3;grid-column:2;--q:1.5% .5%,100% 0,98.8% 100%,0 99%}
 
-/* team panels: flat team colour + halftone shading, runs sub-panel */
+/* team panels: flat team color + halftone shading, runs sub-panel */
 .lk-comic .team .fill{display:flex;align-items:center;background:var(--team,#888)}
 .lk-comic .team .fill::before{content:"";position:absolute;inset:0;background:var(--dots);background-size:.8rem .8rem;
   -webkit-mask-image:linear-gradient(100deg,transparent 35%,#000 95%);mask-image:linear-gradient(100deg,transparent 35%,#000 95%)}

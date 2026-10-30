@@ -41,7 +41,7 @@
 
    Positions: tl tc tr / ml mc mr / bl bc br. A bug's own moments only
    know corners, so place() and body[data-pos] get the nearest corner
-   (a middle row reads as top, a centre column as left).
+   (a middle row reads as top, a center column as left).
 
    URL params: ?obs=1 (no panel, transparent)  ?panel=0 (no panel)
                ?embed=1 (inside the live overlay: waits for live messages)

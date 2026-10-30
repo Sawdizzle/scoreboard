@@ -122,7 +122,7 @@ test('a goal scores one and fires the celebration', () => {
   assert.equal(r.anim, 'goal');
 });
 
-test('cards accumulate per team and colour, leaving the rest alone', () => {
+test('cards accumulate per team and color, leaving the rest alone', () => {
   let g = G();
   g = { ...g, ...S.card(g, 'away', 'y').patch };
   g = { ...g, ...S.card(g, 'away', 'y').patch };

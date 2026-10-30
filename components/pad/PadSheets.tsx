@@ -10,7 +10,7 @@ import type { Lineup, LineupBatter } from '@/lib/types';
 
 // The pad's sheets. Each one is laid out for a thumb: big targets, the common
 // answer first, and a Cancel that is always in the same place. They know the
-// rules only to grey out what cannot have happened (with the reason), and hand
+// rules only to gray out what cannot have happened (with the reason), and hand
 // the choice back to the pad, which records it.
 
 export function Sheet({ title, onClose, children, close = 'Cancel' }: { title: string; onClose: () => void; children: React.ReactNode; close?: string }) {
@@ -392,7 +392,7 @@ export function GameMenu({ final, lineupHref, gameHref, layout, onLayout, sun, o
         <button type="button" role="radio" aria-checked={layout === 'field'} className="seg-item" aria-current={layout === 'field' ? 'page' : undefined} onClick={() => onLayout('field')}>The field</button>
         <button type="button" role="radio" aria-checked={layout === 'keys'} className="seg-item" aria-current={layout === 'keys' ? 'page' : undefined} onClick={() => onLayout('keys')}>Big keys</button>
       </div>
-      <div className="seg" role="radiogroup" aria-label="Screen colours">
+      <div className="seg" role="radiogroup" aria-label="Screen colors">
         <button type="button" role="radio" aria-checked={!sun} className="seg-item" aria-current={!sun ? 'page' : undefined} onClick={() => onSun(false)}>Dark</button>
         <button type="button" role="radio" aria-checked={sun} className="seg-item" aria-current={sun ? 'page' : undefined} onClick={() => onSun(true)}>☀ Sunlight</button>
       </div>

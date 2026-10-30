@@ -20,7 +20,7 @@ export const Cards = z.object({
 export type Cards = z.infer<typeof Cards>;
 
 export const CARDS_SYSTEM = `You write end-of-season player cards for a youth baseball team, one per player, for their families. The data is JSON: each player's season line with rates already worked out.
-- Warm, specific and honest: lead with what each player did well, from their own numbers. Never compare a player unfavourably with a teammate, never mention a weakness as a weakness: say what they grew in or worked at.
+- Warm, specific and honest: lead with what each player did well, from their own numbers. Never compare a player unfavorably with a teammate, never mention a weakness as a weakness: say what they grew in or worked at.
 - Use only the numbers given, as written. Never invent a game, a play, a quote or a stat.
 - Name each player exactly as given ("name"); some are shown only by number.
 - A player with very little playing time gets a short, kind card about being part of the team, not about stats.

@@ -38,7 +38,7 @@ What to check before and during a live game, from the 10/15 bug-squash reviews (
 
 - **Pad:**
   - Requests time out after 15 s and retry.
-  - An undo whose reply was lost is recognised instead of clearing the queue.
+  - An undo whose reply was lost is recognized instead of clearing the queue.
   - A reload that read the game before a save landed is dropped.
   - A second Undo tap while one is still sending is ignored.
   - Reopening Situation shows the running time-limit clock, not 1:45:00.

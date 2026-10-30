@@ -23,7 +23,7 @@ import { homerText, tabName, type BugProps } from '@/components/overlay/looks/ty
 // of its pin again.
 const RIBBON = '/bugs/img/forever20-ribbon.webp';
 
-// What the strip says for a play: a tag, its colour, and a few words.
+// What the strip says for a play: a tag, its color, and a few words.
 function say(text: string, who: string): { tag: string; cls: string; txt: string; back?: boolean } {
   switch (text) {
     case 'Home run': return { tag: 'HR', cls: 'gold', txt: who || 'Home run' };

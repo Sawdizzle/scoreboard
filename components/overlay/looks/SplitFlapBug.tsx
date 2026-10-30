@@ -40,7 +40,7 @@ const six = (b: Brand, abbr: string) => { const t = up(tabName(b, abbr)).trim();
 const msgRow = (sw: string | undefined, text: string, col: string, st = '', stCol = col, stFl = false): C[] =>
   [{ ch: ' ', sw }, ...cells(padL(text, 12), col), ...cells(padL(st, 10), stCol, stFl)];
 
-// What a play puts in the batting side's status column: [text, colour, flashing].
+// What a play puts in the batting side's status column: [text, color, flashing].
 const REMARK: Record<string, [string, string, boolean]> = {
   Strikeout: ['STRIKEOUT', 'R', true], 'Strikeout looking': ['ꓘ LOOKING', 'R', true],
   Single: ['SINGLE', 'Y', false], Double: ['DOUBLE', 'Y', false], Triple: ['TRIPLE', 'Y', false], 'Sac fly': ['SAC FLY', 'Y', false],

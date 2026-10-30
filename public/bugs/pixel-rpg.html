@@ -636,7 +636,7 @@ body.rally .rly{display:flex}
     const v = vicEl = spawn(html, "win vic", 0, 0, 6300);
     $(".ico2", v).style.color = col;
 
-    // centred on the stage, on the open side of the bug and its dialog box
+    // centered on the stage, on the open side of the bug and its dialog box
     const B = rectOf(cl), w = v.offsetWidth, h = v.offsetHeight;
     const y = onTop() ? B.y + B.h + 130 : B.y - 130 - h;
     const vx = Math.round(960 - w / 2), vy = Math.round(Math.max(30, Math.min(1050 - h, y)));

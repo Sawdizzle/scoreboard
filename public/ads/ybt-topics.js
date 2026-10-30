@@ -31,7 +31,7 @@ export const YBT_TOPICS = [
     id: '10u-thin', label: '10U · will it make?', age: '10U',
     q: [['Will that'], ['10U', true], ['|'], ['bracket even make?']],
     answer: 'Know before | you enter.',
-    why: 'A bracket with two teams gets <b>combined or cancelled</b>. The count tells you before you drive.',
+    why: 'A bracket with two teams gets <b>combined or canceled</b>. The count tells you before you drive.',
     flag: 'Only 2 teams so far', tone: 'low', hl: 2,
     rows: [
       { name: 'Pumpkin Bash', town: 'Denton, TX', extra: 'Turf', split: 'Open 11', n: 11, trend: [3, 5, 8, 9, 11] },

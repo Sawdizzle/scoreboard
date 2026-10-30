@@ -20,7 +20,7 @@ export const YOUTUBE_SYSTEM = `You write the YouTube title and opening lines for
 - Title: at most 90 characters, both teams and the final score (winner first, as "10-2") and the short date. No emoji, no clickbait, no all caps.
 - Intro: two or three warm sentences a family member would like: the result and one or two moments from the facts. Never invent a play, a score or a player; name players only as the facts write them.
 - Hashtags: three to five, team-focused, like #BlueSteel and #YouthBaseball.
-- These are kids: never criticise a player, an umpire or the other team.`;
+- These are kids: never criticize a player, an umpire or the other team.`;
 
 export const youtubePrompt = (facts: GameFacts, date: string | null) =>
   `Write the YouTube title, intro and hashtags for this game${date ? ` (played ${date})` : ''}.\n\n<facts>\n${JSON.stringify(facts)}\n</facts>`;

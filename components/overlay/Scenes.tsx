@@ -95,7 +95,7 @@ function Countdown({ at, now, done, label }: { at: string | null | undefined; no
 function Storm({ reason, strike }: { reason: NonNullable<Scene['reason']>; strike: number }) {
   const rain = reason === 'rain' ? 'heavy' : reason === 'lightning' || reason === 'weather' ? 'light' : null;
   return (
-    <div className={`scn-storm ${reason === 'rain' || reason === 'suspended' || reason === 'called' ? 'grey' : 'dark'}`} aria-hidden="true">
+    <div className={`scn-storm ${reason === 'rain' || reason === 'suspended' || reason === 'called' ? 'gray' : 'dark'}`} aria-hidden="true">
       <i className="cl c0" /><i className="cl c1" /><i className="cl c2" />
       {rain && <><i className={`rn far ${rain}`} /><i className={`rn near ${rain}`} /></>}
       {reason === 'lightning' && strike > 0 && <i key={strike} className="flash" />}

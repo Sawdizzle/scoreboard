@@ -8,8 +8,8 @@ import { inkOn } from '@/lib/format';
 
 // Showtime: the elevated package for the full-frame scenes (Starting Soon,
 // Mid-inning, Final, Game paused). One language across all four: a dark
-// studio lit by the two teams' colours, stadium beams, a moving floor and
-// floating dust; a slash of both colours that wipes each scene on; logos in
+// studio lit by the two teams' colors, stadium beams, a moving floor and
+// floating dust; a slash of both colors that wipes each scene on; logos in
 // medallions with a light running round the rim; numbers that roll and count.
 // Everything that moves for long is transform or opacity, since a scene can
 // sit on air for half an hour inside OBS.
@@ -45,7 +45,7 @@ export function Backdrop({ floor = true, motes = true, children }: { floor?: boo
   );
 }
 
-// The two colours slash across the frame from opposite sides and cross in the middle.
+// The two colors slash across the frame from opposite sides and cross in the middle.
 export function Wipe({ a, b }: { a: string; b: string }) {
   return <div className="st-wipe" aria-hidden="true" style={{ '--wa': a, '--wb': b } as React.CSSProperties}><i className="a" /><i className="b" /><i className="flash" /></div>;
 }
@@ -115,7 +115,7 @@ export const titleSize = (t: string, max: number, room = 150) => `${Math.min(max
 
 type Due = { bid: string; num: string; name: string; pos: string; avg?: string | null };
 
-// The mid-inning board, Showtime's way: both teams on slabs of their colour,
+// The mid-inning board, Showtime's way: both teams on slabs of their color,
 // the line score with the finished half lit, the half in a line, and who is
 // due up on cards that turn in.
 export function MidShow({ tag, title, away, home, abbrs, scores, line, recap, list, up, sponsor }: {

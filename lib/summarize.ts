@@ -222,7 +222,7 @@ export function summarizeGame(input: SummaryInput): GameFacts {
   if (final && result !== 'T') {
     const winner: Side = result === 'W' ? 'us' : 'them';
     const loser: Side = winner === 'us' ? 'them' : 'us';
-    // The Final card's own judgement of walk-off and run rule, so the two never disagree.
+    // The Final card's own judgment of walk-off and run rule, so the two never disagree.
     const story = L.finalStory({ ...live, sport, regulation_innings: reg ?? 0, run_rule_diff: input.runRule ?? 0 }) as { walkoff: boolean; runRule: boolean };
     const last = facts.scoringPlays.filter((s) => s.side === winner && !s.correction).at(-1);
     if (story.walkoff) facts.moments.push({ kind: 'walkoff', side: home, inning: last?.inning ?? null, half: 'bottom', text: `Walk-off${last ? `: ${last.what}` : ''}` });

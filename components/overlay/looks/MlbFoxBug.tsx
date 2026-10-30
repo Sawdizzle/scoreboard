@@ -7,7 +7,7 @@ import { shortName } from '@/lib/format';
 // MLBFox, drawn here: Scoreboard's national-TV playoff bug, kept simple
 // (public/bugs/mlbfox.html), rebuilt as part of the page so the stat cards can
 // slide out from behind it. The look is that page's: a navy pitcher bar, a blue
-// batter bar, two team-colour score blocks (the team's logo at the outer edge)
+// batter bar, two team-color score blocks (the team's logo at the outer edge)
 // either side of a black box with the inning, a TV count and the outs, three
 // bevelled bases hung underneath, and a light strip under each team. Nothing
 // moves unless the game does: numerals roll, a run flashes the block and a
@@ -32,8 +32,8 @@ const ordinal = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH
 // The abbreviation's size by its length, so a long one still fits the block.
 const abSize = (s: string) => `${([5.6, 5.6, 5.4, 4.6, 3.8, 3.2][s.length] ?? 2.6)}rem`;
 
-// A team colour as a block: mid tones darken a touch so white reads; pale ones
-// keep their colour and take dark numerals instead (mixing yellow toward navy goes olive).
+// A team color as a block: mid tones darken a touch so white reads; pale ones
+// keep their color and take dark numerals instead (mixing yellow toward navy goes olive).
 function shade(hex: string) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
   if (!m) return { block: '#2a5ab0', foot: '#c9d3e6', ink: '#fff' };
@@ -49,7 +49,7 @@ function shade(hex: string) {
   };
 }
 
-// The batter bar's callout for a play: its tag, its colour and the line after it.
+// The batter bar's callout for a play: its tag, its color and the line after it.
 const SAY: Record<string, [tag: string, tone: string, fallback: string]> = {
   Strikeout: ['STRIKEOUT', 'red', ''], 'Strikeout looking': ['CALLED STRIKE 3', 'red', ''],
   Single: ['SINGLE', 'gold', ''], Double: ['DOUBLE', 'gold', ''], Triple: ['TRIPLE', 'gold', ''],

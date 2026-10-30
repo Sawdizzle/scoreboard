@@ -65,7 +65,7 @@ export function Spots({ spot }: { spot: Feed['spot'] }) {
     if (n === null || n === seen.current) return;
     seen.current = n;
     const app = nextApp();
-    // Top centre: the stat cards own the top right.
+    // Top center: the stat cards own the top right.
     const msg = { type: 'spot:play', cut, topic: null, pos: 'tc', lift: 0 };
     const s = of(app.id);
     const play = () => {

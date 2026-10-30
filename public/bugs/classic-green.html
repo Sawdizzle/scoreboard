@@ -312,7 +312,7 @@ body.rally .board::before,body.rally .board::after,body.rally .rivets::before,bo
       const b = document.createElement("i"); b.className = "mb";
       b.style.left = (x/W*100)+"%"; b.style.top = (y/H*100)+"%";
       b.style.animationDelay = `${-(i%3)*0.166}s`;
-      b.style.setProperty("--bc", ["var(--amber)","#fff3c4","var(--red)"][i%3]);   // walk-off colours
+      b.style.setProperty("--bc", ["var(--amber)","#fff3c4","var(--red)"][i%3]);   // walk-off colors
       m.appendChild(b);
     });
   })();

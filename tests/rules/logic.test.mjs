@@ -529,7 +529,7 @@ test('with nothing adopted yet, every row is taken', () => {
 });
 
 test('a row with no usable timestamp is taken, exactly as before the guard', () => {
-  // Degrading to the old behaviour matters more than the guard: a row the pad
+  // Degrading to the old behavior matters more than the guard: a row the pad
   // cannot date is still the only state it has.
   const last = Date.parse('2026-09-08T13:27:03.6Z');
   for (const row of [{}, { updated_at: null }, { updated_at: 'not a date' }, null, undefined]) {

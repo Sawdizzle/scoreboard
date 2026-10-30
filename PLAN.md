@@ -11,7 +11,7 @@ becomes Scoreboard v5.0. Its history is merged into this repo; the static v4 app
 - **Version:** v5.0 (numbering stays monotonic after v4.47).
 - **Parity before prod switches:** everything Scoreboard v4.47 does that Pressbox does not, including
   sound and moment buttons, the full-screen scenes and weather, OBS control, the other sports in full
-  with their clocks, and Scoreboard's themes, layouts and custom colours, plus the MLBFox bug.
+  with their clocks, and Scoreboard's themes, layouts and custom colors, plus the MLBFox bug.
 - **Old data comes along:** v4's final games (plays, line scores, recaps) and saved teams.
 
 ## v5 stages
@@ -42,7 +42,7 @@ does not change until Shawn says merge.
 6. **Scenes.** Starting Soon (countdown, venue weather), Final, Game paused with storm effects,
    ticker, Elevated scenes, the Blue Steel / Midnight / Forever 20 intros and Midnight's sky,
    MLBFox as a native look, overlay auto-reload on a new release.
-7. **Looks.** v4's themes, layouts and custom colours on the v5 overlay; nine-spot position grid.
+7. **Looks.** v4's themes, layouts and custom colors on the v5 overlay; nine-spot position grid.
 8. **OBS control.** Replay, auto-clip, cameras, Go Live / Record / Buffer, permission tiers.
 9. **Release.** README, CONTRIBUTING, SECURITY, screenshots, GitHub description and topics,
    `v5.0.0` tag and release notes, Pressbox repo archived, merge to `main` on Shawn's word.
@@ -62,7 +62,7 @@ questions below as proposed.
 ## Decisions made (2026-10-02)
 
 - **Look**: Scoreboard's own navy / chalk / steel, pushed further. Barlow Condensed
-  numerals, the Prime Time team-colour hatch as the signature, gold for live stats.
+  numerals, the Prime Time team-color hatch as the signature, gold for live stats.
 - **Foundation**: rebuild on a framework. The scorebug stays a plain transparent page
   that drops into OBS (or any streaming software) as a Browser / HTML source.
 - **Visibility**: public team pages. Roster, schedule, live game and season stats are
@@ -85,7 +85,7 @@ questions below as proposed.
 
 | Table | Holds |
 | --- | --- |
-| `teams` | name, abbreviation, colour, logo, age group, public slug |
+| `teams` | name, abbreviation, color, logo, age group, public slug |
 | `team_staff` | team, user, role (organizer, head coach, coach, scorer, media). Five rows per team at most, enforced in the database |
 | `staff_invites` | one-use link: team, role, expiry |
 | `players` | team, name, number, bats/throws, positions, public-name setting |
@@ -116,7 +116,7 @@ Each stage ends with a checklist to run before the next one starts.
    - **2b, built:** games (Pressbox opponents or typed names), schedule, Today's next game, lineup editor
      (batting order, field positions that trade on a clash, bench, players typed in at the field).
    - **Team brand, built** (asked for before 2c): logo upload to Storage, palette read from the logo,
-     primary and accent colours, a display name of up to 24 characters, one look for teams everywhere.
+     primary and accent colors, a display name of up to 24 characters, one look for teams everywhere.
    - **2c, built:** the pad (/pad/<team>/<game>) on Scoreboard's rules; every play writes a log entry and
      per-player stat rows; undo takes both back; season stats add scored games to the import.
 
@@ -135,7 +135,7 @@ Each stage ends with a checklist to run before the next one starts.
    /team/<slug>/game/<id> (live score, line score, both box scores, each time up). No account.
    Players typed in at the field show by number only.
 5. **Bring it over, built:** Scoreboard's saved teams are other clubs, so they came over as
-   *opponents*: a private list per team (name, short code, colour, last lineup) offered in New Game
+   *opponents*: a private list per team (name, short code, color, last lineup) offered in New Game
    as "Teams you have played". Picking one loads its lineup; saving the other side's lineup in a game
    updates it. Six came over on 2026-10-03; the two Blue Steel copies and Krum (both already teams
    here) did not, and logos did not (they were links to other sites' images).

@@ -72,7 +72,7 @@
 .scn-storm { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .scn-storm .cl { position: absolute; left: -20%; width: 140%; height: 40%; border-radius: 50%; filter: none;
   background: radial-gradient(ellipse at 50% 60%, rgba(40, 48, 64, 0.95), transparent 70%); animation: scn-drift 40s linear infinite alternate; }
-.scn-storm.grey .cl { background: radial-gradient(ellipse at 50% 60%, rgba(90, 100, 116, 0.8), transparent 70%); }
+.scn-storm.gray .cl { background: radial-gradient(ellipse at 50% 60%, rgba(90, 100, 116, 0.8), transparent 70%); }
 .scn-storm .c0 { top: -12%; } .scn-storm .c1 { top: -4%; animation-duration: 55s; opacity: 0.8; } .scn-storm .c2 { top: 6%; animation-duration: 70s; opacity: 0.6; }
 @keyframes scn-drift { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
 .scn-storm .rn { position: absolute; left: 0; right: 0; top: -100%; height: 200%;
@@ -100,7 +100,7 @@
 .scn-ticker .run span { padding-right: 8rem; font-size: 2.2rem; font-weight: 600; letter-spacing: 0.02em; }
 @keyframes scn-tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-/* Elevated: the network-TV package. Glass panels, a raking light, team-colour pools. */
+/* Elevated: the network-TV package. Glass panels, a raking light, team-color pools. */
 .scn-layer.elevated .scn { background: radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.12), transparent 50%), linear-gradient(180deg, #0b111c, #04070c); }
 .scn-layer.elevated .scn::before { background: radial-gradient(closest-side at 0% 40%, color-mix(in srgb, var(--away) 55%, transparent), transparent 70%),
   radial-gradient(closest-side at 100% 40%, color-mix(in srgb, var(--home) 55%, transparent), transparent 70%); animation: scn-pools 20s ease-in-out infinite alternate; }

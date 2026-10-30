@@ -9,7 +9,7 @@ Scoreboard v5.0 is Scoreboard rebuilt around the team. Score the game once, on y
 - Opponents remembered with their last lineup; a jersey-number keypad for the lineup card; password reset; an optional invite code for sign-up.
 
 **Carried over from v4**
-- Fourteen looks, now including MLBFox; v4's seventeen themes and five layouts with custom colours for Scoreboard's own bug; nine positions.
+- Fourteen looks, now including MLBFox; v4's seventeen themes and five layouts with custom colors for Scoreboard's own bug; nine positions.
 - Every sport in full: football downs and distance, soccer cards and stoppage time, basketball fouls and bonus, volleyball serve and sets, and the game clocks.
 - Sound in five synthesized packs; the walk-off and the other stingers; moments and rally from the pad.
 - Starting Soon with venue weather, Final, Game paused with a storm and thunder, the ticker, Elevated scenes, the looks' intros.

@@ -5,7 +5,7 @@ import { shortName } from '@/lib/format';
 
 // Ka-Pow, drawn here: the scorebug as a comic-book panel strip
 // (public/bugs/comic.html), rebuilt as part of the page so the stat cards can
-// slide out from behind it. Inked panels on newsprint, flat team colours with
+// slide out from behind it. Inked panels on newsprint, flat team colors with
 // Ben-Day dots, a narrator's caption for the batter, and the plays told in SFX
 // lettering: CRACK! for a hit, a K panel for a strikeout (WHIFF! swinging,
 // FROZEN! with icicles looking), a shout balloon for a double play, a
@@ -28,7 +28,7 @@ function burstPts(n: number, ro: number, ri: number, seed = 1, jit = 0.18, ky = 
   return pts.join(' ');
 }
 
-// A two-layer inked burst: a colour back plate and an inner flat with red dots.
+// A two-layer inked burst: a color back plate and an inner flat with red dots.
 function Burst({ n = 14, seed = 3, back = 'var(--red)', front = 'var(--yel)', ri = 0.62 }: { n?: number; seed?: number; back?: string; front?: string; ri?: number }) {
   const inner = burstPts(n + 3, 78, 78 * ri, seed + 7);
   return (

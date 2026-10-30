@@ -17,7 +17,7 @@
 <style>
 /* ============================================================
    KA-POW — the scorebug as a comic-book panel strip.
-   Inked panels on newsprint, flat print colours, Ben-Day dots,
+   Inked panels on newsprint, flat print colors, Ben-Day dots,
    and moments told in SFX lettering, balloons and captions.
    ============================================================ */
 :root{
@@ -49,7 +49,7 @@ body.preview{background:
 .panel.home{--q:.4% 2%,99.7% 0,100% 97%,0 100%}
 .panel.situ{grid-row:1/3;grid-column:2;--q:1.5% .5%,100% 0,98.8% 100%,0 99%}
 
-/* team panels: flat team colour + halftone shading, runs sub-panel */
+/* team panels: flat team color + halftone shading, runs sub-panel */
 .team .fill{display:flex;align-items:center;background:var(--team,#888)}
 .team .fill::before{content:"";position:absolute;inset:0;background:var(--dots);background-size:8px 8px;
   -webkit-mask-image:linear-gradient(100deg,transparent 35%,#000 95%);mask-image:linear-gradient(100deg,transparent 35%,#000 95%)}
@@ -295,7 +295,7 @@ body.rally .cap{animation:excite 1.8s linear infinite}
     }
     return pts.join(" ");
   }
-  /* Two-layer inked burst (colour back plate + inner flat). */
+  /* Two-layer inked burst (color back plate + inner flat). */
   function burstSVG({ n = 14, seed = 3, back = "var(--red)", front = "var(--yel)", ri = .62 } = {}){
     return `<svg viewBox="-100 -100 200 200" preserveAspectRatio="none">
       <polygon points="${burstPts(n, 100, 100 * ri, seed)}" fill="${back}" stroke="#141414" stroke-width="5" stroke-linejoin="miter"/>
@@ -518,7 +518,7 @@ body.rally .cap{animation:excite 1.8s linear infinite}
     kp.innerHTML = `<div class="bigpanel kpan"><div class="fill">${looking ? icicles() : ""}</div></div>
       ${swirl}<div class="bigk"><span>K</span></div>${word}
       <div class="kcap">${looking ? "Caught looking…" : "Strike three!"}<b>${who ? `${esc(who)} ${looking ? "never moved" : "goes down swinging"}` : looking ? "Right down the middle" : "Swung and missed"}</b></div>`;
-    // park it beside the scorebug, toward centre stage
+    // park it beside the scorebug, toward center stage
     const r = bug.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = s.width / 1920;
     const bx = (r.left - s.left) / k, bw = r.width / k, by = (r.top - s.top) / k, bh = r.height / k;
     kp.style.left = (pos.endsWith("r") ? bx - 560 - 60 : bx + bw + 50) + "px";

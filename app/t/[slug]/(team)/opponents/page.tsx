@@ -7,7 +7,7 @@ import { listOpponents, loadTeam } from '@/lib/data';
 
 export const metadata: Metadata = { title: 'Opponents' };
 
-// The teams you play: each with its logo, colours and roster, ready for New game.
+// The teams you play: each with its logo, colors and roster, ready for New game.
 export default async function Opponents({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { supabase, team } = await loadTeam(slug);
@@ -23,7 +23,7 @@ export default async function Opponents({ params }: { params: Promise<{ slug: st
         </div>
       </ActionForm>
       {list.length === 0 ? (
-        <div className="card empty"><b>No opponents yet</b>Add the teams you play: their logo, colours and roster come up on the pad and the stream.</div>
+        <div className="card empty"><b>No opponents yet</b>Add the teams you play: their logo, colors and roster come up on the pad and the stream.</div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
           {list.map((o) => {

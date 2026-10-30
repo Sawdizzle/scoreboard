@@ -171,7 +171,7 @@
 @keyframes lkchalkBall{from{offset-distance:0%;opacity:1}to{offset-distance:100%;opacity:1}}
 
 /* Where the bug sits. Top: the boards hang below / drop from above. Right side: the K board stands on the bug's left
-   and the home run board lines up with its right edge. Centre: both boards go above (or below) the bug. */
+   and the home run board lines up with its right edge. Center: both boards go above (or below) the bug. */
 .ov.bug-tl .lk-chalk .hrw,.ov.bug-tc .lk-chalk .hrw,.ov.bug-tr .lk-chalk .hrw{bottom:auto;top:calc(100% + 2.4rem)}
 .ov.bug-tl .lk-chalk .mboard,.ov.bug-tc .lk-chalk .mboard,.ov.bug-tr .lk-chalk .mboard{bottom:auto;top:0}
 .ov.bug-tl .lk-chalk .hrb,.ov.bug-tc .lk-chalk .hrb,.ov.bug-tr .lk-chalk .hrb{--ty:110rem}

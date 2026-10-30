@@ -21,7 +21,7 @@ test('a game and a practice, in UTC, with their own ids and the escapes calendar
   // A practice with no end runs 90 minutes; a canceled one says so.
   assert.match(ics, /DTSTART:20261030T230000Z\r\nDTEND:20261031T003000Z/);
   assert.match(ics, /DESCRIPTION:Bring water\\;\\nand a glove/);
-  assert.match(ics, /STATUS:CANCELLED/);
+  assert.match(ics, /STATUS:CANCELED/);
   assert.equal(ics.split('BEGIN:VEVENT').length, 3);
 });
 

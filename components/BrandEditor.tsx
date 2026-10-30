@@ -11,7 +11,7 @@ import type { FormState, Game, Team } from '@/lib/types';
 const NEUTRALS = ['#ffffff', '#0b1018', '#9aa8c2'];
 
 // Shrink a logo in the browser: 512 px on the long side, transparency kept,
-// WebP where the browser can write it (PNG where it cannot). Its colours are
+// WebP where the browser can write it (PNG where it cannot). Its colors are
 // read from a 96 px copy, which is plenty for a palette.
 export async function readLogo(file: File): Promise<{ blob: Blob; url: string; palette: ReturnType<typeof extractPalette> }> {
   const src = URL.createObjectURL(file);
@@ -44,7 +44,7 @@ export async function readLogo(file: File): Promise<{ blob: Blob; url: string; p
 }
 
 // Everything a team looks like, with the result drawn as it changes: the
-// header, the slab, a matchup, and the scorebug. Upload a logo and its colours
+// header, the slab, a matchup, and the scorebug. Upload a logo and its colors
 // are picked for you; tap a swatch to change either one.
 export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: boolean; welcome?: boolean }) {
   const [name, setName] = useState(team.name);
@@ -127,7 +127,7 @@ export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: b
               {shownLogo ? <img src={shownLogo} alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} /> : <TeamMark brand={brand} size={64} />}
               <span className="row-main">
                 <span className="row-title">{shownLogo ? 'Change the logo' : 'Upload your logo'}</span>
-                <span className="row-meta">PNG with a clear background looks best. Its colours fill in below.</span>
+                <span className="row-meta">PNG with a clear background looks best. Its colors fill in below.</span>
               </span>
             </label>
             {readError && <p role="alert" className="note note-bad">{readError}</p>}
@@ -137,7 +137,7 @@ export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: b
           </section>
 
           <section className="stack" style={{ gap: 10 }}>
-            <span className="legend">Colours{palette.length ? ' · from your logo' : ''}</span>
+            <span className="legend">Colors{palette.length ? ' · from your logo' : ''}</span>
             <div className="slots">
               <button type="button" className="slot" aria-pressed={slot === 'color'} onClick={() => setSlot('color')}>
                 <i style={{ background: color }} /><span>Primary<b>{color}</b></span>
@@ -146,13 +146,13 @@ export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: b
                 <i style={{ background: color2 }} /><span>Accent<b>{color2}</b></span>
               </button>
             </div>
-            <div className="swatches" role="group" aria-label={`Pick the ${slot === 'color' ? 'primary' : 'accent'} colour`}>
+            <div className="swatches" role="group" aria-label={`Pick the ${slot === 'color' ? 'primary' : 'accent'} color`}>
               {swatches.map((hex) => (
                 <button key={hex} type="button" className={`swatch${current.toLowerCase() === hex.toLowerCase() ? ' on' : ''}`}
                   style={{ background: hex }} aria-label={hex} onClick={() => setSlotColor(hex)} />
               ))}
-              <label className="swatch" style={{ position: 'relative', overflow: 'hidden', background: 'conic-gradient(#e5534b, #e0a92a, #35d07f, #6ea8f0, #a06ef0, #e5534b)' }} title="Any colour">
-                <input type="color" value={current} onChange={(e) => setSlotColor(e.currentTarget.value)} aria-label="Any colour"
+              <label className="swatch" style={{ position: 'relative', overflow: 'hidden', background: 'conic-gradient(#e5534b, #e0a92a, #35d07f, #6ea8f0, #a06ef0, #e5534b)' }} title="Any color">
+                <input type="color" value={current} onChange={(e) => setSlotColor(e.currentTarget.value)} aria-label="Any color"
                   style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
               </label>
             </div>
@@ -184,7 +184,7 @@ export function BrandEditor({ team, canEdit, welcome }: { team: Team; canEdit: b
           </div>
         </>
       ) : (
-        <p className="note note-plain">The organizer or head coach sets the logo, colours and names.</p>
+        <p className="note note-plain">The organizer or head coach sets the logo, colors and names.</p>
       )}
     </div>
   );

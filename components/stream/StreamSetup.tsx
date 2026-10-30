@@ -18,12 +18,12 @@ export type StreamChannel = {
   bug_text: string | null; bug_url: string | null; sponsor_name: string | null; sponsor_line: string | null; sponsor_logo: string | null;
 };
 
-const BUG_AT: [BugPos, string][] = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Middle left'], ['mc', 'Middle'], ['mr', 'Middle right'],
-  ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
+const BUG_AT: [BugPos, string][] = [['tl', 'Top left'], ['tc', 'Top center'], ['tr', 'Top right'], ['ml', 'Middle left'], ['mc', 'Middle'], ['mr', 'Middle right'],
+  ['bl', 'Bottom left'], ['bc', 'Bottom center'], ['br', 'Bottom right']];
 // Cards on their own start across the picture from the scorebug, where there is room.
 const FREE_DEFAULT: Record<BugPos, BugPos> = { tl: 'tr', tc: 'bc', tr: 'tl', ml: 'mr', mc: 'bc', mr: 'ml', bl: 'br', bc: 'tc', br: 'bl' };
 const QR_AT: (QrPos | null)[] = ['tl', 'tc', 'tr', 'ml', null, 'mr', 'bl', 'bc', 'br'];
-const QR_LABEL: Record<QrPos, string> = { tl: 'Top left', tc: 'Top centre', tr: 'Top right', ml: 'Middle left', mr: 'Middle right', bl: 'Bottom left', bc: 'Bottom centre', br: 'Bottom right' };
+const QR_LABEL: Record<QrPos, string> = { tl: 'Top left', tc: 'Top center', tr: 'Top right', ml: 'Middle left', mr: 'Middle right', bl: 'Bottom left', bc: 'Bottom center', br: 'Bottom right' };
 const CARDS: [CardKind | null, string][] = [[null, 'No card'], ['batter', 'Batter'], ['pitcher', 'Pitcher'], ['dueup', 'Due up'], ['leaders', 'Leaders'], ['box', 'Box score'],
   ['lineup', 'Lineup'], ['defense', 'Defense'], ['matchup', 'Matchup'], ['mid', 'Mid-inning'], ['sponsor', 'Sponsor']];
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -41,7 +41,7 @@ const ANIMATED: [Look, string, string][] = [
   ['chalkboard', 'Chalk Talk', 'Dugout chalkboard'], ['comic', 'Ka-Pow', 'Comic book'], ['split-flap', 'Departures', 'Split-flap board'],
   ['receipt', 'Play-by-Play Printer', 'Receipt'], ['pixel-rpg', 'Battle Mode', '16-bit'],
 ];
-// v4's themes, with the colours each paints (components/overlay/themes.css):
+// v4's themes, with the colors each paints (components/overlay/themes.css):
 // panel, panel fade, score box, text, accent. Midnight is the default.
 type Swatch = [string, string, string, string, string];
 const THEMES: [string, [string, string, Swatch?][]][] = [
@@ -224,7 +224,7 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
       <section className="card pad">
         <h2>Theme</h2>
         {look !== 'pressbox' ? (
-          <p className="hint">{ANIMATED.find(([k]) => k === look)?.[1] ?? 'This scorebug'} brings its own colours. Pick a layout above to paint it with a theme.</p>
+          <p className="hint">{ANIMATED.find(([k]) => k === look)?.[1] ?? 'This scorebug'} brings its own colors. Pick a layout above to paint it with a theme.</p>
         ) : (
           <>
             {THEMES.map(([group, list]) => (
@@ -261,7 +261,7 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
                     </select>
                   </label>
                 </div>
-                <label className="switch"><span className="switch-text"><b>Team colours behind the scores</b></span>
+                <label className="switch"><span className="switch-text"><b>Team colors behind the scores</b></span>
                   <input type="checkbox" checked={!!custom.teamFill} onChange={(e) => setCustom('teamFill', e.target.checked)} />
                 </label>
               </div>
@@ -338,7 +338,7 @@ export function StreamSetup({ team, channel, streamUrl, canLead }: { team: Team;
 
       <section className="card pad">
         <h2>Scenes</h2>
-        <p className="hint">Starting Soon, the mid-inning board, Final and Game paused cover the whole picture; they are put up and taken down from On Air in the pad. Showtime lights them in your colours, with a wipe, a countdown that rolls and confetti for the winner. Standard is the plain set, for a slow streaming computer.</p>
+        <p className="hint">Starting Soon, the mid-inning board, Final and Game paused cover the whole picture; they are put up and taken down from On Air in the pad. Showtime lights them in your colors, with a wipe, a countdown that rolls and confetti for the winner. Standard is the plain set, for a slow streaming computer.</p>
         <div className="pills" role="radiogroup" aria-label="Scene style">
           {([['elevated', 'Showtime'], ['standard', 'Standard']] as const).map(([k, label]) => (
             <label key={k} className="pill wide"><input type="radio" name="scene_style" checked={(bc.scene_style === 'standard' ? 'standard' : 'elevated') === k} onChange={() => setB({ scene_style: k === 'elevated' ? null : k })} /><span>{label}</span></label>

@@ -7,7 +7,7 @@ import type { Game, Season, Team } from '@/lib/types';
 // Who, where, when, and whether it counts. `opponent` is a team picked from
 // Scoreboard; without one, the name is typed.
 // `saved` is an opponent this team has played before: its name, short code
-// and colour fill the fields, and its last lineup comes with the game.
+// and color fill the fields, and its last lineup comes with the game.
 export function GameFields({ seasons, game, opponent, changeHref, saved, place }: {
   seasons: Season[]; game?: Game; opponent?: Team | null; changeHref?: string; saved?: { id?: string; name: string; abbr: string; color: string; players: number } | null;
   // A new game's field, address and tournament, from a game the same weekend.
@@ -33,7 +33,7 @@ export function GameFields({ seasons, game, opponent, changeHref, saved, place }
           <label className="field"><span>Opponent</span>
             <input className="input" name="opponent_name" defaultValue={saved?.name ?? (game?.opponent_team_id ? '' : game?.opponent_name)} maxLength={60} required autoComplete="off" />
           </label>
-          <label className="field"><span>Colour</span>
+          <label className="field"><span>Color</span>
             <input className="input" type="color" name="opponent_color" defaultValue={saved?.color ?? game?.opponent_color ?? '#7a8794'} />
           </label>
           {saved && <input type="hidden" name="opponent_abbr" value={saved.abbr} />}

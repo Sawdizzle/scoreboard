@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractPalette, fromHex, toHex } from '../lib/palette.ts';
 
-// A made-up logo as raw pixels: shares of each colour, plus transparency.
+// A made-up logo as raw pixels: shares of each color, plus transparency.
 function image(parts: [string, number][], transparent = 0) {
   const total = 10000;
   const px: number[] = [];
@@ -38,16 +38,16 @@ test('a crest in two navies with gold trim is navy, with gold as the accent', ()
   assert.ok(!p.swatches.some((x) => near(x, '#81755c', 12)), p.swatches.join(' '));
 });
 
-test('a logo on a white square still picks its colour, not the white', () => {
+test('a logo on a white square still picks its color, not the white', () => {
   const p = extractPalette(image([['#ffffff', 0.7], ['#1a7541', 0.22], ['#111111', 0.08]]))!;
   assert.ok(near(p.primary, '#1a7541'), p.primary);
   assert.ok(near(p.accent, '#ffffff') || near(p.accent, '#111111'), p.accent);
 });
 
-test('shades of one colour merge into one swatch', () => {
+test('shades of one color merge into one swatch', () => {
   const p = extractPalette(image([['#2f63cc', 0.4], ['#3a6ed6', 0.3], ['#2558be', 0.3]]))!;
   assert.equal(p.swatches.length, 1);
-  // With one colour, the accent is a readable neutral against it.
+  // With one color, the accent is a readable neutral against it.
   assert.ok(p.accent === '#f2f6fc' || p.accent === '#0b1018');
 });
 

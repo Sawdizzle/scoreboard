@@ -6,7 +6,7 @@ import { shortName } from '@/lib/format';
 // Prime Time, drawn here: Scoreboard's network-television bug
 // (public/bugs/primetime.html), rebuilt as part of the page so the stat cards
 // can slide out from behind it. The look is that page's: a dark glass rail,
-// team-colour slabs with a score well each, a lit gold diamond, a numeric
+// team-color slabs with a score well each, a lit gold diamond, a numeric
 // count over three out lamps, and a context strip for the at-bat. Its moments
 // are kept: a run flares the slab and flashes the well gold while a sheen
 // crosses the rail, the inning flips to MID / END between halves, a strikeout

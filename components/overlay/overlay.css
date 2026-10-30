@@ -10,7 +10,7 @@
 .ov .gold { color: #ffcf3a; }
 .ov img { display: block; }
 
-/* A team's colour, lit from above, with the hatch. */
+/* A team's color, lit from above, with the hatch. */
 .ov-slab, .ov-tile, .ov-phead {
   background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 0.2rem, transparent 0.2rem 0.9rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.28)), var(--c);
@@ -37,7 +37,7 @@
 .ov-dock:has(.lk-hot) { filter: none; }
 /* The scorebug and the cards each have their own size: zoom, so the dock's layout follows. */
 .ov-dock > .ov-bug, .ov-dock > .ov-moment, .ov-dock > .ov-look { zoom: var(--bs); }
-/* A look brings its own type: the stage's grey, semi-bold <em> and <small> are for Scoreboard's own bug and cards. */
+/* A look brings its own type: the stage's gray, semi-bold <em> and <small> are for Scoreboard's own bug and cards. */
 .ov-look > :not(.cb) em, .ov-look > :not(.cb) small { color: inherit; font-weight: inherit; }
 
 /* The cards' slot: against the scorebug, on the side away from the picture's edge. One card at a time; the

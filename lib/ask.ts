@@ -22,7 +22,7 @@ export const ASK_SYSTEM = `You answer a youth baseball coach's questions about t
 - Answer only from the data. If it cannot answer the question (a stat not tracked, a game not scored in the app), say so plainly and say what it can answer instead.
 - Use the rates as given; do not recompute them. Mention sample size when it is small (fewer than 10 plate appearances or 3 innings).
 - Season totals may include games imported from GameChanger that have no per-game lines; per-game questions can only use the games listed with lines.
-- Be encouraging and useful to a coach: these are kids. No judgements of character.
+- Be encouraging and useful to a coach: these are kids. No judgments of character.
 - Keep it short. Add a small table only when it helps (a ranking, a comparison).`;
 
 const nz = (o: Record<string, number>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v));

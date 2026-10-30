@@ -26,7 +26,7 @@ export function TodayView({ team, role, players, opponents, season, stats = [], 
     { href: `${base}/roster`, title: 'Roster', done: players >= 9,
       meta: players === 0 ? 'Add your players, or paste the list' : `${players} ${players === 1 ? 'player' : 'players'}${players < 9 ? ' · nine fills a lineup' : ''}` },
     { href: `${base}/opponents`, title: 'Opponents', done: opponents > 0,
-      meta: opponents ? `${opponents} ${opponents === 1 ? 'team' : 'teams'} you play` : 'Add the teams you play: logo, colours, roster' },
+      meta: opponents ? `${opponents} ${opponents === 1 ? 'team' : 'teams'} you play` : 'Add the teams you play: logo, colors, roster' },
     { href: `${base}/season`, title: 'Season', done: !!season,
       meta: season ? season.name : 'Name the season the stats will count for' },
   ];

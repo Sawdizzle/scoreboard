@@ -1,6 +1,6 @@
 /* Showtime: the elevated scenes (components/overlay/Showtime.tsx). On the
    stream's rem grid: 1rem is 1/128 of the picture's width, so the frame is
-   128 x 72. --away and --home are the teams' colours, set on each scene.
+   128 x 72. --away and --home are the teams' colors, set on each scene.
    Long-running motion is transform and opacity only. */
 
 @property --st-n { syntax: '<integer>'; initial-value: 0; inherits: false; }
@@ -112,7 +112,7 @@
 .st-ring { position: absolute; inset: -5.5rem; width: calc(100% + 11rem); height: calc(100% + 11rem); animation: st-spin 28s linear infinite; }
 .st-ring text { font-size: 10.5px; font-weight: 700; letter-spacing: 3px; fill: rgba(255, 255, 255, 0.55); font-family: inherit; }
 
-/* Confetti: a falling celebration in the winner's colours, on a loop. */
+/* Confetti: a falling celebration in the winner's colors, on a loop. */
 .st-confetti { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; perspective: 60rem; }
 .st-confetti i { position: absolute; top: -4rem; left: var(--x); width: 0.9rem; height: 1.5rem; border-radius: 0.15rem; opacity: 0.95;
   animation: st-fall var(--d) linear var(--dl) infinite both; }

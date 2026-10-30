@@ -1,4 +1,4 @@
-// Team brand: display names, colours, and who may put a logo where.
+// Team brand: display names, colors, and who may put a logo where.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeDb } from './db.ts';

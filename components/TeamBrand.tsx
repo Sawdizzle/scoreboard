@@ -2,7 +2,7 @@
 import { inkOn } from '@/lib/format';
 import type { Game, Team } from '@/lib/types';
 
-// How a team looks wherever it appears: its logo, its two colours and the
+// How a team looks wherever it appears: its logo, its two colors and the
 // name it goes by. Every screen draws a team through this file, so a logo
 // uploaded once shows up everywhere at once.
 export type Brand = { name: string; display: string; color: string; color2: string; logo: string | null };
@@ -28,7 +28,7 @@ const vars = (b: Brand) => ({ '--c': b.color, '--c2': b.color2, '--ink': inkOn(b
 const fit = (s: string, ratio = 0.56) => ({ '--k': (100 / (Math.max(s.length, 4) * ratio)).toFixed(2) }) as React.CSSProperties;
 
 // The small square: the logo on a dark tile ringed in the accent, or the
-// initials on the team colour when there is no logo yet.
+// initials on the team color when there is no logo yet.
 export function TeamMark({ brand, size = 46 }: { brand: Brand; size?: number }) {
   const style = { ...vars(brand), '--s': `${size}px` } as React.CSSProperties;
   return brand.logo
@@ -36,7 +36,7 @@ export function TeamMark({ brand, size = 46 }: { brand: Brand; size?: number }) 
     : <span className="mark mono" style={style} aria-hidden="true">{monogram(brand.display)}</span>;
 }
 
-// The team-colour block: the scorebug's slab, made big. Primary colour lit
+// The team-color block: the scorebug's slab, made big. Primary color lit
 // from above, the hatch, an accent stripe along the foot, the logo as a badge
 // and again as a faint watermark.
 export function Slab({ brand, sub, right, compact, className = '' }: {
@@ -67,7 +67,7 @@ export function Matchup({ team, game }: { team: Team; game: Game }) {
 }
 
 // A scorebug rail in miniature, for the brand editor: the slab as the
-// stream will show it, beside a score and a grey opponent.
+// stream will show it, beside a score and a gray opponent.
 export function BugPreview({ brand }: { brand: Brand }) {
   const other: Brand = { name: 'Visitors', display: 'Vis', color: '#4b5563', color2: '#9aa8c2', logo: null };
   const side = (b: Brand, score: number, bat?: boolean) => (

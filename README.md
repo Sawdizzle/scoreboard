@@ -12,17 +12,17 @@ Scoreboard is built for youth sports streamed with OBS (or any streaming softwar
 
 v5 is Scoreboard rebuilt around the team. v4 (tag [`v4.47`](https://github.com/Sawdizzle/scoreboard/tree/v4.47)) scored one game at a time for one account; v5 keeps everything the stream did and adds:
 
-- **Your team, run by you.** One account scores for its own team; the teams you play are kept on an **Opponents** list with their logo, colours and roster, which load into the pad and the stream for every game against them.
+- **Your team, run by you.** One account scores for its own team; the teams you play are kept on an **Opponents** list with their logo, colors and roster, which load into the pad and the stream for every game against them.
 - **Rosters, seasons and player stats.** Every play names its batter and pitcher, so season lines (AVG, OBP, SLG, ERA, WHIP, W/L/SV) build themselves from scored games, on top of a GameChanger season import.
 - **Public team pages**: schedule and results, season stats, the roster, and a live page for every game, with each player shown the way the staff chose (full name, first name and initial, or number only).
 - **Stat cards from the scorebug**: batter, pitcher, due up, leaders, box score, lineup, defense, matchup, sponsor and the mid-inning board slide out from behind any look, or stand on their own in any of nine places on the picture.
 - **Team > Stats**: the season's leaders, the top three in each batting and pitching category, and a Needs work view with the other end of each list for the coaches (never on the public page). Every number sits in batting and pitching tables that sort on a tap. Averages count players with a plate appearance per game.
 - **Where the game is**: each game has the field's address and an optional tournament link. Today, the game screen and the public game page show Directions and Tournament buttons, with the forecast for first pitch (or the weather now, once the game is on) drawn as a small moving sky. The same address feeds the weather on the Starting Soon and Game paused scenes.
 - **Phone, iPad and desktop, each its own way**: a phone scores with a thumb, with tabs along the bottom. An iPad is a booth console: on its side the pad and On Air sit next to each other with nothing to open, and stood up On Air sits under the keys. From an iPad on its side up, the team's screens get a sidebar with every section. A desktop gets wide stats and a Stream screen laid out like an editor, with the preview held beside the settings.
-- **Showtime scenes**: Starting Soon, the mid-inning board, Final and Game paused, lit in both teams' colours with stadium beams and a moving floor. A slash of both colours wipes each one on. The countdown rolls and the final score counts up. The winner gets light rays and confetti, and a delay gets a live weather radar with a restart dial. Standard keeps the plain set for a slow streaming computer.
-- **The Stream screen**: v4's Design picker (five layouts painted by a theme, or one of thirteen animated scorebugs with their own moments, MLBFox first), the theme as colour tiles, and every sound and position setting, over a live preview.
+- **Showtime scenes**: Starting Soon, the mid-inning board, Final and Game paused, lit in both teams' colors with stadium beams and a moving floor. A slash of both colors wipes each one on. The countdown rolls and the final score counts up. The winner gets light rays and confetti, and a delay gets a live weather radar with a restart dial. Standard keeps the plain set for a slow streaming computer.
+- **The Stream screen**: v4's Design picker (five layouts painted by a theme, or one of thirteen animated scorebugs with their own moments, MLBFox first), the theme as color tiles, and every sound and position setting, over a live preview.
 
-Everything v4 did on the stream is here too: the fourteen looks (Scoreboard's own, Classic, Prime Time, Blue Steel, Forever 20, Midnight, MLBFox, Classic Green, Pinball, Chalkboard, Comic, Split Flap, Receipt, Pixel RPG), v4's seventeen themes and five layouts with custom colours, synthesized sound in five packs, the walk-off and other stingers, Starting Soon, Final and Game paused scenes with venue weather, the announcement ticker, rotating sponsors, the on-air spots for our other apps, and OBS control from the pad.
+Everything v4 did on the stream is here too: the fourteen looks (Scoreboard's own, Classic, Prime Time, Blue Steel, Forever 20, Midnight, MLBFox, Classic Green, Pinball, Chalkboard, Comic, Split Flap, Receipt, Pixel RPG), v4's seventeen themes and five layouts with custom colors, synthesized sound in five packs, the walk-off and other stingers, Starting Soon, Final and Game paused scenes with venue weather, the announcement ticker, rotating sponsors, the on-air spots for our other apps, and OBS control from the pad.
 
 v4's links keep working: `/control` opens the teams, `/overlay?ch=<token>` reaches the same stream, and `/recap?game=<id>` lands on that game's public page.
 
@@ -71,8 +71,8 @@ on conflict (key) do update set value = excluded.value;
 ## Your first game
 
 1. **Create an account** at `/sign-up` and confirm the email. On a phone, Share → **Add to Home Screen** opens Scoreboard full screen.
-2. **New team**: name, short code and age group; then the logo (its colours are read from it), the roster (type, paste a list, or import a GameChanger season export), and a season.
-3. **Opponents** (Team → Opponents): add the teams you play, each with a logo (its colours are read from it), a short code and a roster.
+2. **New team**: name, short code and age group; then the logo (its colors are read from it), the roster (type, paste a list, or import a GameChanger season export), and a season.
+3. **Opponents** (Team → Opponents): add the teams you play, each with a logo (its colors are read from it), a short code and a roster.
 4. **New game**: pick one of your opponents (their roster becomes their lineup), another team on Scoreboard, or type a name. Set the start time, the venue, a ZIP or town for the weather, and the rules (time limit, run rule, period length).
 5. **Lineups**: tap players from the bench into the order, tap a spot on the field and then the player, or punch in the jersey numbers from the lineup card on the keypad.
 6. **Stream**: copy the Browser Source link from the Stream screen into OBS once (next section). It follows whichever game the pad is scoring.

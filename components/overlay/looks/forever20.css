@@ -44,7 +44,7 @@
   background:linear-gradient(105deg,transparent 35%,rgba(242,210,122,.32) 50%,transparent 65%)}
 @keyframes lkf20Sheen{to{transform:translateX(110%)}}
 
-/* team block: a team-colour stitch, the abbreviation, then the score well */
+/* team block: a team-color stitch, the abbreviation, then the score well */
 .lk-f20 .team{position:relative;display:flex;align-items:stretch}
 .lk-f20 .team + .team{box-shadow:-0.1rem 0 0 var(--rule)}
 .lk-f20 .slab{position:relative;display:flex;align-items:center;justify-content:center;min-width:12rem;padding:0 1.4rem 0 2.2rem}

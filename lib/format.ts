@@ -46,7 +46,7 @@ export function byJersey(a: Player, b: Player) {
   return na - nb || fullName(a).localeCompare(fullName(b));
 }
 
-// White or near-black, whichever reads on a team colour.
+// White or near-black, whichever reads on a team color.
 export function inkOn(hex: string) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
   if (!m) return '#ffffff';
