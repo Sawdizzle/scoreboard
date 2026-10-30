@@ -107,7 +107,7 @@ test('and they all score normally once possession is set', () => {
   assert.equal(F.safety(g).patch.home_score, 2, 'the safety still goes to the defense');
 });
 
-test('kickoff and turnover still work with nobody set — they are how you say who has it', () => {
+test('kickoff and turnover still work with nobody set; they are how you say who has it', () => {
   assert.equal(F.kickoff(G()).patch.state.possession, 'home');
   assert.equal(F.turnover(G()).patch.state.possession, 'home');
   assert.equal(F.kickoff(G({ state: { possession: 'home' } })).patch.state.possession, 'away');
@@ -200,7 +200,7 @@ test('reaching the target with two clear points wins the set', () => {
   assert.deepEqual(r.animMeta, { away: 15, home: 25 });
 });
 
-test('25-24 is not a set — it plays on to two', () => {
+test('25-24 is not a set: it plays on to two', () => {
   const r = V.point(G({ home_score: 24, away_score: 24, state: { serve: 'home' } }), 'home');
   assert.equal(r.type, 'vb-point');
   assert.equal(r.patch.home_score, 25);
@@ -289,7 +289,7 @@ test('the next period resets team fouls and reloads the clock', () => {
   assert.equal(r.patch.clock_running, false);
 });
 
-test('nudging the period does not reset fouls — it is a correction, not a period change', () => {
+test('nudging the period does not reset fouls: it is a correction, not a period change', () => {
   const r = B.adjustPeriod(G({ state: { period: 3, fouls: { away: 8, home: 5 } } }), -1);
   assert.equal(r.patch.state.period, 2);
   assert.deepEqual(r.patch.state.fouls, { away: 8, home: 5 });
