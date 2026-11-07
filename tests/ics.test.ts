@@ -21,7 +21,9 @@ test('a game and a practice, in UTC, with their own ids and the escapes calendar
   // A practice with no end runs 90 minutes; a canceled one says so.
   assert.match(ics, /DTSTART:20261030T230000Z\r\nDTEND:20261031T003000Z/);
   assert.match(ics, /DESCRIPTION:Bring water\\;\\nand a glove/);
-  assert.match(ics, /STATUS:CANCELED/);
+  // RFC 5545 spells this value CANCELLED (two Ls). It is a protocol keyword, not prose:
+  // do not "Americanize" it, or calendar apps stop showing the event as cancelled.
+  assert.match(ics, /STATUS:CANCELLED/);
   assert.equal(ics.split('BEGIN:VEVENT').length, 3);
 });
 
