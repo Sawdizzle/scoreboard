@@ -49,6 +49,7 @@ export function buildIcs(feed: Feed, siteUrl: string) {
       `DTSTART:${stamp(e.start)}`, `DTEND:${stamp(e.end)}`, `SUMMARY:${esc(e.summary)}`, `URL:${e.url}`);
     if (e.location) lines.push(`LOCATION:${esc(e.location)}`);
     if (e.desc) lines.push(`DESCRIPTION:${esc(e.desc)}`);
+    // RFC 5545 keyword: CANCELLED with two Ls. Keep it, even though the field is `canceled`.
     lines.push(`STATUS:${e.canceled ? 'CANCELLED' : 'CONFIRMED'}`, 'END:VEVENT');
   };
   for (const g of feed.games) {
