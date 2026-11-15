@@ -129,3 +129,71 @@ test('a refused play (not a conflict) stops the queue too', async () => {
   const r = await pumpQueue(state([play('a')]), db.io, hooks().h);
   assert.deepEqual(r.failed, { lost: 1, error: { code: '42501', message: 'Your seat cannot score this game.' } });
 });
+
+// A phone waking from sleep: the call stalls before any request goes out (a
+// sign-in refresh), so the abort signal never fires. The queue's own time
+// limit must let go, or every later tap waits behind it until a force close.
+test('a send that never answers, even to its abort signal, is retried', async () => {
+  const db = fakeDb();
+  let stalls = 1;
+  const send = db.io.send.bind(db.io);
+  db.io.send = (it, at, signal) => (stalls-- > 0 ? new Promise<Sent>(() => {}) : send(it, at, signal));
+  db.io.timeoutMs = 5;
+  const st = state([play('a')]);
+  const { log, h } = hooks();
+  const r = await pumpQueue(st, db.io, h);
+  assert.equal(r.failed, null);
+  assert.equal(st.items.length, 0);
+  assert.equal(db.seq, 1);
+  assert.ok(log.includes('retry'));
+});
+
+test('a stalled send that saved later is found by its id, not sent twice', async () => {
+  const db = fakeDb();
+  let first = true;
+  const send = db.io.send.bind(db.io);
+  // The first send lands on the server, but its answer never comes back.
+  db.io.send = (it, at, signal) => {
+    if (!first) return send(it, at, signal);
+    first = false;
+    void send(it, at, signal);
+    return new Promise<Sent>(() => {});
+  };
+  db.io.timeoutMs = 5;
+  const st = state([play('a'), play('b')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'b']);
+  assert.equal(st.seq, 2);
+});
+
+test('a conflict check that hangs or throws keeps the play and tries again', async () => {
+  const db = fakeDb();
+  db.faults.push('lost');
+  let checks = 0;
+  const after = db.io.eventsAfter.bind(db.io);
+  db.io.eventsAfter = (at) => {
+    checks += 1;
+    if (checks === 1) return new Promise(() => {});
+    if (checks === 2) return Promise.reject(new Error('TypeError: Load failed'));
+    return after(at);
+  };
+  db.io.timeoutMs = 5;
+  const st = state([play('a')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  assert.equal(st.items.length, 0);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a']);
+  assert.ok(checks >= 3);
+});
+
+test('a lapsed sign-in whose refresh hangs does not hold the queue', async () => {
+  const db = fakeDb();
+  db.faults.push('jwt');
+  db.io.refresh = () => new Promise(() => {});
+  db.io.timeoutMs = 5;
+  const st = state([play('a')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  assert.equal(db.seq, 1);
+});

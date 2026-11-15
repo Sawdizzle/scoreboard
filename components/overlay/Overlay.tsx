@@ -49,7 +49,9 @@ function earned(prev: Feed | null, f: Feed, runs: number): { sound: string | nul
   if (k === 'SB') return { sound: 'stolenbase', fx: null };
   return { sound: runs ? 'run' : null, fx: runs ? 'run' : null };
 }
-export const airTopic = (token: string) => `overlay:${token}`;
+// The stream's channel, where every save nudges the scorebug and the pad.
+export { airTopic } from '@/lib/broadcast';
+import { airTopic } from '@/lib/broadcast';
 const RUNNER_KINDS = new Set(Object.keys(L.RUNNER_LABEL));
 
 // The page OBS loads. It has no account: it asks for the feed by the link's

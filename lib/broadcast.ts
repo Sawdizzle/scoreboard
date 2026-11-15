@@ -103,3 +103,7 @@ export function clockStop(c: Clock, now = Date.now()): Clock {
 }
 export const clockSet = (mode: Clock['mode'], seconds: number): Clock =>
   mode === 'up' ? { mode, running: false, base: seconds, since: null } : { mode, running: false, remaining: seconds, ends_at: null };
+
+// The realtime topic the stream page and the pad listen on for a nudge after
+// each save (no data rides on it: whoever hears it reads the database again).
+export const airTopic = (token: string) => `overlay:${token}`;

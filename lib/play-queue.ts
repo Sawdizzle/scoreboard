@@ -4,7 +4,9 @@
 // and how to look things up (QueueIO), so tests can drop the connection.
 //
 //   * no signal, or a request that hangs past 15 s: keep the item, try again,
-//     slower each time (up to 8 s apart)
+//     slower each time (up to 8 s apart). Every step has its own time limit,
+//     not only the request: a phone waking from sleep can stall before the
+//     request goes out (a sign-in refresh), where the abort signal never reaches.
 //   * a sign-in that lapsed while the phone slept: renew it, try again
 //   * PB409 (the game moved on): if the newer plays on the server carry our
 //     own play ids, they are ours whose reply was lost; skip past them. An
@@ -48,18 +50,34 @@ export type PumpResult = { resync: boolean; failed: { lost: number; error: Queue
 export const newCid = () => (typeof crypto !== 'undefined' && crypto.randomUUID
   ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
 
+// A promise that gives up after ms. The work it stands for may still finish
+// later; the queue's PB409 check finds a play that did.
+export function within<T>(p: PromiseLike<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`timeout after ${ms} ms`)), ms);
+    Promise.resolve(p).then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
+const asError = (e: unknown): QueueError => ({ message: e instanceof Error ? e.message : String(e ?? 'timeout') });
+
 const isOffline = (e: QueueError) => !e.code || /fetch|network|load failed|abort|timeout/i.test(e.message);
 const isLapsed = (e: QueueError) => /PGRST30\d/.test(e.code ?? '') || /JWT/i.test(e.message);
 
 export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks): Promise<PumpResult> {
   const sleep = io.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const limit = io.timeoutMs ?? 15000;
   let wait = 800, resync = false;
+  const backOff = async () => {
+    await sleep(wait);
+    wait = Math.min(wait * 2, 8000);
+  };
   while (st.items.length) {
     hooks.status('sending', st.items.length);
     const it = st.items[0];
     const sentBefore = st.sentOnce.has(it);
     st.sentOnce.add(it);
-    const { data, error } = await io.send(it, st.seq, AbortSignal.timeout(io.timeoutMs ?? 15000));
+    const { data, error } = await within(io.send(it, st.seq, AbortSignal.timeout(limit)), limit + 2000)
+      .catch((e): Sent => ({ data: null, error: asError(e) }));
     if (!error) {
       st.seq = (data as { seq: number }).seq;
       st.items.shift();
@@ -69,13 +87,15 @@ export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks):
     }
     if (isOffline(error) || isLapsed(error)) {
       hooks.status('retry', st.items.length);
-      if (isLapsed(error)) await io.refresh().catch(() => {});
-      await sleep(wait);
-      wait = Math.min(wait * 2, 8000);
+      if (isLapsed(error)) await within(io.refresh(), limit).catch(() => {});
+      await backOff();
       continue;
     }
+    // The checks below read the server; one that fails or hangs is no signal:
+    // keep the item and try it again (it meets the same PB409 and checks again).
     if (error.code === 'PB409' && it.kind === 'play' && it.payload.cid) {
-      const evs = await io.eventsAfter(st.seq);
+      let evs: { seq: number; payload: unknown }[];
+      try { evs = await within(io.eventsAfter(st.seq), limit); } catch { hooks.status('retry', st.items.length); await backOff(); continue; }
       let n = 0, last = st.seq;
       for (const ev of evs) {
         const q = st.items[n];
@@ -91,8 +111,12 @@ export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks):
       }
     }
     if (error.code === 'PB409' && it.kind === 'undo' && sentBefore) {
-      const now = await io.gameSeq();
-      if (now !== null && now === st.seq + 1 && !(await io.hasEvent(now))) {
+      let now: number | null, there = true;
+      try {
+        now = await within(io.gameSeq(), limit);
+        if (now !== null && now === st.seq + 1) there = await within(io.hasEvent(now), limit);
+      } catch { hooks.status('retry', st.items.length); await backOff(); continue; }
+      if (now !== null && now === st.seq + 1 && !there) {
         st.seq = now;
         st.items.shift();
         wait = 800;

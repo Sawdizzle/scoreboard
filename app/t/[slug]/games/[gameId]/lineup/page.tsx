@@ -22,7 +22,15 @@ export default async function LineupPage({ params, searchParams }: {
   const { supabase, team, role } = await loadTeam(slug);
   const game = await getGame(supabase, team.id, gameId);
   if (!game) notFound();
-  const saved = (await getLineups(supabase, game.id))[side];
+  const [lineups, stampRow, channelRow] = await Promise.all([
+    getLineups(supabase, game.id),
+    supabase.from('game_lineups').select('updated_at').eq('game_id', game.id).eq('side', side).maybeSingle<{ updated_at: string }>(),
+    supabase.from('channels').select('token').eq('team_id', team.id).maybeSingle<{ token: string }>(),
+  ]);
+  const saved = lineups[side];
+  // Which saved copy this screen starts from, and the stream's channel the pad listens on.
+  const stamp = stampRow.data?.updated_at ?? null;
+  const token = channelRow.data?.token ?? null;
 
   let pool: PoolPlayer[] = [];
   let initial: Lineup;
@@ -59,7 +67,7 @@ export default async function LineupPage({ params, searchParams }: {
   const run = canRunGames(role);
   return (
     <div className="page" style={{ paddingTop: 6 }}>
-      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} pool={pool} presets={presets}
+      <LineupEditor key={side} slug={slug} gameId={game.id} side={side} initial={initial} stored={!!saved} stamp={stamp} token={token} pool={pool} presets={presets}
         canEdit={run} canRoster={canEditTeam(role)} ai={run && aiOn(await getAllowance(supabase, team.id))}
         back={fromPad ? { href: pad, label: 'Back to the pad' } : { href: `/t/${slug}/games/${game.id}`, label: 'Back to the game' }}
         sides={[

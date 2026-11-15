@@ -9,7 +9,7 @@ import { AtBat, EndCheck, EndGame, GameMenu, InPlay, Pitching, PitchMenu, Runner
 import { FieldView, type Drop } from '@/components/pad/FieldView';
 import { PitchCounts, PlaysSheet, type Log } from '@/components/pad/PlaysSheet';
 import { Decisions, type Decided, type Picks } from '@/components/pad/Decisions';
-import { addRosterPlayer, editBatter, saveLineup } from '@/app/actions';
+import { addRosterPlayer, editBatter, saveLineup, type LineupSaved } from '@/app/actions';
 import { auditGame, type Issue } from '@/lib/audit';
 import type { SummaryEvent, SummaryStat } from '@/lib/summarize';
 import type { LogEvent, LogStat } from '@/lib/plays';
@@ -22,9 +22,9 @@ import { airView } from '@/lib/onair';
 import { shortName } from '@/lib/format';
 import type { SeasonLine } from '@/lib/stats';
 import { browserClient } from '@/lib/supabase/browser';
-import { keep as keepQueue, newCid, pumpQueue, readKept, type QueueItem } from '@/lib/play-queue';
+import { keep as keepQueue, newCid, pumpQueue, readKept, within, type QueueItem } from '@/lib/play-queue';
 import { CONSOLE, useMedia } from '@/lib/use-media';
-import type { FormState, Game, Lineup, LineupBatter, Side, Team } from '@/lib/types';
+import type { Game, Lineup, LineupBatter, Side, Team } from '@/lib/types';
 
 type Line = Partial<Record<StatKey, number>>;
 type Status = Game['status'];
@@ -200,20 +200,43 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     return !(gg.outs | 0) && !(gg.balls | 0) && !(gg.strikes | 0) && !bb.first && !bb.second && !bb.third
       && !(off?.game === game.id && off.seq === at);
   };
+  // When each side's lineup was last saved, as read with it: a lineup saved
+  // from the pad says which copy it changed, so it cannot write over a newer
+  // one (an edit on the lineup screen or another phone). null: no row yet.
+  const lineupAt = useRef<Partial<Record<Side, string | null>>>({});
+  // A reload that failed or hung (no signal on waking): the screen may be
+  // behind the game, so the status light says so and it tries again.
+  const [behind, setBehind] = useState(false);
+  const retryLoad = useRef(0);
+  const reloadRef = useRef<() => void>(() => {});
   const reload = useCallback(async (after = true): Promise<boolean> => {
     const mark = taps.current, acked = acks.current;
-    const [{ data: row }, { data: stats }, { data: lus, error: lusError }] = await Promise.all([
-      sb.from('games').select('live, status, seq, clock').eq('id', game.id).single(),
-      sb.from('game_stats').select('*').eq('game_id', game.id),
-      sb.from('game_lineups').select('side, data').eq('game_id', game.id),
-    ]);
-    if (!row || mark !== taps.current || acked !== acks.current) return false;
+    window.clearTimeout(retryLoad.current);
+    let got3;
+    try {
+      got3 = await within(Promise.all([
+        sb.from('games').select('live, status, seq, clock').eq('id', game.id).single(),
+        sb.from('game_stats').select('*').eq('game_id', game.id),
+        sb.from('game_lineups').select('side, data, updated_at').eq('game_id', game.id),
+      ]), 12000);
+    } catch { got3 = null; }
+    const row = got3?.[0].data;
+    if (!got3 || !row || got3[1].error || got3[2].error) {
+      setBehind(true);
+      if (!document.hidden) retryLoad.current = window.setTimeout(() => reloadRef.current(), 4000);
+      return false;
+    }
+    setBehind(false);
+    if (mark !== taps.current || acked !== acks.current) return false;
+    const [, { data: stats }, { data: lus }] = got3;
     setClock(row.clock ?? null);
-    if (!lusError && lus) {
+    if (lus) {
       const got: Partial<Record<Side, Lineup>> = {};
-      for (const r of lus as { side: Side; data: Lineup }[]) got[r.side] = r.data;
+      const at: Partial<Record<Side, string | null>> = { us: null, them: null };
+      for (const r of lus as { side: Side; data: Lineup; updated_at: string }[]) { got[r.side] = r.data; at[r.side] = r.updated_at; }
       got.us = sameNames(got.us, named.current);
       lineupsNow.current = got;
+      lineupAt.current = at;
     }
     seq.current = row.seq;
     history.current = [];
@@ -223,6 +246,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     return true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sb, game, lineups, regulation]);
+  useEffect(() => { reloadRef.current = () => { if (!queue.current.length && !sending.current) void reload(); }; });
+  useEffect(() => () => window.clearTimeout(retryLoad.current), []);
 
   // The queue is kept on the phone as well, so a reload, a crash or iOS
   // closing the tab in the background does not lose plays that had not sent.
@@ -241,7 +266,9 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       get seq() { return seq.current; }, set seq(v: number) { seq.current = v; },
       sentOnce: sentOnce.current,
     };
-    const { resync, failed } = await pumpQueue(st, {
+    let result: Awaited<ReturnType<typeof pumpQueue>>;
+    try {
+      result = await pumpQueue(st, {
       send: (it, at, stop) => it.kind === 'play'
         ? sb.rpc('apply_play', { p_game: game.id, p_seq: at, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status }).abortSignal(stop)
         : sb.rpc('undo_play', { p_game: game.id, p_seq: at }).abortSignal(stop),
@@ -253,6 +280,16 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       status: (s, n) => { setSync(s); setWaiting(n); },
       saved: () => { acks.current += 1; keep(); nudge(); },
     });
+    } catch {
+      // Nothing in the queue should throw; if it does, the pad must not stay
+      // stuck "sending" with every later tap waiting behind it.
+      sending.current = false;
+      setSync('retry');
+      keep();
+      window.setTimeout(() => void pumpRef.current(), 3000);
+      return;
+    }
+    const { resync, failed } = result;
     if (failed) {
       keep();
       await reload();
@@ -362,6 +399,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     try { r = await editBatter(slug, game.id, side, bid, fix); } catch { return 'That did not save. Check the signal and try again.'; }
     if ('error' in r) return r.error;
     const nb = r.batter;
+    if (r.at) lineupAt.current = { ...lineupAt.current, [side]: r.at };
     const swap = (l: Lineup | undefined) => l && { ...l, batters: (l.batters ?? []).map((x) => (x.bid === bid ? nb : x)) };
     lineupsNow.current = { ...lineupsNow.current, [side]: swap(lineupsNow.current[side]) };
     if (side === 'us') {
@@ -381,11 +419,22 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
   async function saveSide(e: EngineSide, next: Lineup): Promise<string | null> {
     if (!canScore) return 'Your seat cannot change lineups.';
     const side = sides(e);
+    // Which saved copy this change was made on. Not read yet (the pad opened
+    // without signal): read it first rather than save blind.
+    if (lineupAt.current[side] === undefined && !(await reload(false))) return 'No signal: that did not save. Try again.';
     const fd = new FormData();
     fd.set('lineup', JSON.stringify(next));
-    let r: FormState;
-    try { r = await saveLineup(slug, game.id, side, {}, fd); } catch { return 'That did not save. Check the signal and try again.'; }
+    fd.set('base', lineupAt.current[side] ?? '');
+    let r: LineupSaved;
+    try { r = await within(saveLineup(slug, game.id, side, {}, fd), 15000); } catch { return 'That did not save. Check the signal and try again.'; }
+    if (r.stale) {
+      // Someone saved this lineup since the pad read it: show theirs, and the
+      // change is made again on top of it.
+      await reload();
+      return 'The lineup was changed on another phone. The pad now shows the new one: make the change again.';
+    }
     if (r.error) return r.error;
+    lineupAt.current = { ...lineupAt.current, [side]: r.at };
     lineupsNow.current = { ...lineupsNow.current, [side]: next };
     if (side === 'us') named.current = next;
     const v = cur.current;
@@ -703,9 +752,24 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Plays not getting through, or the screen not catching up, for a while with
+  // the phone online: offer to load the pad again. The queue is kept on the
+  // phone, so a reload sends it; this is the force-close, as one tap.
+  const leaving = useRef(false);
+  const stuck = online && (sync === 'retry' || behind);
+  useEffect(() => {
+    if (!stuck) return;
+    const t = window.setTimeout(() => {
+      say(queue.current.length ? 'Plays are not getting through. Your plays are kept on this phone.' : 'The pad has lost touch with the game.',
+        { label: 'Reload pad', run: () => { leaving.current = true; keep(); window.location.reload(); } });
+    }, 30000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stuck]);
+
   // Leaving with plays still waiting would lose them: ask first.
   useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => { if (queue.current.length) e.preventDefault(); };
+    const warn = (e: BeforeUnloadEvent) => { if (queue.current.length && !leaving.current) e.preventDefault(); };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
@@ -851,8 +915,8 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
             </span>
           ))}
         </div>
-        <span className={`pad-sync ${online ? sync : 'retry'}`} role="status"
-          aria-label={!online ? 'Offline: plays are kept and sent when the signal is back' : sync === 'ok' ? 'Saved' : sync === 'sending' ? 'Saving' : 'Waiting for signal'}>
+        <span className={`pad-sync ${online && !(behind && sync === 'ok') ? sync : 'retry'}`} role="status"
+          aria-label={!online ? 'Offline: plays are kept and sent when the signal is back' : sync === 'sending' ? 'Saving' : sync === 'retry' ? 'Waiting for signal' : behind ? 'Not up to date: trying again' : 'Saved'}>
           {waiting > 1 ? waiting : null}
         </span>
       </header>

@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PhotoLineup } from '@/components/PhotoLineup';
-import { addRosterPlayer, saveLineup } from '@/app/actions';
+import { addRosterPlayer, saveLineup, type LineupSaved } from '@/app/actions';
+import { airTopic } from '@/lib/broadcast';
+import { within } from '@/lib/play-queue';
+import { browserClient } from '@/lib/supabase/browser';
 import { ChevronLeft, Cross, Plus } from '@/components/icons';
 import { benchFrom, FIELD, placeBatter, placeFromCard } from '@/lib/lineup';
 import { parseRoster } from '@/lib/roster-parse';
 import { assignSpot, missingPositions, newBid, normalizeTeam, positionOf, setPosition, slotAt, swapBatters } from '@/lib/rules/roster.js';
-import type { FormState, Lineup, LineupBatter, Side } from '@/lib/types';
+import type { Lineup, LineupBatter, Side } from '@/lib/types';
 
 export type PoolPlayer = LineupBatter & { avg?: string };
 
@@ -42,9 +45,17 @@ const placeholders = (n: number): Lineup => ({ batters: Array.from({ length: n }
 //                  back through every change, a whole preset included. Leaving
 //                  waits for the save. `stored` false means `initial` is only a
 //                  suggestion (last game, the roster): it saves on the first
-//                  change, or on "Use this lineup".
-export function LineupEditor({ slug, gameId, side, initial, stored, pool, presets, canEdit, canRoster = false, ai = false, back, sides, next }: {
-  slug: string; gameId: string; side: Side; initial: Lineup; stored: boolean; pool: PoolPlayer[];
+//                  change, or on "Use this lineup". Each save names the copy
+//                  it changed (`stamp`), so a lineup saved meanwhile from the
+//                  pad or another phone is never written over; the pad hears
+//                  of each save at once (`token`, the stream's channel).
+export function LineupEditor({ slug, gameId, side, initial, stored, stamp = null, token = null, pool, presets, canEdit, canRoster = false, ai = false, back, sides, next }: {
+  slug: string; gameId: string; side: Side; initial: Lineup; stored: boolean;
+  // When the saved lineup was last saved (null: none saved yet).
+  stamp?: string | null;
+  // The team's stream token: the pad listens on its channel.
+  token?: string | null;
+  pool: PoolPlayer[];
   presets: { label: string; lineup: Lineup }[]; canEdit: boolean;
   // This seat can put a new kid on the roster (organizer, head coach).
   canRoster?: boolean;
@@ -96,6 +107,19 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
   const busy = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState('');
+  // The copy the next save changes: '' when none was saved, null to save
+  // without the check (a save answered without one).
+  const base = useRef<string | null>(stamp ?? '');
+  // Saved from somewhere else since this screen read it: saving stops until
+  // the newer one is loaded.
+  const [stale, setStale] = useState(false);
+  const reloading = useRef(false);
+  const tellPad = useCallback(() => {
+    if (!token) return;
+    const sb = browserClient();
+    const c = sb.channel(airTopic(token));
+    void c.httpSend('tick', {}).catch(() => {}).finally(() => { void sb.removeChannel(c); });
+  }, [token]);
   const flush = useCallback(async () => {
     if (busy.current) return;
     busy.current = true;
@@ -105,9 +129,13 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
         const body = want.current;
         const fd = new FormData();
         fd.set('lineup', body);
-        let r: FormState;
-        try { r = await saveLineup(slug, gameId, side, {}, fd); } catch { r = { error: 'No signal: not saved yet. Tap Save to try again.' }; }
+        if (base.current !== null) fd.set('base', base.current);
+        let r: LineupSaved;
+        try { r = await within(saveLineup(slug, gameId, side, {}, fd), 15000); } catch { r = { error: 'No signal: not saved yet. Tap Save to try again.' }; }
+        if (r.stale) setStale(true);
         if (r.error) { setSaveErr(r.error); break; }
+        base.current = r.at ?? null;
+        tellPad();
         savedRef.current = body;
         setSaved(body);
         setSaveErr('');
@@ -116,21 +144,21 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
       busy.current = false;
       setSaving(false);
     }
-  }, [slug, gameId, side]);
+  }, [slug, gameId, side, tellPad]);
   useEffect(() => {
     want.current = json;
-    if (!canEdit || !touched || json === savedRef.current) return;
+    if (!canEdit || !touched || stale || json === savedRef.current) return;
     const t = window.setTimeout(() => void flush(), 600);
     return () => window.clearTimeout(t);
-  }, [json, touched, canEdit, flush]);
+  }, [json, touched, canEdit, stale, flush]);
   useEffect(() => {
-    const again = () => { if (want.current !== savedRef.current) void flush(); };
+    const again = () => { if (want.current !== savedRef.current && !stale) void flush(); };
     window.addEventListener('online', again);
     return () => window.removeEventListener('online', again);
-  }, [flush]);
+  }, [flush, stale]);
   useEffect(() => {
     if (!dirty || !touched) return;
-    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    const warn = (e: BeforeUnloadEvent) => { if (!reloading.current) e.preventDefault(); };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty, touched]);
@@ -544,7 +572,9 @@ export function LineupEditor({ slug, gameId, side, initial, stored, pool, preset
           <div className="save-bar">
             <button type="button" className="btn btn-quiet" onClick={undo} disabled={!hist.length}>Undo</button>
             <span className="sub" role="status">{cursor === null && msg ? msg : status}</span>
-            {dirty && (!touched || saveErr)
+            {stale
+              ? <button type="button" className="btn btn-primary" onClick={() => { reloading.current = true; window.location.reload(); }}>Load the newer one</button>
+              : dirty && (!touched || saveErr)
               ? <button type="button" className="btn btn-primary" onClick={saveNow} disabled={saving}>{touched ? 'Save' : 'Use this lineup'}</button>
               : <Link href={next.href} onNavigate={(e) => guard(e, next.href)} className="btn btn-primary">{next.label}</Link>}
           </div>
