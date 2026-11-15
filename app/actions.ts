@@ -767,7 +767,12 @@ export async function deleteOpponent(slug: string, id: string, _: FormState): Pr
   return { ok: 'Removed.' };
 }
 
-export async function saveLineup(slug: string, gameId: string, side: 'us' | 'them', _: FormState, fd: FormData): Promise<FormState> {
+// `base` (optional): when the lineup this phone changed was saved, as it read
+// it ('' when it read no lineup). The save then goes through only if nobody
+// saved since, so a pad or lineup screen holding an old copy cannot write over
+// a newer one. `at` comes back for the next save.
+export type LineupSaved = FormState & { at?: string; stale?: boolean };
+export async function saveLineup(slug: string, gameId: string, side: 'us' | 'them', _: FormState, fd: FormData): Promise<LineupSaved> {
   if (side !== 'us' && side !== 'them') return { error: 'Pick a side.' };
   let raw: unknown;
   try { raw = JSON.parse(String(fd.get('lineup') ?? '')); } catch { return { error: 'The lineup did not come through. Try Save again.' }; }
@@ -779,9 +784,30 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   if (!game) return { error: 'That game is gone.' };
   // Update, else insert: an upsert would also rewrite game_id and side, which
   // the grants keep fixed once a lineup exists.
-  const up = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('side');
-  let error = up.error;
-  if (!error && !up.data?.length) error = (await supabase.from('game_lineups').insert({ game_id: gameId, side, data: lineup })).error;
+  const base = fd.get('base');
+  const changed = { error: 'This lineup was changed on another phone since you opened it. Load the newer one and make your change again.', stale: true };
+  let at: string | undefined;
+  let error;
+  if (typeof base === 'string' && base) {
+    const up = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).eq('updated_at', base).select('updated_at');
+    if (up.error) error = up.error;
+    else if (!up.data?.length) return changed;
+    else at = (up.data[0] as { updated_at: string }).updated_at;
+  } else if (base === '') {
+    const ins = await supabase.from('game_lineups').insert({ game_id: gameId, side, data: lineup }).select('updated_at').single();
+    if (ins.error?.code === '23505') return changed;
+    error = ins.error;
+    at = (ins.data as { updated_at: string } | null)?.updated_at;
+  } else {
+    const up = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('updated_at');
+    error = up.error;
+    at = (up.data?.[0] as { updated_at: string } | undefined)?.updated_at;
+    if (!error && !up.data?.length) {
+      const ins = await supabase.from('game_lineups').insert({ game_id: gameId, side, data: lineup }).select('updated_at').single();
+      error = ins.error;
+      at = (ins.data as { updated_at: string } | null)?.updated_at;
+    }
+  }
   if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
   // The other side's lineup is kept for the next time we play them.
   // Anyone new in it joins their roster on the Opponents screen; the roster's
@@ -803,7 +829,7 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
     }
   }
   revalidatePath(`/t/${slug}`, 'layout');
-  return { ok: 'Lineup saved.' };
+  return { ok: 'Lineup saved.', at };
 }
 
 // One batter's number and name, fixed from the pad mid-game. Our own player is
@@ -812,7 +838,7 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
 // lineup gets the new copy, and the pad gets it back to show at once.
 export type BatterEdit = { num: string; first?: string; last?: string; name?: string };
 export async function editBatter(slug: string, gameId: string, side: 'us' | 'them', bid: string, input: BatterEdit):
-  Promise<{ error: string } | { ok: string; batter: LineupBatter }> {
+  Promise<{ error: string } | { ok: string; batter: LineupBatter; at?: string }> {
   if (side !== 'us' && side !== 'them') return { error: 'Pick a side.' };
   const num = String(input?.num ?? '').trim().replace(/^#/, '');
   if (!/^\d{0,3}$/.test(num)) return { error: 'A jersey number is up to three digits.' };
@@ -845,11 +871,11 @@ export async function editBatter(slug: string, gameId: string, side: 'us' | 'the
 
   const lineup = cleanLineup({ ...row.data, batters: row.data.batters.map((b, i) => (i === at ? batter : b)) });
   if (!lineup) return { error: 'Something in that lineup is not valid. Reload and try again.' };
-  const { data: saved, error } = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('side');
+  const { data: saved, error } = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('updated_at');
   if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
   if (!saved.length) return { error: 'Your seat cannot set lineups.' };
   revalidatePath(`/t/${slug}`, 'layout');
-  return { ok: 'Saved.', batter };
+  return { ok: 'Saved.', batter, at: (saved[0] as { updated_at: string }).updated_at };
 }
 
 // ---- Recaps -------------------------------------------------------------------
