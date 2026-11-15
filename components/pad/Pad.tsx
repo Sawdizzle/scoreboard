@@ -16,7 +16,7 @@ import type { LogEvent, LogStat } from '@/lib/plays';
 import { brandOf, opponentBrand, TeamMark } from '@/components/TeamBrand';
 import * as L from '@/lib/rules/logic.js';
 import { assignSpot, newBid, normalizeTeam, positionOf } from '@/lib/rules/roster.js';
-import { engineGame, gameOver, lastPlayText, onPlay, orderChange, pitcherChange, record, runnersOf, sideOf, tonight, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
+import { engineGame, gameOver, lastPlayText, onPlay, orderChange, pitcherChange, record, runnersOf, sideOf, tonight, PAD_STAT_COLS, type EngineSide, type Res, type StatKey, type StatRow } from '@/lib/scoring';
 import { mergeBroadcast, type Broadcast, type BroadcastPatch } from '@/lib/broadcast';
 import { airView } from '@/lib/onair';
 import { shortName } from '@/lib/format';
@@ -216,7 +216,7 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
     try {
       got3 = await within(Promise.all([
         sb.from('games').select('live, status, seq, clock').eq('id', game.id).single(),
-        sb.from('game_stats').select('*').eq('game_id', game.id),
+        sb.from('game_stats').select(PAD_STAT_COLS).eq('game_id', game.id),
         sb.from('game_lineups').select('side, data, updated_at').eq('game_id', game.id),
       ]), 12000);
     } catch { got3 = null; }
@@ -272,6 +272,10 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
       send: (it, at, stop) => it.kind === 'play'
         ? sb.rpc('apply_play', { p_game: game.id, p_seq: at, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: it.rows, p_status: it.status }).abortSignal(stop)
         : sb.rpc('undo_play', { p_game: game.id, p_seq: at }).abortSignal(stop),
+      sendPlays: (its, at, stop) => sb.rpc('apply_plays', {
+        p_game: game.id, p_seq: at,
+        p_items: its.map((it) => ({ type: it.type, patch: it.patch, payload: it.payload, stats: it.rows, status: it.status })),
+      }).abortSignal(stop),
       eventsAfter: async (at) => ((await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', at).order('seq')).data ?? []) as { seq: number; payload: unknown }[],
       gameSeq: async () => ((await sb.from('games').select('seq').eq('id', game.id).single()).data?.seq as number | undefined) ?? null,
       hasEvent: async (at) => !!(await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', at).maybeSingle()).data,

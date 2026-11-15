@@ -197,3 +197,98 @@ test('a lapsed sign-in whose refresh hangs does not hold the queue', async () =>
   assert.equal(r.failed, null);
   assert.equal(db.seq, 1);
 });
+
+// ---- apply_plays: everything waiting in one request -------------------------
+// The fake's apply_plays: all or nothing, like the transaction on the server.
+// A play whose cid starts with "bad" is refused (a row the database rejects).
+function batched(db: ReturnType<typeof fakeDb>) {
+  const calls: number[] = [];
+  const single = db.io.send.bind(db.io);
+  db.io.send = async (it, at, signal) => {
+    if (it.kind === 'play' && it.payload.cid?.startsWith('bad')) return { data: null, error: { code: 'P0001', message: 'That play could not be read.' } };
+    return single(it, at, signal);
+  };
+  db.io.sendPlays = async (items, at) => {
+    calls.push(items.length);
+    const f = db.faults.shift();
+    if (f === 'offline') return { data: null, error: { message: 'TypeError: Failed to fetch' } };
+    if (at !== db.seq) return { data: null, error: { code: 'PB409', message: 'The game moved on.' } };
+    if (items.some((it) => it.payload.cid?.startsWith('bad'))) return { data: null, error: { code: 'P0001', message: 'That play could not be read.' } };
+    const results = items.map((it) => { db.seq += 1; db.events.push({ seq: db.seq, payload: it.payload }); return { seq: db.seq }; });
+    if (f === 'lost') return { data: null, error: { message: 'TypeError: Load failed' } };
+    return { data: { seq: db.seq, results }, error: null };
+  };
+  return calls;
+}
+
+test('plays waiting together go in one request, and each one is reported saved', async () => {
+  const db = fakeDb();
+  const calls = batched(db);
+  const st = state([play('a'), play('b'), play('c')]);
+  const { log, h } = hooks();
+  const r = await pumpQueue(st, db.io, h);
+  assert.deepEqual(r, { resync: false, failed: null });
+  assert.deepEqual(calls, [3]);
+  assert.equal(db.sends, 0);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'b', 'c']);
+  assert.equal(st.seq, 3);
+  assert.equal(log.filter((x) => x === 'saved').length, 3);
+});
+
+test('an undo goes alone: plays before it batch, plays after it batch again', async () => {
+  const db = fakeDb();
+  const calls = batched(db);
+  const st = state([play('a'), play('b'), { kind: 'undo' }, play('c'), play('d')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  assert.deepEqual(calls, [2, 2]);
+  assert.equal(db.sends, 1);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'c', 'd']);
+  assert.equal(st.seq, 5);
+});
+
+test('a batch whose reply was lost is found by its ids and not sent twice', async () => {
+  const db = fakeDb();
+  const calls = batched(db);
+  db.faults.push('offline', 'lost');
+  const st = state([play('a'), play('b'), play('c')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  // Offline, then saved with the reply lost, then PB409 and the ids match.
+  assert.deepEqual(calls, [3, 3, 3]);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'b', 'c']);
+  assert.equal(st.seq, 3);
+  assert.equal(st.items.length, 0);
+});
+
+test('a batch on an old seq is refused whole: the queue drops as before', async () => {
+  const db = fakeDb();
+  batched(db);
+  db.other();
+  const st = state([play('a'), play('b')], 0);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed?.lost, 2);
+  assert.equal(r.failed?.error.code, 'PB409');
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['theirs']);
+});
+
+test('a bad play in a batch: the good ones before it still save, one at a time', async () => {
+  const db = fakeDb();
+  const calls = batched(db);
+  const st = state([play('a'), play('b'), play('bad'), play('c')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.deepEqual(calls, [4]);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'b']);
+  assert.equal(r.failed?.lost, 2);
+  assert.equal(r.failed?.error.code, 'P0001');
+});
+
+test('a server without apply_plays yet: the pad falls back to one play per request', async () => {
+  const db = fakeDb();
+  db.io.sendPlays = async () => ({ data: null, error: { code: 'PGRST202', message: 'Could not find the function public.apply_plays' } });
+  const st = state([play('a'), play('b')]);
+  const r = await pumpQueue(st, db.io, hooks().h);
+  assert.equal(r.failed, null);
+  assert.equal(db.sends, 2);
+  assert.deepEqual(db.events.map((e) => e.payload.cid), ['a', 'b']);
+});

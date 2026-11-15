@@ -108,6 +108,10 @@ export function ScorePad({ slug, team, game, canScore, canWrite = false, channel
       send: (it, at, stop) => it.kind === 'play'
         ? sb.rpc('apply_play', { p_game: game.id, p_seq: at, p_type: it.type, p_patch: it.patch, p_payload: it.payload, p_stats: [], p_status: it.status }).abortSignal(stop)
         : sb.rpc('undo_play', { p_game: game.id, p_seq: at }).abortSignal(stop),
+      sendPlays: (its, at, stop) => sb.rpc('apply_plays', {
+        p_game: game.id, p_seq: at,
+        p_items: its.map((it) => ({ type: it.type, patch: it.patch, payload: it.payload, stats: [], status: it.status })),
+      }).abortSignal(stop),
       eventsAfter: async (at) => ((await sb.from('game_events').select('seq, payload').eq('game_id', game.id).gt('seq', at).order('seq')).data ?? []) as { seq: number; payload: unknown }[],
       gameSeq: async () => ((await sb.from('games').select('seq').eq('id', game.id).single()).data?.seq as number | undefined) ?? null,
       hasEvent: async (at) => !!(await sb.from('game_events').select('id').eq('game_id', game.id).eq('seq', at).maybeSingle()).data,

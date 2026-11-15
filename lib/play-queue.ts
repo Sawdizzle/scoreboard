@@ -3,7 +3,7 @@
 // ScorePad. No React and no Supabase in here: the pad hands in how to send
 // and how to look things up (QueueIO), so tests can drop the connection.
 //
-//   * no signal, or a request that hangs past 15 s: keep the item, try again,
+//   * no signal, or a request that hangs past 6 s: keep the item, try again,
 //     slower each time (up to 8 s apart). Every step has its own time limit,
 //     not only the request: a phone waking from sleep can stall before the
 //     request goes out (a sign-in refresh), where the abort signal never reaches.
@@ -14,16 +14,25 @@
 //     of that number. Anything else: drop the queue and say so.
 //   * the queue is kept on the phone too (keep / readKept), so a reload or
 //     iOS closing the tab does not lose plays that had not sent
+//   * plays waiting together go in one request (sendPlays, apply_plays) when
+//     the pad offers it: one round trip for the lot instead of one each. The
+//     batch is all or nothing on the server, so PB409 and a lost reply work as
+//     above. Any other refusal sends the rest one at a time, so the good plays
+//     still save and only the bad one fails.
 
 export type QueueItem =
   | { kind: 'play'; type: string; patch: object; payload: { cid?: string } & Record<string, unknown>; rows: unknown[]; status: string | null }
   | { kind: 'undo' };
+export type PlayItem = Extract<QueueItem, { kind: 'play' }>;
 export type QueueError = { code?: string; message: string };
 export type Sent = { data: unknown; error: QueueError | null };
 
 export type QueueIO = {
   // apply_play or undo_play, on top of seq.
   send(item: QueueItem, seq: number, signal: AbortSignal): Promise<Sent>;
+  // apply_plays: several plays in order, on top of seq, in one request.
+  // data is { seq, results: [one apply_play answer per play] }.
+  sendPlays?(items: PlayItem[], seq: number, signal: AbortSignal): Promise<Sent>;
   // The server's events after seq, oldest first.
   eventsAfter(seq: number): Promise<{ seq: number; payload: unknown }[]>;
   gameSeq(): Promise<number | null>;
@@ -60,6 +69,20 @@ export function within<T>(p: PromiseLike<T>, ms: number): Promise<T> {
 }
 const asError = (e: unknown): QueueError => ({ message: e instanceof Error ? e.message : String(e ?? 'timeout') });
 
+// Most plays one request carries. A phone that was offline for an inning may
+// hold more; they go in the next request.
+export const MAX_BATCH = 20;
+// The plays at the front of the queue that can go together: up to an undo
+// (which goes alone) or a play with no id (whose lost reply could not be found).
+const leadingPlays = (items: QueueItem[]) => {
+  const out: PlayItem[] = [];
+  for (const it of items) {
+    if (it.kind !== 'play' || !it.payload.cid || out.length >= MAX_BATCH) break;
+    out.push(it);
+  }
+  return out;
+};
+
 const isOffline = (e: QueueError) => !e.code || /fetch|network|load failed|abort|timeout/i.test(e.message);
 const isLapsed = (e: QueueError) => /PGRST30\d/.test(e.code ?? '') || /JWT/i.test(e.message);
 
@@ -68,7 +91,7 @@ export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks):
   // apply_play is one small RPC: one that has not answered in 6 s is a stall
   // (often a phone just woken), and every tap behind it waits on it.
   const limit = io.timeoutMs ?? 6000;
-  let wait = 800, resync = false;
+  let wait = 800, resync = false, batching = !!io.sendPlays;
   const backOff = async () => {
     await sleep(wait);
     wait = Math.min(wait * 2, 8000);
@@ -77,9 +100,21 @@ export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks):
     hooks.status('sending', st.items.length);
     const it = st.items[0];
     const sentBefore = st.sentOnce.has(it);
-    st.sentOnce.add(it);
-    const { data, error } = await within(io.send(it, st.seq, AbortSignal.timeout(limit)), limit + 2000)
+    const run = batching ? leadingPlays(st.items) : [];
+    const batch = run.length > 1 && !!io.sendPlays;
+    for (const x of batch ? run : [it]) st.sentOnce.add(x);
+    const stop = AbortSignal.timeout(limit);
+    const call = batch ? io.sendPlays!(run, st.seq, stop) : io.send(it, st.seq, stop);
+    const { data, error } = await within(call, limit + 2000)
       .catch((e): Sent => ({ data: null, error: asError(e) }));
+    if (!error && batch) {
+      const d = data as { seq: number; results?: unknown[] };
+      st.seq = d.seq;
+      st.items.splice(0, run.length);
+      wait = 800;
+      run.forEach((x, i) => hooks.saved(x, d.results?.[i] ?? null));
+      continue;
+    }
     if (!error) {
       st.seq = (data as { seq: number }).seq;
       st.items.shift();
@@ -127,6 +162,9 @@ export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks):
         continue;
       }
     }
+    // A batch refused for anything but the seq (a bad play, or a server that
+    // has no apply_plays yet): send one at a time from here on.
+    if (batch && error.code !== 'PB409') { batching = false; continue; }
     const lost = st.items.length;
     st.items.splice(0);
     return { resync, failed: { lost, error } };

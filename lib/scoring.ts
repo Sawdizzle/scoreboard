@@ -36,6 +36,13 @@ export type StatKey =
   | 'p_outs' | 'p_bf' | 'p_pitches' | 'p_h' | 'p_r' | 'p_er' | 'p_bb' | 'p_so' | 'p_hbp' | 'p_wp' | 'p_bk' | 'p_pik'
   | 'f_po' | 'f_a' | 'f_e' | 'c_sb' | 'c_cs' | 'c_pik' | 'c_pb';
 
+// The game_stats columns the pad adds up for tonight's lines: what tonight()
+// writes under the batter and what the On Air pitcher card shows (airView).
+// The pad reads every row of the game on each reload, one row per pitch, so
+// it asks for these and not the whole row.
+export const PAD_STAT_COLS =
+  'side, bid, b_pa, b_ab, b_h, b_2b, b_3b, b_hr, b_rbi, b_bb, b_hbp, b_so, b_sb, p_outs, p_r, p_so, p_pitches';
+
 export const START_LIVE = {
   inning: 1, half: 'top', balls: 0, strikes: 0, outs: 0, bases: { first: false, second: false, third: false },
   home_score: 0, away_score: 0, home_hits: 0, away_hits: 0, home_errors: 0, away_errors: 0, line_score: [], state: {},

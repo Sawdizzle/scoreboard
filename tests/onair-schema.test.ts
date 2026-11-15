@@ -80,7 +80,7 @@ test('the feed names our players as the public may see them, and guests by numbe
   assert.deepEqual(f.lineups.them.batters, [{ bid: 'x1', num: '19', name: '' }]);
 });
 
-test('scoring a play puts that game on the stream, with tonight, the at-bats and the season', async () => {
+test('scoring a play puts that game on the stream, with tonight, the at-bats and (from overlay_season) the season', async () => {
   await t.as('owner', `select import_season_stats($1, $2::jsonb)`, [season, JSON.stringify([{ player_id: p7, b_g: 10, b_pa: 30, b_ab: 27, b_h: 9 }])]);
   const play = (g: string, seq: number, type: string, payload: object, stats: object[]) =>
     t.as('scorer', `select apply_play($1, $2, $3, '{"balls":0}'::jsonb, $4::jsonb, $5::jsonb, null)`, [g, seq, type, JSON.stringify(payload), JSON.stringify(stats)]);
@@ -98,7 +98,10 @@ test('scoring a play puts that game on the stream, with tonight, the at-bats and
   assert.deepEqual([mine.side, mine.b_pa, mine.b_h, mine.b_2b], ['us', 1, 1, 1]);
   assert.equal(f.tonight.find((r: Feed) => r.bid === 'x1').p_pitches, 2);
   assert.deepEqual(f.pas, [{ side: 'us', bid: p7, inning: 1, kind: 'H2', code: '' }]);
-  const line = f.season_stats.find((r: Feed) => r.player_id === p7);
+  // Season lines come from overlay_season now, not the per-pitch feed.
+  assert.deepEqual(f.season_stats, []);
+  const [{ s }] = await t.as<{ s: Feed }>(null, `select overlay_season($1) s`, [token]);
+  const line = s.season_stats.find((r: Feed) => r.player_id === p7);
   assert.deepEqual([line.b_g, line.b_ab, line.b_h], [11, 28, 10]);
 });
 
