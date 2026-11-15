@@ -6,6 +6,7 @@
 // before it gets that far.
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { adminClient } from '@/lib/supabase/admin';
 import { listOpponents, loadTeam, padScoredGames, safeNext } from '@/lib/data';
@@ -812,7 +813,8 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
   // The other side's lineup is kept for the next time we play them.
   // Anyone new in it joins their roster on the Opponents screen; the roster's
   // own players, names and positions stay as they were set there.
-  if (side === 'them' && !game.opponent_team_id) {
+  // Done after the reply: the phone waiting on this save does not wait on it.
+  if (side === 'them' && !game.opponent_team_id) after(async () => {
     const list = await listOpponents(supabase, team.id);
     const known = list.find((o) => o.id === game.opponent_id) ?? list.find((o) => o.name.toLowerCase() === game.opponent_name.toLowerCase());
     if (known) {
@@ -827,8 +829,10 @@ export async function saveLineup(slug: string, gameId: string, side: 'us' | 'the
       const { data: made } = await supabase.from('opponents').insert({ team_id: team.id, name: game.opponent_name, abbr: game.opponent_abbr, color: game.opponent_color, roster: lineup }).select('id').single();
       if (made) await supabase.from('games').update({ opponent_id: made.id }).eq('id', game.id);
     }
-  }
-  revalidatePath(`/t/${slug}`, 'layout');
+  });
+  // No revalidatePath: it made Next render the whole lineup page again inside
+  // this reply, and both callers already hold the lineup they saved. Pages
+  // under the team load fresh on the next visit anyway.
   return { ok: 'Lineup saved.', at };
 }
 
@@ -843,9 +847,11 @@ export async function editBatter(slug: string, gameId: string, side: 'us' | 'the
   const num = String(input?.num ?? '').trim().replace(/^#/, '');
   if (!/^\d{0,3}$/.test(num)) return { error: 'A jersey number is up to three digits.' };
   const { supabase, team } = await loadTeam(slug);
-  const { data: game } = await supabase.from('games').select('id').eq('team_id', team.id).eq('id', gameId).maybeSingle();
+  const [{ data: game }, { data: row }] = await Promise.all([
+    supabase.from('games').select('id').eq('team_id', team.id).eq('id', gameId).maybeSingle(),
+    supabase.from('game_lineups').select('data').eq('game_id', gameId).eq('side', side).maybeSingle<{ data: Lineup }>(),
+  ]);
   if (!game) return { error: 'That game is gone.' };
-  const { data: row } = await supabase.from('game_lineups').select('data').eq('game_id', gameId).eq('side', side).maybeSingle<{ data: Lineup }>();
   const at = row?.data?.batters?.findIndex((b) => b.bid === bid) ?? -1;
   if (!row || at < 0) return { error: 'That batter is not in the lineup any more. Reload the pad.' };
 
@@ -874,7 +880,6 @@ export async function editBatter(slug: string, gameId: string, side: 'us' | 'the
   const { data: saved, error } = await supabase.from('game_lineups').update({ data: lineup }).eq('game_id', gameId).eq('side', side).select('updated_at');
   if (error) return { error: error.code === '42501' ? 'Your seat cannot set lineups.' : say(error) };
   if (!saved.length) return { error: 'Your seat cannot set lineups.' };
-  revalidatePath(`/t/${slug}`, 'layout');
   return { ok: 'Saved.', batter, at: (saved[0] as { updated_at: string }).updated_at };
 }
 

@@ -22,21 +22,25 @@ export default async function PadPage({ params, searchParams }: { params: Promis
   const { supabase, team, role } = await loadTeam(slug);
   const game = await getGame(supabase, team.id, gameId);
   if (!game) notFound();
-  const [lineups, seasons, seqRow, stats, players] = await Promise.all([
+  // Everything at once: each read waited on the one before it, and on a ball
+  // field's signal every wait shows.
+  const [lineups, seasons, seqRow, stats, players, { data: channel }, allowance, gameLines] = await Promise.all([
     getLineups(supabase, game.id),
     listSeasons(supabase, team.id),
     supabase.from('games').select('seq').eq('id', game.id).single(),
     supabase.from('game_stats').select(PAD_STAT_COLS).eq('game_id', game.id),
     listPlayers(supabase, team.id),
+    // Before the Stage 3 migration there is no channel; the pad then has no On Air.
+    supabase.from('channels').select(CHANNEL_COLS).eq('team_id', team.id).maybeSingle<Channel>(),
+    canWriteRecaps(role) ? getAllowance(supabase, team.id) : null,
+    game.season_id ? seasonStats(supabase, team.id, game.season_id) : null,
   ]);
   // Our batters under the team's name format, whatever it was when the lineup was saved.
   if (lineups.us) lineups.us = withRosterNames(lineups.us, players, team.name_format);
   const season = seasons.find((s) => s.id === game.season_id) ?? seasons.find((s) => s.is_current);
-  const lines = season ? await seasonStats(supabase, team.id, season.id) : [];
-  // Before the Stage 3 migration there is no channel; the pad then has no On Air.
-  const { data: channel } = await supabase.from('channels').select(CHANNEL_COLS).eq('team_id', team.id).maybeSingle<Channel>();
+  const lines = gameLines ?? (season ? await seasonStats(supabase, team.id, season.id) : []);
   // The blurb button: coaches, and only when the team's plan has AI on.
-  const canWrite = canWriteRecaps(role) && aiOn(await getAllowance(supabase, team.id));
+  const canWrite = !!allowance && aiOn(allowance);
   if (game.sport !== 'baseball') {
     return <ScorePad slug={slug} team={team} game={{ ...(game as Game), seq: (seqRow.data as { seq: number } | null)?.seq ?? 0 }}
       canScore={canRunGames(role)} canWrite={canWrite} channel={channel ?? null} canAir={canBroadcast(role)} />;

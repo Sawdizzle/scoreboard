@@ -319,7 +319,14 @@ export function Pad({ slug, team, game, lineups, season, tonightRows, regulation
 
   // Catch up with the server when it is safe to: nothing of ours waiting.
   const idle = () => !queue.current.length && !sending.current;
-  useEffect(() => { follow.current = () => { if (!queue.current.length && !sending.current) void reload(); }; });
+  const followT = useRef(0);
+  useEffect(() => {
+    follow.current = () => {
+      window.clearTimeout(followT.current);
+      followT.current = window.setTimeout(() => { if (!queue.current.length && !sending.current) void reload(); }, 400);
+    };
+  });
+  useEffect(() => () => window.clearTimeout(followT.current), []);
   useEffect(() => {
     const back = () => {
       setOnline(navigator.onLine);

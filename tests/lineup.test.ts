@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { benchFrom, cleanLineup, lineupFromLast, lineupFromRoster, lineupStatus, placeBatter, placeFromCard } from '../lib/lineup.ts';
+import { benchFrom, cleanLineup, lineupFromLast, lineupFromRoster, lineupStatus, moveBatter, placeBatter, placeFromCard } from '../lib/lineup.ts';
 import type { Player, Position } from '../lib/types.ts';
 
 const P = (id: string, number: string, first: string, positions: Position[], active = true): Player =>
@@ -93,4 +93,16 @@ test('card: a new kid goes in at the cursor; done benches whoever was not on the
   const done = benchFrom(t, 2);
   assert.deepEqual(done.batters.map((b) => b.bid), ['a', 'n']);
   assert.deepEqual(done.positions, { SS: 'a', C: 'n' });
+});
+
+test('drag in the order: the batter lands at the new spot, the rest slide, positions follow', () => {
+  const l = lineupFromRoster(roster); // 3 7 9 12 21
+  const down = moveBatter(l, 0, 3);
+  assert.deepEqual(down.batters.map((b) => b.num), ['7', '9', '12', '3', '21']);
+  assert.deepEqual(down.positions, l.positions);
+  const up = moveBatter(l, 4, 1);
+  assert.deepEqual(up.batters.map((b) => b.num), ['3', '21', '7', '9', '12']);
+  assert.deepEqual(moveBatter(l, 2, 2).batters, l.batters);
+  assert.deepEqual(moveBatter(l, 1, 99).batters.map((b) => b.num), ['3', '9', '12', '21', '7']);
+  assert.deepEqual(moveBatter(l, 9, 0).batters, l.batters);
 });

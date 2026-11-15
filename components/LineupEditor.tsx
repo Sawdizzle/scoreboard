@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { PhotoLineup } from '@/components/PhotoLineup';
 import { addRosterPlayer, saveLineup, type LineupSaved } from '@/app/actions';
 import { airTopic } from '@/lib/broadcast';
 import { within } from '@/lib/play-queue';
 import { browserClient } from '@/lib/supabase/browser';
 import { ChevronLeft, Cross, Plus } from '@/components/icons';
-import { benchFrom, FIELD, placeBatter, placeFromCard } from '@/lib/lineup';
+import { benchFrom, FIELD, moveBatter, placeBatter, placeFromCard } from '@/lib/lineup';
 import { parseRoster } from '@/lib/roster-parse';
 import { assignSpot, missingPositions, newBid, normalizeTeam, positionOf, setPosition, slotAt, swapBatters } from '@/lib/rules/roster.js';
 import type { Lineup, LineupBatter, Side } from '@/lib/types';
@@ -334,6 +334,82 @@ export function LineupEditor({ slug, gameId, side, initial, stored, stamp = null
   }
   // Keep the kid just placed in sight above the keypad.
   const rows = useRef<HTMLOListElement>(null);
+
+  // ---- Drag to reorder -----------------------------------------------------
+  // The grip on each row picks the player up; the others slide out of the way
+  // and letting go drops them there. Rows move by style while the finger is
+  // down, so a drag never re-renders the screen; one update at the drop.
+  const drag = useRef<{ from: number; over: number; y0: number; mids: number[]; h: number; id: number; raf: number; y: number } | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const paint = () => {
+    const d = drag.current;
+    const list = rows.current;
+    if (!d || !list || !d.mids.length) return;
+    const dy = d.y + window.scrollY - d.y0;
+    const mid = d.mids[d.from] + dy;
+    let over = 0;
+    d.mids.forEach((m, j) => { if (j !== d.from && m < mid) over++; });
+    d.over = over;
+    Array.from(list.children).forEach((el, j) => {
+      const s = (el as HTMLElement).style;
+      if (j === d.from) { s.transform = `translateY(${dy}px)`; return; }
+      const shift = d.from < over && j > d.from && j <= over ? -d.h : d.from > over && j >= over && j < d.from ? d.h : 0;
+      s.transform = shift ? `translateY(${shift}px)` : '';
+    });
+  };
+  // Near the top or the save bar, the page scrolls on its own so a kid can go
+  // from ninth to first on a phone.
+  const edge = () => {
+    const d = drag.current;
+    if (!d) return;
+    const dock = document.querySelector('.lineup-dock')?.getBoundingClientRect().top ?? window.innerHeight;
+    const v = d.y < 90 ? -(90 - d.y) / 6 : d.y > dock - 70 ? (d.y - (dock - 70)) / 6 : 0;
+    if (v) { window.scrollBy(0, Math.max(-14, Math.min(14, v))); paint(); }
+    d.raf = requestAnimationFrame(edge);
+  };
+  function grab(e: RPointerEvent, i: number) {
+    if (!canEdit || cursor !== null || drag.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
+    // An open row closes first; the rows are measured once it has.
+    setSel({});
+    drag.current = { from: i, over: i, y0: 0, y: e.clientY, id: e.pointerId, raf: 0, mids: [], h: 52 };
+    setDragging(i);
+    if (sel.idx === undefined) measure(); // nothing to close: measure now
+    drag.current.raf = requestAnimationFrame(() => { measure(); edge(); });
+  }
+  function measure() {
+    const d = drag.current;
+    const list = rows.current;
+    if (!d || !list || d.mids.length) return;
+    const boxes = Array.from(list.children).map((el) => el.getBoundingClientRect());
+    d.mids = boxes.map((b) => b.top + window.scrollY + b.height / 2);
+    d.h = boxes[d.from]?.height ?? 52;
+    d.y0 = d.y + window.scrollY;
+  }
+  function slide(e: RPointerEvent) {
+    const d = drag.current;
+    if (!d || e.pointerId !== d.id) return;
+    measure(); // no-op once measured; a move comes after the open row has closed
+    d.y = e.clientY;
+    paint();
+  }
+  function letGo(e: RPointerEvent, keep: boolean) {
+    const d = drag.current;
+    if (!d || e.pointerId !== d.id) return;
+    d.y = e.clientY;
+    paint();
+    cancelAnimationFrame(d.raf);
+    drag.current = null;
+    Array.from(rows.current?.children ?? []).forEach((el) => { (el as HTMLElement).style.transform = ''; });
+    setDragging(null);
+    if (keep && d.over !== d.from) {
+      const b = team.batters[d.from];
+      update(moveBatter(team, d.from, d.over));
+      setMsg(`${who(b)} bats ${ord(d.over + 1)}`);
+    }
+  }
+  useEffect(() => () => { if (drag.current) cancelAnimationFrame(drag.current.raf); }, []);
   useEffect(() => {
     if (last === null || cursor === null) return;
     rows.current?.children[last]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -428,7 +504,7 @@ export function LineupEditor({ slug, gameId, side, initial, stored, stamp = null
               const later = cursor !== null && i >= cursor;
               const open = canEdit && sel.idx === i;
               return (
-                <li key={b.bid} className={`order-row${open ? ' on' : ''}${later ? ' later' : ''}${cursor !== null && last === i ? ' just' : ''}`}>
+                <li key={b.bid} className={`order-row${open ? ' on' : ''}${later ? ' later' : ''}${cursor !== null && last === i ? ' just' : ''}${dragging === i ? ' lifted' : dragging !== null ? ' making-room' : ''}`}>
                   <div className="order-line">
                     <span className="order-n">{i + 1}</span>
                     <button type="button" className="order-who" onClick={() => tapRow(i)} disabled={!canEdit} aria-expanded={open}>
@@ -437,6 +513,13 @@ export function LineupEditor({ slug, gameId, side, initial, stored, stamp = null
                       <span className={`tag${pos ? '' : ' dim'}`}>{pos || 'Bats'}</span>
                       {avg.get(b.bid) && <span className="order-avg">{avg.get(b.bid)}</span>}
                     </button>
+                    {canEdit && cursor === null && team.batters.length > 1 && (
+                      <span className="order-grip" aria-hidden="true" title="Drag to move in the order"
+                        onPointerDown={(e) => grab(e, i)} onPointerMove={slide}
+                        onPointerUp={(e) => letGo(e, true)} onPointerCancel={(e) => letGo(e, false)}>
+                        <svg width="16" height="20" viewBox="0 0 16 20" fill="currentColor"><circle cx="5" cy="4" r="1.8" /><circle cx="11" cy="4" r="1.8" /><circle cx="5" cy="10" r="1.8" /><circle cx="11" cy="10" r="1.8" /><circle cx="5" cy="16" r="1.8" /><circle cx="11" cy="16" r="1.8" /></svg>
+                      </span>
+                    )}
                   </div>
                   {open && (
                     <div className="order-tools">

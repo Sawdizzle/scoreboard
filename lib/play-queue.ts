@@ -3,7 +3,7 @@
 // ScorePad. No React and no Supabase in here: the pad hands in how to send
 // and how to look things up (QueueIO), so tests can drop the connection.
 //
-//   * no signal, or a request that hangs past 15 s: keep the item, try again,
+//   * no signal, or a request that hangs past 6 s: keep the item, try again,
 //     slower each time (up to 8 s apart). Every step has its own time limit,
 //     not only the request: a phone waking from sleep can stall before the
 //     request goes out (a sign-in refresh), where the abort signal never reaches.
@@ -88,7 +88,9 @@ const isLapsed = (e: QueueError) => /PGRST30\d/.test(e.code ?? '') || /JWT/i.tes
 
 export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks): Promise<PumpResult> {
   const sleep = io.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const limit = io.timeoutMs ?? 15000;
+  // apply_play is one small RPC: one that has not answered in 6 s is a stall
+  // (often a phone just woken), and every tap behind it waits on it.
+  const limit = io.timeoutMs ?? 6000;
   let wait = 800, resync = false, batching = !!io.sendPlays;
   const backOff = async () => {
     await sleep(wait);
