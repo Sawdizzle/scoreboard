@@ -29,7 +29,7 @@ export function ObsPanel({ teamId, sport = 'baseball', broadcast, onBroadcast, o
     setFresh(!!row?.at && Date.now() - Date.parse(row.at) < 10 * 60 * 1000);
   }, [teamId]);
   useEffect(() => {
-    const t = window.setInterval(read, 3000);
+    const t = window.setInterval(() => { if (!document.hidden) void read(); }, 3000);
     const first = window.setTimeout(read, 0);
     return () => { window.clearInterval(t); window.clearTimeout(first); };
   }, [read]);

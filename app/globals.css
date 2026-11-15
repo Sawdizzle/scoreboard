@@ -295,6 +295,10 @@ button.seg-item[aria-current="page"] { background: var(--steel); }
 .order-row.on { background: var(--take-bg, #1c2c40); border-radius: 12px; }
 /* From the card: who is not on it yet, and the kid just placed. */
 .order-row.later { opacity: 0.5; }
+.order-grip { flex: 0 0 44px; align-self: stretch; display: grid; place-items: center; color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.order-row.making-room { transition: transform 0.16s ease; }
+.order-row.lifted { position: relative; z-index: 5; background: var(--raised); border-radius: 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); }
+.order-row.lifted .order-grip { cursor: grabbing; color: var(--soft); }
 .order-row.just { background: color-mix(in srgb, var(--gold) 16%, transparent); border-radius: 12px; }
 .order-who .row-title small { display: block; font-size: 11px; color: var(--muted); }
 /* A tapped row opens its own keys: where they play, a sub, a move. */
@@ -1008,3 +1012,8 @@ html:has(.pad.sun), html:has(.pad.sun) body { background: #ffffff; }
 .guide .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.5; color: var(--soft); }
 .guide .steps b { color: var(--chalk); }
 .guide code { font: 600 13.5px/1 var(--mono); padding: 2px 6px; border-radius: 6px; background: var(--raised); color: var(--chalk); }
+
+/* Page loading (loading.tsx): a spinner while the server reads the next page. */
+.loading-pane { min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--raised); border-top-color: var(--soft); animation: sk-turn 0.8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

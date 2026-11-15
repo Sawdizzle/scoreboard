@@ -65,7 +65,9 @@ const isLapsed = (e: QueueError) => /PGRST30\d/.test(e.code ?? '') || /JWT/i.tes
 
 export async function pumpQueue(st: QueueState, io: QueueIO, hooks: QueueHooks): Promise<PumpResult> {
   const sleep = io.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const limit = io.timeoutMs ?? 15000;
+  // apply_play is one small RPC: one that has not answered in 6 s is a stall
+  // (often a phone just woken), and every tap behind it waits on it.
+  const limit = io.timeoutMs ?? 6000;
   let wait = 800, resync = false;
   const backOff = async () => {
     await sleep(wait);
