@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { airView, autoMid, boxScore, breakText, halfRecap, layoutOf, qrLayer, feedView, leaders, momentText, ordinal, paText, RELOAD_QUIET_MS, safeToReload, type AirCtx, type Feed } from '../lib/onair.ts';
-import { engineGame } from '../lib/scoring.ts';
+import { engineGame, PAD_STAT_COLS, tonight, type StatKey } from '../lib/scoring.ts';
 import type { SeasonLine } from '../lib/stats.ts';
 import type { Lineup } from '../lib/types.ts';
 import { homerText } from '../components/overlay/looks/types.ts';
@@ -186,4 +186,22 @@ test('a new release reloads the overlay only between halves, before or after the
   assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K' } }, t0, t0 + 1000), false, 'mid-half');
   assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K', rolled: true } }, t0, t0 + 1000), true, 'half just ended');
   assert.equal(safeToReload({ game: live, last: { seq: 9, type: 'play', kind: 'K' } }, t0, t0 + RELOAD_QUIET_MS), true, 'quiet spell');
+});
+
+// The pad reads game_stats with only PAD_STAT_COLS. Every stat set, then cut
+// down to those columns: what the pad shows must not change.
+test('the pad\'s game_stats columns cover everything its lines show', () => {
+  const keys: StatKey[] = ['b_pa', 'b_ab', 'b_h', 'b_2b', 'b_3b', 'b_hr', 'b_rbi', 'b_r', 'b_bb', 'b_so', 'b_kl', 'b_hbp',
+    'b_sac', 'b_sf', 'b_roe', 'b_fc', 'b_sb', 'b_cs', 'b_pik', 'p_outs', 'p_bf', 'p_pitches', 'p_h', 'p_r', 'p_er', 'p_bb',
+    'p_so', 'p_hbp', 'p_wp', 'p_bk', 'p_pik', 'f_po', 'f_a', 'f_e', 'c_sb', 'c_cs', 'c_pik', 'c_pb'];
+  const full = Object.fromEntries(keys.map((k, i) => [k, i + 1]));
+  const cols = new Set(PAD_STAT_COLS.split(',').map((c) => c.trim()));
+  const cut = Object.fromEntries(Object.entries(full).filter(([k]) => cols.has(k)));
+  assert.ok(cols.has('side') && cols.has('bid'));
+  assert.equal(tonight(cut), tonight(full));
+  const a = airView(g(), { ...ctx, tonight: { a2: full, h9: full } });
+  const b = airView(g(), { ...ctx, tonight: { a2: cut, h9: cut } });
+  assert.deepEqual(b.batter?.today, a.batter?.today);
+  assert.deepEqual(b.pitcher?.today, a.pitcher?.today);
+  assert.deepEqual(b, a);
 });

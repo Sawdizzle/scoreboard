@@ -35,6 +35,12 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Skipped: static files, and the paths that never read who is signed in, so
+// they do not wait on getClaims(): the scorebug (/overlay, polled every few
+// seconds), /version, route handlers under /api (they set their own cookies),
+// the public live game, and the plain public pages. /team/<slug> itself stays:
+// it asks who is signed in, and a Server Component cannot save a refreshed
+// session.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|overlay/|version$|api/|team/[^/]+/game/|recap$|privacy$|help(?:/|$)|cal/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)'],
 };

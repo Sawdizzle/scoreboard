@@ -12,7 +12,9 @@ import { browserClient } from '@/lib/supabase/browser';
 import { periodText, type SportLive } from '@/lib/sports';
 import type { Side } from '@/lib/types';
 
-const POLL_MS = 5000;
+// The public page is for parents in the stands: every 12 s is plenty, and it
+// keeps a crowd of phones off the database during a game.
+const POLL_MS = 12000;
 
 function BoxTable({ title, cols, rows }: { title: string; cols: string[]; rows: BoxRow[] }) {
   if (!rows.length) return null;

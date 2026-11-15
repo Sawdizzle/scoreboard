@@ -7,7 +7,7 @@ import { batterOf, withRosterNames } from '@/lib/lineup';
 import { byJersey } from '@/lib/format';
 import type { Channel } from '@/components/pad/OnAir';
 import { CHANNEL_COLS } from '@/lib/broadcast';
-import type { StatRow } from '@/lib/scoring';
+import { PAD_STAT_COLS, type StatRow } from '@/lib/scoring';
 import { canBroadcast, canEditTeam, canRunGames, canWriteRecaps, type Game } from '@/lib/types';
 import { aiOn, getAllowance } from '@/lib/ai-limit';
 
@@ -26,7 +26,7 @@ export default async function PadPage({ params, searchParams }: { params: Promis
     getLineups(supabase, game.id),
     listSeasons(supabase, team.id),
     supabase.from('games').select('seq').eq('id', game.id).single(),
-    supabase.from('game_stats').select('*').eq('game_id', game.id),
+    supabase.from('game_stats').select(PAD_STAT_COLS).eq('game_id', game.id),
     listPlayers(supabase, team.id),
   ]);
   // Our batters under the team's name format, whatever it was when the lineup was saved.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BreakAudio } from '@/components/overlay/BreakAudio';
 import { Fx, type FxShot } from '@/components/overlay/Fx';
 import { Keep } from '@/components/overlay/Keep';
@@ -15,8 +15,12 @@ import * as M from '@/lib/fx/music';
 import { feedView, layoutOf, momentText, safeToReload, type Feed } from '@/lib/onair';
 import * as L from '@/lib/rules/logic.js';
 import { browserClient } from '@/lib/supabase/browser';
+import type { SeasonLine } from '@/lib/stats';
 
 const POLL_MS = 2500;
+// Season lines change slowly: asked for when the game, the half or the status
+// changes, and at least this often.
+const SEASON_MS = 5 * 60 * 1000;
 const AUTO_CARD_MS = 6000;
 const MOMENT_MS = 4500;
 const FX_MS = 5000;
@@ -70,6 +74,32 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   const [weather, setWeather] = useState<Weather | null>(null);
   const [mute, setMute] = useState(false);
   const first = useRef(initial);
+  // Season lines come from overlay_season(), not the per-pitch feed. A feed
+  // that still carries them (a database from before that change) wins.
+  const [season, setSeason] = useState<SeasonLine[]>(initial?.season_stats ?? []);
+  const live = feed?.game?.live as { inning?: number; half?: string } | undefined;
+  const seasonKey = feed?.game ? `${feed.game.id}|${live?.inning ?? ''}|${live?.half ?? ''}|${feed.game.status}` : '';
+  const seasonAt = useRef(initial?.game ? `${initial.game.id}|${(initial.game.live as { inning?: number } | undefined)?.inning ?? ''}|${(initial.game.live as { half?: string } | undefined)?.half ?? ''}|${initial.game.status}` : '');
+  const [seasonTick, setSeasonTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setSeasonTick((n) => n + 1), SEASON_MS);
+    return () => window.clearInterval(t);
+  }, []);
+  useEffect(() => {
+    if (!seasonKey) return;
+    if (seasonAt.current === seasonKey && seasonTick === 0) return;
+    seasonAt.current = seasonKey;
+    let stop = false;
+    void (async () => {
+      try {
+        const { data } = await browserClient().rpc('overlay_season', { p_token: token }).abortSignal(AbortSignal.timeout(8000));
+        const s = (data as { season_stats?: SeasonLine[] } | null)?.season_stats;
+        if (!stop && Array.isArray(s)) setSeason(s);
+      } catch { /* the next half inning asks again */ }
+    })();
+    return () => { stop = true; };
+  }, [seasonKey, seasonTick, token]);
+  const shown = useMemo(() => (feed && !feed.season_stats?.length ? { ...feed, season_stats: season } : feed), [feed, season]);
   // The venue's weather, for Starting Soon and the pause scene: from
   // Open-Meteo every ten minutes while one of them is up (two after a miss).
   const scene = feed?.broadcast?.scene?.kind;
@@ -253,8 +283,8 @@ export function Overlay({ token, initial }: { token: string; initial: Feed | nul
   }, []);
   const top = feed ? layoutOf(feed.layout).bug.pos.startsWith('t') : false;
   return <>
-    <Keep><Stage feed={feed} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} /></Keep>
-    <Keep><Scenes feed={feed} now={now} weather={weather} strike={strike} /></Keep>
+    <Keep><Stage feed={shown} card={feed?.card ?? (auto ? 'batter' : null)} moment={moment} now={now} intro={intro} fx={shot ? { kind: shot.kind, n: shot.n } : null} /></Keep>
+    <Keep><Scenes feed={shown} now={now} weather={weather} strike={strike} /></Keep>
     <Keep><Fx shot={shot} rally={!!feed?.broadcast?.rally} top={top} /></Keep>
     <ObsBridge token={token} feed={feed} fx={heard} />
     <BreakAudio feed={feed} />
