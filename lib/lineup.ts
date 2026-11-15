@@ -91,6 +91,19 @@ export function placeFromCard(team: Lineup, cursor: number, num: string, bench: 
   return { ok: false, why: 'unknown' };
 }
 
+// A batter dragged from one spot in the order to another: everyone between
+// slides one spot toward the gap. Positions point at players, so the field
+// goes with them untouched.
+export function moveBatter(team: Lineup, from: number, to: number): Lineup {
+  const t = normalizeTeam(team) as Lineup;
+  const n = t.batters.length;
+  if (from < 0 || from >= n || from === to) return t;
+  const batters = t.batters.slice();
+  const [b] = batters.splice(from, 1);
+  batters.splice(Math.min(Math.max(to, 0), n - 1), 0, b);
+  return normalizeTeam({ ...t, batters }) as Lineup;
+}
+
 // Done with the card: whoever was not on it (below the cursor) goes to the
 // bench, and their spots in the field with them.
 export function benchFrom(team: Lineup, cursor: number): Lineup {
